@@ -1,0 +1,6 @@
+*.vo
+*.glob
+*.aux
+.depend
+.lia.cache
+\#*\#
