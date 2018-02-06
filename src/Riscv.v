@@ -1,4 +1,4 @@
-Require Export bbv.WordScope.
+Require Export bbv.Word.
 Require Export bbv.DepEqNat.
 Require Export riscv.NameWithEq.
 Require Export riscv.RiscvBitWidths.
