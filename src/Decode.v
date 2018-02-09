@@ -242,6 +242,12 @@ Definition bitSlice'{sz: nat}(inst: word sz)(n m: nat){H: n <= m <= sz}: word sz
   abstract omega.
 Defined.
 
+(* we redefine a wlshift which does not match on (possibly opaque) equality proofs,
+   so that we can simpl/cbv/etc it *)
+Definition wlshift {sz : nat} (w : word sz) (n : nat) : word sz.
+  refine (split1 sz n (nat_cast _ _ (combine (wzero n) w))). apply plus_comm.
+Defined.
+
 (* extends word size to wXLEN *)
 Definition bitSlice(inst: word 32)(n m: nat){H: n <= m <= 32}: word wXLEN.
   refine (nat_cast _ _ (zext inst (wXLEN - 32))). abstract bitwidth_omega.
@@ -252,11 +258,19 @@ Definition shift{n: nat}{sz: nat}(w: word n)(m : nat){H: (n <= sz)%nat}: word sz
   refine (wlshift (nat_cast _ _ (zext w (sz - n))) m). abstract omega.
 Defined.
 
-Definition testBit{sz: nat}(w: word sz)(l: nat): bool :=
-  weqb (wzero sz) (wand w (natToWord sz (pow2 l))).
+(* calculating (pow2 32) on nat will result in S (S (S .... 2^32 times, that's too much *)
+Definition setBit(sz: nat)(b: nat): word sz := NToWord sz (Npow2 b).
 
+Definition testBit{sz: nat}(w: word sz)(l: nat): bool :=
+  weqb (wzero sz) (wand w (setBit sz l)).
+
+(*
 Definition signExtend{sz: nat}(l: nat)(n: word sz): word sz :=
   if testBit n (l-1) then (n ^- $ (pow2 l)) else n.
+*)
+
+Definition signExtend{sz: nat}(l: nat)(n: word sz): word sz :=
+  if testBit n (l-1) then (n ^- (setBit sz l)) else n.
 
 Notation "a <|> b" := (wor a b) (at level 50, left associativity).
 
@@ -355,3 +369,19 @@ Definition decode (inst : word 32) : Instruction. simple refine (
 Defined.
 
 End Decode.
+
+
+Definition test_instruction: word 32 :=
+  combine opcode_LUI (combine (natToWord 5 9) (natToWord 20 (33 + 128))).
+
+Eval cbv in test_instruction.
+
+Require Import riscv.RiscvBitWidths32.
+
+Definition test_result: Instruction := decode test_instruction.
+
+Goal test_result = Lui (zext (natToWord 5 9) 27) (extz (natToWord 20 (33 + 128)) 12).
+  cbv.
+  Fail reflexivity.
+Abort.
+
