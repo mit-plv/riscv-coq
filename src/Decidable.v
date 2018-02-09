@@ -4,6 +4,7 @@
 Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Arith.Compare_dec.
 Require Import Coq.ZArith.BinInt.
+Require Import bbv.Word.
 
 Class Decidable (P : Prop) := dec : {P} + {~P}.
 Arguments dec _%type_scope {_}.
@@ -18,7 +19,7 @@ Global Instance dec_lt_nat : DecidableRel lt := Compare_dec.lt_dec.
 Global Instance dec_ge_nat : DecidableRel ge := Compare_dec.ge_dec.
 Global Instance dec_gt_nat : DecidableRel gt := Compare_dec.gt_dec.
 
-Instance decidable_eq_option {A} `{DecidableEq A}: DecidableEq (option A).
+Global Instance decidable_eq_option {A} `{DecidableEq A}: DecidableEq (option A).
   intros. unfold Decidable. destruct x; destruct y.
   - destruct (DecidableEq0 a a0).
     + subst. left. reflexivity.
@@ -27,3 +28,13 @@ Instance decidable_eq_option {A} `{DecidableEq A}: DecidableEq (option A).
   - right. intro. discriminate.
   - left. reflexivity.
 Defined.
+
+Global Instance dec_and {A B} `{Decidable A, Decidable B} : Decidable (A /\ B).
+  unfold Decidable in *; destruct H; destruct H0; tauto.
+Defined.
+
+Global Instance dec_or {A B} `{Decidable A, Decidable B} : Decidable (A \/ B).
+  unfold Decidable in *; destruct H; destruct H0; tauto.
+Defined.
+
+Global Instance dec_eq_word : forall sz, DecidableEq (word sz) := weq.
