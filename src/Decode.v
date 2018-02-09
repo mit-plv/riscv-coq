@@ -1,7 +1,10 @@
 (* Need to define MachineInt = Int64? Int32 *)
 (* Need to define Register *)
+Require Import Coq.Bool.Sumbool.
+Require Import Coq.omega.Omega.
 Require Import bbv.WordScope.
 Require Import riscv.Decidable.
+Require Import bbv.DepEqNat.
 
 Notation opcode_LOAD      := WO~0~0~0~0~0~1~1.
 Notation opcode_LOAD_FP   := WO~0~0~0~0~1~1~1.
@@ -192,13 +195,63 @@ Inductive Instruction : Set :=
 .
 
 
+Arguments sumbool_not {_} {_} (_).
+
+Section comparisons.
+
+  Context {sz: nat}.
+  Variable a b: word sz.
+
+  (* a >= b <-> b <= a <-> ~ b > a <-> ~ a < b *)
+  Definition wge_dec := sumbool_not (wlt_dec a b).
+
+  (* a > b <-> b < a *)
+  Definition wgt_dec := wlt_dec b a.
+
+  (* a <= b <-> ~ b < a *)
+  Definition wle_dec := sumbool_not (wlt_dec b a).
+
+  (* a >= b <-> b <= a <-> ~ b > a <-> ~ a < b *)
+  Definition wsge_dec := sumbool_not (wslt_dec a b).
+
+  (* a > b <-> b < a *)
+  Definition wsgt_dec := wslt_dec b a.
+
+  (* a <= b <-> ~ b < a *)
+  Definition wsle_dec := sumbool_not (wslt_dec b a).
+
+End comparisons.
+
+
+Definition split_upper(szU szL : nat): word (szL + szU) -> word szU := split2 szL szU.
+
+Definition split_lower(szU szL : nat): word (szL + szU) -> word szL := split1 szL szU.
+
+Definition split_middle(szU szM szL: nat)(w: word (szL + szM + szU)): word szM :=
+  split_upper szM szL (split_lower szU (szL + szM) w).
+
+Definition bitSlice(inst: word 32)(n m: nat){H: n <= m <= 32}: word 32.
+  refine (nat_cast _ _ (zext (split_middle (32 - m) (m - n) n (nat_cast _ _ inst)) (32 - (m - n))));
+  abstract omega.
+Defined.
+
 (* Quick and dirty axiomatic, this will require more work *)
-Axiom bitSlice: forall (inst: word 32) (n m:nat), word 32.
+(* Axiom bitSlice: forall (inst: word 32) (n m:nat), word 32. *)
 Axiom shift: forall{n:nat} (inst: word n) (m : nat),  word 32.
 Axiom signExtend: forall {n:nat} (m: nat) (inst : word n) , word 32.
 Notation "a <|> b" := (wor a b) (at level 50, left associativity).
 
-Definition decode (inst : word 32) : Instruction :=
+(*
+Declare Implicit Tactic (clear; abstract omega). (* dangerous? *)
+
+Goal 0 <= 7 <= 32. omega. Qed.
+
+Definition foo (inst : word 32) : word 32.
+  refine (bitSlice inst 0 7).
+Defined.
+*)
+
+Definition decode (inst : word 32) : Instruction. simple refine (
   let opcode :=  split2 25 7 (bitSlice inst 0 7) in
   let funct3 :=  split2 29 3 (bitSlice inst 12 15) in
   let funct7 :=  split2 25 7 (bitSlice inst 25 32) in
@@ -288,4 +341,6 @@ Definition decode (inst : word 32) : Instruction :=
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRWI) then  Csrrwi  rd zimm csr12
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRSI) then  Csrrwi  rd zimm csr12
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRCI) then  Csrrwi  rd zimm csr12
-      else InvalidInstruction.
+      else InvalidInstruction);
+  (clear; abstract omega).
+Defined.
