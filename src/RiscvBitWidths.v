@@ -33,8 +33,7 @@ Class RiscvBitWidths := mkRiscvBitWidths {
 
   wXLEN_lbound: wXLEN >= wInstr;
 
-  (* This prevents 64bit. TODO remove this and make sure literal loading still works. *)
-  wXLEN_wInstr: wXLEN = wInstr;
+  wXLEN_ge_32: wXLEN >= 32;
 }.
 
 Ltac bitwidth_omega :=

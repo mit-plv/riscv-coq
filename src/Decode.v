@@ -5,115 +5,120 @@ Require Import Coq.omega.Omega.
 Require Import bbv.WordScope.
 Require Import riscv.Decidable.
 Require Import bbv.DepEqNat.
+Require Import riscv.RiscvBitWidths.
 
-Notation opcode_LOAD      := WO~0~0~0~0~0~1~1.
-Notation opcode_LOAD_FP   := WO~0~0~0~0~1~1~1.
-Notation opcode_MISC_MEM  := WO~0~0~0~1~1~1~1.
-Notation opcode_OP_IMM    := WO~0~0~1~0~0~1~1.
-Notation opcode_AUIPC     := WO~0~0~1~0~1~1~1.
-Notation opcode_OP_IMM_32 := WO~0~0~1~1~0~1~1.
-Notation opcode_STORE     := WO~0~1~0~0~0~1~1.
-Notation opcode_STORE_FP  := WO~0~1~0~0~1~1~1.
-Notation opcode_AMO       := WO~0~1~0~1~1~1~1.
-Notation opcode_OP        := WO~0~1~1~0~0~1~1.
-Notation opcode_LUI       := WO~0~1~1~0~1~1~1.
-Notation opcode_OP_32     := WO~0~1~1~1~0~1~1.
-Notation opcode_MADD      := WO~1~0~0~0~0~1~1.
-Notation opcode_MSUB      := WO~1~0~0~0~1~1~1.
-Notation opcode_NMSUB     := WO~1~0~0~1~0~1~1.
-Notation opcode_NMADD     := WO~1~0~0~1~1~1~1.
-Notation opcode_OP_FP     := WO~1~0~1~0~0~1~1.
-Notation opcode_BRANCH    := WO~1~1~0~0~0~1~1.
-Notation opcode_JALR      := WO~1~1~0~0~1~1~1.
-Notation opcode_JAL       := WO~1~1~0~1~1~1~1.
-Notation opcode_SYSTEM    := WO~1~1~1~0~0~1~1.
-Notation funct3_LB  := WO~0~0~0.
-Notation funct3_LH  := WO~0~0~1.
-Notation funct3_LW  := WO~0~1~0.
-Notation funct3_LD  := WO~0~1~1.
-Notation funct3_LBU := WO~1~0~0.
-Notation funct3_LHU := WO~1~0~1.
-Notation funct3_LWU := WO~1~1~0.
-Notation funct3_FENCE   := WO~0~0~0.
-Notation funct3_FENCE_I := WO~0~0~1.
-Notation funct3_ADDI  := WO~0~0~0.
-Notation funct3_SLLI  := WO~0~0~1.
-Notation funct3_SLTI  := WO~0~1~0.
-Notation funct3_SLTIU := WO~0~1~1.
-Notation funct3_XORI  := WO~1~0~0.
-Notation funct3_SRLI  := WO~1~0~1.
-Notation funct3_SRAI  := WO~1~0~1.
-Notation funct3_ORI   := WO~1~1~0.
-Notation funct3_ANDI  := WO~1~1~1.
-Notation funct7_SLLI  := WO~0~0~0~0~0~0~0.
-Notation funct7_SRLI  := WO~0~0~0~0~0~0~0.
-Notation funct7_SRAI  := WO~0~1~0~0~0~0~0.
-Notation funct6_SLLI  := WO~0~0~0~0~0~0.
-Notation funct6_SRLI  := WO~0~0~0~0~0~0.
-Notation funct6_SRAI  := WO~0~1~0~0~0~0.
-Notation funct3_SB := WO~0~0~0.
-Notation funct3_SH := WO~0~0~1.
-Notation funct3_SW := WO~0~1~0.
-Notation funct3_SD := WO~0~1~1.
-Notation funct3_ADD  := WO~0~0~0.
-Notation funct7_ADD  := WO~0~0~0~0~0~0~0.
-Notation funct3_SUB  := WO~0~0~0.
-Notation funct7_SUB  := WO~0~1~0~0~0~0~0.
-Notation funct3_SLL  := WO~0~0~1.
-Notation funct7_SLL  := WO~0~0~0~0~0~0~0.
-Notation funct3_SLT  := WO~0~1~0.
-Notation funct7_SLT  := WO~0~0~0~0~0~0~0.
-Notation funct3_SLTU := WO~0~1~1.
-Notation funct7_SLTU := WO~0~0~0~0~0~0~0.
-Notation funct3_XOR  := WO~1~0~0.
-Notation funct7_XOR  := WO~0~0~0~0~0~0~0.
-Notation funct3_SRL  := WO~1~0~1.
-Notation funct7_SRL  := WO~0~0~0~0~0~0~0.
-Notation funct3_SRA  := WO~1~0~1.
-Notation funct7_SRA  := WO~0~1~0~0~0~0~0.
-Notation funct3_OR   := WO~1~1~0.
-Notation funct7_OR   := WO~0~0~0~0~0~0~0.
-Notation funct3_AND  := WO~1~1~1.
-Notation funct7_AND  := WO~0~0~0~0~0~0~0.
-Notation funct3_MUL    :=WO~0~0~0.
-Notation funct7_MUL    :=WO~0~0~0~0~0~0~1.
-Notation funct3_MULH   :=WO~0~0~1.
-Notation funct7_MULH   :=WO~0~0~0~0~0~0~1.
-Notation funct3_MULHSU :=WO~0~1~0.
-Notation funct7_MULHSU :=WO~0~0~0~0~0~0~1.
-Notation funct3_MULHU  :=WO~0~1~1.
-Notation funct7_MULHU  :=WO~0~0~0~0~0~0~1.
-Notation funct3_DIV    :=WO~1~0~0.
-Notation funct7_DIV    :=WO~0~0~0~0~0~0~1.
-Notation funct3_DIVU   :=WO~1~0~1.
-Notation funct7_DIVU   :=WO~0~0~0~0~0~0~1.
-Notation funct3_REM    :=WO~1~1~0.
-Notation funct7_REM    :=WO~0~0~0~0~0~0~1.
-Notation funct3_REMU   :=WO~1~1~1.
-Notation funct7_REMU   :=WO~0~0~0~0~0~0~1.
-Notation funct3_BEQ  := WO~0~0~0.
-Notation funct3_BNE  := WO~0~0~1.
-Notation funct3_BLT  := WO~1~0~0.
-Notation funct3_BGE  := WO~1~0~1.
-Notation funct3_BLTU := WO~1~1~0.
-Notation funct3_BGEU := WO~1~1~1.
-Notation funct3_PRIV   := WO~0~0~0.
-Notation funct12_ECALL  := WO~0~0~0~0~0~0~0~0~0~0~0~0.
-Notation funct12_EBREAK := WO~0~0~0~0~0~0~0~0~0~0~0~1.
-Notation funct12_URET   := WO~0~0~0~0~0~0~0~0~0~0~1~0.
-Notation funct12_SRET   := WO~0~0~0~1~0~0~0~0~0~0~1~0.
-Notation funct12_MRET   := WO~0~0~1~1~0~0~0~0~0~0~1~0.
-Notation funct12_WFI    := WO~0~0~0~1~0~0~0~0~0~1~0~1.
-Notation funct7_SFENCE_VM := WO~0~0~0~1~0~0~1.
-Notation funct3_CSRRW  := WO~0~0~1.
-Notation funct3_CSRRS  := WO~0~1~0.
-Notation funct3_CSRRC  := WO~0~1~1.
-Notation funct3_CSRRWI := WO~1~0~1.
-Notation funct3_CSRRSI := WO~1~1~0.
-Notation funct3_CSRRCI := WO~1~1~1.
+Definition opcode_LOAD      := WO~0~0~0~0~0~1~1.
+Definition opcode_LOAD_FP   := WO~0~0~0~0~1~1~1.
+Definition opcode_MISC_MEM  := WO~0~0~0~1~1~1~1.
+Definition opcode_OP_IMM    := WO~0~0~1~0~0~1~1.
+Definition opcode_AUIPC     := WO~0~0~1~0~1~1~1.
+Definition opcode_OP_IMM_32 := WO~0~0~1~1~0~1~1.
+Definition opcode_STORE     := WO~0~1~0~0~0~1~1.
+Definition opcode_STORE_FP  := WO~0~1~0~0~1~1~1.
+Definition opcode_AMO       := WO~0~1~0~1~1~1~1.
+Definition opcode_OP        := WO~0~1~1~0~0~1~1.
+Definition opcode_LUI       := WO~0~1~1~0~1~1~1.
+Definition opcode_OP_32     := WO~0~1~1~1~0~1~1.
+Definition opcode_MADD      := WO~1~0~0~0~0~1~1.
+Definition opcode_MSUB      := WO~1~0~0~0~1~1~1.
+Definition opcode_NMSUB     := WO~1~0~0~1~0~1~1.
+Definition opcode_NMADD     := WO~1~0~0~1~1~1~1.
+Definition opcode_OP_FP     := WO~1~0~1~0~0~1~1.
+Definition opcode_BRANCH    := WO~1~1~0~0~0~1~1.
+Definition opcode_JALR      := WO~1~1~0~0~1~1~1.
+Definition opcode_JAL       := WO~1~1~0~1~1~1~1.
+Definition opcode_SYSTEM    := WO~1~1~1~0~0~1~1.
+Definition funct3_LB  := WO~0~0~0.
+Definition funct3_LH  := WO~0~0~1.
+Definition funct3_LW  := WO~0~1~0.
+Definition funct3_LD  := WO~0~1~1.
+Definition funct3_LBU := WO~1~0~0.
+Definition funct3_LHU := WO~1~0~1.
+Definition funct3_LWU := WO~1~1~0.
+Definition funct3_FENCE   := WO~0~0~0.
+Definition funct3_FENCE_I := WO~0~0~1.
+Definition funct3_ADDI  := WO~0~0~0.
+Definition funct3_SLLI  := WO~0~0~1.
+Definition funct3_SLTI  := WO~0~1~0.
+Definition funct3_SLTIU := WO~0~1~1.
+Definition funct3_XORI  := WO~1~0~0.
+Definition funct3_SRLI  := WO~1~0~1.
+Definition funct3_SRAI  := WO~1~0~1.
+Definition funct3_ORI   := WO~1~1~0.
+Definition funct3_ANDI  := WO~1~1~1.
+Definition funct7_SLLI  := WO~0~0~0~0~0~0~0.
+Definition funct7_SRLI  := WO~0~0~0~0~0~0~0.
+Definition funct7_SRAI  := WO~0~1~0~0~0~0~0.
+Definition funct6_SLLI  := WO~0~0~0~0~0~0.
+Definition funct6_SRLI  := WO~0~0~0~0~0~0.
+Definition funct6_SRAI  := WO~0~1~0~0~0~0.
+Definition funct3_SB := WO~0~0~0.
+Definition funct3_SH := WO~0~0~1.
+Definition funct3_SW := WO~0~1~0.
+Definition funct3_SD := WO~0~1~1.
+Definition funct3_ADD  := WO~0~0~0.
+Definition funct7_ADD  := WO~0~0~0~0~0~0~0.
+Definition funct3_SUB  := WO~0~0~0.
+Definition funct7_SUB  := WO~0~1~0~0~0~0~0.
+Definition funct3_SLL  := WO~0~0~1.
+Definition funct7_SLL  := WO~0~0~0~0~0~0~0.
+Definition funct3_SLT  := WO~0~1~0.
+Definition funct7_SLT  := WO~0~0~0~0~0~0~0.
+Definition funct3_SLTU := WO~0~1~1.
+Definition funct7_SLTU := WO~0~0~0~0~0~0~0.
+Definition funct3_XOR  := WO~1~0~0.
+Definition funct7_XOR  := WO~0~0~0~0~0~0~0.
+Definition funct3_SRL  := WO~1~0~1.
+Definition funct7_SRL  := WO~0~0~0~0~0~0~0.
+Definition funct3_SRA  := WO~1~0~1.
+Definition funct7_SRA  := WO~0~1~0~0~0~0~0.
+Definition funct3_OR   := WO~1~1~0.
+Definition funct7_OR   := WO~0~0~0~0~0~0~0.
+Definition funct3_AND  := WO~1~1~1.
+Definition funct7_AND  := WO~0~0~0~0~0~0~0.
+Definition funct3_MUL    :=WO~0~0~0.
+Definition funct7_MUL    :=WO~0~0~0~0~0~0~1.
+Definition funct3_MULH   :=WO~0~0~1.
+Definition funct7_MULH   :=WO~0~0~0~0~0~0~1.
+Definition funct3_MULHSU :=WO~0~1~0.
+Definition funct7_MULHSU :=WO~0~0~0~0~0~0~1.
+Definition funct3_MULHU  :=WO~0~1~1.
+Definition funct7_MULHU  :=WO~0~0~0~0~0~0~1.
+Definition funct3_DIV    :=WO~1~0~0.
+Definition funct7_DIV    :=WO~0~0~0~0~0~0~1.
+Definition funct3_DIVU   :=WO~1~0~1.
+Definition funct7_DIVU   :=WO~0~0~0~0~0~0~1.
+Definition funct3_REM    :=WO~1~1~0.
+Definition funct7_REM    :=WO~0~0~0~0~0~0~1.
+Definition funct3_REMU   :=WO~1~1~1.
+Definition funct7_REMU   :=WO~0~0~0~0~0~0~1.
+Definition funct3_BEQ  := WO~0~0~0.
+Definition funct3_BNE  := WO~0~0~1.
+Definition funct3_BLT  := WO~1~0~0.
+Definition funct3_BGE  := WO~1~0~1.
+Definition funct3_BLTU := WO~1~1~0.
+Definition funct3_BGEU := WO~1~1~1.
+Definition funct3_PRIV   := WO~0~0~0.
+Definition funct12_ECALL  := WO~0~0~0~0~0~0~0~0~0~0~0~0.
+Definition funct12_EBREAK := WO~0~0~0~0~0~0~0~0~0~0~0~1.
+Definition funct12_URET   := WO~0~0~0~0~0~0~0~0~0~0~1~0.
+Definition funct12_SRET   := WO~0~0~0~1~0~0~0~0~0~0~1~0.
+Definition funct12_MRET   := WO~0~0~1~1~0~0~0~0~0~0~1~0.
+Definition funct12_WFI    := WO~0~0~0~1~0~0~0~0~0~1~0~1.
+Definition funct7_SFENCE_VM := WO~0~0~0~1~0~0~1.
+Definition funct3_CSRRW  := WO~0~0~1.
+Definition funct3_CSRRS  := WO~0~1~0.
+Definition funct3_CSRRC  := WO~0~1~1.
+Definition funct3_CSRRWI := WO~1~0~1.
+Definition funct3_CSRRSI := WO~1~1~0.
+Definition funct3_CSRRCI := WO~1~1~1.
+
+Section Decode.
+
+Context {B: RiscvBitWidths}.
 
 Definition Register := word 32.
-Definition MachineInt := word 32.
+Definition MachineInt := word wXLEN.
 
 Inductive Instruction : Set :=
   | InvalidInstruction : Instruction
@@ -220,8 +225,9 @@ Section comparisons.
   (* a <= b <-> ~ b < a *)
   Definition wsle_dec := sumbool_not (wslt_dec b a).
 
-End comparisons.
+  Definition wneq_dec := sumbool_not (weq a b).
 
+End comparisons.
 
 Definition split_upper(szU szL : nat): word (szL + szU) -> word szU := split2 szL szU.
 
@@ -230,37 +236,40 @@ Definition split_lower(szU szL : nat): word (szL + szU) -> word szL := split1 sz
 Definition split_middle(szU szM szL: nat)(w: word (szL + szM + szU)): word szM :=
   split_upper szM szL (split_lower szU (szL + szM) w).
 
-Definition bitSlice(inst: word 32)(n m: nat){H: n <= m <= 32}: word 32.
-  refine (nat_cast _ _ (zext (split_middle (32 - m) (m - n) n (nat_cast _ _ inst)) (32 - (m - n))));
+(* keeps word size *)
+Definition bitSlice'{sz: nat}(inst: word sz)(n m: nat){H: n <= m <= sz}: word sz.
+  refine (nat_cast _ _ (zext (split_middle (sz - m) (m - n) n (nat_cast _ _ inst)) (sz - (m - n))));
   abstract omega.
 Defined.
 
-(* Quick and dirty axiomatic, this will require more work *)
-(* Axiom bitSlice: forall (inst: word 32) (n m:nat), word 32. *)
-Axiom shift: forall{n:nat} (inst: word n) (m : nat),  word 32.
-Axiom signExtend: forall {n:nat} (m: nat) (inst : word n) , word 32.
+(* extends word size to wXLEN *)
+Definition bitSlice(inst: word 32)(n m: nat){H: n <= m <= 32}: word wXLEN.
+  refine (nat_cast _ _ (zext inst (wXLEN - 32))). abstract bitwidth_omega.
+Defined.
+
+(* this is actually "zero-extend and then shift left" *)
+Definition shift{n: nat}{sz: nat}(w: word n)(m : nat){H: (n <= sz)%nat}: word sz.
+  refine (wlshift (nat_cast _ _ (zext w (sz - n))) m). abstract omega.
+Defined.
+
+Definition testBit{sz: nat}(w: word sz)(l: nat): bool :=
+  weqb (wzero sz) (wand w (natToWord sz (pow2 l))).
+
+Definition signExtend{sz: nat}(l: nat)(n: word sz): word sz :=
+  if testBit n (l-1) then (n ^- $ (pow2 l)) else n.
+
 Notation "a <|> b" := (wor a b) (at level 50, left associativity).
 
-(*
-Declare Implicit Tactic (clear; abstract omega). (* dangerous? *)
-
-Goal 0 <= 7 <= 32. omega. Qed.
-
-Definition foo (inst : word 32) : word 32.
-  refine (bitSlice inst 0 7).
-Defined.
-*)
-
 Definition decode (inst : word 32) : Instruction. simple refine (
-  let opcode :=  split2 25 7 (bitSlice inst 0 7) in
-  let funct3 :=  split2 29 3 (bitSlice inst 12 15) in
-  let funct7 :=  split2 25 7 (bitSlice inst 25 32) in
-  let funct10 := split2 22 10 ((shift (bitSlice inst 25 32) 3) <|> (bitSlice inst 12 15)) in
-  let funct12 :=  split2 20 12 (bitSlice inst 20 32) in
-  let rd := bitSlice inst 7 12 in
-  let rs1 := bitSlice inst 15 20 in
-  let rs2 := bitSlice inst 20 25 in
-  let rs3 := bitSlice inst 27 32 in
+  let opcode :=  split_lower 25 7 (bitSlice' inst 0 7) in
+  let funct3 :=  split_lower 29 3 (bitSlice' inst 12 15) in
+  let funct7 :=  split_lower 25 7 (bitSlice' inst 25 32) in
+  let funct10 := split_lower 22 10 ((shift (bitSlice' inst 25 32) 3) <|> (bitSlice' inst 12 15)) in
+  let funct12 :=  split_lower 20 12 (bitSlice' inst 20 32) in
+  let rd := bitSlice' inst 7 12 in
+  let rs1 := bitSlice' inst 15 20 in
+  let rs2 := bitSlice' inst 20 25 in
+  let rs3 := bitSlice' inst 27 32 in
   let succ := bitSlice inst 20 24 in
   let pred := bitSlice inst 24 28 in
   let msb4 := bitSlice inst 28 32 in
@@ -344,3 +353,5 @@ Definition decode (inst : word 32) : Instruction. simple refine (
       else InvalidInstruction);
   (clear; abstract omega).
 Defined.
+
+End Decode.
