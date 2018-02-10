@@ -250,7 +250,8 @@ Defined.
 
 (* extends word size to wXLEN *)
 Definition bitSlice(inst: word 32)(n m: nat){H: n <= m <= 32}: word wXLEN.
-  refine (nat_cast _ _ (zext inst (wXLEN - 32))). abstract bitwidth_omega.
+  set (bits := @bitSlice' _ inst n m H).
+  refine (nat_cast _ _ (zext bits (wXLEN - 32))). abstract bitwidth_omega.
 Defined.
 
 (* this is actually "zero-extend and then shift left" *)
@@ -264,11 +265,14 @@ Definition setBit(sz: nat)(b: nat): word sz := NToWord sz (Npow2 b).
 Definition testBit{sz: nat}(w: word sz)(l: nat): bool :=
   weqb (wzero sz) (wand w (setBit sz l)).
 
-(*
+(* bad because (pow2 l) will compute a huge nat
 Definition signExtend{sz: nat}(l: nat)(n: word sz): word sz :=
   if testBit n (l-1) then (n ^- $ (pow2 l)) else n.
 *)
 
+(* Note: also works if sz = l: In that case, setBit will overflow and equal 0,
+   so the subtraction doesn't do anything, but that's fine because no bits need
+   to be change in that case. *)
 Definition signExtend{sz: nat}(l: nat)(n: word sz): word sz :=
   if testBit n (l-1) then (n ^- (setBit sz l)) else n.
 
@@ -372,16 +376,13 @@ End Decode.
 
 
 Definition test_instruction: word 32 :=
-  combine opcode_LUI (combine (natToWord 5 9) (natToWord 20 (33 + 128))).
-
-Eval cbv in test_instruction.
+  combine opcode_LUI (combine (natToWord 5 9) (natToWord 20 (35 + 128 + 2048))).
 
 Require Import riscv.RiscvBitWidths32.
 
 Definition test_result: Instruction := decode test_instruction.
 
-Goal test_result = Lui (zext (natToWord 5 9) 27) (extz (natToWord 20 (33 + 128)) 12).
+Goal test_result = Lui (zext (natToWord 5 9) 27) (extz (natToWord 20 (35 + 128 + 2048)) 12).
   cbv.
-  Fail reflexivity.
-Abort.
-
+  reflexivity.
+Qed.
