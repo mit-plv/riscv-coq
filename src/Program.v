@@ -1,3 +1,4 @@
+Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
 Require Import riscv.RiscvBitWidths.
 Require Import riscv.NameWithEq.
@@ -14,13 +15,12 @@ Section Riscv.
   Class RiscvState(M: Type -> Type) := mkRiscvState {
     getRegister: Register -> M (word wXLEN);
     setRegister: Register -> (word wXLEN) -> M unit;
-    loadInst: (word wXLEN) -> M Instruction; (* decode already included *)
-    (* not yet:
+
     loadWord: (word wXLEN) -> M (word wXLEN);
     storeWord: (word wXLEN) -> (word wXLEN) -> M unit;
-    *)
-    getPC: M (word wXLEN);
-    setPC: word wXLEN -> M unit;
+
+    getPC: M Z;
+    setPC: Z -> M unit;
   }.
 
 End Riscv.
