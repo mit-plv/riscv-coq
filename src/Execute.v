@@ -56,6 +56,42 @@ Section Riscv.
     | Zneg p => (Zpower.two_power_nat wXLEN - Zpos p)
     end.
 
+  Definition fromByte(w: word 8): word wXLEN.
+    refine (nat_cast _ _ (sext w (wXLEN - 8))). abstract bitwidth_omega.
+  Defined.
+
+  Definition fromHalf(w: word 16): word wXLEN.
+    refine (nat_cast _ _ (sext w (wXLEN - 16))). abstract bitwidth_omega.
+  Defined.
+
+  Definition fromWord(w: word 32): word wXLEN.
+    refine (nat_cast _ _ (sext w (wXLEN - 32))). abstract bitwidth_omega.
+  Defined.
+
+  Definition fromByteU(w: word 8): word wXLEN.
+    refine (nat_cast _ _ (zext w (wXLEN - 8))). abstract bitwidth_omega.
+  Defined.
+
+  Definition fromHalfU(w: word 16): word wXLEN.
+    refine (nat_cast _ _ (zext w (wXLEN - 16))). abstract bitwidth_omega.
+  Defined.
+
+  Definition fromWordU(w: word 32): word wXLEN.
+    refine (nat_cast _ _ (zext w (wXLEN - 32))). abstract bitwidth_omega.
+  Defined.
+
+  Definition toByte(w: word wXLEN): word 8.
+    refine (split_lower (wXLEN - 8) 8 (nat_cast _ _ w)). abstract bitwidth_omega.
+  Defined.
+
+  Definition toHalf(w: word wXLEN): word 16.
+    refine (split_lower (wXLEN - 16) 16 (nat_cast _ _ w)). abstract bitwidth_omega.
+  Defined.
+
+  Definition toWord(w: word wXLEN): word 32.
+    refine (split_lower (wXLEN - 32) 32 (nat_cast _ _ w)). abstract bitwidth_omega.
+  Defined.
+
   Axiom wneq: forall {sz:nat}, word sz -> word sz -> bool .
   Axiom raiseException: forall {M: Type -> Type}, word wXLEN -> word wXLEN -> M unit.
 
@@ -141,53 +177,53 @@ Section Riscv.
                then ( ( raiseException $0 ) $0 )
                else ( setPC addr ))
          else (Return tt))
-    (* | Lb rd rs1 oimm12 => *)
-    (* a <- ( getRegister rs1 ); *)
-    (* x <- ( loadByte (a + (  oimm12 )) ); *)
-    (* ( ( setRegister rd ) x ) *)
-    (* | Lh rd rs1 oimm12 => *)
-    (* a <- ( getRegister rs1 ); *)
-    (* let addr := (a + (  oimm12 )) in *)
-    (* (if (wneq ( ( wmod addr ) $2 ) $0) *)
-    (*  then ( ( raiseException $0 ) $4 ) *)
-    (*  else x <- ( loadHalf addr ); *)
-    (* ( ( setRegister rd ) x )) *)
-    (* | Lw rd rs1 oimm12 => *)
-    (* a <- ( getRegister rs1 ); *)
-    (* let addr := (a + (  oimm12 )) in *)
-    (* (if (wneq ( ( wmod addr ) $4 ) $0) *)
-    (*  then ( ( raiseException $0 ) $4 ) *)
-    (*  else x <- ( loadWord addr ); *)
-    (* ( ( setRegister rd ) x )) *)
-    (* | Lbu rd rs1 oimm12 => *)
-    (* a <- ( getRegister rs1 ); *)
-    (* x <- ( loadByte (a + (  oimm12 )) ); *)
-    (* ( ( setRegister rd ) (  x ) ) *)
-    (* | Lhu rd rs1 oimm12 => *)
-    (* a <- ( getRegister rs1 ); *)
-    (* let addr := (a + (  oimm12 )) in *)
-    (* (if (wneq ( ( wmod addr ) $2 ) $0) *)
-    (*  then ( ( raiseException $0 ) $4 ) *)
-    (*  else x <- ( loadHalf addr ); *)
-    (* ( ( setRegister rd ) (  x ) )) *)
-    (* | Sb rs1 rs2 simm12 => *)
-    (* a <- ( getRegister rs1 ); *)
-    (* x <- ( getRegister rs2 ); *)
-    (* ( ( storeByte (a + (  simm12 )) ) x ) *)
-    (* | Sh rs1 rs2 simm12 => *)
-    (* a <- ( getRegister rs1 ); *)
-    (* let addr := (a + (  simm12 )) in *)
-    (* (if (wneq ( ( wmod addr ) $2 ) $0) *)
-    (*  then ( ( raiseException $0 ) $6 ) *)
-    (*  else x <- ( getRegister rs2 ); *)
-    (* ( ( storeHalf addr ) x )) *)
-    (* | Sw rs1 rs2 simm12 => *)
-    (* a <- ( getRegister rs1 ); *)
-    (* let addr := (a + (  simm12 )) in *)
-    (* (if (wneq ( ( wmod addr ) $4 ) $0) *)
-    (*  then ( ( raiseException $0 ) $6 ) *)
-    (*  else x <- ( getRegister rs2 ); *)
-    (* ( ( storeWord addr ) x )) *)
+     | Lb rd rs1 oimm12 => 
+     a <- ( getRegister rs1 ); 
+     x <- ( loadByte (toZ a + (  oimm12 )) ); 
+     ( ( setRegister rd ) (fromByte x) ) 
+     | Lh rd rs1 oimm12 => 
+     a <- ( getRegister rs1 ); 
+     let addr := (toZ a + (  oimm12 )) in 
+     (if dec (Z.modulo addr 2 <> 0)
+      then ( ( raiseException $0 ) $4 ) 
+      else x <- ( loadHalf addr ); 
+     ( ( setRegister rd ) (fromHalf x) )) 
+     | Lw rd rs1 oimm12 => 
+     a <- ( getRegister rs1 ); 
+     let addr := (toZ a + (  oimm12 )) in 
+     (if dec (Z.modulo addr 4 <> 0)
+      then ( ( raiseException $0 ) $4 ) 
+      else x <- ( loadWord addr ); 
+     ( ( setRegister rd ) (fromWord x) )) 
+     | Lbu rd rs1 oimm12 => 
+     a <- ( getRegister rs1 ); 
+     x <- ( loadByte (a + (  oimm12 )) ); 
+     ( ( setRegister rd ) (  x ) ) 
+     | Lhu rd rs1 oimm12 => 
+     a <- ( getRegister rs1 ); 
+     let addr := (a + (  oimm12 )) in 
+     (if dec (Z.modulo addr 2 <> 0)
+      then ( ( raiseException $0 ) $4 ) 
+      else x <- ( loadHalf addr ); 
+     ( ( setRegister rd ) (  x ) )) 
+     | Sb rs1 rs2 simm12 => 
+     a <- ( getRegister rs1 ); 
+     x <- ( getRegister rs2 ); 
+     ( ( storeByte (a + (  simm12 )) ) x ) 
+     | Sh rs1 rs2 simm12 => 
+     a <- ( getRegister rs1 ); 
+     let addr := (a + (  simm12 )) in 
+     (if (wneq ( ( wmod addr ) $2 ) $0) 
+      then ( ( raiseException $0 ) $6 ) 
+      else x <- ( getRegister rs2 ); 
+     ( ( storeHalf addr ) x )) 
+     | Sw rs1 rs2 simm12 => 
+     a <- ( getRegister rs1 ); 
+     let addr := (a + (  simm12 )) in 
+     (if (wneq ( ( wmod addr ) $4 ) $0) 
+      then ( ( raiseException $0 ) $6 ) 
+      else x <- ( getRegister rs2 ); 
+     ( ( storeWord addr ) x ))
     | Addi rd rs1 imm12 =>
       x <- ( getRegister rs1 );
         ( ( setRegister rd ) (fromZ (toZ x + (  imm12 )) ))
