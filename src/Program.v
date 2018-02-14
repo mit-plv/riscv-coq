@@ -28,6 +28,8 @@ Section Riscv.
 
     getPC: M Z;
     setPC: Z -> M unit;
+
+    step: M unit; (* updates PC *)
   }.
 
 (* With word-based addresses:

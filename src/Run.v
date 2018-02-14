@@ -21,8 +21,8 @@ Section Riscv.
   Definition run1{M: Type -> Type}{MM: Monad M}{RVS: RiscvState M}: M unit :=
     pc <- getPC;
     inst <- loadWord pc;
-    setPC (pc + 4)%Z;;
-    execute (decode inst).
+    execute (decode inst);;
+    step.
 
   Definition run{M: Type -> Type}{MM: Monad M}{RVS: RiscvState M}: nat -> M unit :=
     fun n => power_func (fun m => run1 ;; m) n (Return tt).
@@ -31,6 +31,7 @@ Section Riscv.
     machineMem: mem 32;
     registers: Register -> word wXLEN;
     pc: word wXLEN;
+    nextPC: word wXLEN;
     exceptionHandlerAddr: word wXLEN;
   }.
 
@@ -50,10 +51,10 @@ Section Riscv.
         else
           machine <- get;
           match machine with
-          | mkRiscvMachine imem regs pc eh =>
+          | mkRiscvMachine imem regs pc npc eh =>
               put (mkRiscvMachine imem 
                                   (fun reg2 => if dec (reg = reg2) then v else regs reg2)
-                                  pc eh)
+                                  pc npc eh)
           end;
 
       getPC := 
@@ -63,8 +64,8 @@ Section Riscv.
       setPC := fun (newPC: Z) =>
         machine <- get;
         match machine with
-        | mkRiscvMachine imem regs pc eh =>
-            put (mkRiscvMachine imem regs (ZToWord _ newPC) eh)
+        | mkRiscvMachine imem regs pc npc eh =>
+            put (mkRiscvMachine imem regs pc (ZToWord _ newPC) eh)
         end;
 
       loadByte := TODO;
@@ -84,6 +85,12 @@ Section Riscv.
       storeWord := TODO;
       storeDouble := TODO;
 
+      step :=
+        machine <- get;
+        match machine with
+        | mkRiscvMachine imem regs pc npc eh =>
+            put (mkRiscvMachine imem regs npc (npc ^+ $4) eh)
+        end;
   |}.
 
   Definition InfiniteJal := Jal Register0 (-4).
@@ -96,8 +103,8 @@ Section Riscv.
      is needed. *)
   Definition putProgram(prog: list (word 32))(m: RiscvMachine): RiscvMachine :=
     match m with
-    | mkRiscvMachine _ regs _ eh =>
-        mkRiscvMachine (list_to_mem _ prog) regs $0 eh
+    | mkRiscvMachine _ regs _ _ eh =>
+        mkRiscvMachine (list_to_mem _ prog) regs $0 $4 eh
     end.
 
 End Riscv.

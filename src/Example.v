@@ -5,6 +5,7 @@ Require Import riscv.RiscvBitWidths32.
 Require Import riscv.HexNotation.
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.Memory.
+Require Import riscv.RunTrace.
 
 Notation "'Ox' a" := (NToWord _ (hex a)) (at level 50).
 
@@ -21,12 +22,14 @@ Definition fib6_riscv: list (word 32) := [
   Ox"ff34c8e3"          (* blt s1,s3,101d0 <main+0x34> *)
 ].
 
+(*
 Notation x0 := (WO~0~0~0~0~0)%word.
 Notation s1 := (WO~0~1~0~0~1)%word.
 Notation s2 := (WO~1~0~0~1~0)%word.
 Notation s3 := (WO~1~0~0~1~1)%word.
 Notation s4 := (WO~1~0~1~0~0)%word.
 Notation s5 := (WO~1~0~1~0~1)%word.
+*)
 
 Goal False.
   set (l := map decode fib6_riscv).
@@ -34,23 +37,30 @@ Goal False.
   (* decoder seems to work :) *)
 Abort.
 
-Definition initialRiscvMachine(imem: list (word 32)): RiscvMachine := {|
+Definition initialRiscvMachine(imem: list (word 32)): TraceRiscvMachine := {|
   machineMem := list_to_mem _ imem;
   registers := fun (r: Register) => $0;
   pc := $0;
+  nextPC := $4;
   exceptionHandlerAddr := wneg $4;
+  executionTrace := nil;
 |}.
 
-Definition fib6_L_final(fuel: nat): RiscvMachine :=
+Definition fib6_L_final(fuel: nat): TraceRiscvMachine :=
   execState (run fuel) (initialRiscvMachine fib6_riscv).
 
 Definition fib6_L_res(fuel: nat): word wXLEN :=
-  (fib6_L_final fuel).(registers) s2.
+  (fib6_L_final fuel).(registers) (WO~1~0~0~1~0)%word.
+
+Definition fib6_L_trace(fuel: nat): list TraceEvent :=
+  (fib6_L_final fuel).(executionTrace).
 
 Transparent wlt_dec.
 
+Eval cbv in (fib6_L_trace 50).
+
 Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_L_res fuel = $13.
-  exists 200%nat.
+  exists 50%nat.
   cbv.
-  (* TODO should hold but doesn't *)
-Abort.
+  reflexivity.
+Qed.
