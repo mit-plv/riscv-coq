@@ -2,12 +2,10 @@ Require Import Coq.Lists.List.
 Import ListNotations.
 Require Import riscv.Riscv.
 Require Import riscv.RiscvBitWidths32.
-Require Import riscv.HexNotation.
+Require Import bbv.HexNotation.
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.Memory.
 Require Import riscv.RunTrace.
-
-Notation "'Ox' a" := (NToWord _ (hex a)) (at level 50).
 
 Definition fib6_riscv: list (word 32) := [
   Ox"00600993";         (* li s3,6 *)

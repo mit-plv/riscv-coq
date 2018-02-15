@@ -9,3 +9,4 @@ Require Export riscv.Program.
 Require Export riscv.Execute.
 Require Export riscv.PowerFunc.
 Require Export riscv.Run.
+Require Export riscv.PseudoInstructions.
