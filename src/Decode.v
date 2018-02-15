@@ -130,9 +130,6 @@ Inductive Instruction : Set :=
   |  Lhu(rd: Register)(rs1: Register)(oimm12: Z): Instruction
   |  Lwu(rd: Register)(rs1: Register)(oimm12: Z): Instruction
 
-  (* | Fence (pred : Z)(succ : Z): Instruction *)
-  | Fence_i:Instruction
-  
   | Addi (rd: Register)(rs1: Register)(imm12: Z) : Instruction
   | Slli (rd: Register)(rs1: Register)(shamt6: nat) : Instruction
   | Slti (rd: Register)(rs1: Register)(imm12: Z) : Instruction
@@ -145,10 +142,6 @@ Inductive Instruction : Set :=
 
   | Auipc (rd : Register)(oimm20: Z): Instruction
 
-  | Addiw (rd: Register)(rs1: Register)(imm12: Z) :  Instruction
-  | Slliw (rd: Register)(rs1: Register)(shamt5: nat) :  Instruction
-  | Srliw (rd: Register)(rs1: Register)(shamt5: nat) :  Instruction
-  | Sraiw (rd: Register)(rs1: Register)(shamt5: nat) :  Instruction
   | Sb (rs1: Register)(rs2: Register)(simm12: Z) :  Instruction
   | Sh (rs1: Register)(rs2: Register)(simm12: Z) :  Instruction
   | Sw (rs1: Register)(rs2: Register)(simm12: Z) :  Instruction
@@ -188,15 +181,14 @@ Inductive Instruction : Set :=
   | Sret : Instruction
   | Mret : Instruction
   | Wfi : Instruction
-  | Sfence_vm (rs1: Register)(rs2: Register): Instruction
 
   (* TODO what's the right type for csr12 and zimm? *)
-  | Csrrw(rd: Register)(rs1: Register)(csr12: word 32): Instruction
-  | Csrrs(rd: Register)(rs1: Register)(csr12: word 32): Instruction
-  | Csrrc(rd: Register)(rs1: Register)(csr12: word 32): Instruction
-  | Csrrwi(rd: Register)(zimm: word 32)(csr12: word 32): Instruction
-  | Csrrsi(rd: Register)(zimm: word 32)(csr12: word 32): Instruction
-  | Csrrci(rd: Register)(zimm: word 32)(csr12: word 32): Instruction
+  | Csrrw(rd: Register)(rs1: Register)(csr12: word 12): Instruction
+  | Csrrs(rd: Register)(rs1: Register)(csr12: word 12): Instruction
+  | Csrrc(rd: Register)(rs1: Register)(csr12: word 12): Instruction
+  | Csrrwi(rd: Register)(zimm: word 5)(csr12: word 12): Instruction
+  | Csrrsi(rd: Register)(zimm: word 5)(csr12: word 12): Instruction
+  | Csrrci(rd: Register)(zimm: word 5)(csr12: word 12): Instruction
 .
 
 
@@ -267,7 +259,7 @@ Definition decode (inst : word 32) : Instruction :=
                                 shift (bitSlice inst 12 20) 12) in
   let imm12 := signExtend 12 (bitSlice inst 20 32) in
   let oimm12 := signExtend 12 (bitSlice inst 20 32) in
-  let csr12 := bitSlice inst 20 32 in
+  let csr12 := bitSlice' inst 20 32 in
   let simm12 := signExtend 12 (shift (bitSlice inst 25 32) 5 <|> bitSlice inst 7 12) in
   let sbimm12 := signExtend 13 (shift (bitSlice inst 31 32) 12 <|>
                                 shift (bitSlice inst 25 31) 5 <|>
@@ -275,14 +267,12 @@ Definition decode (inst : word 32) : Instruction :=
                                 shift (bitSlice inst 7 8) 11) in
   let shamt5 := wordToNat (bitSlice inst 20 25) in
   let shamt6 := wordToNat (bitSlice inst 20 26) in
-  let zimm := bitSlice inst 15 20 in
+  let zimm := bitSlice' inst 15 20 in
            if dec(opcode = opcode_LOAD /\ funct3 = funct3_LB) then  Lb  rd rs1 oimm12
       else if dec(opcode = opcode_LOAD /\ funct3 = funct3_LH) then  Lh  rd rs1 oimm12
       else if dec(opcode = opcode_LOAD /\ funct3 = funct3_LW) then  Lw  rd rs1 oimm12
       else if dec(opcode = opcode_LOAD /\ funct3 = funct3_LBU) then  Lbu rd rs1 oimm12
       else if dec(opcode = opcode_LOAD /\ funct3 = funct3_LHU) then  Lhu rd rs1 oimm12
-      (* else if dec(opcode = opcode_MISC_MEM /\ rd = $0 /\ funct3 = funct3_FENCE /\ rs1 = $0 /\ msb4 inst = 0) then  Fence pred succ *)
-      else if dec(opcode = opcode_MISC_MEM /\ rd = $0 /\ funct3 = funct3_FENCE_I /\ rs1 = $0 /\ imm12 = 0%Z) then  Fence_i
       else if dec(opcode = opcode_OP_IMM /\ funct3 = funct3_ADDI) then  Addi  rd rs1 imm12
       else if dec(opcode = opcode_OP_IMM /\ funct3 = funct3_SLLI /\ funct7 = funct7_SLLI)  then  Slli  rd rs1 shamt5
       else if dec(opcode = opcode_OP_IMM /\ funct3 = funct3_SLTI) then  Slti  rd rs1 imm12
@@ -329,7 +319,6 @@ Definition decode (inst : word 32) : Instruction :=
       else if dec(opcode = opcode_SYSTEM /\ rd = $0 /\ funct3 = funct3_PRIV /\ rs1 = $0 /\ funct12 = funct12_SRET) then  Sret
       else if dec(opcode = opcode_SYSTEM /\ rd = $0 /\ funct3 = funct3_PRIV /\ rs1 = $0 /\ funct12 = funct12_MRET) then  Mret
       else if dec(opcode = opcode_SYSTEM /\ rd = $0 /\ funct3 = funct3_PRIV /\ rs1 = $0 /\ funct12 = funct12_WFI) then  Wfi
-      else if dec(opcode = opcode_SYSTEM /\ rd = $0 /\ funct3 = funct3_PRIV /\ funct7 = funct7_SFENCE_VM) then  Sfence_vm rs1 rs2
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRW) then  Csrrw   rd rs1 csr12
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRS) then  Csrrw   rd rs1 csr12
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRC) then  Csrrw   rd rs1 csr12
