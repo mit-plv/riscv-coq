@@ -46,10 +46,30 @@ Section Riscv.
   Notation Reg := (@name Name).
   Existing Instance eq_name_dec.
 
-  Definition toZ: word wXLEN -> Z := @wordToZ wXLEN.
+  (* interpret this word as a signed number *)
+  Definition signed: word wXLEN -> Z := @wordToZ wXLEN.
 
+  (* interpret this word as an unsigned number *)
+  Definition unsigned(w: word wXLEN): Z := Z.of_N (wordToN w).
+
+  (* can be used for obtaining both signed and unsigned numbers *)
   Definition fromZ: Z -> word wXLEN := ZToWord wXLEN.
 
+  (* Design note: PC is an unsigned number, but we often need to add a signed
+     number to it, so we prefer using Z for everything (rather than also using N),
+     but need a way to say that PC is to be interpreted as a signed number. *)
+
+(*
+  Definition toN: word wXLEN -> N := @wordToN wXLEN.
+
+  Definition fromN: N -> word wXLEN := NToWord wXLEN.
+
+  Definition treat_signed_as_unsigned(a: Z): N := match a with
+    | Z0 => N0
+    | Zpos p => Npos p
+    | Zneg p => (Npow2 wXLEN - Npos p)%N
+    end.
+*)
   Definition treat_signed_as_unsigned(a: Z): Z := match a with
     | Z0 => Z0
     | Zpos p => Zpos p
@@ -101,107 +121,108 @@ Section Riscv.
       ( ( setRegister rd ) (fromZ imm20) )
     | Auipc rd oimm20 =>
       pc <- getPC;
-        ( ( setRegister rd ) (fromZ (oimm20 + pc)) )
+        (* note: don't go directly from pc to Z, because pc cannot be negative *)
+        ( ( setRegister rd ) (fromZ (oimm20 + unsigned pc)) )
     | Jal rd jimm20 =>
       pc <- getPC;
-        let newPC := (pc + (  jimm20 )) in
+        let newPC := (unsigned pc + (  jimm20 )) in
         (if dec (Z.modulo newPC 4 <> 0)
          then ( ( raiseException $0 ) $0 )
-         else ( ( setRegister rd ) (fromZ (pc + 4)));;
-                                                    ( setPC newPC ))
+         else ( ( setRegister rd ) (fromZ (unsigned pc + 4)));;
+                                                    ( setPC (fromZ newPC) ))
     | Jalr rd rs1 oimm12 =>
       x <- ( getRegister rs1 );
         pc <- getPC;
-        let newPC := (toZ x + (  oimm12 )) in
+        let newPC := (unsigned x + (  oimm12 )) in
         (if dec (Z.modulo newPC 4 <> 0)
          then ( ( raiseException $0 ) $0 )
-         else ( ( setRegister rd ) (fromZ (pc + 4)));;
-                                                    ( setPC newPC ))
+         else ( ( setRegister rd ) (fromZ (unsigned pc + 4)));;
+                                                    ( setPC (fromZ newPC) ))
     | Beq rs1 rs2 sbimm12 =>
       x <- ( getRegister rs1 );
         y <- ( getRegister rs2 );
         pc <- getPC;
         (if (weq x y)
-         then let newPC := (pc + (  sbimm12 )) in
+         then let newPC := (unsigned pc + (  sbimm12 )) in
               (if dec (Z.modulo newPC 4 <> 0)
                then ( ( raiseException $0 ) $0 )
-               else ( setPC newPC ))
+               else ( setPC (fromZ newPC) ))
          else (Return tt))
     | Bne rs1 rs2 sbimm12 =>
       x <- ( getRegister rs1 );
         y <- ( getRegister rs2 );
         pc <- getPC;
         (if dec (x <> y)
-         then let addr := (pc + (  sbimm12 )) in
+         then let addr := (unsigned pc + (  sbimm12 )) in
               (if dec (Z.modulo addr 4 <> 0)
                then ( ( raiseException $0 ) $0 )
-               else ( setPC addr ))
+               else ( setPC (fromZ addr) ))
          else (Return tt))
     | Blt rs1 rs2 sbimm12 =>
       x <- ( getRegister rs1 );
         y <- ( getRegister rs2 );
         pc <- getPC;
         (if (wslt_dec x y)
-         then let addr := (pc + (  sbimm12 )) in
+         then let addr := (unsigned pc + (  sbimm12 )) in
               (if dec (Z.modulo addr 4 <> 0)
                then ( ( raiseException $0 ) $0 )
-               else ( setPC addr ))
+               else ( setPC (fromZ addr) ))
          else (Return tt))
     | Bge rs1 rs2 sbimm12 =>
       x <- ( getRegister rs1 );
         y <- ( getRegister rs2 );
         pc <- getPC;
         (if (wsge_dec x y)
-         then let addr := (pc + (  sbimm12 )) in
+         then let addr := (unsigned pc + (  sbimm12 )) in
               (if dec (Z.modulo addr 4 <> 0)
                then ( ( raiseException $0 ) $0 )
-               else ( setPC addr ))
+               else ( setPC (fromZ addr) ))
          else (Return tt))
     | Bltu rs1 rs2 sbimm12 =>
       x <- ( getRegister rs1 );
         y <- ( getRegister rs2 );
         pc <- getPC;
         (if ( ( wlt_dec x ) y )
-         then let addr := (pc + (  sbimm12 )) in
+         then let addr := (unsigned pc + (  sbimm12 )) in
               (if dec (Z.modulo addr 4 <> 0)
                then ( ( raiseException $0 ) $0 )
-               else ( setPC addr ))
+               else ( setPC (fromZ addr) ))
          else (Return tt))
     | Bgeu rs1 rs2 sbimm12 =>
       x <- ( getRegister rs1 );
         y <- ( getRegister rs2 );
         pc <- getPC;
         (if ( Sumbool.sumbool_not ( ( wlt_dec x ) y ) )
-         then let addr := (pc + (  sbimm12 )) in
+         then let addr := (unsigned pc + (  sbimm12 )) in
               (if dec (Z.modulo addr 4 <> 0)
                then ( ( raiseException $0 ) $0 )
-               else ( setPC addr ))
+               else ( setPC (fromZ addr) ))
          else (Return tt))
      | Lb rd rs1 oimm12 => 
      a <- ( getRegister rs1 ); 
-     x <- ( loadByte (toZ a + (  oimm12 )) ); 
+     x <- ( loadByte (unsigned a + (  oimm12 )) ); 
      ( ( setRegister rd ) (fromByte x) ) 
      | Lh rd rs1 oimm12 => 
      a <- ( getRegister rs1 ); 
-     let addr := (toZ a + (  oimm12 )) in 
+     let addr := (unsigned a + (  oimm12 )) in 
      (if dec (Z.modulo addr 2 <> 0)
       then ( ( raiseException $0 ) $4 ) 
       else x <- ( loadHalf addr ); 
      ( ( setRegister rd ) (fromHalf x) )) 
      | Lw rd rs1 oimm12 => 
      a <- ( getRegister rs1 ); 
-     let addr := (toZ a + (  oimm12 )) in 
+     let addr := (unsigned a + (  oimm12 )) in 
      (if dec (Z.modulo addr 4 <> 0)
       then ( ( raiseException $0 ) $4 ) 
       else x <- ( loadWord addr ); 
      ( ( setRegister rd ) (fromWord x) )) 
      | Lbu rd rs1 oimm12 => 
      a <- ( getRegister rs1 ); 
-     x <- ( loadByte (toZ a + (  oimm12 )) ); 
+     x <- ( loadByte (unsigned a + (  oimm12 )) ); 
      ( ( setRegister rd ) (fromByteU x ) ) 
      | Lhu rd rs1 oimm12 => 
      a <- ( getRegister rs1 ); 
-     let addr := (toZ a + (  oimm12 )) in 
+     let addr := (unsigned a + (  oimm12 )) in 
      (if dec (Z.modulo addr 2 <> 0)
       then ( ( raiseException $0 ) $4 ) 
       else x <- ( loadHalf addr ); 
@@ -209,43 +230,45 @@ Section Riscv.
      | Sb rs1 rs2 simm12 => 
      a <- ( getRegister rs1 ); 
      x <- ( getRegister rs2 ); 
-     ( ( storeByte (toZ a + (  simm12 )) ) (toByte x) ) 
+     ( ( storeByte (unsigned a + (  simm12 )) ) (toByte x) ) 
      | Sh rs1 rs2 simm12 => 
      a <- ( getRegister rs1 ); 
-     let addr := (toZ a + (  simm12 )) in 
+     let addr := (unsigned a + (  simm12 )) in 
      (if dec (Z.modulo addr 2 <> 0)
       then ( ( raiseException $0 ) $6 ) 
       else x <- ( getRegister rs2 ); 
      ( ( storeHalf addr ) (toHalf x) )) 
      | Sw rs1 rs2 simm12 => 
      a <- ( getRegister rs1 ); 
-     let addr := (toZ a + (  simm12 )) in 
+     let addr := (unsigned a + (  simm12 )) in 
      (if dec (Z.modulo addr 4 <> 0)
       then ( ( raiseException $0 ) $6 ) 
       else x <- ( getRegister rs2 ); 
      ( ( storeWord addr ) (toWord x) ))
     | Addi rd rs1 imm12 =>
       x <- ( getRegister rs1 );
-        ( ( setRegister rd ) (fromZ (toZ x + (  imm12 )) ))
+        ( ( setRegister rd ) (fromZ (signed x + (  imm12 )) ))
+         (* signed or unsigned doesn't matter here, meh *)
     | Slti rd rs1 imm12 =>
       x <- ( getRegister rs1 );
-        ( ( setRegister rd ) (if dec (toZ x < imm12)
+        ( ( setRegister rd ) (if dec (signed x < imm12)
                               then $1
                               else $0) )
     | Sltiu rd rs1 imm12 =>
       x <- ( getRegister rs1 );
-        ( ( setRegister rd ) (if dec (toZ x < treat_signed_as_unsigned imm12)
+        ( ( setRegister rd ) (if dec (unsigned x < treat_signed_as_unsigned imm12)%N
                               then $1
                               else $0) )
     | Xori rd rs1 imm12 =>
       x <- ( getRegister rs1 );
-        ( ( setRegister rd ) (fromZ (Z.lxor (toZ x) imm12)))
+        (* signed should have the same result after casting back to word *)
+        ( ( setRegister rd ) (fromZ (Z.lxor (unsigned x) imm12))) (* TODO that's awkward *)
     | Ori rd rs1 imm12 =>
       x <- ( getRegister rs1 );
-        ( ( setRegister rd ) (fromZ (Z.lor (toZ x) imm12)))
+        ( ( setRegister rd ) (fromZ (Z.lor (unsigned x) imm12)))
     | Andi rd rs1 imm12 =>
       x <- ( getRegister rs1 );
-        ( ( setRegister rd ) (fromZ (Z.land (toZ x) imm12)))
+        ( ( setRegister rd ) (fromZ (Z.land (unsigned x) imm12)))
     | Slli rd rs1 shamt6 =>
       x <- ( getRegister rs1 );
         ( ( setRegister rd ) ( ( wlshift x ) shamt6 ) )
@@ -258,11 +281,11 @@ Section Riscv.
     | Add rd rs1 rs2 =>
       x <- ( getRegister rs1 );
         y <- ( getRegister rs2 );
-        ( ( setRegister rd ) (fromZ (toZ x + toZ y)) )
+        ( ( setRegister rd ) (fromZ (unsigned x + unsigned y)) ) (* TODO or directly on word? *)
     | Sub rd rs1 rs2 =>
       x <- ( getRegister rs1 );
         y <- ( getRegister rs2 );
-        ( ( setRegister rd ) (fromZ (toZ x - toZ y)) )
+        ( ( setRegister rd ) (fromZ (unsigned x - unsigned y)) )
     | Sll rd rs1 rs2 =>
       x <- ( getRegister rs1 );
         y <- ( getRegister rs2 );

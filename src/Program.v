@@ -26,8 +26,8 @@ Section Riscv.
     storeWord: Z -> (word 32) -> M unit;
     storeDouble: Z -> (word 64) -> M unit;
 
-    getPC: M Z;
-    setPC: Z -> M unit;
+    getPC: M (word wXLEN);
+    setPC: (word wXLEN) -> M unit;
 
     step: M unit; (* updates PC *)
   }.
