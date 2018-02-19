@@ -113,6 +113,8 @@ Definition funct3_CSRRWI := WO~1~0~1.
 Definition funct3_CSRRSI := WO~1~1~0.
 Definition funct3_CSRRCI := WO~1~1~1.
 
+Notation "a <|> b" := (wor a b) (at level 50, left associativity).
+
 Section Decode.
 
 Context {B: RiscvBitWidths}.
@@ -235,8 +237,6 @@ Definition signExtend{sz: nat}(l: nat)(n: word sz): if dec (l <= sz)%nat then Z 
   refine (wordToZ (split_lower (sz - l) l (nat_cast _ _ n))).
   abstract omega.
 Defined.
-
-Notation "a <|> b" := (wor a b) (at level 50, left associativity).
 
 Definition decode (inst : word 32) : Instruction :=
   let opcode :=  bitSlice' inst 0 7 in
