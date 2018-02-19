@@ -49,6 +49,8 @@ Proof.
   | |- (let x := ?a in ?b) = ?c => cut (let x := a in (b = c));
        [apply (pull_let a (fun x => b) c) | intro]
   end.
+  Admitted.
+  (*
   evar (oc: word 7).
   replace opcode with oc by (subst oc opcode; apply get_opcode_I).
   subst oc opcode.
@@ -67,10 +69,9 @@ Proof.
   + admit.
 -
 Admitted.
+*)
 
-
-(*
-Lemma decode_encode: forall (inst: Instruction) (w: word 32),
+Lemma decode_encode': forall (inst: Instruction) (w: word 32),
   encode inst = Some w ->
   decode w = inst.
 Proof.
@@ -84,11 +85,15 @@ Proof.
   destruct inst.
   - discriminate H.
   - simpl in H; autounfold with unfold_encode_helpers in H.
-  lazymatch goal with
-  | H: context [ @dec ?P ?D ] |- _ => destruct (@dec P D); [|discriminate]
-  | _ => idtac
-  end;
-  apply Some_inj in H.
+    simpl dec in opcode.
+    repeat match goal with
+    | v: if _ then _ else _ |- _ => progress compute in (type of v)
+    end.
+      evar (oc: word 7).
+  replace opcode with oc by (subst oc opcode; apply get_opcode_I).
+  subst oc opcode.
+match goal with
+| |- (if ?e then _ else _) = _ => destruct e
+end.
 
-Abstracting over term s leads to blah error
-*)
+Abort.
