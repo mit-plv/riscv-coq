@@ -205,33 +205,38 @@ Proof.
   repeat match goal with
     | v: if _ then _ else _ |- _ => progress compute in (type of v)
   end.
-(* might work but requires more than 6GB of memory
-  destruct inst;
-  unfold encode in H;
-  first
-  [ apply invert_encode_R in H
-  | apply invert_encode_I in H
-  | apply invert_encode_I_shift in H
-  | apply invert_encode_I_system in H
-  | apply invert_encode_S in H
-  | apply invert_encode_SB in H
-  | apply invert_encode_U in H
-  | apply invert_encode_UJ in H
-  | apply invert_encode_InvalidInstruction in H; contradiction H ];
-  deep_destruct_and H;
-  repeat match goal with
-  | v: _ |- _ => subst v
-  end;
-  repeat match goal with
-  | E: _ = _ |- _ => rewrite <- E
-  end;
-  repeat (
-    (apply simpl_dec_and_neq; [
-     match goal with
-     | |- ?x <> ?y => unfold x, y; intro C; discriminate C
-     end | ])
-    || apply simpl_dec_and_eq
-    || (apply simpl_dec_and_eq_final; reflexivity)).
-*)
-Admitted.
-
+  destruct inst; time (
+  tryif (solve [
+    unfold encode in H;
+    first
+    [ apply invert_encode_R in H
+    | apply invert_encode_I in H
+    | apply invert_encode_I_shift in H
+    | apply invert_encode_I_system in H
+    | apply invert_encode_S in H
+    | apply invert_encode_SB in H
+    | apply invert_encode_U in H
+    | apply invert_encode_UJ in H
+    | apply invert_encode_InvalidInstruction in H; contradiction H ];
+    deep_destruct_and H;
+    repeat match goal with
+    | v: _ |- _ => subst v
+    end;
+    repeat match goal with
+    | E: _ = _ |- _ => rewrite <- E
+    end;
+    repeat (
+      (apply simpl_dec_and_neq; [
+       match goal with
+       | |- ?x <> ?y => unfold x, y; intro C; discriminate C
+       end | ])
+      || apply simpl_dec_and_eq
+      || (apply simpl_dec_and_eq_final; reflexivity))
+  ]) then (
+    idtac "subgoal solved"
+  ) else (
+    match goal with
+    | |- ?G => idtac "subgoal not solved:" G
+    end
+  )).
+Qed.
