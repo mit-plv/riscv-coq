@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
 Require Import riscv.RiscvBitWidths.
-Require Import riscv.NameWithEq.
+Require Import riscv.util.NameWithEq.
 Require Import riscv.Decode.
 
 Section Riscv.

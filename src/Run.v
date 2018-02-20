@@ -1,14 +1,14 @@
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.WordScope.
 Require Import bbv.DepEqNat.
-Require Import riscv.NameWithEq.
+Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
-Require Import riscv.Monad.
-Require Import riscv.StateMonad.
+Require Import riscv.util.Monad.
+Require Import riscv.util.StateMonad.
 Require Import riscv.Decode.
 Require Import riscv.Program.
 Require Import riscv.Execute.
-Require Import riscv.PowerFunc.
+Require Import riscv.util.PowerFunc.
 Require Import riscv.Memory.
 Require Import Coq.Lists.List.
 

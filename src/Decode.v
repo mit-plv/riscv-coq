@@ -3,7 +3,7 @@
 Require Import Coq.Bool.Sumbool.
 Require Import Coq.omega.Omega.
 Require Import bbv.WordScope.
-Require Import riscv.Decidable.
+Require Import riscv.util.Decidable.
 Require Import bbv.DepEqNat.
 Require Import riscv.RiscvBitWidths.
 

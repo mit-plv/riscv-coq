@@ -1,4 +1,4 @@
-Require Export riscv.Decidable.
+Require Export riscv.util.Decidable.
 
 Class NameWithEq := mkNameWithEq {
   name: Set;

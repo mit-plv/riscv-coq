@@ -1,8 +1,8 @@
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
-Require Import riscv.Decidable.
+Require Import riscv.util.Decidable.
 Require Import riscv.Decode.
-Require Import riscv.Encode.
+Require Import riscv.encode.Encode.
 
 Local Open Scope Z_scope.
 

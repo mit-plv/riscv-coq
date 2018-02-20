@@ -1,5 +1,5 @@
 Require Import Coq.Logic.FunctionalExtensionality.
-Require Export riscv.Monad.
+Require Export riscv.util.Monad.
 
 
 Definition State(S A: Type) := S -> (A * S).

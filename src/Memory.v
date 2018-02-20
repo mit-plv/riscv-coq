@@ -1,6 +1,6 @@
 Require Import bbv.Word.
 Require Import Coq.ZArith.BinInt.
-Require Import riscv.Decidable.
+Require Import riscv.util.Decidable.
 Require Import Coq.Lists.List.
 
 (* memory addresses are represented using Z because word does not restrict them enough,

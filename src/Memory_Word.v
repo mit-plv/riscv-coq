@@ -1,5 +1,5 @@
 Require Import bbv.Word.
-Require Import riscv.Decidable.
+Require Import riscv.util.Decidable.
 Require Import Coq.Lists.List.
 
 Section Memory.

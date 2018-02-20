@@ -2,9 +2,9 @@ Require Import Coq.ZArith.BinInt.
 Require Import Coq.Bool.Sumbool.
 Require Import bbv.WordScope.
 Require Import bbv.DepEqNat.
-Require Import riscv.NameWithEq.
+Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
-Require Import riscv.Monad.
+Require Import riscv.util.Monad.
 Require Import riscv.Decode.
 Require Import riscv.Program.
 

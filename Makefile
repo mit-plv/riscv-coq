@@ -1,7 +1,5 @@
 
-default_target: all
-
-DIRS = src
+default_target: spec
 
 COQFLAGS= -Q ../bbv bbv  -Q ./src riscv  
 
@@ -15,10 +13,17 @@ COQDOC=$(COQBIN)coqdoc
 %.vo: %.v
 	$(COQC) $(COQFLAGS) $*.v 
 
-all: $(patsubst %.v,%.vo,$(wildcard src/*.v))
+spec: $(patsubst %.v,%.vo,$(wildcard src/*.v))
+
+encode: $(patsubst %.v,%.vo,$(wildcard src/encode/*.v))
+
+# beware: the "encode(decode inst) = inst" proof takes about half an hour
+proofs: $(patsubst %.v,%.vo,$(wildcard src/proofs/*.v))
+
+all: spec encode proofs
 
 .depend depend:
-	$(COQDEP) >.depend `find $(DIRS) -name "*.v"`
+	$(COQDEP) >.depend `find src -name "*.v"`
 
 clean:
 	find . -type f \( -name '*.glob' -o -name '*.vo' -o -name '*.aux' \) -delete
