@@ -168,7 +168,7 @@ Proof.
   - unfold dec_and. unfold dec in E. rewrite E. assumption.
 Qed.
 
-Lemma simpl_dec_and_eq_final: forall (A: Type) (a: A) (T: Type) (e1 e2 e3: T) da,
+Lemma simpl_dec_final_eq: forall (A: Type) (a: A) (T: Type) (e1 e2 e3: T) da,
   e1 = e3 ->
   (if @dec (a = a) da then e1 else e2) = e3.
 Proof.
@@ -183,6 +183,14 @@ Proof.
   intros. destruct da; [contradiction|]. destruct (@dec P dP) eqn: E.
   - unfold dec_and. unfold dec in E. rewrite E. assumption.
   - unfold dec_and. unfold dec in E. rewrite E. assumption.
+Qed.
+
+Lemma simpl_dec_final_neq: forall (A: Type) (a1 a2: A) (T: Type) (e1 e2 e3: T) da,
+  a1 <> a2 ->
+  e2 = e3 ->
+  (if @dec (a1 = a2) da then e1 else e2) = e3.
+Proof.
+  intros. unfold dec. destruct da; [contradiction|]. assumption.
 Qed.
 
 Ltac deep_destruct_and H :=
@@ -205,7 +213,8 @@ Proof.
   repeat match goal with
     | v: if _ then _ else _ |- _ => progress compute in (type of v)
   end.
-  destruct inst; time (
+  destruct inst;
+  let force_evaluation_order_dummy := constr:(0) in time (
   tryif (solve [
     unfold encode in H;
     first
@@ -226,12 +235,16 @@ Proof.
     | E: _ = _ |- _ => rewrite <- E
     end;
     repeat (
-      (apply simpl_dec_and_neq; [
-       match goal with
-       | |- ?x <> ?y => unfold x, y; intro C; discriminate C
-       end | ])
-      || apply simpl_dec_and_eq
-      || (apply simpl_dec_and_eq_final; reflexivity))
+       (apply simpl_dec_and_neq; [
+        match goal with
+        | |- ?x <> ?y => unfold x, y; intro C; discriminate C
+        end | ])
+    || (apply simpl_dec_final_neq; [
+        match goal with
+        | |- ?x <> ?y => unfold x, y; intro C; discriminate C
+        end | ])
+    || (apply simpl_dec_and_eq)
+    || (apply simpl_dec_final_eq; reflexivity))
   ]) then (
     idtac "subgoal solved"
   ) else (
