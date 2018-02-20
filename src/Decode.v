@@ -283,9 +283,16 @@ Definition decode (inst : word 32) : Instruction :=
       else if dec(opcode = opcode_OP_IMM /\ funct3 = funct3_SRLI /\ funct7 = funct7_SRLI)  then  Srli  rd rs1 shamt5
       else if dec(opcode = opcode_OP_IMM /\ funct3 = funct3_SRAI /\ funct7 = funct7_SRAI)  then  Srai  rd rs1 shamt5
       else if dec(opcode = opcode_AUIPC) then  Auipc rd oimm20
+
       else if dec(opcode = opcode_STORE /\ funct3 = funct3_SB) then  Sb rs1 rs2 simm12
       else if dec(opcode = opcode_STORE /\ funct3 = funct3_SH) then  Sh rs1 rs2 simm12
       else if dec(opcode = opcode_STORE /\ funct3 = funct3_SW) then  Sw rs1 rs2 simm12
+
+      (* TODO the following 3 are 64bit only, and should include a check whether wXLEN=64 *)
+      else if dec(opcode = opcode_LOAD  /\ funct3 = funct3_LD ) then Ld  rd  rs1 oimm12
+      else if dec(opcode = opcode_LOAD  /\ funct3 = funct3_LWU) then Lwu rd  rs1 oimm12
+      else if dec(opcode = opcode_STORE /\ funct3 = funct3_SD ) then Sd  rs1 rs2 simm12
+
       else if dec(opcode = opcode_OP /\ funct3 = funct3_ADD /\ funct7 = funct7_ADD) then  Add  rd rs1 rs2
       else if dec(opcode = opcode_OP /\ funct3 = funct3_SUB /\ funct7 = funct7_SUB) then  Sub  rd rs1 rs2
       else if dec(opcode = opcode_OP /\ funct3 = funct3_SLL /\ funct7 = funct7_SLL) then  Sll  rd rs1 rs2
@@ -320,11 +327,11 @@ Definition decode (inst : word 32) : Instruction :=
       else if dec(opcode = opcode_SYSTEM /\ rd = $0 /\ funct3 = funct3_PRIV /\ rs1 = $0 /\ funct12 = funct12_MRET) then  Mret
       else if dec(opcode = opcode_SYSTEM /\ rd = $0 /\ funct3 = funct3_PRIV /\ rs1 = $0 /\ funct12 = funct12_WFI) then  Wfi
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRW) then  Csrrw   rd rs1 csr12
-      else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRS) then  Csrrw   rd rs1 csr12
-      else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRC) then  Csrrw   rd rs1 csr12
+      else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRS) then  Csrrs   rd rs1 csr12
+      else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRC) then  Csrrc   rd rs1 csr12
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRWI) then  Csrrwi  rd zimm csr12
-      else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRSI) then  Csrrwi  rd zimm csr12
-      else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRCI) then  Csrrwi  rd zimm csr12
+      else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRSI) then  Csrrsi  rd zimm csr12
+      else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRCI) then  Csrrci  rd zimm csr12
       else InvalidInstruction.
 
 End Decode.

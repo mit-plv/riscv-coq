@@ -66,7 +66,11 @@ Lemma invert_encode_SB(opcode: word 7)(rs1 rs2: word 5)(funct3: word 3)(sbimm12:
   opcode = bitSlice' inst 0 7 /\
   funct3 = bitSlice' inst 12 15 /\
   rs1 = bitSlice' inst 15 20 /\
-  rs2 = bitSlice' inst 20 25.
+  rs2 = bitSlice' inst 20 25 /\
+  sbimm12 = signExtend 13 (shift (bitSlice inst 31 32) 12 <|>
+                           shift (bitSlice inst 25 31) 5 <|>
+                           shift (bitSlice inst 8 12) 1  <|>
+                           shift (bitSlice inst 7 8) 11).
 Proof. Admitted.
 
 Lemma invert_encode_U(opcode: word 7)(rd: word 5)(imm20: Z)(inst: word 32):
@@ -185,6 +189,16 @@ Proof.
   - unfold dec_and. unfold dec in E. rewrite E. assumption.
 Qed.
 
+Lemma simpl_dec_and_neq_2: forall (A T: Type) (a1 a2: A) (P1 P2: Prop) (e1 e2 e3: T) da dP1 dP2,
+  a1 <> a2 ->
+  e2 = e3 ->
+  (if @dec_and P1 (a1 = a2 /\ P2) dP1 (@dec_and (a1 = a2) P2 da dP2) then e1 else e2) = e3.
+Proof.
+  intros. destruct da; [contradiction|]. destruct (@dec P1 dP1) eqn: E.
+  - unfold dec_and. unfold dec in E. rewrite E. destruct dP2 eqn: E2; assumption.
+  - unfold dec_and. unfold dec in E. rewrite E. destruct dP2 eqn: E2; assumption.
+Qed.
+
 Lemma simpl_dec_final_neq: forall (A: Type) (a1 a2: A) (T: Type) (e1 e2 e3: T) da,
   a1 <> a2 ->
   e2 = e3 ->
@@ -215,7 +229,7 @@ Proof.
   end.
   destruct inst;
   let force_evaluation_order_dummy := constr:(0) in time (
-  tryif (solve [
+  tryif (solve [ abstract (
     unfold encode in H;
     first
     [ apply invert_encode_R in H
@@ -239,17 +253,21 @@ Proof.
         match goal with
         | |- ?x <> ?y => unfold x, y; intro C; discriminate C
         end | ])
+    || (apply simpl_dec_and_neq_2; [
+        match goal with
+        | |- ?x <> ?y => unfold x, y; intro C; discriminate C
+        end | ])
     || (apply simpl_dec_final_neq; [
         match goal with
         | |- ?x <> ?y => unfold x, y; intro C; discriminate C
         end | ])
     || (apply simpl_dec_and_eq)
     || (apply simpl_dec_final_eq; reflexivity))
-  ]) then (
+  )]) then (
     idtac "subgoal solved"
   ) else (
     match goal with
-    | |- ?G => idtac "subgoal not solved:" G
+    | |- ?G => fail 100 "subgoal not solved:" G
     end
   )).
-Qed.
+Time Qed.
