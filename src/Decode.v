@@ -5,6 +5,7 @@ Require Import Coq.omega.Omega.
 Require Import bbv.WordScope.
 Require Import riscv.util.Decidable.
 Require Import bbv.DepEqNat.
+Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
 
 Definition opcode_LOAD      := WO~0~0~0~0~0~1~1.
@@ -115,39 +116,40 @@ Definition funct3_CSRRCI := WO~1~1~1.
 
 Notation "a <|> b" := (wor a b) (at level 50, left associativity).
 
-Section Decode.
+Section Instructions.
 
-Context {B: RiscvBitWidths}.
+Context {Name: NameWithEq}. (* register name *)
+Notation Register := (@name Name).
 
-Definition Register := word 5.
+Context {Imm: Set}.
 
 Inductive Instruction : Set :=
   | InvalidInstruction : Instruction
 
-  |  Lb(rd: Register)(rs1: Register)(oimm12: Z): Instruction
-  |  Lh(rd: Register)(rs1: Register)(oimm12: Z): Instruction
-  |  Lw(rd: Register)(rs1: Register)(oimm12: Z): Instruction
-  |  Ld(rd: Register)(rs1: Register)(oimm12: Z): Instruction
-  |  Lbu(rd: Register)(rs1: Register)(oimm12: Z): Instruction
-  |  Lhu(rd: Register)(rs1: Register)(oimm12: Z): Instruction
-  |  Lwu(rd: Register)(rs1: Register)(oimm12: Z): Instruction
+  |  Lb(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+  |  Lh(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+  |  Lw(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+  |  Ld(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+  |  Lbu(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+  |  Lhu(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+  |  Lwu(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
 
-  | Addi (rd: Register)(rs1: Register)(imm12: Z) : Instruction
-  | Slli (rd: Register)(rs1: Register)(shamt6: nat) : Instruction
-  | Slti (rd: Register)(rs1: Register)(imm12: Z) : Instruction
-  | Sltiu (rd: Register)(rs1: Register)(imm12: Z) : Instruction
-  | Xori (rd: Register)(rs1: Register)(imm12: Z) : Instruction
-  | Ori (rd: Register)(rs1: Register)(imm12: Z) : Instruction
-  | Andi (rd: Register)(rs1: Register)(imm12: Z) : Instruction
-  | Srli (rd: Register)(rs1: Register)(shamt6: nat) : Instruction
-  | Srai (rd: Register)(rs1: Register)(shamt6: nat) : Instruction
+  | Addi (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
+  | Slli (rd: Register)(rs1: Register)(shamt6: Imm) : Instruction
+  | Slti (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
+  | Sltiu (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
+  | Xori (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
+  | Ori (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
+  | Andi (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
+  | Srli (rd: Register)(rs1: Register)(shamt6: Imm) : Instruction
+  | Srai (rd: Register)(rs1: Register)(shamt6: Imm) : Instruction
 
-  | Auipc (rd : Register)(oimm20: Z): Instruction
+  | Auipc (rd : Register)(oimm20: Imm): Instruction
 
-  | Sb (rs1: Register)(rs2: Register)(simm12: Z) :  Instruction
-  | Sh (rs1: Register)(rs2: Register)(simm12: Z) :  Instruction
-  | Sw (rs1: Register)(rs2: Register)(simm12: Z) :  Instruction
-  | Sd (rs1: Register)(rs2: Register)(simm12: Z) :  Instruction
+  | Sb (rs1: Register)(rs2: Register)(simm12: Imm) :  Instruction
+  | Sh (rs1: Register)(rs2: Register)(simm12: Imm) :  Instruction
+  | Sw (rs1: Register)(rs2: Register)(simm12: Imm) :  Instruction
+  | Sd (rs1: Register)(rs2: Register)(simm12: Imm) :  Instruction
   | Add (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
   | Sub (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
   | Sll (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
@@ -167,15 +169,15 @@ Inductive Instruction : Set :=
   | Rem (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
   | Remu (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
 
-  | Lui(rd: Register)(imm20: Z): Instruction
-  | Beq(rs1: Register)(rs2: Register)(sbimm12: Z): Instruction
-  | Bne(rs1: Register)(rs2: Register)(sbimm12: Z): Instruction
-  | Blt(rs1: Register)(rs2: Register)(sbimm12: Z): Instruction
-  | Bge(rs1: Register)(rs2: Register)(sbimm12: Z): Instruction
-  | Bltu(rs1: Register)(rs2: Register)(sbimm12: Z): Instruction
-  | Bgeu(rs1: Register)(rs2: Register)(sbimm12: Z): Instruction
-  | Jalr(rd: Register)(rs1: Register)(oimm12: Z): Instruction
-  | Jal(rd: Register)(jimm20: Z) : Instruction
+  | Lui(rd: Register)(imm20: Imm): Instruction
+  | Beq(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
+  | Bne(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
+  | Blt(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
+  | Bge(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
+  | Bltu(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
+  | Bgeu(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
+  | Jalr(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+  | Jal(rd: Register)(jimm20: Imm) : Instruction
 
   | Ecall : Instruction
   | Ebreak : Instruction
@@ -184,15 +186,29 @@ Inductive Instruction : Set :=
   | Mret : Instruction
   | Wfi : Instruction
 
-  (* TODO what's the right type for csr12 and zimm? *)
-  | Csrrw(rd: Register)(rs1: Register)(csr12: word 12): Instruction
-  | Csrrs(rd: Register)(rs1: Register)(csr12: word 12): Instruction
-  | Csrrc(rd: Register)(rs1: Register)(csr12: word 12): Instruction
-  | Csrrwi(rd: Register)(zimm: word 5)(csr12: word 12): Instruction
-  | Csrrsi(rd: Register)(zimm: word 5)(csr12: word 12): Instruction
-  | Csrrci(rd: Register)(zimm: word 5)(csr12: word 12): Instruction
+  | Csrrw(rd: Register)(rs1: Register)(csr12: Imm): Instruction
+  | Csrrs(rd: Register)(rs1: Register)(csr12: Imm): Instruction
+  | Csrrc(rd: Register)(rs1: Register)(csr12: Imm): Instruction
+  | Csrrwi(rd: Register)(zimm: Imm)(csr12: Imm): Instruction
+  | Csrrsi(rd: Register)(zimm: Imm)(csr12: Imm): Instruction
+  | Csrrci(rd: Register)(zimm: Imm)(csr12: Imm): Instruction
 .
 
+End Instructions.
+
+Arguments Instruction {_} _.
+
+Instance Word5NameWithEq: NameWithEq := {|
+  name := word 5;
+|}.
+
+(* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
+   no matter whether it's a 32-bit or 64-bit machine. *)
+Definition MachineInt := word 64.
+
+Section Decode.
+
+Context {B: RiscvBitWidths}.
 
 Arguments sumbool_not {_} {_} (_).
 
@@ -202,6 +218,19 @@ Definition split_lower(szU szL : nat): word (szL + szU) -> word szL := split1 sz
 
 Definition split_middle(szU szM szL: nat)(w: word (szL + szM + szU)): word szM :=
   split_upper szM szL (split_lower szU (szL + szM) w).
+
+(* we redefine a wlshift/wrshift which does not match on (possibly opaque) equality proofs,
+   so that we can simpl/cbv/etc it *)
+Definition wlshift {sz : nat} (w : word sz) (n : nat) : word sz.
+  refine (split_lower n sz (nat_cast _ _ (combine (wzero n) w))). apply plus_comm.
+Defined.
+
+Definition wrshift {sz : nat} (w : word sz) (n : nat) : word sz.
+  refine (split_upper sz n (nat_cast _ _ (combine w (wzero n)))). apply plus_comm.
+Defined.
+
+Definition bitSlice{sz: nat}(x: word sz)(start eend: nat): word sz :=
+  wand (wrshift x start) (wnot (wlshift (wneg $1) (eend - start))).
 
 Ltac elim_oob_case :=
   match goal with
@@ -214,31 +243,40 @@ Definition bitSlice'{sz: nat}(inst: word sz)(n m: nat): if dec (n <= m <= sz) th
   abstract omega.
 Defined.
 
-(* we redefine a wlshift which does not match on (possibly opaque) equality proofs,
-   so that we can simpl/cbv/etc it *)
-Definition wlshift {sz : nat} (w : word sz) (n : nat) : word sz.
-  refine (split1 sz n (nat_cast _ _ (combine (wzero n) w))). apply plus_comm.
-Defined.
-
-Definition bitSlice{sz: nat}(inst: word sz)(n m: nat): if dec (n <= m <= sz) then word sz else unit.
+(*
+Definition bitSlice'{sz: nat}(x: word sz)(start eend: nat)
+  : if dec (start <= eend <= sz) then word (eend - start) else unit.
   elim_oob_case.
-  (* TODO it would be nice to define it in temrs of bitSlice', but this results in dependent types
-     errors. *)
-  refine (nat_cast _ _ (zext (split_middle (sz - m) (m - n) n (nat_cast _ _ inst)) (sz - (m - n))));
-    abstract omega.
+  refine (split_lower (sz - (eend - start)) (eend - start) (nat_cast _ _ (bitSlice x start eend))).
+  omega.
 Defined.
+*)
 
 Definition shift{sz: nat} := @wlshift sz.
 
-Definition signExtend{sz: nat}(l: nat)(n: word sz): if dec (l <= sz)%nat then Z else unit.
-  match goal with
-  | |- if ?c then _ else _ => destruct c; [|apply tt]
-  end.
-  refine (wordToZ (split_lower (sz - l) l (nat_cast _ _ n))).
-  abstract omega.
+(* calculating (pow2 32) on nat will result in S (S (S .... 2^32 times, that's too much *)
+Definition setBit(sz: nat)(b: nat): word sz := NToWord sz (Npow2 b).
+
+Definition testBit{sz: nat}(w: word sz)(l: nat): bool :=
+  negb (weqb (wzero sz) (wand w (setBit sz l))).
+
+(* bad because (pow2 l) will compute a huge nat
+Definition signExtend{sz: nat}(l: nat)(n: word sz): word sz :=
+  if testBit n (l-1) then (n ^- $ (pow2 l)) else n.
+*)
+
+(* Note: also works if sz = l: In that case, setBit will overflow and equal 0,
+   so the subtraction doesn't do anything, but that's fine because no bits need
+   to be change in that case. *)
+Definition signExtend{sz: nat}(l: nat)(n: word sz): word sz :=
+  if testBit n (l-1) then (n ^- (setBit sz l)) else n.
+
+Definition zext_to_wXLEN(w: word 32): word wXLEN.
+  refine (nat_cast _ _ (zext w (wXLEN - 32))).
+  abstract bitwidth_omega.
 Defined.
 
-Definition decode (inst : word 32) : Instruction :=
+Definition decode (inst : MachineInt) : Instruction MachineInt :=
   let opcode :=  bitSlice' inst 0 7 in
   let funct3 :=  bitSlice' inst 12 15 in
   let funct7 :=  bitSlice' inst 25 32 in
@@ -259,15 +297,15 @@ Definition decode (inst : word 32) : Instruction :=
                                 shift (bitSlice inst 12 20) 12) in
   let imm12 := signExtend 12 (bitSlice inst 20 32) in
   let oimm12 := signExtend 12 (bitSlice inst 20 32) in
-  let csr12 := bitSlice' inst 20 32 in
+  let csr12 := bitSlice inst 20 32 in
   let simm12 := signExtend 12 (shift (bitSlice inst 25 32) 5 <|> bitSlice inst 7 12) in
   let sbimm12 := signExtend 13 (shift (bitSlice inst 31 32) 12 <|>
                                 shift (bitSlice inst 25 31) 5 <|>
                                 shift (bitSlice inst 8 12) 1  <|>
                                 shift (bitSlice inst 7 8) 11) in
-  let shamt5 := wordToNat (bitSlice inst 20 25) in
-  let shamt6 := wordToNat (bitSlice inst 20 26) in
-  let zimm := bitSlice' inst 15 20 in
+  let shamt5 := bitSlice inst 20 25 in
+  let shamt6 := bitSlice inst 20 26 in
+  let zimm := bitSlice inst 15 20 in
            if dec(opcode = opcode_LOAD /\ funct3 = funct3_LB) then  Lb  rd rs1 oimm12
       else if dec(opcode = opcode_LOAD /\ funct3 = funct3_LH) then  Lh  rd rs1 oimm12
       else if dec(opcode = opcode_LOAD /\ funct3 = funct3_LW) then  Lw  rd rs1 oimm12
@@ -342,9 +380,9 @@ Definition test_instruction: word 32 :=
 
 Require Import riscv.RiscvBitWidths32.
 
-Definition test_result: Instruction := decode test_instruction.
+Definition test_result: Instruction MachineInt := decode (zext test_instruction 32).
 
-Goal test_result = Lui (natToWord 5 9) (Z.shiftl (35 + 128 + 2048)%Z 12).
+Goal test_result = Lui (natToWord 5 9) (ZToWord _ (Z.shiftl (35 + 128 + 2048)%Z 12)).
   cbv.
   reflexivity.
 Qed.

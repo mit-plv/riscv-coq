@@ -4,10 +4,11 @@ Require Import riscv.Riscv.
 Require Import riscv.RiscvBitWidths32.
 Require Import bbv.HexNotation.
 Require Import Coq.ZArith.BinInt.
+Require Import bbv.WordScope.
 Require Import riscv.Memory.
-Require Import riscv.RunTrace.
+Require Import riscv.Run.
 
-Definition fib6_riscv: list (word 32) := [
+Definition fib6_riscv: list MachineInt := [ (* TODO should be "word 32", not MachineInt *)
   Ox"00600993";         (* li s3,6 *)
   Ox"00000a13";         (* li s4,0 *)
   Ox"00100913";         (* li s2,1 *)
@@ -35,25 +36,28 @@ Goal False.
   (* decoder seems to work :) *)
 Abort.
 
-Definition initialRiscvMachine(imem: list (word 32)): TraceRiscvMachine := {|
-  machineMem := list_to_mem _ imem;
+Definition initialRiscvMachine(imem: list MachineInt): RiscvMachine := {|
+  machineMem := no_mem _; (* TODO *)
   registers := fun (r: Register) => $0;
   pc := $0;
   nextPC := $4;
   exceptionHandlerAddr := wneg $4;
-  executionTrace := nil;
 |}.
 
-Definition fib6_L_final(fuel: nat): TraceRiscvMachine :=
+Definition fib6_L_final(fuel: nat): RiscvMachine :=
   execState (run fuel) (initialRiscvMachine fib6_riscv).
 
 Definition fib6_L_res(fuel: nat): word wXLEN :=
   (fib6_L_final fuel).(registers) (WO~1~0~0~1~0)%word.
 
+(*
 Definition fib6_L_trace(fuel: nat): list TraceEvent :=
   (fib6_L_final fuel).(executionTrace).
+*)
 
 Transparent wlt_dec.
+
+(* TODO will only work once we don't have any admits in computational parts
 
 Eval cbv in (fib6_L_trace 50).
 
@@ -62,3 +66,4 @@ Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_L_res fuel = $13.
   cbv.
   reflexivity.
 Qed.
+*)

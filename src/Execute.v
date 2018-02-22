@@ -40,11 +40,17 @@ End comparisons.
 
 Section Riscv.
 
+  Context {Name: NameWithEq}. (* register name *)
+  Notation Register := (@name Name).
+  Existing Instance eq_name_dec.
+
   Context {B: RiscvBitWidths}.
 
-  Context {Name: NameWithEq}. (* register name *)
-  Notation Reg := (@name Name).
-  Existing Instance eq_name_dec.
+  Context {t Imm: Set}.
+
+  Context {A: Alu t}.
+
+  Context {c: IntegralConversion Imm t}.
 
   (* interpret this word as a signed number *)
   Definition signed: word wXLEN -> Z := @wordToZ wXLEN.
@@ -76,6 +82,7 @@ Section Riscv.
     | Zneg p => (Zpower.two_power_nat wXLEN - Zpos p)
     end.
 
+(*
   Definition fromByte(w: word 8): word wXLEN.
     refine (nat_cast _ _ (sext w (wXLEN - 8))). abstract bitwidth_omega.
   Defined.
@@ -111,12 +118,16 @@ Section Riscv.
   Definition toWord(w: word wXLEN): word 32.
     refine (split_lower (wXLEN - 32) 32 (nat_cast _ _ w)). abstract bitwidth_omega.
   Defined.
+*)
+
+  Context {ic8: IntegralConversion (word 8) t}.
 
   (* TODO *)
   Definition raiseException{M: Type -> Type}{MM: Monad M}(x1 x2: word wXLEN): M unit := Return tt.
 
-  Definition execute{M: Type -> Type}{MM: Monad M}{RVS: RiscvState M}(i: Instruction): M unit :=
+  Definition execute{M: Type -> Type}{MM: Monad M}{RVS: RiscvState M}(i: Instruction Imm): M unit :=
     match i with
+(*
     | Lui rd imm20 =>
       ( ( setRegister rd ) (fromZ imm20) )
     | Auipc rd oimm20 =>
@@ -198,10 +209,13 @@ Section Riscv.
                then ( ( raiseException $0 ) $0 )
                else ( setPC (fromZ addr) ))
          else (Return tt))
+*)
+
      | Lb rd rs1 oimm12 => 
-     a <- ( getRegister rs1 ); 
-     x <- ( loadByte (unsigned a + (  oimm12 )) ); 
-     ( ( setRegister rd ) (fromByte x) ) 
+         a <- getRegister rs1; 
+         x <- loadByte (add a (fromIntegral oimm12)); 
+         setRegister rd x
+(*
      | Lh rd rs1 oimm12 => 
      a <- ( getRegister rs1 ); 
      let addr := (unsigned a + (  oimm12 )) in 
@@ -322,6 +336,7 @@ Section Riscv.
       x <- ( getRegister rs1 );
         y <- ( getRegister rs2 );
         ( ( setRegister rd ) (wand x y) )
+*)
     | _ => Return tt
     end.
 

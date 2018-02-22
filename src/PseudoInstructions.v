@@ -1,7 +1,7 @@
 Require Import riscv.Decode.
 Require Import riscv.Run.
+Require Import bbv.WordScope.
 
-Definition Seqz(rd: Register)(rs1: Register) := Sltiu rd rs1 1.
-Definition Snez(rd: Register)(rs1: Register) := Sltu rd Register0 rs1.
+Definition Seqz(rd: Register)(rs1: Register): Instruction MachineInt := Sltiu rd rs1 $1.
+Definition Snez(rd: Register)(rs1: Register): Instruction MachineInt := Sltu rd Register0 rs1.
 Definition Nop := Addi Register0 Register0 0.
-Definition InfiniteJal := Jal Register0 0.

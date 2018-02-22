@@ -16,12 +16,20 @@ Section Riscv.
 
   Context {B: RiscvBitWidths}.
 
+  Instance A: Alu (word wXLEN). Admitted.
+
+  Definition Register := word 5. (* for the moment *)
+
   Definition Register0: Register := $0.
+
+  Instance ic8: IntegralConversion (word 8) (word wXLEN). Admitted.
+
+  Instance immmm: IntegralConversion MachineInt (word wXLEN). Admitted.
 
   Definition run1{M: Type -> Type}{MM: Monad M}{RVS: RiscvState M}: M unit :=
     pc <- getPC;
-    inst <- loadWord (unsigned pc);
-    execute (decode inst);;
+    inst <- loadWord pc;
+    execute (decode (zext inst 32));; (* because of stupid definition of MachineInt *)
     step.
 
   Definition run{M: Type -> Type}{MM: Monad M}{RVS: RiscvState M}: nat -> M unit :=
@@ -79,13 +87,13 @@ Section Riscv.
 
   Instance IsRiscvMachine: RiscvState (State RiscvMachine) :=
   {|
-      getRegister := fun (reg: Register) =>
+      getRegister := fun (reg: name) =>
         if dec (reg = Register0) then
           Return $0
         else
           machine <- get; Return (machine.(registers) reg);
 
-      setRegister := fun (reg: Register) (v: word wXLEN) =>
+      setRegister := fun s ic (reg: name) (v: s) =>
         if dec (reg = Register0) then
           Return tt
         else
@@ -93,33 +101,33 @@ Section Riscv.
           match machine with
           | mkRiscvMachine imem regs pc npc eh =>
               put (mkRiscvMachine imem 
-                                  (fun reg2 => if dec (reg = reg2) then v else regs reg2)
-                                  pc npc eh)
+                      (fun reg2 => if dec (reg = reg2) then (fromIntegral v) else regs reg2)
+                      pc npc eh)
           end;
 
-      getPC := 
-        p <- gets pc;
-        Return (wordToZ p); (* TODO this should be unsigned *)
+      getPC := gets pc;
 
-      setPC := fun (newPC: Z) =>
+      setPC := fun newPC =>
         machine <- get;
         match machine with
         | mkRiscvMachine imem regs pc npc eh =>
-            put (mkRiscvMachine imem regs pc (ZToWord _ newPC) eh)
+            put (mkRiscvMachine imem regs pc newPC eh)
         end;
 
       loadByte := TODO;
       loadHalf := TODO;
-
+      loadWord := TODO;
+(*
       loadWord := fun x => 
+        let x := wordToZ x in (* TODO fix *)
         ensure_aligned x 4;;
         m <- get;
         match read_mem x m.(machineMem) with
-        | Some v => Return v
+        | Some v => Return $123 (* TODO should be v *)
         | None => setPC m.(exceptionHandlerAddr)
         end;
       (* TODO if wXLEN = 64, we have to split *)
-
+*)
       loadDouble := TODO;
 
       storeByte := TODO;
@@ -135,19 +143,17 @@ Section Riscv.
         end;
   |}.
 
-  Definition InfiniteJal := Jal Register0 (-4).
-
   (* Puts given program at address 0, and makes pc point to beginning of program, i.e. 0.
      TODO maybe later allow any address?
      Note: Keeps the original exceptionHandlerAddr, and the values of the registers,
      which might contain any undefined garbage values, so the compiler correctness proof
      will show that the program is correct even then, i.e. no initialisation of the registers
      is needed. *)
-  Definition putProgram(prog: list (word 32))(m: RiscvMachine): RiscvMachine :=
+  Definition putProgram(prog: list (word 32))(m: RiscvMachine): RiscvMachine. Admitted. (*
     match m with
     | mkRiscvMachine _ regs _ _ eh =>
         mkRiscvMachine (list_to_mem _ prog) regs $0 $4 eh
-    end.
+    end. *)
 
 End Riscv.
 

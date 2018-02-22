@@ -35,6 +35,7 @@ Section Riscv.
 
   Definition TODO{T: Type}: T. Admitted.
 
+(*
   Instance IsTraceRiscvMachine: RiscvState (State TraceRiscvMachine) :=
   {|
       getRegister := fun (reg: Register) =>
@@ -98,7 +99,10 @@ Section Riscv.
             put (mkTraceRiscvMachine imem regs npc (npc ^+ $4) eh tr)
         end;
   |}.
+*)
 
 End Riscv.
 
+(*
 Existing Instance IsTraceRiscvMachine. (* needed because it was defined inside a Section *)
+*)
