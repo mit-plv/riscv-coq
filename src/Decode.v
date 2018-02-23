@@ -124,7 +124,7 @@ Section Instructions.
 Context {Name: NameWithEq}. (* register name *)
 Notation Register := (@name Name).
 
-Context {Imm: Set}.
+Definition Imm := Z.
 
 Inductive Instruction : Set :=
   | InvalidInstruction : Instruction
@@ -199,8 +199,6 @@ Inductive Instruction : Set :=
 
 End Instructions.
 
-Arguments Instruction {_} _.
-
 (* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
    no matter whether it's a 32-bit or 64-bit machine. *)
 Definition MachineInt := Z.
@@ -217,7 +215,7 @@ Local Instance ZName: NameWithEq := {|
   name := Z
 |}.
 
-Definition decode (inst : MachineInt) : Instruction MachineInt :=
+Definition decode (inst : MachineInt) : Instruction :=
   let opcode :=  bitSlice inst 0 7 in
   let funct3 :=  bitSlice inst 12 15 in
   let funct7 :=  bitSlice inst 25 32 in
@@ -316,7 +314,7 @@ Definition decode (inst : MachineInt) : Instruction MachineInt :=
 
 Definition test_instruction: Z :=   Ox"0140006f".
 
-Definition test_result: Instruction MachineInt := decode test_instruction.
+Definition test_result: Instruction := decode test_instruction.
 
 Goal test_result = Jal 0 20.
   reflexivity.

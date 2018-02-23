@@ -16,17 +16,22 @@ Class Alu(t u: Set) := mkAlu {
   unsigned_less_than: u -> u -> bool;
 
   (* logical operations: *)
-  shift_left: t -> t -> t;
-  shift_right_logic: t -> t -> t;
-  shift_right_arith: t -> t -> t;
-  bitwise_xor: t -> t -> t;
-  bitwise_or: t -> t -> t;
-  bitwise_and: t -> t -> t;
+  sll: t -> t -> t;
+  srl: t -> t -> t;
+  sra: t -> t -> t;
+  xor: t -> t -> t;
+  or: t -> t -> t;
+  and: t -> t -> t;
 
   (* conversion operations: *)
   signed: u -> t;
   unsigned: t -> u;
 }.
+
+Notation "a <|> b" := (or a b) (at level 50, left associativity).
+Notation "a <&> b" := (and a b) (at level 40, left associativity).
+Notation "a + b" := (add a b) (at level 50, left associativity).
+Notation "a - b" := (sub a b) (at level 50, left associativity).
 
 Class IntegralConversion(t1 t2: Set) := mkIntegralConversion {
   fromIntegral: t1 -> t2
