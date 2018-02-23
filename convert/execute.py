@@ -27,6 +27,8 @@ blacklist = r'^(L.u?|S.|B.*|Jalr|Jal|S..i|Slt.*)$'
 def convert_line(line):
     global casename
 
+    extra_indent = "  "
+
     line = re.sub(r'^(.*<-.*)$', r'\1;', line)
     line = re.sub('::', ':', line)
     line = line.replace('.&.', '<&>')
@@ -58,9 +60,11 @@ def convert_line(line):
                 suffix = " =>"
             line = prefix + pattern + suffix
         else:
-            line = "  | " + pattern + " =>\n    " + firstword + rest
-        
-    return "  " + line
+            line = "  | " + pattern + " =>\n      " + extra_indent + firstword + rest
+    else:
+        line = "    " + line
+
+    return extra_indent + line
 
 
 def convert(hs_filepath, coq_filepath):
