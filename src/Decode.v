@@ -1,120 +1,123 @@
-(* Need to define MachineInt = Int64? Int32 *)
-(* Need to define Register *)
-Require Import Coq.Bool.Sumbool.
 Require Import Coq.omega.Omega.
-Require Import bbv.WordScope.
 Require Import riscv.util.Decidable.
-Require Import bbv.DepEqNat.
 Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
+Require Import bbv.BinNotationZ.
+Require Import bbv.HexNotationZ.
 
-Definition opcode_LOAD      := WO~0~0~0~0~0~1~1.
-Definition opcode_LOAD_FP   := WO~0~0~0~0~1~1~1.
-Definition opcode_MISC_MEM  := WO~0~0~0~1~1~1~1.
-Definition opcode_OP_IMM    := WO~0~0~1~0~0~1~1.
-Definition opcode_AUIPC     := WO~0~0~1~0~1~1~1.
-Definition opcode_OP_IMM_32 := WO~0~0~1~1~0~1~1.
-Definition opcode_STORE     := WO~0~1~0~0~0~1~1.
-Definition opcode_STORE_FP  := WO~0~1~0~0~1~1~1.
-Definition opcode_AMO       := WO~0~1~0~1~1~1~1.
-Definition opcode_OP        := WO~0~1~1~0~0~1~1.
-Definition opcode_LUI       := WO~0~1~1~0~1~1~1.
-Definition opcode_OP_32     := WO~0~1~1~1~0~1~1.
-Definition opcode_MADD      := WO~1~0~0~0~0~1~1.
-Definition opcode_MSUB      := WO~1~0~0~0~1~1~1.
-Definition opcode_NMSUB     := WO~1~0~0~1~0~1~1.
-Definition opcode_NMADD     := WO~1~0~0~1~1~1~1.
-Definition opcode_OP_FP     := WO~1~0~1~0~0~1~1.
-Definition opcode_BRANCH    := WO~1~1~0~0~0~1~1.
-Definition opcode_JALR      := WO~1~1~0~0~1~1~1.
-Definition opcode_JAL       := WO~1~1~0~1~1~1~1.
-Definition opcode_SYSTEM    := WO~1~1~1~0~0~1~1.
-Definition funct3_LB  := WO~0~0~0.
-Definition funct3_LH  := WO~0~0~1.
-Definition funct3_LW  := WO~0~1~0.
-Definition funct3_LD  := WO~0~1~1.
-Definition funct3_LBU := WO~1~0~0.
-Definition funct3_LHU := WO~1~0~1.
-Definition funct3_LWU := WO~1~1~0.
-Definition funct3_FENCE   := WO~0~0~0.
-Definition funct3_FENCE_I := WO~0~0~1.
-Definition funct3_ADDI  := WO~0~0~0.
-Definition funct3_SLLI  := WO~0~0~1.
-Definition funct3_SLTI  := WO~0~1~0.
-Definition funct3_SLTIU := WO~0~1~1.
-Definition funct3_XORI  := WO~1~0~0.
-Definition funct3_SRLI  := WO~1~0~1.
-Definition funct3_SRAI  := WO~1~0~1.
-Definition funct3_ORI   := WO~1~1~0.
-Definition funct3_ANDI  := WO~1~1~1.
-Definition funct7_SLLI  := WO~0~0~0~0~0~0~0.
-Definition funct7_SRLI  := WO~0~0~0~0~0~0~0.
-Definition funct7_SRAI  := WO~0~1~0~0~0~0~0.
-Definition funct6_SLLI  := WO~0~0~0~0~0~0.
-Definition funct6_SRLI  := WO~0~0~0~0~0~0.
-Definition funct6_SRAI  := WO~0~1~0~0~0~0.
-Definition funct3_SB := WO~0~0~0.
-Definition funct3_SH := WO~0~0~1.
-Definition funct3_SW := WO~0~1~0.
-Definition funct3_SD := WO~0~1~1.
-Definition funct3_ADD  := WO~0~0~0.
-Definition funct7_ADD  := WO~0~0~0~0~0~0~0.
-Definition funct3_SUB  := WO~0~0~0.
-Definition funct7_SUB  := WO~0~1~0~0~0~0~0.
-Definition funct3_SLL  := WO~0~0~1.
-Definition funct7_SLL  := WO~0~0~0~0~0~0~0.
-Definition funct3_SLT  := WO~0~1~0.
-Definition funct7_SLT  := WO~0~0~0~0~0~0~0.
-Definition funct3_SLTU := WO~0~1~1.
-Definition funct7_SLTU := WO~0~0~0~0~0~0~0.
-Definition funct3_XOR  := WO~1~0~0.
-Definition funct7_XOR  := WO~0~0~0~0~0~0~0.
-Definition funct3_SRL  := WO~1~0~1.
-Definition funct7_SRL  := WO~0~0~0~0~0~0~0.
-Definition funct3_SRA  := WO~1~0~1.
-Definition funct7_SRA  := WO~0~1~0~0~0~0~0.
-Definition funct3_OR   := WO~1~1~0.
-Definition funct7_OR   := WO~0~0~0~0~0~0~0.
-Definition funct3_AND  := WO~1~1~1.
-Definition funct7_AND  := WO~0~0~0~0~0~0~0.
-Definition funct3_MUL    :=WO~0~0~0.
-Definition funct7_MUL    :=WO~0~0~0~0~0~0~1.
-Definition funct3_MULH   :=WO~0~0~1.
-Definition funct7_MULH   :=WO~0~0~0~0~0~0~1.
-Definition funct3_MULHSU :=WO~0~1~0.
-Definition funct7_MULHSU :=WO~0~0~0~0~0~0~1.
-Definition funct3_MULHU  :=WO~0~1~1.
-Definition funct7_MULHU  :=WO~0~0~0~0~0~0~1.
-Definition funct3_DIV    :=WO~1~0~0.
-Definition funct7_DIV    :=WO~0~0~0~0~0~0~1.
-Definition funct3_DIVU   :=WO~1~0~1.
-Definition funct7_DIVU   :=WO~0~0~0~0~0~0~1.
-Definition funct3_REM    :=WO~1~1~0.
-Definition funct7_REM    :=WO~0~0~0~0~0~0~1.
-Definition funct3_REMU   :=WO~1~1~1.
-Definition funct7_REMU   :=WO~0~0~0~0~0~0~1.
-Definition funct3_BEQ  := WO~0~0~0.
-Definition funct3_BNE  := WO~0~0~1.
-Definition funct3_BLT  := WO~1~0~0.
-Definition funct3_BGE  := WO~1~0~1.
-Definition funct3_BLTU := WO~1~1~0.
-Definition funct3_BGEU := WO~1~1~1.
-Definition funct3_PRIV   := WO~0~0~0.
-Definition funct12_ECALL  := WO~0~0~0~0~0~0~0~0~0~0~0~0.
-Definition funct12_EBREAK := WO~0~0~0~0~0~0~0~0~0~0~0~1.
-Definition funct12_URET   := WO~0~0~0~0~0~0~0~0~0~0~1~0.
-Definition funct12_SRET   := WO~0~0~0~1~0~0~0~0~0~0~1~0.
-Definition funct12_MRET   := WO~0~0~1~1~0~0~0~0~0~0~1~0.
-Definition funct12_WFI    := WO~0~0~0~1~0~0~0~0~0~1~0~1.
-Definition funct7_SFENCE_VM := WO~0~0~0~1~0~0~1.
-Definition funct3_CSRRW  := WO~0~0~1.
-Definition funct3_CSRRS  := WO~0~1~0.
-Definition funct3_CSRRC  := WO~0~1~1.
-Definition funct3_CSRRWI := WO~1~0~1.
-Definition funct3_CSRRSI := WO~1~1~0.
-Definition funct3_CSRRCI := WO~1~1~1.
+Local Open Scope Z_scope.
 
-Notation "a <|> b" := (wor a b) (at level 50, left associativity).
+(* Note: we could also use this notation:
+Eval cbv in (1~0~1~0)%positive.
+But it doesn't allow leading zeros, nor zero values. *)
+
+Definition opcode_LOAD      := Ob"0000011".
+Definition opcode_LOAD_FP   := Ob"0000111".
+Definition opcode_MISC_MEM  := Ob"0001111".
+Definition opcode_OP_IMM    := Ob"0010011".
+Definition opcode_AUIPC     := Ob"0010111".
+Definition opcode_OP_IMM_32 := Ob"0011011".
+Definition opcode_STORE     := Ob"0100011".
+Definition opcode_STORE_FP  := Ob"0100111".
+Definition opcode_AMO       := Ob"0101111".
+Definition opcode_OP        := Ob"0110011".
+Definition opcode_LUI       := Ob"0110111".
+Definition opcode_OP_32     := Ob"0111011".
+Definition opcode_MADD      := Ob"1000011".
+Definition opcode_MSUB      := Ob"1000111".
+Definition opcode_NMSUB     := Ob"1001011".
+Definition opcode_NMADD     := Ob"1001111".
+Definition opcode_OP_FP     := Ob"1010011".
+Definition opcode_BRANCH    := Ob"1100011".
+Definition opcode_JALR      := Ob"1100111".
+Definition opcode_JAL       := Ob"1101111".
+Definition opcode_SYSTEM    := Ob"1110011".
+Definition funct3_LB  := Ob"000".
+Definition funct3_LH  := Ob"001".
+Definition funct3_LW  := Ob"010".
+Definition funct3_LD  := Ob"011".
+Definition funct3_LBU := Ob"100".
+Definition funct3_LHU := Ob"101".
+Definition funct3_LWU := Ob"110".
+Definition funct3_FENCE   := Ob"000".
+Definition funct3_FENCE_I := Ob"001".
+Definition funct3_ADDI  := Ob"000".
+Definition funct3_SLLI  := Ob"001".
+Definition funct3_SLTI  := Ob"010".
+Definition funct3_SLTIU := Ob"011".
+Definition funct3_XORI  := Ob"100".
+Definition funct3_SRLI  := Ob"101".
+Definition funct3_SRAI  := Ob"101".
+Definition funct3_ORI   := Ob"110".
+Definition funct3_ANDI  := Ob"111".
+Definition funct7_SLLI  := Ob"0000000".
+Definition funct7_SRLI  := Ob"0000000".
+Definition funct7_SRAI  := Ob"0100000".
+Definition funct6_SLLI  := Ob"000000".
+Definition funct6_SRLI  := Ob"000000".
+Definition funct6_SRAI  := Ob"010000".
+Definition funct3_SB := Ob"000".
+Definition funct3_SH := Ob"001".
+Definition funct3_SW := Ob"010".
+Definition funct3_SD := Ob"011".
+Definition funct3_ADD  := Ob"000".
+Definition funct7_ADD  := Ob"0000000".
+Definition funct3_SUB  := Ob"000".
+Definition funct7_SUB  := Ob"0100000".
+Definition funct3_SLL  := Ob"001".
+Definition funct7_SLL  := Ob"0000000".
+Definition funct3_SLT  := Ob"010".
+Definition funct7_SLT  := Ob"0000000".
+Definition funct3_SLTU := Ob"011".
+Definition funct7_SLTU := Ob"0000000".
+Definition funct3_XOR  := Ob"100".
+Definition funct7_XOR  := Ob"0000000".
+Definition funct3_SRL  := Ob"101".
+Definition funct7_SRL  := Ob"0000000".
+Definition funct3_SRA  := Ob"101".
+Definition funct7_SRA  := Ob"0100000".
+Definition funct3_OR   := Ob"110".
+Definition funct7_OR   := Ob"0000000".
+Definition funct3_AND  := Ob"111".
+Definition funct7_AND  := Ob"0000000".
+Definition funct3_MUL    :=Ob"000".
+Definition funct7_MUL    :=Ob"0000001".
+Definition funct3_MULH   :=Ob"001".
+Definition funct7_MULH   :=Ob"0000001".
+Definition funct3_MULHSU :=Ob"010".
+Definition funct7_MULHSU :=Ob"0000001".
+Definition funct3_MULHU  :=Ob"011".
+Definition funct7_MULHU  :=Ob"0000001".
+Definition funct3_DIV    :=Ob"100".
+Definition funct7_DIV    :=Ob"0000001".
+Definition funct3_DIVU   :=Ob"101".
+Definition funct7_DIVU   :=Ob"0000001".
+Definition funct3_REM    :=Ob"110".
+Definition funct7_REM    :=Ob"0000001".
+Definition funct3_REMU   :=Ob"111".
+Definition funct7_REMU   :=Ob"0000001".
+Definition funct3_BEQ  := Ob"000".
+Definition funct3_BNE  := Ob"001".
+Definition funct3_BLT  := Ob"100".
+Definition funct3_BGE  := Ob"101".
+Definition funct3_BLTU := Ob"110".
+Definition funct3_BGEU := Ob"111".
+Definition funct3_PRIV   := Ob"000".
+Definition funct12_ECALL  := Ob"000000000000".
+Definition funct12_EBREAK := Ob"000000000001".
+Definition funct12_URET   := Ob"000000000010".
+Definition funct12_SRET   := Ob"000100000010".
+Definition funct12_MRET   := Ob"001100000010".
+Definition funct12_WFI    := Ob"000100000101".
+Definition funct7_SFENCE_VM := Ob"0001001".
+Definition funct3_CSRRW  := Ob"001".
+Definition funct3_CSRRS  := Ob"010".
+Definition funct3_CSRRC  := Ob"011".
+Definition funct3_CSRRWI := Ob"101".
+Definition funct3_CSRRSI := Ob"110".
+Definition funct3_CSRRCI := Ob"111".
+
+Notation "a <|> b" := (Z.lor a b) (at level 50, left associativity).
 
 Section Instructions.
 
@@ -198,94 +201,32 @@ End Instructions.
 
 Arguments Instruction {_} _.
 
-Instance Word5NameWithEq: NameWithEq := {|
-  name := word 5;
-|}.
-
 (* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
    no matter whether it's a 32-bit or 64-bit machine. *)
-Definition MachineInt := word 64.
+Definition MachineInt := Z.
 
-Section Decode.
+Definition bitSlice(x: Z)(start eend: Z): Z :=
+  Z.land (Z.shiftr x start) (Z.lnot (Z.shiftl (-1) (eend - start))).
 
-Context {B: RiscvBitWidths}.
+Definition shift := Z.shiftl.
 
-Arguments sumbool_not {_} {_} (_).
+Definition signExtend(l: Z)(n: Z): Z :=
+  if Z.testbit n (l-1) then (n - (Z.setbit 0 l)) else n.
 
-Definition split_upper(szU szL : nat): word (szL + szU) -> word szU := split2 szL szU.
-
-Definition split_lower(szU szL : nat): word (szL + szU) -> word szL := split1 szL szU.
-
-Definition split_middle(szU szM szL: nat)(w: word (szL + szM + szU)): word szM :=
-  split_upper szM szL (split_lower szU (szL + szM) w).
-
-(* we redefine a wlshift/wrshift which does not match on (possibly opaque) equality proofs,
-   so that we can simpl/cbv/etc it *)
-Definition wlshift {sz : nat} (w : word sz) (n : nat) : word sz.
-  refine (split_lower n sz (nat_cast _ _ (combine (wzero n) w))). apply plus_comm.
-Defined.
-
-Definition wrshift {sz : nat} (w : word sz) (n : nat) : word sz.
-  refine (split_upper sz n (nat_cast _ _ (combine w (wzero n)))). apply plus_comm.
-Defined.
-
-Definition bitSlice{sz: nat}(x: word sz)(start eend: nat): word sz :=
-  wand (wrshift x start) (wnot (wlshift (wneg $1) (eend - start))).
-
-Ltac elim_oob_case :=
-  match goal with
-  | |- if ?c then _ else _ => destruct c; [|apply tt]
-  end.
-
-Definition bitSlice'{sz: nat}(inst: word sz)(n m: nat): if dec (n <= m <= sz) then word (m - n) else unit.
-  elim_oob_case.
-  refine (split_middle (sz - m) (m - n) n (nat_cast _ _ inst)).
-  abstract omega.
-Defined.
-
-(*
-Definition bitSlice'{sz: nat}(x: word sz)(start eend: nat)
-  : if dec (start <= eend <= sz) then word (eend - start) else unit.
-  elim_oob_case.
-  refine (split_lower (sz - (eend - start)) (eend - start) (nat_cast _ _ (bitSlice x start eend))).
-  omega.
-Defined.
-*)
-
-Definition shift{sz: nat} := @wlshift sz.
-
-(* calculating (pow2 32) on nat will result in S (S (S .... 2^32 times, that's too much *)
-Definition setBit(sz: nat)(b: nat): word sz := NToWord sz (Npow2 b).
-
-Definition testBit{sz: nat}(w: word sz)(l: nat): bool :=
-  negb (weqb (wzero sz) (wand w (setBit sz l))).
-
-(* bad because (pow2 l) will compute a huge nat
-Definition signExtend{sz: nat}(l: nat)(n: word sz): word sz :=
-  if testBit n (l-1) then (n ^- $ (pow2 l)) else n.
-*)
-
-(* Note: also works if sz = l: In that case, setBit will overflow and equal 0,
-   so the subtraction doesn't do anything, but that's fine because no bits need
-   to be change in that case. *)
-Definition signExtend{sz: nat}(l: nat)(n: word sz): word sz :=
-  if testBit n (l-1) then (n ^- (setBit sz l)) else n.
-
-Definition zext_to_wXLEN(w: word 32): word wXLEN.
-  refine (nat_cast _ _ (zext w (wXLEN - 32))).
-  abstract bitwidth_omega.
-Defined.
+Local Instance ZName: NameWithEq := {|
+  name := Z
+|}.
 
 Definition decode (inst : MachineInt) : Instruction MachineInt :=
-  let opcode :=  bitSlice' inst 0 7 in
-  let funct3 :=  bitSlice' inst 12 15 in
-  let funct7 :=  bitSlice' inst 25 32 in
+  let opcode :=  bitSlice inst 0 7 in
+  let funct3 :=  bitSlice inst 12 15 in
+  let funct7 :=  bitSlice inst 25 32 in
   let funct10 := (shift (bitSlice inst 25 32) 3) <|> (bitSlice inst 12 15) in
-  let funct12 :=  bitSlice' inst 20 32 in
-  let rd := bitSlice' inst 7 12 in
-  let rs1 := bitSlice' inst 15 20 in
-  let rs2 := bitSlice' inst 20 25 in
-  let rs3 := bitSlice' inst 27 32 in
+  let funct12 :=  bitSlice inst 20 32 in
+  let rd := bitSlice inst 7 12 in
+  let rs1 := bitSlice inst 15 20 in
+  let rs2 := bitSlice inst 20 25 in
+  let rs3 := bitSlice inst 27 32 in
   let succ := bitSlice inst 20 24 in
   let pred := bitSlice inst 24 28 in
   let msb4 := bitSlice inst 28 32 in
@@ -358,12 +299,12 @@ Definition decode (inst : MachineInt) : Instruction MachineInt :=
       else if dec(opcode = opcode_BRANCH /\ funct3 = funct3_BGEU) then  Bgeu rs1 rs2 sbimm12
       else if dec(opcode = opcode_JALR) then  Jalr rd rs1 oimm12
       else if dec(opcode = opcode_JAL) then  Jal rd jimm20
-      else if dec(opcode = opcode_SYSTEM /\ rd = $0 /\ funct3 = funct3_PRIV /\ rs1 = $0 /\ funct12 = funct12_ECALL) then  Ecall
-      else if dec(opcode = opcode_SYSTEM /\ rd = $0 /\ funct3 = funct3_PRIV /\ rs1 = $0 /\ funct12 = funct12_EBREAK) then  Ebreak
-      else if dec(opcode = opcode_SYSTEM /\ rd = $0 /\ funct3 = funct3_PRIV /\ rs1 = $0 /\ funct12 = funct12_URET) then  Uret
-      else if dec(opcode = opcode_SYSTEM /\ rd = $0 /\ funct3 = funct3_PRIV /\ rs1 = $0 /\ funct12 = funct12_SRET) then  Sret
-      else if dec(opcode = opcode_SYSTEM /\ rd = $0 /\ funct3 = funct3_PRIV /\ rs1 = $0 /\ funct12 = funct12_MRET) then  Mret
-      else if dec(opcode = opcode_SYSTEM /\ rd = $0 /\ funct3 = funct3_PRIV /\ rs1 = $0 /\ funct12 = funct12_WFI) then  Wfi
+      else if dec(opcode = opcode_SYSTEM /\ rd = 0 /\ funct3 = funct3_PRIV /\ rs1 = 0 /\ funct12 = funct12_ECALL) then  Ecall
+      else if dec(opcode = opcode_SYSTEM /\ rd = 0 /\ funct3 = funct3_PRIV /\ rs1 = 0 /\ funct12 = funct12_EBREAK) then  Ebreak
+      else if dec(opcode = opcode_SYSTEM /\ rd = 0 /\ funct3 = funct3_PRIV /\ rs1 = 0 /\ funct12 = funct12_URET) then  Uret
+      else if dec(opcode = opcode_SYSTEM /\ rd = 0 /\ funct3 = funct3_PRIV /\ rs1 = 0 /\ funct12 = funct12_SRET) then  Sret
+      else if dec(opcode = opcode_SYSTEM /\ rd = 0 /\ funct3 = funct3_PRIV /\ rs1 = 0 /\ funct12 = funct12_MRET) then  Mret
+      else if dec(opcode = opcode_SYSTEM /\ rd = 0 /\ funct3 = funct3_PRIV /\ rs1 = 0 /\ funct12 = funct12_WFI) then  Wfi
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRW) then  Csrrw   rd rs1 csr12
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRS) then  Csrrs   rd rs1 csr12
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRC) then  Csrrc   rd rs1 csr12
@@ -372,17 +313,11 @@ Definition decode (inst : MachineInt) : Instruction MachineInt :=
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRCI) then  Csrrci  rd zimm csr12
       else InvalidInstruction.
 
-End Decode.
 
+Definition test_instruction: Z :=   Ox"0140006f".
 
-Definition test_instruction: word 32 :=
-  combine opcode_LUI (combine (natToWord 5 9) (natToWord 20 (35 + 128 + 2048))).
+Definition test_result: Instruction MachineInt := decode test_instruction.
 
-Require Import riscv.RiscvBitWidths32.
-
-Definition test_result: Instruction MachineInt := decode (zext test_instruction 32).
-
-Goal test_result = Lui (natToWord 5 9) (ZToWord _ (Z.shiftl (35 + 128 + 2048)%Z 12)).
-  cbv.
+Goal test_result = Jal 0 20.
   reflexivity.
 Qed.
