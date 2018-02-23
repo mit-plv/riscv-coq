@@ -1,7 +1,9 @@
 Require Import bbv.Word.
 Require Import riscv.util.NameWithEq.
 
-Class Alu(t: Set) := mkAlu {
+(* t will be instantiated with a signed type, u with an unsigned type.
+   By default, all operations are on signed numbers. *)
+Class Alu(t u: Set) := mkAlu {
   (* arithmetic operations: *)
   add: t -> t -> t;
   sub: t -> t -> t;
@@ -11,7 +13,7 @@ Class Alu(t: Set) := mkAlu {
 
   (* comparison operators: *)
   signed_less_than: t -> t -> bool;
-  unsigned_less_than: t -> t -> bool;
+  unsigned_less_than: u -> u -> bool;
 
   (* logical operations: *)
   shift_left: t -> t -> t;
@@ -20,6 +22,10 @@ Class Alu(t: Set) := mkAlu {
   bitwise_xor: t -> t -> t;
   bitwise_or: t -> t -> t;
   bitwise_and: t -> t -> t;
+
+  (* conversion operations: *)
+  signed: u -> t;
+  unsigned: t -> u;
 }.
 
 Class IntegralConversion(t1 t2: Set) := mkIntegralConversion {
@@ -31,7 +37,7 @@ Section Riscv.
   Context {Name: NameWithEq}. (* register name *)
   Notation Register := (@name Name).
 
-  Class RiscvState(M: Type -> Type){t: Set}{A: Alu t} := mkRiscvState {
+  Class RiscvState(M: Type -> Type){t u: Set}{A: Alu t u} := mkRiscvState {
     getRegister: Register -> M t;
     setRegister{s: Set}{c: IntegralConversion s t}: Register -> s -> M unit;
 

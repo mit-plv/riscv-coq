@@ -1,42 +1,10 @@
 Require Import Coq.ZArith.BinInt.
-Require Import Coq.Bool.Sumbool.
 Require Import bbv.WordScope.
-Require Import bbv.DepEqNat.
 Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
 Require Import riscv.util.Monad.
 Require Import riscv.Decode.
 Require Import riscv.Program.
-
-Arguments sumbool_not {_} {_} (_).
-
-Open Scope Z_scope.
-
-Section comparisons.
-
-  Context {sz: nat}.
-  Variable a b: word sz.
-
-  (* a >= b <-> b <= a <-> ~ b > a <-> ~ a < b *)
-  Definition wge_dec := sumbool_not (wlt_dec a b).
-
-  (* a > b <-> b < a *)
-  Definition wgt_dec := wlt_dec b a.
-
-  (* a <= b <-> ~ b < a *)
-  Definition wle_dec := sumbool_not (wlt_dec b a).
-
-  (* a >= b <-> b <= a <-> ~ b > a <-> ~ a < b *)
-  Definition wsge_dec := sumbool_not (wslt_dec a b).
-
-  (* a > b <-> b < a *)
-  Definition wsgt_dec := wslt_dec b a.
-
-  (* a <= b <-> ~ b < a *)
-  Definition wsle_dec := sumbool_not (wslt_dec b a).
-
-End comparisons.
-
 
 Section Riscv.
 
@@ -46,87 +14,17 @@ Section Riscv.
 
   Context {B: RiscvBitWidths}.
 
-  Context {t Imm: Set}.
+  Context {t u Imm: Set}.
 
-  Context {A: Alu t}.
+  Context {A: Alu t u}.
 
   Context {c: IntegralConversion Imm t}.
 
-  (* interpret this word as a signed number *)
-  Definition signed: word wXLEN -> Z := @wordToZ wXLEN.
-
-  (* interpret this word as an unsigned number *)
-  Definition unsigned(w: word wXLEN): Z := Z.of_N (wordToN w).
-
-  (* can be used for obtaining both signed and unsigned numbers *)
-  Definition fromZ: Z -> word wXLEN := ZToWord wXLEN.
-
-  (* Design note: PC is an unsigned number, but we often need to add a signed
-     number to it, so we prefer using Z for everything (rather than also using N),
-     but need a way to say that PC is to be interpreted as a signed number. *)
-
-(*
-  Definition toN: word wXLEN -> N := @wordToN wXLEN.
-
-  Definition fromN: N -> word wXLEN := NToWord wXLEN.
-
-  Definition treat_signed_as_unsigned(a: Z): N := match a with
-    | Z0 => N0
-    | Zpos p => Npos p
-    | Zneg p => (Npow2 wXLEN - Npos p)%N
-    end.
-*)
-  Definition treat_signed_as_unsigned(a: Z): Z := match a with
-    | Z0 => Z0
-    | Zpos p => Zpos p
-    | Zneg p => (Zpower.two_power_nat wXLEN - Zpos p)
-    end.
-
-(*
-  Definition fromByte(w: word 8): word wXLEN.
-    refine (nat_cast _ _ (sext w (wXLEN - 8))). abstract bitwidth_omega.
-  Defined.
-
-  Definition fromHalf(w: word 16): word wXLEN.
-    refine (nat_cast _ _ (sext w (wXLEN - 16))). abstract bitwidth_omega.
-  Defined.
-
-  Definition fromWord(w: word 32): word wXLEN.
-    refine (nat_cast _ _ (sext w (wXLEN - 32))). abstract bitwidth_omega.
-  Defined.
-
-  Definition fromByteU(w: word 8): word wXLEN.
-    refine (nat_cast _ _ (zext w (wXLEN - 8))). abstract bitwidth_omega.
-  Defined.
-
-  Definition fromHalfU(w: word 16): word wXLEN.
-    refine (nat_cast _ _ (zext w (wXLEN - 16))). abstract bitwidth_omega.
-  Defined.
-
-  Definition fromWordU(w: word 32): word wXLEN.
-    refine (nat_cast _ _ (zext w (wXLEN - 32))). abstract bitwidth_omega.
-  Defined.
-
-  Definition toByte(w: word wXLEN): word 8.
-    refine (split_lower (wXLEN - 8) 8 (nat_cast _ _ w)). abstract bitwidth_omega.
-  Defined.
-
-  Definition toHalf(w: word wXLEN): word 16.
-    refine (split_lower (wXLEN - 16) 16 (nat_cast _ _ w)). abstract bitwidth_omega.
-  Defined.
-
-  Definition toWord(w: word wXLEN): word 32.
-    refine (split_lower (wXLEN - 32) 32 (nat_cast _ _ w)). abstract bitwidth_omega.
-  Defined.
-*)
-
   Context {ic8: IntegralConversion (word 8) t}.
-
-  (* TODO *)
-  Definition raiseException{M: Type -> Type}{MM: Monad M}(x1 x2: word wXLEN): M unit := Return tt.
 
   Definition execute{M: Type -> Type}{MM: Monad M}{RVS: RiscvState M}(i: Instruction Imm): M unit :=
     match i with
+    (* begin ast *)
 (*
     | Lui rd imm20 =>
       ( ( setRegister rd ) (fromZ imm20) )
@@ -337,6 +235,7 @@ Section Riscv.
         y <- ( getRegister rs2 );
         ( ( setRegister rd ) (wand x y) )
 *)
+    (* end ast *)
     | _ => Return tt
     end.
 
