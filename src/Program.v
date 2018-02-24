@@ -4,6 +4,10 @@ Require Import riscv.util.NameWithEq.
 (* t will be instantiated with a signed type, u with an unsigned type.
    By default, all operations are on signed numbers. *)
 Class Alu(t u: Set) := mkAlu {
+  (* constants *)
+  zero: t;
+  one: t;
+
   (* arithmetic operations: *)
   add: t -> t -> t;
   sub: t -> t -> t;
@@ -26,12 +30,17 @@ Class Alu(t u: Set) := mkAlu {
   (* conversion operations: *)
   signed: u -> t;
   unsigned: t -> u;
+
+  (* decidable equality *)
+  eq_dec_t: DecidableEq t;
+  eq_dec_u: DecidableEq t;
 }.
 
-Notation "a <|> b" := (or a b) (at level 50, left associativity).
-Notation "a <&> b" := (and a b) (at level 40, left associativity).
-Notation "a + b" := (add a b) (at level 50, left associativity).
-Notation "a - b" := (sub a b) (at level 50, left associativity).
+Notation "a <|> b" := (or a b) (at level 50, left associativity) : alu_scope.
+Notation "a <&> b" := (and a b) (at level 40, left associativity) : alu_scope.
+Notation "a + b" := (add a b) (at level 50, left associativity) : alu_scope.
+Notation "a - b" := (sub a b) (at level 50, left associativity) : alu_scope.
+
 
 Class IntegralConversion(t1 t2: Set) := mkIntegralConversion {
   fromIntegral: t1 -> t2

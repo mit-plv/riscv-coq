@@ -21,7 +21,7 @@ def read_coq_template(filepath):
 
 casename = ""
 
-blacklist = r'^(L.u?|S.|B.*|Jalr|Jal|S..i|Slt.*)$'
+blacklist = r'^(L.u?|S.|S..i|Slt.*|Bl.*|Bg.*)$'
 
 
 def convert_line(line):
@@ -30,10 +30,22 @@ def convert_line(line):
     extra_indent = "  "
 
     line = re.sub(r'^(.*<-.*)$', r'\1;', line)
-    line = re.sub('::', ':', line)
+    line = re.sub(r'^(\s*let [^=]+)=(.*)$', r'\1:=\2 in', line)
+    
+    # in most cases, setRegister is the last statement and therefore does
+    # not need ";;", but in the Jal and Jalr case, it's not the last one
+    if casename == "Jal" or casename == "Jalr":
+        line = re.sub(r'^(\s*setRegister.*)$', r'\1;;', line)
+
+    line = line.replace('::', ':')
     line = line.replace('.&.', '<&>')
     line = line.replace('.|.', '<|>')
-    
+    line = line.replace('/=', '<>')
+    line = line.replace('==', '=')
+    line = line.replace('mod ', 'rem ')
+    line = line.replace(' 4', ' four')
+    line = line.replace(' 0', ' zero')
+
     m = re.match(r'^(.*)if (.*) then(.*)$', line)
     if m:
         # "then" on same line
@@ -41,7 +53,7 @@ def convert_line(line):
     else:
         # "then" on next line, or no if at all
         line = re.sub(r'if (.*)$', r'if dec (\1)', line)
-    
+
     m = re.match(r'execute\s*\((([^ ]+)[^)]+)\)\s*=\s*(\w+)(.*)', line)
     if m:
         pattern = m.group(1)
@@ -63,6 +75,9 @@ def convert_line(line):
             line = "  | " + pattern + " =>\n      " + extra_indent + firstword + rest
     else:
         line = "    " + line
+
+    line = re.sub(r'do\s*$', '', line)
+    line = re.sub(r'when\s*\((.*)\)\s*\(\s*$', r'when (dec (\1)) (', line)
 
     return extra_indent + line
 
