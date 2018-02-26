@@ -21,7 +21,7 @@ def read_coq_template(filepath):
 
 casename = ""
 
-blacklist = r'^(L.u?|S.|S..i|Slt.*|Bl.*|Bg.*)$'
+blacklist = r'^(L.u?|S.|S..i|Slt.*)$'
 
 
 def convert_line(line):
@@ -43,6 +43,10 @@ def convert_line(line):
     line = line.replace('mod ', 'rem ')
     line = line.replace(' 4', ' four')
     line = line.replace(' 0', ' zero')
+
+    if re.match(r'.*unsigned.*unsigned.*', line):
+        line = line.replace('<', '<u')
+        line = line.replace('>=', '>=u')
 
     m = re.match(r'execute\s*\((([^ ]+)[^)]+)\)\s*=\s*(\w+)(.*)', line)
     if m:

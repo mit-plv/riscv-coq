@@ -33,12 +33,20 @@ Class Alu(t u: Set) := mkAlu {
   unsigned: t -> u;
 }.
 
-Notation "a <|> b" := (or a b) (at level 50, left associativity) : alu_scope.
+Notation "a <|> b" := (or a b)  (at level 50, left associativity) : alu_scope.
 Notation "a <&> b" := (and a b) (at level 40, left associativity) : alu_scope.
-Notation "a + b" := (add a b) (at level 50, left associativity) : alu_scope.
-Notation "a - b" := (sub a b) (at level 50, left associativity) : alu_scope.
-Notation "a /= b" := (negb (signed_eqb a b)) (at level 50, left associativity) : alu_scope.
-Notation "a == b" := (signed_eqb a b) (at level 50, left associativity) : alu_scope.
+Notation "a + b"   := (add a b) (at level 50, left associativity) : alu_scope.
+Notation "a - b"   := (sub a b) (at level 50, left associativity) : alu_scope.
+
+Notation "a /= b" := (negb (signed_eqb a b))        (at level 70, no associativity) : alu_scope.
+Notation "a == b" := (signed_eqb a b)               (at level 70, no associativity) : alu_scope.
+Notation "a < b"  := (signed_less_than a b)         (at level 70, no associativity) : alu_scope.
+Notation "a >= b" := (negb (signed_less_than a b))  (at level 70, no associativity) : alu_scope.
+
+(* Even with different scopes for t and u, it's too tricky to deal with notation aliasing,
+   because notation aliasing makes type class resolution less well. *)
+Notation "a <u b"  := (unsigned_less_than a b)         (at level 70, no associativity) : alu_scope.
+Notation "a >=u b" := (negb (unsigned_less_than a b))  (at level 70, no associativity) : alu_scope.
 
 Class IntegralConversion(t1 t2: Set) := mkIntegralConversion {
   fromIntegral: t1 -> t2

@@ -79,7 +79,7 @@ Section Riscv.
           if (rem addr four /= zero)
             then raiseException zero zero
             else setPC addr)
-    | Blt rs1 rs2 sbimm12 => Return tt (*
+    | Blt rs1 rs2 sbimm12 =>
         x <- getRegister rs1;
         y <- getRegister rs2;
         pc <- getPC;
@@ -88,7 +88,7 @@ Section Riscv.
           if (rem addr four /= zero)
             then raiseException zero zero
             else setPC addr)
-  *)| Bge rs1 rs2 sbimm12 => Return tt (*
+    | Bge rs1 rs2 sbimm12 =>
         x <- getRegister rs1;
         y <- getRegister rs2;
         pc <- getPC;
@@ -97,25 +97,25 @@ Section Riscv.
           if (rem addr four /= zero)
             then raiseException zero zero
             else setPC addr)
-  *)| Bltu rs1 rs2 sbimm12 => Return tt (*
+    | Bltu rs1 rs2 sbimm12 =>
         x <- getRegister rs1;
         y <- getRegister rs2;
         pc <- getPC;
-        when ((unsigned x) < (unsigned y)) (
+        when ((unsigned x) <u (unsigned y)) (
           let addr := (pc + fromIntegral sbimm12) in
           if (rem addr four /= zero)
             then raiseException zero zero
             else setPC addr)
-  *)| Bgeu rs1 rs2 sbimm12 => Return tt (*
+    | Bgeu rs1 rs2 sbimm12 =>
         x <- getRegister rs1;
         y <- getRegister rs2;
         pc <- getPC;
-        when ((unsigned x) >= (unsigned y)) (
+        when ((unsigned x) >=u (unsigned y)) (
           let addr := (pc + fromIntegral sbimm12) in
           if (rem addr four /= zero)
             then raiseException zero zero
             else setPC addr)
-  *)| Lb rd rs1 oimm12 => Return tt (*
+    | Lb rd rs1 oimm12 => Return tt (*
         a <- getRegister rs1;
         withTranslation Load 1 (a + fromIntegral oimm12)
           (\addr -> 
@@ -209,7 +209,7 @@ Section Riscv.
   *)| Sltu rd rs1 rs2 => Return tt (*
         x <- getRegister rs1;
         y <- getRegister rs2;
-        setRegister rd (if (unsigned x) < (unsigned y) then 1 else zero)
+        setRegister rd (if (unsigned x) <u (unsigned y) then 1 else zero)
   *)| Xor rd rs1 rs2 =>
         x <- getRegister rs1;
         y <- getRegister rs2;
