@@ -18,6 +18,7 @@ Class Alu(t u: Set) := mkAlu {
   (* comparison operators: *)
   signed_less_than: t -> t -> bool;
   unsigned_less_than: u -> u -> bool;
+  signed_eqb: t -> t -> bool;
 
   (* logical operations: *)
   sll: t -> t -> t;
@@ -30,17 +31,14 @@ Class Alu(t u: Set) := mkAlu {
   (* conversion operations: *)
   signed: u -> t;
   unsigned: t -> u;
-
-  (* decidable equality *)
-  eq_dec_t: DecidableEq t;
-  eq_dec_u: DecidableEq t;
 }.
 
 Notation "a <|> b" := (or a b) (at level 50, left associativity) : alu_scope.
 Notation "a <&> b" := (and a b) (at level 40, left associativity) : alu_scope.
 Notation "a + b" := (add a b) (at level 50, left associativity) : alu_scope.
 Notation "a - b" := (sub a b) (at level 50, left associativity) : alu_scope.
-
+Notation "a /= b" := (negb (signed_eqb a b)) (at level 50, left associativity) : alu_scope.
+Notation "a == b" := (signed_eqb a b) (at level 50, left associativity) : alu_scope.
 
 Class IntegralConversion(t1 t2: Set) := mkIntegralConversion {
   fromIntegral: t1 -> t2

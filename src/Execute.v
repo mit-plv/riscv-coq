@@ -25,9 +25,6 @@ Section Riscv.
 
   Context {A: Alu t u}.
 
-  Existing Instance eq_dec_t.
-  Existing Instance eq_dec_u.
-
   Context {ic8: IntegralConversion (word 8) t}.
 
   Context {icZ: IntegralConversion Z t}.
@@ -50,7 +47,7 @@ Section Riscv.
     | Jal rd jimm20 =>
         pc <- getPC;
         let newPC := pc + (fromIntegral jimm20) in
-        if dec ((rem newPC four <> zero))
+        if (rem newPC four /= zero)
           then raiseException zero zero
           else (
             setRegister rd (fromIntegral pc + four);;
@@ -59,7 +56,7 @@ Section Riscv.
         x <- getRegister rs1;
         pc <- getPC;
         let newPC := x + fromIntegral oimm12 in
-        if dec ((rem newPC four <> zero))
+        if (rem newPC four /= zero)
           then raiseException zero zero
           else (
             setRegister rd (fromIntegral pc + four);;
@@ -68,54 +65,54 @@ Section Riscv.
         x <- getRegister rs1;
         y <- getRegister rs2;
         pc <- getPC;
-        when (dec (x = y)) (
+        when (x == y) (
           let newPC := (pc + fromIntegral sbimm12) in
-          if dec ((rem newPC four <> zero))
+          if (rem newPC four /= zero)
             then raiseException zero zero
             else setPC newPC)
     | Bne rs1 rs2 sbimm12 =>
         x <- getRegister rs1;
         y <- getRegister rs2;
         pc <- getPC;
-        when (dec (x <> y)) (
+        when (x /= y) (
           let addr := (pc + fromIntegral sbimm12) in
-          if dec ((rem addr four <> zero))
+          if (rem addr four /= zero)
             then raiseException zero zero
             else setPC addr)
     | Blt rs1 rs2 sbimm12 => Return tt (*
         x <- getRegister rs1;
         y <- getRegister rs2;
         pc <- getPC;
-        when (dec (x < y)) (
+        when (x < y) (
           let addr := (pc + fromIntegral sbimm12) in
-          if dec ((rem addr four <> zero))
+          if (rem addr four /= zero)
             then raiseException zero zero
             else setPC addr)
   *)| Bge rs1 rs2 sbimm12 => Return tt (*
         x <- getRegister rs1;
         y <- getRegister rs2;
         pc <- getPC;
-        when (dec (x >= y)) (
+        when (x >= y) (
           let addr := (pc + fromIntegral sbimm12) in
-          if dec ((rem addr four <> zero))
+          if (rem addr four /= zero)
             then raiseException zero zero
             else setPC addr)
   *)| Bltu rs1 rs2 sbimm12 => Return tt (*
         x <- getRegister rs1;
         y <- getRegister rs2;
         pc <- getPC;
-        when (dec ((unsigned x) < (unsigned y))) (
+        when ((unsigned x) < (unsigned y)) (
           let addr := (pc + fromIntegral sbimm12) in
-          if dec ((rem addr four <> zero))
+          if (rem addr four /= zero)
             then raiseException zero zero
             else setPC addr)
   *)| Bgeu rs1 rs2 sbimm12 => Return tt (*
         x <- getRegister rs1;
         y <- getRegister rs2;
         pc <- getPC;
-        when (dec ((unsigned x) >= (unsigned y))) (
+        when ((unsigned x) >= (unsigned y)) (
           let addr := (pc + fromIntegral sbimm12) in
-          if dec ((rem addr four <> zero))
+          if (rem addr four /= zero)
             then raiseException zero zero
             else setPC addr)
   *)| Lb rd rs1 oimm12 => Return tt (*
@@ -171,10 +168,10 @@ Section Riscv.
         setRegister rd (x + fromIntegral imm12)
     | Slti rd rs1 imm12 => Return tt (*
         x <- getRegister rs1;
-        setRegister rd (if dec(x < fromIntegral imm12) then 1 else zero)
+        setRegister rd (if x < fromIntegral imm12 then 1 else zero)
   *)| Sltiu rd rs1 imm12 => Return tt (*
         x <- getRegister rs1;
-        setRegister rd (if dec((unsigned x) < (fromIntegral imm12 : u)) then 1 else zero)
+        setRegister rd (if (unsigned x) < (fromIntegral imm12 : u) then 1 else zero)
   *)| Xori rd rs1 imm12 =>
         x <- getRegister rs1;
         setRegister rd (xor x (fromIntegral imm12))
@@ -208,11 +205,11 @@ Section Riscv.
     | Slt rd rs1 rs2 => Return tt (*
         x <- getRegister rs1;
         y <- getRegister rs2;
-        setRegister rd (if dec(x < y) then 1 else zero)
+        setRegister rd (if x < y then 1 else zero)
   *)| Sltu rd rs1 rs2 => Return tt (*
         x <- getRegister rs1;
         y <- getRegister rs2;
-        setRegister rd (if dec((unsigned x) < (unsigned y)) then 1 else zero)
+        setRegister rd (if (unsigned x) < (unsigned y) then 1 else zero)
   *)| Xor rd rs1 rs2 =>
         x <- getRegister rs1;
         y <- getRegister rs2;

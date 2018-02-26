@@ -40,19 +40,9 @@ def convert_line(line):
     line = line.replace('::', ':')
     line = line.replace('.&.', '<&>')
     line = line.replace('.|.', '<|>')
-    line = line.replace('/=', '<>')
-    line = line.replace('==', '=')
     line = line.replace('mod ', 'rem ')
     line = line.replace(' 4', ' four')
     line = line.replace(' 0', ' zero')
-
-    m = re.match(r'^(.*)if (.*) then(.*)$', line)
-    if m:
-        # "then" on same line
-        line = m.group(1) + "if dec(" + m.group(2) + ") then" + m.group(3)
-    else:
-        # "then" on next line, or no if at all
-        line = re.sub(r'if (.*)$', r'if dec (\1)', line)
 
     m = re.match(r'execute\s*\((([^ ]+)[^)]+)\)\s*=\s*(\w+)(.*)', line)
     if m:
@@ -77,7 +67,6 @@ def convert_line(line):
         line = "    " + line
 
     line = re.sub(r'do\s*$', '', line)
-    line = re.sub(r'when\s*\((.*)\)\s*\(\s*$', r'when (dec (\1)) (', line)
 
     return extra_indent + line
 
