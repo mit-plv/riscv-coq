@@ -3,6 +3,7 @@ Require Import bbv.WordScope.
 Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
 Require Import riscv.util.Monad.
+Require Import riscv.Utility.
 Require Import riscv.Decode.
 Require Import riscv.Program.
 

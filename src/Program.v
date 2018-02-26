@@ -1,5 +1,6 @@
 Require Import bbv.Word.
 Require Import riscv.util.NameWithEq.
+Require Import riscv.Utility.
 
 (* t will be instantiated with a signed type, u with an unsigned type.
    By default, all operations are on signed numbers. *)
@@ -48,9 +49,6 @@ Notation "a >= b" := (negb (signed_less_than a b))  (at level 70, no associativi
 Notation "a <u b"  := (unsigned_less_than a b)         (at level 70, no associativity) : alu_scope.
 Notation "a >=u b" := (negb (unsigned_less_than a b))  (at level 70, no associativity) : alu_scope.
 
-Class IntegralConversion(t1 t2: Set) := mkIntegralConversion {
-  fromIntegral: t1 -> t2
-}.
 
 Section Riscv.
 

@@ -2,6 +2,7 @@ Require Import Coq.omega.Omega.
 Require Import riscv.util.Decidable.
 Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
+Require Import riscv.Utility.
 Require Import bbv.BinNotationZ.
 Require Import bbv.HexNotationZ.
 
@@ -199,17 +200,7 @@ Inductive Instruction : Set :=
 
 End Instructions.
 
-(* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
-   no matter whether it's a 32-bit or 64-bit machine. *)
-Definition MachineInt := Z.
-
-Definition bitSlice(x: Z)(start eend: Z): Z :=
-  Z.land (Z.shiftr x start) (Z.lnot (Z.shiftl (-1) (eend - start))).
-
 Definition shift := Z.shiftl.
-
-Definition signExtend(l: Z)(n: Z): Z :=
-  if Z.testbit n (l-1) then (n - (Z.setbit 0 l)) else n.
 
 Local Instance ZName: NameWithEq := {|
   name := Z
