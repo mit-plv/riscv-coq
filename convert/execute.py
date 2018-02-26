@@ -21,7 +21,7 @@ def read_coq_template(filepath):
 
 casename = ""
 
-blacklist = r'^(L.u?|S.|S..i)$'
+blacklist = r'^(L.u?|S.)$'
 
 
 def convert_line(line):

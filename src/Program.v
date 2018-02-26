@@ -1,6 +1,7 @@
 Require Import bbv.Word.
 Require Import riscv.util.NameWithEq.
 Require Import riscv.Utility.
+Require Import Coq.ZArith.BinInt.
 
 (* t will be instantiated with a signed type, u with an unsigned type.
    By default, all operations are on signed numbers. *)
@@ -22,9 +23,10 @@ Class Alu(t u: Set) := mkAlu {
   signed_eqb: t -> t -> bool;
 
   (* logical operations: *)
-  sll: t -> t -> t;
-  srl: t -> t -> t;
-  sra: t -> t -> t;
+  shiftL: t -> Z -> t;
+  signed_shiftR: t -> Z -> t; (* arithmetic shift *)
+  unsigned_shiftR: u -> Z -> u; (* logic shift *)
+
   xor: t -> t -> t;
   or: t -> t -> t;
   and: t -> t -> t;
@@ -49,6 +51,30 @@ Notation "a >= b" := (negb (signed_less_than a b))  (at level 70, no associativi
 Notation "a <u b"  := (unsigned_less_than a b)         (at level 70, no associativity) : alu_scope.
 Notation "a >=u b" := (negb (unsigned_less_than a b))  (at level 70, no associativity) : alu_scope.
 
+
+Section Shifts.
+
+  Context {t u: Set}.
+  Context {A: Alu t u}.
+  Context {m: MachineWidth t}.
+  Context {ic0: IntegralConversion Z t}.
+
+  Definition slli(x: t)(shamt6: Z): t :=
+    shiftL x (shiftBits (fromIntegral shamt6: t)).
+
+  Definition srli(x: t)(shamt6: Z): u :=
+    unsigned_shiftR ((unsigned x) : u) (shiftBits (fromIntegral shamt6 : t)).
+
+  Definition srai(x: t)(shamt6: Z): t :=
+    signed_shiftR x (shiftBits (fromIntegral shamt6 : t)).
+
+  Definition sll(x y: t): t := shiftL x (shiftBits y).
+
+  Definition srl(x y: t): u := unsigned_shiftR (unsigned x) (shiftBits y).
+
+  Definition sra(x y: t): t := signed_shiftR x (shiftBits y).
+
+End Shifts.
 
 Section Riscv.
 

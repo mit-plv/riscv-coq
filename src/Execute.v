@@ -32,6 +32,10 @@ Section Riscv.
 
   Context {icZu: IntegralConversion Z u}.
 
+  Context {icut: IntegralConversion u t}.
+
+  Context {m: MachineWidth t}.
+
   (* TODO *)
   Definition raiseException{M: Type -> Type}{MM: Monad M}(x1 x2: t): M unit := Return tt.
 
@@ -169,10 +173,10 @@ Section Riscv.
   *)| Addi rd rs1 imm12 =>
         x <- getRegister rs1;
         setRegister rd (x + fromIntegral imm12)
-    | Slti rd rs1 imm12 => Return tt (*
+    | Slti rd rs1 imm12 =>
         x <- getRegister rs1;
         setRegister rd (if x < fromIntegral imm12 then one else zero)
-  *)| Sltiu rd rs1 imm12 =>
+    | Sltiu rd rs1 imm12 =>
         x <- getRegister rs1;
         setRegister rd (if (unsigned x) <u (fromIntegral imm12 : u) then one else zero)
     | Xori rd rs1 imm12 =>
@@ -184,16 +188,16 @@ Section Riscv.
     | Andi rd rs1 imm12 =>
         x <- getRegister rs1;
         setRegister rd (x <&> (fromIntegral imm12))
-    | Slli rd rs1 shamt6 => Return tt (*
+    | Slli rd rs1 shamt6 =>
         x <- getRegister rs1;
         setRegister rd (slli x shamt6)
-  *)| Srli rd rs1 shamt6 => Return tt (*
+    | Srli rd rs1 shamt6 =>
         x <- getRegister rs1;
         setRegister rd (srli x shamt6)
-  *)| Srai rd rs1 shamt6 => Return tt (*
+    | Srai rd rs1 shamt6 =>
         x <- getRegister rs1;
         setRegister rd (srai x shamt6)
-  *)| Add rd rs1 rs2 =>
+    | Add rd rs1 rs2 =>
         x <- getRegister rs1;
         y <- getRegister rs2;
         setRegister rd (x + y)
