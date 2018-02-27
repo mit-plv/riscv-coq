@@ -32,6 +32,10 @@ Section Riscv.
   Context {ic16: IntegralConversion Int16 t}.
   Context {ic32: IntegralConversion Int32 t}.
 
+  Context {ic8': IntegralConversion t Int8}.
+  Context {ic16': IntegralConversion t Int16}.
+  Context {ic32': IntegralConversion t Int32}.
+
   Context {ic8u: IntegralConversion Word8 t}.
   Context {ic16u: IntegralConversion Word16 t}.
   Context {ic32u: IntegralConversion Word32 t}.
@@ -46,6 +50,7 @@ Section Riscv.
   Context {m: MachineWidth t}.
 
   Notation "'when' a b" := (if a then b else Return tt) (at level 60, a at level 0, b at level 0).
+
 
   Definition execute{M: Type -> Type}{MM: Monad M}{RVS: RiscvState M}(i: Instruction): M unit :=
     match i with
@@ -156,25 +161,25 @@ Section Riscv.
           (fun addr => 
               x <- loadHalf addr;
               setRegister rd (unsigned x))
-    | Sb rs1 rs2 simm12 => Return tt (*
+    | Sb rs1 rs2 simm12 =>
         a <- getRegister rs1;
         withTranslation Store one (a + fromIntegral simm12)
           (fun addr => 
               x <- getRegister rs2;
               storeByte addr (fromIntegral x))
-  *)| Sh rs1 rs2 simm12 => Return tt (*
+    | Sh rs1 rs2 simm12 =>
         a <- getRegister rs1;
         withTranslation Store two (a + fromIntegral simm12)
           (fun addr => 
               x <- getRegister rs2;
               storeHalf addr (fromIntegral x))
-  *)| Sw rs1 rs2 simm12 => Return tt (*
+    | Sw rs1 rs2 simm12 =>
         a <- getRegister rs1;
         withTranslation Store four (a + fromIntegral simm12)
           (fun addr => 
               x <- getRegister rs2;
               storeWord addr (fromIntegral x))
-  *)| Addi rd rs1 imm12 =>
+    | Addi rd rs1 imm12 =>
         x <- getRegister rs1;
         setRegister rd (x + fromIntegral imm12)
     | Slti rd rs1 imm12 =>

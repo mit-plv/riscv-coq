@@ -21,12 +21,11 @@ def read_coq_template(filepath):
 
 casename = ""
 
-blacklist = r'^(S.)$'
-
 max_number_of_cases = 10000000
 casecount = 0
 
-# blacklist = r'^(FirstInstructionToCommentOut|SecondInstruction|Etc)$'
+# blacklist = r'^(S.)$'
+blacklist = r'^(FirstInstructionToCommentOut|SecondInstruction|Etc)$'
 
 def convert_line(line):
     global casename
