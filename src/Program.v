@@ -41,11 +41,8 @@ Notation "a == b" := (signed_eqb a b)               (at level 70, no associativi
 Notation "a < b"  := (signed_less_than a b)         (at level 70, no associativity) : alu_scope.
 Notation "a >= b" := (negb (signed_less_than a b))  (at level 70, no associativity) : alu_scope.
 
-(* Even with different scopes for t and u, it's too tricky to deal with notation aliasing,
-   because notation aliasing makes type class resolution less well. *)
-Notation "a <u b"  := (unsigned_less_than a b)         (at level 70, no associativity) : alu_scope.
-Notation "a >=u b" := (negb (unsigned_less_than a b))  (at level 70, no associativity) : alu_scope.
-
+Definition ltu{t u s: Set}{A: Alu t u}{c: Convertible t u}{ic: IntegralConversion s u}
+  (x: t)(y: s): bool := unsigned_less_than (unsigned x) (fromIntegral y: u).
 
 Section Constants.
   Context {t u: Set}.

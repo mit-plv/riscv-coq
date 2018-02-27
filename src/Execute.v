@@ -41,6 +41,7 @@ Section Riscv.
   Context {icZu: IntegralConversion Z u}.
 
   Context {icut: IntegralConversion u t}.
+  Context {ictu: IntegralConversion t u}.
 
   Context {m: MachineWidth t}.
 
@@ -111,7 +112,7 @@ Section Riscv.
         x <- getRegister rs1;
         y <- getRegister rs2;
         pc <- getPC;
-        when ((unsigned x) <u (unsigned y)) (
+        when ((ltu x y)) (
           let addr := (pc + fromIntegral sbimm12) in
           if (rem addr four /= zero)
             then raiseException zero zero
@@ -120,7 +121,7 @@ Section Riscv.
         x <- getRegister rs1;
         y <- getRegister rs2;
         pc <- getPC;
-        when ((unsigned x) >=u (unsigned y)) (
+        when (negb (ltu x y)) (
           let addr := (pc + fromIntegral sbimm12) in
           if (rem addr four /= zero)
             then raiseException zero zero
@@ -160,28 +161,28 @@ Section Riscv.
         withTranslation Store one (a + fromIntegral simm12)
           (fun addr => 
               x <- getRegister rs2;
-              storeByte addr x)
+              storeByte addr (fromIntegral x))
   *)| Sh rs1 rs2 simm12 => Return tt (*
         a <- getRegister rs1;
         withTranslation Store two (a + fromIntegral simm12)
           (fun addr => 
               x <- getRegister rs2;
-              storeHalf addr x)
+              storeHalf addr (fromIntegral x))
   *)| Sw rs1 rs2 simm12 => Return tt (*
         a <- getRegister rs1;
         withTranslation Store four (a + fromIntegral simm12)
           (fun addr => 
               x <- getRegister rs2;
-              storeWord addr x)
+              storeWord addr (fromIntegral x))
   *)| Addi rd rs1 imm12 =>
         x <- getRegister rs1;
         setRegister rd (x + fromIntegral imm12)
     | Slti rd rs1 imm12 =>
         x <- getRegister rs1;
-        setRegister rd (if x < fromIntegral imm12 then one else zero)
+        setRegister rd (if x < (fromIntegral imm12) then one else zero)
     | Sltiu rd rs1 imm12 =>
         x <- getRegister rs1;
-        setRegister rd (if (unsigned x) <u (fromIntegral imm12 : u) then one else zero)
+        setRegister rd (if (ltu x imm12) then one else zero)
     | Xori rd rs1 imm12 =>
         x <- getRegister rs1;
         setRegister rd (xor x (fromIntegral imm12))
@@ -219,7 +220,7 @@ Section Riscv.
     | Sltu rd rs1 rs2 =>
         x <- getRegister rs1;
         y <- getRegister rs2;
-        setRegister rd (if (unsigned x) <u (unsigned y) then one else zero)
+        setRegister rd (if (ltu x y) then one else zero)
     | Xor rd rs1 rs2 =>
         x <- getRegister rs1;
         y <- getRegister rs2;
