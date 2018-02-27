@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.BinInt.
+Require Import bbv.Word.
 
 Class IntegralConversion(t1 t2: Set) := mkIntegralConversion {
   fromIntegral: t1 -> t2
@@ -35,6 +36,53 @@ splitWord = splitBytes 32
 splitDouble :: (Bits a, Integral a) => a -> [Word8]
 splitDouble = splitBytes 64
 *)
+
+(*
+Inductive WordWithSignedness(sz: nat): Set :=
+| SignedWord: word sz -> WordWithSignedness sz
+| UnsignedWord: word sz -> WordWithSignedness sz.
+*)
+
+Inductive SignedWord(sz: nat): Set := mkSignedWord: word sz -> SignedWord sz.
+Inductive UnsignedWord(sz: nat): Set := mkUnsignedWord: word sz -> UnsignedWord sz.
+
+Arguments mkSignedWord {_} _.
+Arguments mkUnsignedWord {_} _.
+
+Definition Int8 : Set := SignedWord  8.
+Definition Int16: Set := SignedWord 16.
+Definition Int32: Set := SignedWord 32.
+Definition Int64: Set := SignedWord 64.
+
+Definition Word8 : Set := UnsignedWord  8.
+Definition Word16: Set := UnsignedWord 16.
+Definition Word32: Set := UnsignedWord 32.
+Definition Word64: Set := UnsignedWord 64.
+
+Class Convertible(s u: Set) := mkConvertible {
+  unsigned: s -> u;
+  signed: u -> s;
+}.
+
+Definition signed0{sz: nat}(w: UnsignedWord sz): SignedWord sz :=
+  match w with
+  | mkUnsignedWord x => mkSignedWord x
+  end.
+
+Definition unsigned0{sz: nat}(w: SignedWord sz): UnsignedWord sz :=
+  match w with
+  | mkSignedWord x => mkUnsignedWord x
+  end.
+
+Definition Convertible_Int_Word(sz: nat): Convertible (SignedWord sz) (UnsignedWord sz) := {|
+  unsigned := unsigned0;
+  signed := signed0;
+|}.
+
+Instance Convertible_Int8_Word8: Convertible Int8 Word8 := Convertible_Int_Word 8.
+Instance Convertible_Int16_Word16: Convertible Int16 Word16 := Convertible_Int_Word 16.
+Instance Convertible_Int32_Word32: Convertible Int32 Word32 := Convertible_Int_Word 32.
+Instance Convertible_Int64_Word64: Convertible Int64 Word64 := Convertible_Int_Word 64.
 
 Class MachineWidth(t: Set) := mkMachineWidth {
   (* the bits of the "shift amount" field to be used for in a shift operation *)

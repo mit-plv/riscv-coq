@@ -1,9 +1,9 @@
 Require Import Coq.ZArith.BinInt.
-Require Import bbv.WordScope.
 Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
 Require Import riscv.util.Monad.
 Require Import riscv.Utility.
+Require Import riscv.NoVirtualMemory.
 Require Import riscv.Decode.
 Require Import riscv.Program.
 
@@ -26,7 +26,15 @@ Section Riscv.
 
   Context {A: Alu t u}.
 
-  Context {ic8: IntegralConversion (word 8) t}.
+  Context {c: Convertible t u}.
+
+  Context {ic8: IntegralConversion Int8 t}.
+  Context {ic16: IntegralConversion Int16 t}.
+  Context {ic32: IntegralConversion Int32 t}.
+
+  Context {ic8u: IntegralConversion Word8 t}.
+  Context {ic16u: IntegralConversion Word16 t}.
+  Context {ic32u: IntegralConversion Word32 t}.
 
   Context {icZt: IntegralConversion Z t}.
 
@@ -35,11 +43,6 @@ Section Riscv.
   Context {icut: IntegralConversion u t}.
 
   Context {m: MachineWidth t}.
-
-  (* TODO *)
-  Definition raiseException{M: Type -> Type}{MM: Monad M}(x1 x2: t): M unit := Return tt.
-
-  Definition four: t := one + one + one + one.
 
   Notation "'when' a b" := (if a then b else Return tt) (at level 60, a at level 0, b at level 0).
 
@@ -122,52 +125,52 @@ Section Riscv.
           if (rem addr four /= zero)
             then raiseException zero zero
             else setPC addr)
-    | Lb rd rs1 oimm12 => Return tt (*
+    | Lb rd rs1 oimm12 =>
         a <- getRegister rs1;
         withTranslation Load one (a + fromIntegral oimm12)
-          (\addr -> 
+          (fun addr => 
               x <- loadByte addr;
               setRegister rd x)
-  *)| Lh rd rs1 oimm12 => Return tt (*
+    | Lh rd rs1 oimm12 =>
         a <- getRegister rs1;
-        withTranslation Load 2 (a + fromIntegral oimm12)
-          (\addr -> 
+        withTranslation Load two (a + fromIntegral oimm12)
+          (fun addr => 
               x <- loadHalf addr;
               setRegister rd x)
-  *)| Lw rd rs1 oimm12 => Return tt (*
+    | Lw rd rs1 oimm12 =>
         a <- getRegister rs1;
         withTranslation Load four (a + fromIntegral oimm12)
-          (\addr -> 
+          (fun addr => 
               x <- loadWord addr;
               setRegister rd x)
-  *)| Lbu rd rs1 oimm12 => Return tt (*
+    | Lbu rd rs1 oimm12 =>
         a <- getRegister rs1;
         withTranslation Load one (a + fromIntegral oimm12)
-          (\addr -> 
+          (fun addr => 
               x <- loadByte addr;
               setRegister rd (unsigned x))
-  *)| Lhu rd rs1 oimm12 => Return tt (*
+    | Lhu rd rs1 oimm12 =>
         a <- getRegister rs1;
-        withTranslation Load 2 (a + fromIntegral oimm12)
-          (\addr -> 
+        withTranslation Load two (a + fromIntegral oimm12)
+          (fun addr => 
               x <- loadHalf addr;
               setRegister rd (unsigned x))
-  *)| Sb rs1 rs2 simm12 => Return tt (*
+    | Sb rs1 rs2 simm12 => Return tt (*
         a <- getRegister rs1;
         withTranslation Store one (a + fromIntegral simm12)
-          (\addr -> 
+          (fun addr => 
               x <- getRegister rs2;
               storeByte addr x)
   *)| Sh rs1 rs2 simm12 => Return tt (*
         a <- getRegister rs1;
-        withTranslation Store 2 (a + fromIntegral simm12)
-          (\addr -> 
+        withTranslation Store two (a + fromIntegral simm12)
+          (fun addr => 
               x <- getRegister rs2;
               storeHalf addr x)
   *)| Sw rs1 rs2 simm12 => Return tt (*
         a <- getRegister rs1;
         withTranslation Store four (a + fromIntegral simm12)
-          (\addr -> 
+          (fun addr => 
               x <- getRegister rs2;
               storeWord addr x)
   *)| Addi rd rs1 imm12 =>

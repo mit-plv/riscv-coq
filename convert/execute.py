@@ -21,8 +21,9 @@ def read_coq_template(filepath):
 
 casename = ""
 
-blacklist = r'^(L.u?|S.)$'
+blacklist = r'^(S.)$'
 
+# blacklist = r'^(FirstInstructionToCommentOut|SecondInstruction|Etc)$'
 
 def convert_line(line):
     global casename
@@ -31,6 +32,7 @@ def convert_line(line):
 
     line = re.sub(r'^(.*<-.*)$', r'\1;', line)
     line = re.sub(r'^(\s*let [^=]+)=(.*)$', r'\1:=\2 in', line)
+    line = re.sub(r'\\([^ ->]+)\s*->', r'fun \1 =>', line)
     
     # in most cases, setRegister is the last statement and therefore does
     # not need ";;", but in the Jal and Jalr case, it's not the last one
@@ -42,6 +44,7 @@ def convert_line(line):
     line = line.replace('.|.', '<|>')
     line = line.replace('mod ', 'rem ')
     line = line.replace(' 4', ' four')
+    line = line.replace(' 2', ' two')
     line = line.replace(' 1', ' one')
     line = line.replace(' 0', ' zero')
 

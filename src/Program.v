@@ -1,4 +1,3 @@
-Require Import bbv.Word.
 Require Import riscv.util.NameWithEq.
 Require Import riscv.Utility.
 Require Import Coq.ZArith.BinInt.
@@ -30,10 +29,6 @@ Class Alu(t u: Set) := mkAlu {
   xor: t -> t -> t;
   or: t -> t -> t;
   and: t -> t -> t;
-
-  (* conversion operations: *)
-  signed: u -> t;
-  unsigned: t -> u;
 }.
 
 Notation "a <|> b" := (or a b)  (at level 50, left associativity) : alu_scope.
@@ -52,10 +47,23 @@ Notation "a <u b"  := (unsigned_less_than a b)         (at level 70, no associat
 Notation "a >=u b" := (negb (unsigned_less_than a b))  (at level 70, no associativity) : alu_scope.
 
 
+Section Constants.
+  Context {t u: Set}.
+  Context {A: Alu t u}.
+
+  Local Open Scope alu_scope.
+
+  Definition two: t := one + one.
+
+  Definition four: t := two + two.
+
+End Constants.
+
 Section Shifts.
 
   Context {t u: Set}.
   Context {A: Alu t u}.
+  Context {c: Convertible t u}.
   Context {m: MachineWidth t}.
   Context {ic0: IntegralConversion Z t}.
 
@@ -85,20 +93,22 @@ Section Riscv.
     getRegister: Register -> M t;
     setRegister{s: Set}{c: IntegralConversion s t}: Register -> s -> M unit;
 
-    loadByte: t -> M (word 8);
-    loadHalf: t -> M (word 16);
-    loadWord: t -> M (word 32);
-    loadDouble: t -> M (word 64);
+    loadByte: t -> M Int8;
+    loadHalf: t -> M Int16;
+    loadWord: t -> M Int32;
+    loadDouble: t -> M Int64;
 
-    storeByte: t -> (word 8) -> M unit;
-    storeHalf: t -> (word 16) -> M unit;
-    storeWord: t -> (word 32) -> M unit;
-    storeDouble: t -> (word 64) -> M unit;
+    storeByte: t -> Int8 -> M unit;
+    storeHalf: t -> Int16 -> M unit;
+    storeWord: t -> Int32 -> M unit;
+    storeDouble: t -> Int64 -> M unit;
 
     getPC: M t;
     setPC: t -> M unit;
 
     step: M unit; (* updates PC *)
+
+    raiseException: t -> t -> M unit;
   }.
 
 End Riscv.
