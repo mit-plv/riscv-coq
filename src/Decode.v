@@ -8,6 +8,90 @@ Require Import bbv.HexNotationZ.
 
 Local Open Scope Z_scope.
 
+Notation "a <|> b" := (Z.lor a b) (at level 50, left associativity).
+
+Section Instructions.
+
+Context {Name: NameWithEq}. (* register name *)
+Notation Register := (@name Name).
+
+Definition Imm := Z.
+
+Inductive Instruction : Set :=
+  (* begin instructions *)
+  | InvalidInstruction : Instruction
+
+  |  Lb(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+  |  Lh(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+  |  Lw(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+  |  Ld(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+  |  Lbu(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+  |  Lhu(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+  |  Lwu(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+
+  | Addi (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
+  | Slli (rd: Register)(rs1: Register)(shamt6: Imm) : Instruction
+  | Slti (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
+  | Sltiu (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
+  | Xori (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
+  | Ori (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
+  | Andi (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
+  | Srli (rd: Register)(rs1: Register)(shamt6: Imm) : Instruction
+  | Srai (rd: Register)(rs1: Register)(shamt6: Imm) : Instruction
+
+  | Auipc (rd : Register)(oimm20: Imm): Instruction
+
+  | Sb (rs1: Register)(rs2: Register)(simm12: Imm) :  Instruction
+  | Sh (rs1: Register)(rs2: Register)(simm12: Imm) :  Instruction
+  | Sw (rs1: Register)(rs2: Register)(simm12: Imm) :  Instruction
+  | Sd (rs1: Register)(rs2: Register)(simm12: Imm) :  Instruction
+  | Add (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Sub (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Sll (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Slt (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Sltu (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Xor (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Srl (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Sra (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Or (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | And (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Mul (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Mulh (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Mulhsu (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Mulhu (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Div (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Divu (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Rem (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+  | Remu (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
+
+  | Lui(rd: Register)(imm20: Imm): Instruction
+  | Beq(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
+  | Bne(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
+  | Blt(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
+  | Bge(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
+  | Bltu(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
+  | Bgeu(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
+  | Jalr(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
+  | Jal(rd: Register)(jimm20: Imm) : Instruction
+
+  | Ecall : Instruction
+  | Ebreak : Instruction
+  | Uret : Instruction
+  | Sret : Instruction
+  | Mret : Instruction
+  | Wfi : Instruction
+
+  | Csrrw(rd: Register)(rs1: Register)(csr12: Imm): Instruction
+  | Csrrs(rd: Register)(rs1: Register)(csr12: Imm): Instruction
+  | Csrrc(rd: Register)(rs1: Register)(csr12: Imm): Instruction
+  | Csrrwi(rd: Register)(zimm: Imm)(csr12: Imm): Instruction
+  | Csrrsi(rd: Register)(zimm: Imm)(csr12: Imm): Instruction
+  | Csrrci(rd: Register)(zimm: Imm)(csr12: Imm): Instruction
+  (* end instructions *)
+.
+
+End Instructions.
+
 (* Note: we could also use this notation:
 Eval cbv in (1~0~1~0)%positive.
 But it doesn't allow leading zeros, nor zero values. *)
@@ -119,90 +203,6 @@ Definition funct3_CSRRWI := Ob"101".
 Definition funct3_CSRRSI := Ob"110".
 Definition funct3_CSRRCI := Ob"111".
 (* end constants *)
-
-Notation "a <|> b" := (Z.lor a b) (at level 50, left associativity).
-
-Section Instructions.
-
-Context {Name: NameWithEq}. (* register name *)
-Notation Register := (@name Name).
-
-Definition Imm := Z.
-
-Inductive Instruction : Set :=
-  (* begin instructions *)
-  | InvalidInstruction : Instruction
-
-  |  Lb(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
-  |  Lh(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
-  |  Lw(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
-  |  Ld(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
-  |  Lbu(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
-  |  Lhu(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
-  |  Lwu(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
-
-  | Addi (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
-  | Slli (rd: Register)(rs1: Register)(shamt6: Imm) : Instruction
-  | Slti (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
-  | Sltiu (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
-  | Xori (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
-  | Ori (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
-  | Andi (rd: Register)(rs1: Register)(imm12: Imm) : Instruction
-  | Srli (rd: Register)(rs1: Register)(shamt6: Imm) : Instruction
-  | Srai (rd: Register)(rs1: Register)(shamt6: Imm) : Instruction
-
-  | Auipc (rd : Register)(oimm20: Imm): Instruction
-
-  | Sb (rs1: Register)(rs2: Register)(simm12: Imm) :  Instruction
-  | Sh (rs1: Register)(rs2: Register)(simm12: Imm) :  Instruction
-  | Sw (rs1: Register)(rs2: Register)(simm12: Imm) :  Instruction
-  | Sd (rs1: Register)(rs2: Register)(simm12: Imm) :  Instruction
-  | Add (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Sub (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Sll (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Slt (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Sltu (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Xor (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Srl (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Sra (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Or (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | And (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Mul (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Mulh (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Mulhsu (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Mulhu (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Div (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Divu (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Rem (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-  | Remu (rd: Register)(rs1: Register)(rs2: Register) :  Instruction
-
-  | Lui(rd: Register)(imm20: Imm): Instruction
-  | Beq(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
-  | Bne(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
-  | Blt(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
-  | Bge(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
-  | Bltu(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
-  | Bgeu(rs1: Register)(rs2: Register)(sbimm12: Imm): Instruction
-  | Jalr(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
-  | Jal(rd: Register)(jimm20: Imm) : Instruction
-
-  | Ecall : Instruction
-  | Ebreak : Instruction
-  | Uret : Instruction
-  | Sret : Instruction
-  | Mret : Instruction
-  | Wfi : Instruction
-
-  | Csrrw(rd: Register)(rs1: Register)(csr12: Imm): Instruction
-  | Csrrs(rd: Register)(rs1: Register)(csr12: Imm): Instruction
-  | Csrrc(rd: Register)(rs1: Register)(csr12: Imm): Instruction
-  | Csrrwi(rd: Register)(zimm: Imm)(csr12: Imm): Instruction
-  | Csrrsi(rd: Register)(zimm: Imm)(csr12: Imm): Instruction
-  | Csrrci(rd: Register)(zimm: Imm)(csr12: Imm): Instruction
-  (* end instructions *)
-.
-
-End Instructions.
 
 Definition shift := Z.shiftl.
 
