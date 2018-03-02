@@ -155,10 +155,11 @@ def convert(hs_filepath, coq_filepath):
                 cond = m.group(1).strip()
                 casename = m.group(2)
                 args = m.group(3)
-                cond = cond.replace('==', ' =? ').replace(',', ' &&')
+                cond = cond.replace('==', ' =? ')
+                cond = re.sub(r'\s*,\s*', ') && (', cond)
                 args = re.sub('[^ =,]+\s*=\s*([^ =,]+)', r'\1', args)
                 args = args.replace('{', '').replace('}', '').replace(',', '')
-                line = '    if ' + cond + ' then ' + casename + ' ' + args + ' else'
+                line = '    if (' + cond + ') then ' + casename + ' ' + args + ' else'
             g.write(line)
             g.write('\n')
         

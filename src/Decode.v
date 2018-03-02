@@ -326,7 +326,9 @@ Local Instance ZName: NameWithEq := {|
   name := Z
 |}.
 
-Definition decode (inst : MachineInt) : Instruction :=
+Local Open Scope bool_scope.
+
+Definition decode (xlen inst : MachineInt) : Instruction :=
 (* begin decode *)
     let opcode  := bitSlice inst 0 7 in
     let funct3  := bitSlice inst 12 15 in
@@ -369,113 +371,113 @@ Definition decode (inst : MachineInt) : Instruction :=
 
     let zimm    := bitSlice inst 15 20 in
 
-    if opcode =? opcode_LOAD && funct3 =? funct3_LB then Lb rd rs1 oimm12 else
-    if opcode =? opcode_LOAD && funct3 =? funct3_LH then Lh rd rs1 oimm12 else
-    if opcode =? opcode_LOAD && funct3 =? funct3_LW then Lw rd rs1 oimm12 else
-    if opcode =? opcode_LOAD && funct3 =? funct3_LBU then Lbu rd rs1 oimm12 else
-    if opcode =? opcode_LOAD && funct3 =? funct3_LHU then Lhu rd rs1 oimm12 else
+    if (opcode =? opcode_LOAD) && (funct3 =? funct3_LB) then Lb rd rs1 oimm12 else
+    if (opcode =? opcode_LOAD) && (funct3 =? funct3_LH) then Lh rd rs1 oimm12 else
+    if (opcode =? opcode_LOAD) && (funct3 =? funct3_LW) then Lw rd rs1 oimm12 else
+    if (opcode =? opcode_LOAD) && (funct3 =? funct3_LBU) then Lbu rd rs1 oimm12 else
+    if (opcode =? opcode_LOAD) && (funct3 =? funct3_LHU) then Lhu rd rs1 oimm12 else
 
-    if opcode =? opcode_MISC_MEM && rd =? 0 && funct3 =? funct3_FENCE &&   rs1 =? 0 && msb4 =? 0 then Fence pred succ else
-    if opcode =? opcode_MISC_MEM && rd =? 0 && funct3 =? funct3_FENCE_I && rs1 =? 0 && imm12 =? 0 then Fence_i  else
+    if (opcode =? opcode_MISC_MEM) && (rd =? 0) && (funct3 =? funct3_FENCE) && (rs1 =? 0) && (msb4 =? 0) then Fence pred succ else
+    if (opcode =? opcode_MISC_MEM) && (rd =? 0) && (funct3 =? funct3_FENCE_I) && (rs1 =? 0) && (imm12 =? 0) then Fence_i  else
 
-    if opcode =? opcode_OP_IMM && funct3 =? funct3_ADDI then Addi rd rs1 imm12 else
-    if opcode =? opcode_OP_IMM && funct3 =? funct3_SLLI && funct7 =? funct7_SLLI && xlen =? 32 then Slli rd rs1 shamt5 else
-    if opcode =? opcode_OP_IMM && funct3 =? funct3_SLTI then Slti rd rs1 imm12 else
-    if opcode =? opcode_OP_IMM && funct3 =? funct3_SLTIU then Sltiu rd rs1 imm12 else
-    if opcode =? opcode_OP_IMM && funct3 =? funct3_XORI then Xori rd rs1 imm12 else
-    if opcode =? opcode_OP_IMM && funct3 =? funct3_ORI then Ori rd rs1 imm12 else
-    if opcode =? opcode_OP_IMM && funct3 =? funct3_ANDI then Andi rd rs1 imm12 else
-    if opcode =? opcode_OP_IMM && funct3 =? funct3_SRLI && funct7 =? funct7_SRLI && xlen =? 32 then Srli rd rs1 shamt5 else
-    if opcode =? opcode_OP_IMM && funct3 =? funct3_SRAI && funct7 =? funct7_SRAI && xlen =? 32 then Srai rd rs1 shamt5 else
+    if (opcode =? opcode_OP_IMM) && (funct3 =? funct3_ADDI) then Addi rd rs1 imm12 else
+    if (opcode =? opcode_OP_IMM) && (funct3 =? funct3_SLLI) && (funct7 =? funct7_SLLI) && (xlen =? 32) then Slli rd rs1 shamt5 else
+    if (opcode =? opcode_OP_IMM) && (funct3 =? funct3_SLTI) then Slti rd rs1 imm12 else
+    if (opcode =? opcode_OP_IMM) && (funct3 =? funct3_SLTIU) then Sltiu rd rs1 imm12 else
+    if (opcode =? opcode_OP_IMM) && (funct3 =? funct3_XORI) then Xori rd rs1 imm12 else
+    if (opcode =? opcode_OP_IMM) && (funct3 =? funct3_ORI) then Ori rd rs1 imm12 else
+    if (opcode =? opcode_OP_IMM) && (funct3 =? funct3_ANDI) then Andi rd rs1 imm12 else
+    if (opcode =? opcode_OP_IMM) && (funct3 =? funct3_SRLI) && (funct7 =? funct7_SRLI) && (xlen =? 32) then Srli rd rs1 shamt5 else
+    if (opcode =? opcode_OP_IMM) && (funct3 =? funct3_SRAI) && (funct7 =? funct7_SRAI) && (xlen =? 32) then Srai rd rs1 shamt5 else
 
-    if opcode =? opcode_AUIPC then Auipc rd oimm20 else
+    if (opcode =? opcode_AUIPC) then Auipc rd oimm20 else
 
-    if opcode =? opcode_STORE && funct3 =? funct3_SB then Sb rs1 rs2 simm12 else
-    if opcode =? opcode_STORE && funct3 =? funct3_SH then Sh rs1 rs2 simm12 else
-    if opcode =? opcode_STORE && funct3 =? funct3_SW then Sw rs1 rs2 simm12 else
+    if (opcode =? opcode_STORE) && (funct3 =? funct3_SB) then Sb rs1 rs2 simm12 else
+    if (opcode =? opcode_STORE) && (funct3 =? funct3_SH) then Sh rs1 rs2 simm12 else
+    if (opcode =? opcode_STORE) && (funct3 =? funct3_SW) then Sw rs1 rs2 simm12 else
 
-    if opcode =? opcode_OP && funct3 =? funct3_ADD &&  funct7 =? funct7_ADD then Add rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_SUB &&  funct7 =? funct7_SUB then Sub rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_SLL &&  funct7 =? funct7_SLL then Sll rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_SLT &&  funct7 =? funct7_SLT then Slt rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_SLTU && funct7 =? funct7_SLTU then Sltu rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_XOR &&  funct7 =? funct7_XOR then Xor rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_SRL &&  funct7 =? funct7_SRL then Srl rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_SRA &&  funct7 =? funct7_SRA then Sra rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_OR &&   funct7 =? funct7_OR then Or rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_AND &&  funct7 =? funct7_AND then And rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_ADD) && (funct7 =? funct7_ADD) then Add rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_SUB) && (funct7 =? funct7_SUB) then Sub rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_SLL) && (funct7 =? funct7_SLL) then Sll rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_SLT) && (funct7 =? funct7_SLT) then Slt rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_SLTU) && (funct7 =? funct7_SLTU) then Sltu rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_XOR) && (funct7 =? funct7_XOR) then Xor rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_SRL) && (funct7 =? funct7_SRL) then Srl rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_SRA) && (funct7 =? funct7_SRA) then Sra rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_OR) && (funct7 =? funct7_OR) then Or rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_AND) && (funct7 =? funct7_AND) then And rd rs1 rs2 else
 
-    if opcode =? opcode_OP && funct3 =? funct3_MUL &&    funct7 =? funct7_MUL then Mul rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_MULH &&   funct7 =? funct7_MULH then Mulh rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_MULHSU && funct7 =? funct7_MULHSU then Mulhsu rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_MULHU &&  funct7 =? funct7_MULHU then Mulhu rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_DIV &&    funct7 =? funct7_DIV then Div rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_DIVU &&   funct7 =? funct7_DIVU then Divu rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_REM &&    funct7 =? funct7_REM then Rem rd rs1 rs2 else
-    if opcode =? opcode_OP && funct3 =? funct3_REMU &&   funct7 =? funct7_REMU then Remu rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_MUL) && (funct7 =? funct7_MUL) then Mul rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_MULH) && (funct7 =? funct7_MULH) then Mulh rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_MULHSU) && (funct7 =? funct7_MULHSU) then Mulhsu rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_MULHU) && (funct7 =? funct7_MULHU) then Mulhu rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_DIV) && (funct7 =? funct7_DIV) then Div rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_DIVU) && (funct7 =? funct7_DIVU) then Divu rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_REM) && (funct7 =? funct7_REM) then Rem rd rs1 rs2 else
+    if (opcode =? opcode_OP) && (funct3 =? funct3_REMU) && (funct7 =? funct7_REMU) then Remu rd rs1 rs2 else
 
-    if opcode =? opcode_LUI then Lui rd imm20 else
+    if (opcode =? opcode_LUI) then Lui rd imm20 else
 
-    if opcode =? opcode_BRANCH && funct3 =? funct3_BEQ then Beq rs1 rs2 sbimm12 else
-    if opcode =? opcode_BRANCH && funct3 =? funct3_BNE then Bne rs1 rs2 sbimm12 else
-    if opcode =? opcode_BRANCH && funct3 =? funct3_BLT then Blt rs1 rs2 sbimm12 else
-    if opcode =? opcode_BRANCH && funct3 =? funct3_BGE then Bge rs1 rs2 sbimm12 else
-    if opcode =? opcode_BRANCH && funct3 =? funct3_BLTU then Bltu rs1 rs2 sbimm12 else
-    if opcode =? opcode_BRANCH && funct3 =? funct3_BGEU then Bgeu rs1 rs2 sbimm12 else
+    if (opcode =? opcode_BRANCH) && (funct3 =? funct3_BEQ) then Beq rs1 rs2 sbimm12 else
+    if (opcode =? opcode_BRANCH) && (funct3 =? funct3_BNE) then Bne rs1 rs2 sbimm12 else
+    if (opcode =? opcode_BRANCH) && (funct3 =? funct3_BLT) then Blt rs1 rs2 sbimm12 else
+    if (opcode =? opcode_BRANCH) && (funct3 =? funct3_BGE) then Bge rs1 rs2 sbimm12 else
+    if (opcode =? opcode_BRANCH) && (funct3 =? funct3_BLTU) then Bltu rs1 rs2 sbimm12 else
+    if (opcode =? opcode_BRANCH) && (funct3 =? funct3_BGEU) then Bgeu rs1 rs2 sbimm12 else
 
-    if opcode =? opcode_JALR then Jalr rd rs1 oimm12 else
+    if (opcode =? opcode_JALR) then Jalr rd rs1 oimm12 else
 
-    if opcode =? opcode_JAL then Jal rd jimm20 else
+    if (opcode =? opcode_JAL) then Jal rd jimm20 else
 
-    if opcode =? opcode_SYSTEM && rd =? 0 && funct3 =? funct3_PRIV && rs1 =? 0 && funct12 =? funct12_ECALL then Ecall  else
-    if opcode =? opcode_SYSTEM && rd =? 0 && funct3 =? funct3_PRIV && rs1 =? 0 && funct12 =? funct12_EBREAK then Ebreak  else
-    if opcode =? opcode_SYSTEM && rd =? 0 && funct3 =? funct3_PRIV && rs1 =? 0 && funct12 =? funct12_URET then Uret  else
-    if opcode =? opcode_SYSTEM && rd =? 0 && funct3 =? funct3_PRIV && rs1 =? 0 && funct12 =? funct12_SRET then Sret  else
-    if opcode =? opcode_SYSTEM && rd =? 0 && funct3 =? funct3_PRIV && rs1 =? 0 && funct12 =? funct12_MRET then Mret  else
-    if opcode =? opcode_SYSTEM && rd =? 0 && funct3 =? funct3_PRIV && rs1 =? 0 && funct12 =? funct12_WFI then Wfi  else
+    if (opcode =? opcode_SYSTEM) && (rd =? 0) && (funct3 =? funct3_PRIV) && (rs1 =? 0) && (funct12 =? funct12_ECALL) then Ecall  else
+    if (opcode =? opcode_SYSTEM) && (rd =? 0) && (funct3 =? funct3_PRIV) && (rs1 =? 0) && (funct12 =? funct12_EBREAK) then Ebreak  else
+    if (opcode =? opcode_SYSTEM) && (rd =? 0) && (funct3 =? funct3_PRIV) && (rs1 =? 0) && (funct12 =? funct12_URET) then Uret  else
+    if (opcode =? opcode_SYSTEM) && (rd =? 0) && (funct3 =? funct3_PRIV) && (rs1 =? 0) && (funct12 =? funct12_SRET) then Sret  else
+    if (opcode =? opcode_SYSTEM) && (rd =? 0) && (funct3 =? funct3_PRIV) && (rs1 =? 0) && (funct12 =? funct12_MRET) then Mret  else
+    if (opcode =? opcode_SYSTEM) && (rd =? 0) && (funct3 =? funct3_PRIV) && (rs1 =? 0) && (funct12 =? funct12_WFI) then Wfi  else
 
-    if opcode =? opcode_SYSTEM && rd =? 0 && funct3 =? funct3_PRIV && funct7 =? funct7_SFENCE_VM then Sfence_vm rs1 rs2 else
+    if (opcode =? opcode_SYSTEM) && (rd =? 0) && (funct3 =? funct3_PRIV) && (funct7 =? funct7_SFENCE_VM) then Sfence_vm rs1 rs2 else
 
-    if opcode =? opcode_SYSTEM && funct3 =? funct3_CSRRW then Csrrw rd rs1   csr12 else
-    if opcode =? opcode_SYSTEM && funct3 =? funct3_CSRRS then Csrrw rd rs1   csr12 else
-    if opcode =? opcode_SYSTEM && funct3 =? funct3_CSRRC then Csrrw rd rs1   csr12 else
-    if opcode =? opcode_SYSTEM && funct3 =? funct3_CSRRWI then Csrrwi rd zimm csr12 else
-    if opcode =? opcode_SYSTEM && funct3 =? funct3_CSRRSI then Csrrwi rd zimm csr12 else
-    if opcode =? opcode_SYSTEM && funct3 =? funct3_CSRRCI then Csrrwi rd zimm csr12 else
+    if (opcode =? opcode_SYSTEM) && (funct3 =? funct3_CSRRW) then Csrrw rd rs1   csr12 else
+    if (opcode =? opcode_SYSTEM) && (funct3 =? funct3_CSRRS) then Csrrw rd rs1   csr12 else
+    if (opcode =? opcode_SYSTEM) && (funct3 =? funct3_CSRRC) then Csrrw rd rs1   csr12 else
+    if (opcode =? opcode_SYSTEM) && (funct3 =? funct3_CSRRWI) then Csrrwi rd zimm csr12 else
+    if (opcode =? opcode_SYSTEM) && (funct3 =? funct3_CSRRSI) then Csrrwi rd zimm csr12 else
+    if (opcode =? opcode_SYSTEM) && (funct3 =? funct3_CSRRCI) then Csrrwi rd zimm csr12 else
 
-    if opcode =? opcode_LOAD && funct3 =? funct3_LD &&  xlen =? 64 then Ld rd rs1 oimm12 else
-    if opcode =? opcode_LOAD && funct3 =? funct3_LWU && xlen =? 64 then Lwu rd rs1 oimm12 else
+    if (opcode =? opcode_LOAD) && (funct3 =? funct3_LD) && (xlen =? 64) then Ld rd rs1 oimm12 else
+    if (opcode =? opcode_LOAD) && (funct3 =? funct3_LWU) && (xlen =? 64) then Lwu rd rs1 oimm12 else
 
-    if opcode =? opcode_OP_IMM && funct3 =? funct3_SLLI && funct6 =? funct6_SLLI && xlen =? 64 then Slli rd rs1 shamt6 else
-    if opcode =? opcode_OP_IMM && funct3 =? funct3_SRLI && funct6 =? funct6_SRLI && xlen =? 64 then Srli rd rs1 shamt6 else
-    if opcode =? opcode_OP_IMM && funct3 =? funct3_SRAI && funct6 =? funct6_SRAI && xlen =? 64 then Srai rd rs1 shamt6 else
+    if (opcode =? opcode_OP_IMM) && (funct3 =? funct3_SLLI) && (funct6 =? funct6_SLLI) && (xlen =? 64) then Slli rd rs1 shamt6 else
+    if (opcode =? opcode_OP_IMM) && (funct3 =? funct3_SRLI) && (funct6 =? funct6_SRLI) && (xlen =? 64) then Srli rd rs1 shamt6 else
+    if (opcode =? opcode_OP_IMM) && (funct3 =? funct3_SRAI) && (funct6 =? funct6_SRAI) && (xlen =? 64) then Srai rd rs1 shamt6 else
 
-    if opcode =? opcode_OP_IMM_32 && funct3 =? funct3_ADDIW &&                       xlen =? 64 then Addiw rd rs1 imm12 else
-    if opcode =? opcode_OP_IMM_32 && funct3 =? funct3_SLLIW && funct7 =? funct7_SLLIW && xlen =? 64 then Slliw rd rs1 shamt5 else
-    if opcode =? opcode_OP_IMM_32 && funct3 =? funct3_SRLIW && funct7 =? funct7_SRLIW && xlen =? 64 then Srliw rd rs1 shamt5 else
-    if opcode =? opcode_OP_IMM_32 && funct3 =? funct3_SRAIW && funct7 =? funct7_SRAIW && xlen =? 64 then Sraiw rd rs1 shamt5 else
+    if (opcode =? opcode_OP_IMM_32) && (funct3 =? funct3_ADDIW) && (xlen =? 64) then Addiw rd rs1 imm12 else
+    if (opcode =? opcode_OP_IMM_32) && (funct3 =? funct3_SLLIW) && (funct7 =? funct7_SLLIW) && (xlen =? 64) then Slliw rd rs1 shamt5 else
+    if (opcode =? opcode_OP_IMM_32) && (funct3 =? funct3_SRLIW) && (funct7 =? funct7_SRLIW) && (xlen =? 64) then Srliw rd rs1 shamt5 else
+    if (opcode =? opcode_OP_IMM_32) && (funct3 =? funct3_SRAIW) && (funct7 =? funct7_SRAIW) && (xlen =? 64) then Sraiw rd rs1 shamt5 else
 
-    if opcode =? opcode_STORE && funct3 =? funct3_SD && xlen =? 64 then Sd rs1 rs2 simm12 else
+    if (opcode =? opcode_STORE) && (funct3 =? funct3_SD) && (xlen =? 64) then Sd rs1 rs2 simm12 else
 
-    if opcode =? opcode_OP_32 && funct3 =? funct3_ADDW &&  funct7 =? funct7_ADDW &&  xlen =? 64 then Addw rd rs1 rs2 else
-    if opcode =? opcode_OP_32 && funct3 =? funct3_SUBW &&  funct7 =? funct7_SUBW &&  xlen =? 64 then Subw rd rs1 rs2 else
-    if opcode =? opcode_OP_32 && funct3 =? funct3_SLLW &&  funct7 =? funct7_SLLW &&  xlen =? 64 then Sllw rd rs1 rs2 else
-    if opcode =? opcode_OP_32 && funct3 =? funct3_SRLW &&  funct7 =? funct7_SRLW &&  xlen =? 64 then Srlw rd rs1 rs2 else
-    if opcode =? opcode_OP_32 && funct3 =? funct3_SRAW &&  funct7 =? funct7_SRAW &&  xlen =? 64 then Sraw rd rs1 rs2 else
+    if (opcode =? opcode_OP_32) && (funct3 =? funct3_ADDW) && (funct7 =? funct7_ADDW) && (xlen =? 64) then Addw rd rs1 rs2 else
+    if (opcode =? opcode_OP_32) && (funct3 =? funct3_SUBW) && (funct7 =? funct7_SUBW) && (xlen =? 64) then Subw rd rs1 rs2 else
+    if (opcode =? opcode_OP_32) && (funct3 =? funct3_SLLW) && (funct7 =? funct7_SLLW) && (xlen =? 64) then Sllw rd rs1 rs2 else
+    if (opcode =? opcode_OP_32) && (funct3 =? funct3_SRLW) && (funct7 =? funct7_SRLW) && (xlen =? 64) then Srlw rd rs1 rs2 else
+    if (opcode =? opcode_OP_32) && (funct3 =? funct3_SRAW) && (funct7 =? funct7_SRAW) && (xlen =? 64) then Sraw rd rs1 rs2 else
 
-    if opcode =? opcode_OP_32 && funct3 =? funct3_MULW &&  funct7 =? funct7_MULW &&  xlen =? 64 then Mulw rd rs1 rs2 else
-    if opcode =? opcode_OP_32 && funct3 =? funct3_DIVW &&  funct7 =? funct7_DIVW &&  xlen =? 64 then Divw rd rs1 rs2 else
-    if opcode =? opcode_OP_32 && funct3 =? funct3_DIVUW && funct7 =? funct7_DIVUW && xlen =? 64 then Divuw rd rs1 rs2 else
-    if opcode =? opcode_OP_32 && funct3 =? funct3_REMW &&  funct7 =? funct7_REMW &&  xlen =? 64 then Remw rd rs1 rs2 else
-    if opcode =? opcode_OP_32 && funct3 =? funct3_REMUW && funct7 =? funct7_REMUW && xlen =? 64 then Remuw rd rs1 rs2 else
+    if (opcode =? opcode_OP_32) && (funct3 =? funct3_MULW) && (funct7 =? funct7_MULW) && (xlen =? 64) then Mulw rd rs1 rs2 else
+    if (opcode =? opcode_OP_32) && (funct3 =? funct3_DIVW) && (funct7 =? funct7_DIVW) && (xlen =? 64) then Divw rd rs1 rs2 else
+    if (opcode =? opcode_OP_32) && (funct3 =? funct3_DIVUW) && (funct7 =? funct7_DIVUW) && (xlen =? 64) then Divuw rd rs1 rs2 else
+    if (opcode =? opcode_OP_32) && (funct3 =? funct3_REMW) && (funct7 =? funct7_REMW) && (xlen =? 64) then Remw rd rs1 rs2 else
+    if (opcode =? opcode_OP_32) && (funct3 =? funct3_REMUW) && (funct7 =? funct7_REMUW) && (xlen =? 64) then Remuw rd rs1 rs2 else
 
 (* end decode *)
-      else InvalidInstruction.
+    InvalidInstruction.
 
 
 Definition test_instruction: Z :=   Ox"0140006f".
 
-Definition test_result: Instruction := decode test_instruction.
+Definition test_result: Instruction := decode 32 test_instruction.
 
 Goal test_result = Jal 0 20.
   reflexivity.
