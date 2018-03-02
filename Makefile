@@ -35,6 +35,10 @@ all: spec encode proofs
 convert_execute: riscv-semantics_version_check
 	cd convert && python execute.py
 
+# beware: will overwrite src/Decode.v
+convert_decode: riscv-semantics_version_check
+	cd convert && python decode.py
+
 clean:
 	find . -type f \( -name '*.glob' -o -name '*.vo' -o -name '*.aux' \) -delete
 	rm .depend
