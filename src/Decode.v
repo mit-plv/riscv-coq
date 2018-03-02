@@ -12,6 +12,7 @@ Local Open Scope Z_scope.
 Eval cbv in (1~0~1~0)%positive.
 But it doesn't allow leading zeros, nor zero values. *)
 
+(* begin constants *)
 Definition opcode_LOAD      := Ob"0000011".
 Definition opcode_LOAD_FP   := Ob"0000111".
 Definition opcode_MISC_MEM  := Ob"0001111".
@@ -117,6 +118,7 @@ Definition funct3_CSRRC  := Ob"011".
 Definition funct3_CSRRWI := Ob"101".
 Definition funct3_CSRRSI := Ob"110".
 Definition funct3_CSRRCI := Ob"111".
+(* end constants *)
 
 Notation "a <|> b" := (Z.lor a b) (at level 50, left associativity).
 
@@ -128,6 +130,7 @@ Notation Register := (@name Name).
 Definition Imm := Z.
 
 Inductive Instruction : Set :=
+  (* begin instructions *)
   | InvalidInstruction : Instruction
 
   |  Lb(rd: Register)(rs1: Register)(oimm12: Imm): Instruction
@@ -196,6 +199,7 @@ Inductive Instruction : Set :=
   | Csrrwi(rd: Register)(zimm: Imm)(csr12: Imm): Instruction
   | Csrrsi(rd: Register)(zimm: Imm)(csr12: Imm): Instruction
   | Csrrci(rd: Register)(zimm: Imm)(csr12: Imm): Instruction
+  (* end instructions *)
 .
 
 End Instructions.
@@ -207,6 +211,7 @@ Local Instance ZName: NameWithEq := {|
 |}.
 
 Definition decode (inst : MachineInt) : Instruction :=
+  (* begin decode *)
   let opcode :=  bitSlice inst 0 7 in
   let funct3 :=  bitSlice inst 12 15 in
   let funct7 :=  bitSlice inst 25 32 in
@@ -300,6 +305,7 @@ Definition decode (inst : MachineInt) : Instruction :=
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRWI) then  Csrrwi  rd zimm csr12
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRSI) then  Csrrsi  rd zimm csr12
       else if dec(opcode = opcode_SYSTEM /\ funct3 = funct3_CSRRCI) then  Csrrci  rd zimm csr12
+  (* end decode *)
       else InvalidInstruction.
 
 
