@@ -10,26 +10,50 @@ Require Import riscv.Program.
 Require Import riscv.Execute.
 Require Import riscv.util.PowerFunc.
 Require Import riscv.Memory.
+Require Import riscv.Utility.
 Require Import Coq.Lists.List.
 
 Section Riscv.
 
   Context {B: RiscvBitWidths}.
 
-  Instance A: Alu (word wXLEN). Admitted.
-
-  Definition Register := word 5. (* for the moment *)
-
-  Definition Register0: Register := $0.
-
-  Instance ic8: IntegralConversion (word 8) (word wXLEN). Admitted.
+  Instance A: Alu (word wXLEN) (word wXLEN). Admitted.
 
   Instance immmm: IntegralConversion MachineInt (word wXLEN). Admitted.
+  Instance immmm': IntegralConversion (word wXLEN) MachineInt. Admitted.
+
+  (* TODO this is not the way to do it *)
+  Instance c: Convertible (word wXLEN) (word wXLEN). Admitted.
+  Instance ic8: IntegralConversion Int8 (word wXLEN). Admitted.
+  Instance ic16: IntegralConversion Int16 (word wXLEN). Admitted.
+  Instance ic32: IntegralConversion Int32 (word wXLEN). Admitted.
+  Instance ic8': IntegralConversion (word wXLEN) Int8. Admitted.
+  Instance ic16': IntegralConversion (word wXLEN) Int16. Admitted.
+  Instance ic32': IntegralConversion (word wXLEN) Int32. Admitted.
+  Instance ic8u: IntegralConversion Word8 (word wXLEN). Admitted.
+  Instance ic16u: IntegralConversion Word16 (word wXLEN). Admitted.
+  Instance ic32u: IntegralConversion Word32 (word wXLEN). Admitted.
+  Instance icZt: IntegralConversion Z (word wXLEN). Admitted.
+  Instance icZu: IntegralConversion Z (word wXLEN). Admitted.
+  Instance icut: IntegralConversion (word wXLEN) (word wXLEN). Admitted.
+  Instance ictu: IntegralConversion (word wXLEN) (word wXLEN). Admitted.
+
+  Definition MW: MachineWidth (word wXLEN) := MachineWidthInst (Z.of_nat log2wXLEN) (word wXLEN).
+
+  Existing Instance MW.
+
+  Definition Register := Z.
+
+  Definition Register0: Register := 0%Z.
+
+  Instance ZName: NameWithEq := {|
+    name := Z
+  |}.
 
   Definition run1{M: Type -> Type}{MM: Monad M}{RVS: RiscvState M}: M unit :=
     pc <- getPC;
     inst <- loadWord pc;
-    execute (decode (zext inst 32));; (* because of stupid definition of MachineInt *)
+    execute (decode (Z.of_nat wXLEN) (Int32ToMachineInt inst));;
     step.
 
   Definition run{M: Type -> Type}{MM: Monad M}{RVS: RiscvState M}: nat -> M unit :=
@@ -141,6 +165,8 @@ Section Riscv.
         | mkRiscvMachine imem regs pc npc eh =>
             put (mkRiscvMachine imem regs npc (npc ^+ $4) eh)
         end;
+
+      raiseException := TODO;
   |}.
 
   (* Puts given program at address 0, and makes pc point to beginning of program, i.e. 0.

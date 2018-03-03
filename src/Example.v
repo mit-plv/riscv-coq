@@ -2,9 +2,10 @@ Require Import Coq.Lists.List.
 Import ListNotations.
 Require Import riscv.Riscv.
 Require Import riscv.RiscvBitWidths32.
-Require Import bbv.HexNotation.
+Require Import bbv.HexNotationZ.
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.WordScope.
+Require Import riscv.Utility.
 Require Import riscv.Memory.
 Require Import riscv.Run.
 
@@ -30,8 +31,10 @@ Notation s4 := (WO~1~0~1~0~0)%word.
 Notation s5 := (WO~1~0~1~0~1)%word.
 *)
 
+Open Scope Z_scope.
+
 Goal False.
-  set (l := map decode fib6_riscv).
+  set (l := map (decode 32) fib6_riscv).
   cbv in l.
   (* decoder seems to work :) *)
 Abort.
@@ -48,7 +51,7 @@ Definition fib6_L_final(fuel: nat): RiscvMachine :=
   execState (run fuel) (initialRiscvMachine fib6_riscv).
 
 Definition fib6_L_res(fuel: nat): word wXLEN :=
-  (fib6_L_final fuel).(registers) (WO~1~0~0~1~0)%word.
+  (fib6_L_final fuel).(registers) 18.
 
 (*
 Definition fib6_L_trace(fuel: nat): list TraceEvent :=

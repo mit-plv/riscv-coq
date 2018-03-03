@@ -84,6 +84,11 @@ Instance Convertible_Int16_Word16: Convertible Int16 Word16 := Convertible_Int_W
 Instance Convertible_Int32_Word32: Convertible Int32 Word32 := Convertible_Int_Word 32.
 Instance Convertible_Int64_Word64: Convertible Int64 Word64 := Convertible_Int_Word 64.
 
+Definition Int32ToMachineInt(i: Int32): MachineInt :=
+  match i with
+  | mkSignedWord w => wordToZ w
+  end.
+
 Class MachineWidth(t: Set) := mkMachineWidth {
   (* the bits of the "shift amount" field to be used for in a shift operation *)
   shiftBits: t -> Z;
