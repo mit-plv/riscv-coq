@@ -6,10 +6,10 @@ Require Import riscv.RiscvBitWidths.
 Require Import riscv.util.Monad.
 Require Import riscv.util.StateMonad.
 Require Import riscv.Decode.
+Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)
 Require Import riscv.Program.
 Require Import riscv.Execute.
 Require Import riscv.util.PowerFunc.
-Require Import riscv.Memory.
 Require Import riscv.Utility.
 Require Import Coq.Lists.List.
 
@@ -60,52 +60,23 @@ Section Riscv.
     fun n => power_func (fun m => run1 ;; m) n (Return tt).
 
   Record RiscvMachine := mkRiscvMachine {
-    machineMem: mem wXLEN;
+    machineMem: mem 8;
     registers: Register -> word wXLEN;
     pc: word wXLEN;
     nextPC: word wXLEN;
     exceptionHandlerAddr: word wXLEN;
   }.
 
-  Definition ensure_aligned{RVS: RiscvState (State RiscvMachine)}(addr: Z)(m: nat):
-    State RiscvMachine unit :=
-    if dec (Z.modulo addr 4 = 0)%Z then
-      Return tt
-    else
-      h <- gets exceptionHandlerAddr;
-      setPC h.
-  (* TODO generalize? *)
-
-(*
-  Definition ensure_aligned{RVS: RiscvState (State RiscvMachine)}(addr: word wXLEN)(m: nat):
-    State RiscvMachine unit :=
-    if dec (wmod addr $m = $0) then
-      Return tt
-    else
-      h <- gets exceptionHandlerAddr;
-      setPC h.
-  (* TODO generalize? *)
-
-  Definition ensure_aligned{RVS: RiscvState (State RiscvMachine)}: State RiscvMachine unit :=
-    Return tt.
-
-  Definition ensure_aligned{MM: Monad (State RiscvMachine)}{RVS: RiscvState (State RiscvMachine)}:
-  State RiscvMachine unit. refine (Return tt).
-
-  Definition ensure_aligned{RVS: RiscvState (State RiscvMachine)}(addr: word wXLEN)(m: nat):
-     RiscvState (State RiscvMachine).
-     refine (@Return _ _ RVS _ _).
-
-  Definition ensure_aligned(addr: word wXLEN)(m: nat):
-     State RiscvMachine unit := Return tt.
-
-
-  Definition ensure_aligned{RVS: RiscvState (State RiscvMachine)}(addr: word wXLEN)(m: nat):
-     State RiscvMachine unit := Return tt.
-
-  Definition ensure_aligned{MM: Monad (State RiscvMachine)}{RVS: RiscvState (State RiscvMachine)}(addr: word wXLEN)(m: nat):
-     State RiscvMachine unit. refine (@Return _ MM _ tt).
-  *)
+  Definition with_machineMem me ma :=
+    mkRiscvMachine me ma.(registers) ma.(pc) ma.(nextPC) ma.(exceptionHandlerAddr).
+  Definition with_registers r ma :=
+    mkRiscvMachine ma.(machineMem) r ma.(pc) ma.(nextPC) ma.(exceptionHandlerAddr).
+  Definition with_pc p ma :=
+    mkRiscvMachine ma.(machineMem) ma.(registers) p ma.(nextPC) ma.(exceptionHandlerAddr).
+  Definition with_nextPC npc ma :=
+    mkRiscvMachine ma.(machineMem) ma.(registers) ma.(pc) npc ma.(exceptionHandlerAddr).
+  Definition with_exceptionHandlerAddr eh ma :=
+    mkRiscvMachine ma.(machineMem) ma.(registers) ma.(pc) ma.(nextPC) eh.
 
   Definition TODO{T: Type}: T. Admitted.
 
@@ -122,36 +93,24 @@ Section Riscv.
           Return tt
         else
           machine <- get;
-          match machine with
-          | mkRiscvMachine imem regs pc npc eh =>
-              put (mkRiscvMachine imem 
-                      (fun reg2 => if dec (reg = reg2) then (fromIntegral v) else regs reg2)
-                      pc npc eh)
-          end;
+          let newRegs := (fun reg2 => if dec (reg = reg2)
+                                      then (fromIntegral v)
+                                      else machine.(registers) reg2) in
+          put (with_registers newRegs machine);
 
       getPC := gets pc;
 
       setPC := fun newPC =>
         machine <- get;
-        match machine with
-        | mkRiscvMachine imem regs pc npc eh =>
-            put (mkRiscvMachine imem regs pc newPC eh)
-        end;
+        put (with_nextPC newPC machine);
 
-      loadByte := TODO;
+      loadByte a := m <- get; match Memory.loadByte m.(machineMem) a with
+      | Some v => Return v
+      | None => put (with_nextPC m.(exceptionHandlerAddr) m);; Return (mkSignedWord $0)
+      end;
+
       loadHalf := TODO;
       loadWord := TODO;
-(*
-      loadWord := fun x => 
-        let x := wordToZ x in (* TODO fix *)
-        ensure_aligned x 4;;
-        m <- get;
-        match read_mem x m.(machineMem) with
-        | Some v => Return $123 (* TODO should be v *)
-        | None => setPC m.(exceptionHandlerAddr)
-        end;
-      (* TODO if wXLEN = 64, we have to split *)
-*)
       loadDouble := TODO;
 
       storeByte := TODO;
