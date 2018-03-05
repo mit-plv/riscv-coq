@@ -42,7 +42,7 @@ Abort.
 (* This example uses the memory only as instruction memory
    TODO make an example which uses memory to store data *)
 Definition zeroedRiscvMachine: RiscvMachine := {|
-  machineMem := zero_mem 8 100;
+  machineMem := counter_mem 8 100;
   registers := fun (r: Register) => $0;
   pc := $0;
   nextPC := $4;
@@ -64,8 +64,24 @@ Definition fib6_L_trace(fuel: nat): list TraceEvent :=
 
 Transparent wlt_dec.
 
+Fixpoint mem_to_word_list(m: mem 8)(start: Z)(count: nat): list (option (word 32)) :=
+  match count with
+  | S c => read_word m start :: mem_to_word_list m (start + 4) c
+  | O => nil
+  end.
+
+Fixpoint mem_to_byte_list(m: mem 8)(start: Z)(count: nat): list (option (word 8)) :=
+  match count with
+  | S c => read_byte m start :: mem_to_byte_list m (start + 1) c
+  | O => nil
+  end.
+
 (* only uncomment this if you're sure there are no admits in the computational parts,
    otherwise this will eat all your memory
+
+Eval cbv in (mem_to_byte_list (initialRiscvMachine fib6_riscv).(machineMem) 0 40).
+
+Eval cbv in (mem_to_word_list (initialRiscvMachine fib6_riscv).(machineMem) 0 10).
 
 Eval cbv in (fib6_L_trace 50).
 

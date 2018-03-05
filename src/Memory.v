@@ -41,7 +41,13 @@ Section Memory.
 
   Definition no_mem: mem := fun x => None.
 
-  Definition zero_mem(size: Z): mem := fun x => if dec (x < size) then Some $0 else None.
+  Definition const_mem(size: Z)(default: word w): mem :=
+    fun x => if dec (x < size) then Some default else None.
+
+  Definition zero_mem(size: Z): mem := const_mem size $0.
+
+  Definition counter_mem(size: Z): mem :=
+    fun x => if dec (x < size) then Some (ZToWord w x) else None.
 
 End Memory.
 
