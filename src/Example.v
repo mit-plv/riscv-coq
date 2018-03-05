@@ -64,9 +64,14 @@ Definition fib6_L_trace(fuel: nat): list TraceEvent :=
 
 Transparent wlt_dec.
 
+(* only uncomment this if you're sure there are no admits in the computational parts,
+   otherwise this will eat all your memory
+
 Eval cbv in (fib6_L_trace 50).
 
 Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_L_res fuel = $13.
   exists 50%nat.
   cbv.
 Abort.
+
+*)
