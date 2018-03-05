@@ -17,26 +17,84 @@ Section Riscv.
 
   Context {B: RiscvBitWidths}.
 
-  Instance A: Alu (word wXLEN) (word wXLEN). Admitted.
-
-  Instance immmm: IntegralConversion MachineInt (word wXLEN). Admitted.
-  Instance immmm': IntegralConversion (word wXLEN) MachineInt. Admitted.
+  Instance A: Alu (word wXLEN) (word wXLEN) := {|
+    zero := $0;
+    one := $1;
+    add := @wplus wXLEN;
+    sub := @wminus wXLEN;
+    mul := @wmult wXLEN;
+    div := @wdiv wXLEN;
+    rem := @wmod wXLEN;
+    signed_less_than a b := if wslt_dec a b then true else false;
+    unsigned_less_than a (b: word wXLEN) := if wlt_dec a b then true else false;
+    signed_eqb := @weqb wXLEN;
+    shiftL w n := wlshift w (Z.to_nat n);
+    signed_shiftR w n := wrshifta w (Z.to_nat n);
+    unsigned_shiftR w n := wrshift w (Z.to_nat n);
+    xor := @wxor wXLEN;
+    or := @wor wXLEN;
+    and := @wand wXLEN;
+  |}.
 
   (* TODO this is not the way to do it *)
-  Instance c: Convertible (word wXLEN) (word wXLEN). Admitted.
-  Instance ic8: IntegralConversion Int8 (word wXLEN). Admitted.
-  Instance ic16: IntegralConversion Int16 (word wXLEN). Admitted.
-  Instance ic32: IntegralConversion Int32 (word wXLEN). Admitted.
-  Instance ic8': IntegralConversion (word wXLEN) Int8. Admitted.
-  Instance ic16': IntegralConversion (word wXLEN) Int16. Admitted.
-  Instance ic32': IntegralConversion (word wXLEN) Int32. Admitted.
-  Instance ic8u: IntegralConversion Word8 (word wXLEN). Admitted.
-  Instance ic16u: IntegralConversion Word16 (word wXLEN). Admitted.
-  Instance ic32u: IntegralConversion Word32 (word wXLEN). Admitted.
-  Instance icZt: IntegralConversion Z (word wXLEN). Admitted.
-  Instance icZu: IntegralConversion Z (word wXLEN). Admitted.
-  Instance icut: IntegralConversion (word wXLEN) (word wXLEN). Admitted.
-  Instance ictu: IntegralConversion (word wXLEN) (word wXLEN). Admitted.
+
+  Instance immmm: IntegralConversion MachineInt (word wXLEN).
+    unfold MachineInt. constructor. apply ZToWord.
+  Defined.
+  Instance immmm': IntegralConversion (word wXLEN) MachineInt.
+    unfold MachineInt. constructor. apply ZToWord || apply wordToZ.
+  Defined.
+  Instance c: Convertible (word wXLEN) (word wXLEN).
+    unfold MachineInt. constructor; apply id || apply ZToWord || apply wordToZ.
+  Defined.
+  Instance ic8: IntegralConversion Int8 (word wXLEN).
+    cbv -[wXLEN]. constructor. intro. destruct H.
+    refine (nat_cast _ _ (sext w (wXLEN - 8))). abstract bitwidth_omega.
+  Defined.
+  Instance ic16: IntegralConversion Int16 (word wXLEN).
+    cbv -[wXLEN]. constructor. intro. destruct H.
+    refine (nat_cast _ _ (sext w (wXLEN - 16))). abstract bitwidth_omega.
+  Defined.
+  Instance ic32: IntegralConversion Int32 (word wXLEN).
+    cbv -[wXLEN]. constructor. intro. destruct H.
+    refine (nat_cast _ _ (sext w (wXLEN - 32))). abstract bitwidth_omega.
+  Defined.
+  Instance ic8': IntegralConversion (word wXLEN) Int8.
+    cbv -[wXLEN]. constructor. intro. constructor.
+    refine (split1 _ (wXLEN - 8) (nat_cast _ _ H)). abstract bitwidth_omega.
+  Defined.
+  Instance ic16': IntegralConversion (word wXLEN) Int16.
+    cbv -[wXLEN]. constructor. intro. constructor.
+    refine (split1 _ (wXLEN - 16) (nat_cast _ _ H)). abstract bitwidth_omega.
+  Defined.
+  Instance ic32': IntegralConversion (word wXLEN) Int32.
+    cbv -[wXLEN]. constructor. intro. constructor.
+    refine (split1 _ (wXLEN - 32) (nat_cast _ _ H)). abstract bitwidth_omega.
+  Defined.
+  Instance ic8u: IntegralConversion Word8 (word wXLEN).
+    cbv -[wXLEN]. constructor. intro. destruct H.
+    refine (nat_cast _ _ (zext w (wXLEN - 8))). abstract bitwidth_omega.
+  Defined.
+  Instance ic16u: IntegralConversion Word16 (word wXLEN).
+    cbv -[wXLEN]. constructor. intro. destruct H.
+    refine (nat_cast _ _ (zext w (wXLEN - 16))). abstract bitwidth_omega.
+  Defined.
+  Instance ic32u: IntegralConversion Word32 (word wXLEN).
+    cbv -[wXLEN]. constructor. intro. destruct H.
+    refine (nat_cast _ _ (zext w (wXLEN - 32))). abstract bitwidth_omega.
+  Defined.
+  Instance icZt: IntegralConversion Z (word wXLEN).
+    unfold MachineInt. constructor. apply ZToWord.
+  Defined.
+  Instance icZu: IntegralConversion Z (word wXLEN).
+    unfold MachineInt. constructor. apply ZToWord.
+  Defined.
+  Instance icut: IntegralConversion (word wXLEN) (word wXLEN).
+    constructor. exact id.
+  Defined.
+  Instance ictu: IntegralConversion (word wXLEN) (word wXLEN).
+    constructor. exact id.
+  Defined.
 
   Definition MW: MachineWidth (word wXLEN) := MachineWidthInst (Z.of_nat log2wXLEN) (word wXLEN).
 
@@ -78,7 +136,21 @@ Section Riscv.
   Definition with_exceptionHandlerAddr eh ma :=
     mkRiscvMachine ma.(machineMem) ma.(registers) ma.(pc) ma.(nextPC) eh.
 
-  Definition TODO{T: Type}: T. Admitted.
+  Definition liftLoad{sz: nat}(f: mem 8 -> word wXLEN -> option (SignedWord sz))(a: word wXLEN)
+    : State RiscvMachine (SignedWord sz) :=
+    m <- get;
+    match f m.(machineMem) a with
+    | Some v => Return v
+    | None => put (with_nextPC m.(exceptionHandlerAddr) m);; Return (mkSignedWord $0)
+    end.
+
+  Definition liftStore{sz: nat}(f: mem 8 -> word wXLEN -> SignedWord sz -> option (mem 8))
+    (a: word wXLEN)(v: SignedWord sz) : State RiscvMachine unit :=
+    m <- get;
+    match f m.(machineMem) a v with
+    | Some mem' => put (with_machineMem mem' m)
+    | None => put (with_nextPC m.(exceptionHandlerAddr) m)
+    end.
 
   Instance IsRiscvMachine: RiscvState (State RiscvMachine) :=
   {|
@@ -104,29 +176,40 @@ Section Riscv.
         machine <- get;
         put (with_nextPC newPC machine);
 
-      loadByte a := m <- get; match Memory.loadByte m.(machineMem) a with
-      | Some v => Return v
-      | None => put (with_nextPC m.(exceptionHandlerAddr) m);; Return (mkSignedWord $0)
-      end;
+      loadByte   := liftLoad Memory.loadByte;
+      loadHalf   := liftLoad Memory.loadHalf;
+      loadWord   := liftLoad Memory.loadWord;
+      loadDouble := liftLoad Memory.loadDouble;
 
-      loadHalf := TODO;
-      loadWord := TODO;
-      loadDouble := TODO;
-
-      storeByte := TODO;
-      storeHalf := TODO;
-      storeWord := TODO;
-      storeDouble := TODO;
+      storeByte   := liftStore Memory.storeByte;
+      storeHalf   := liftStore Memory.storeHalf;
+      storeWord   := liftStore Memory.storeWord;
+      storeDouble := liftStore Memory.storeDouble;
 
       step :=
-        machine <- get;
-        match machine with
-        | mkRiscvMachine imem regs pc npc eh =>
-            put (mkRiscvMachine imem regs npc (npc ^+ $4) eh)
-        end;
+        m <- get;
+        put (with_nextPC (m.(nextPC) ^+ $4) (with_pc m.(nextPC) m));
 
-      raiseException := TODO;
+      raiseException _ _ :=
+        m <- get;
+        put (with_nextPC m.(exceptionHandlerAddr) m);
   |}.
+
+  Fixpoint storeWords(l: list (word 32))(a: word wXLEN)(m: mem 8): option (mem 8) :=
+    match l with
+    | nil => Some m
+    | cons w l' =>
+        match Memory.storeWord m a (mkSignedWord w) with
+        | Some m' => storeWords l' (a ^+ $4) m'
+        | None => None
+        end
+    end.
+
+  Definition storeWords_if_mem_accepts(l: list (word 32))(m: mem 8): mem 8 :=
+    match storeWords l $0 m with
+    | Some m' => m'
+    | None => m
+    end.
 
   (* Puts given program at address 0, and makes pc point to beginning of program, i.e. 0.
      TODO maybe later allow any address?
@@ -134,11 +217,11 @@ Section Riscv.
      which might contain any undefined garbage values, so the compiler correctness proof
      will show that the program is correct even then, i.e. no initialisation of the registers
      is needed. *)
-  Definition putProgram(prog: list (word 32))(m: RiscvMachine): RiscvMachine. Admitted. (*
+  Definition putProgram(prog: list (word 32))(m: RiscvMachine): RiscvMachine :=
     match m with
-    | mkRiscvMachine _ regs _ _ eh =>
-        mkRiscvMachine (list_to_mem _ prog) regs $0 $4 eh
-    end. *)
+    | mkRiscvMachine m regs _ _ eh =>
+        mkRiscvMachine (storeWords_if_mem_accepts prog m) regs $0 $4 eh
+    end.
 
 End Riscv.
 

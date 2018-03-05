@@ -41,6 +41,8 @@ Section Memory.
 
   Definition no_mem: mem := fun x => None.
 
+  Definition zero_mem(size: Z): mem := fun x => if dec (x < size) then Some $0 else None.
+
 End Memory.
 
 Arguments read_mem {_} _.
