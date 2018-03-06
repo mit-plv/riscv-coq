@@ -1,10 +1,6 @@
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
 
-Class IntegralConversion(t1 t2: Set) := mkIntegralConversion {
-  fromIntegral: t1 -> t2
-}.
-
 (* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
    no matter whether it's a 32-bit or 64-bit machine. *)
 Definition MachineInt := Z.
@@ -15,91 +11,148 @@ Definition bitSlice(x: Z)(start eend: Z): Z :=
 Definition signExtend(l: Z)(n: Z): Z :=
   if Z.testbit n (l-1) then (n - (Z.setbit 0 l)) else n.
 
-Definition lower{a: Set}{ic: IntegralConversion a Z}(n: Z)(x: a): Z :=
-  bitSlice (fromIntegral x) 0 n.
-
-(*
-combineBytes :: (Bits a, Integral a) => [Word8] -> a
-combineBytes bytes = foldr (\(x,n) res -> res .|. shiftL (fromIntegral n) (8*x)) 0 $ zip [0..] bytes
-*)
-
-(*
-splitBytes :: (Bits a, Integral a) => Int -> a -> [Word8]
-splitBytes n w = map fromIntegral [bitSlice w p (p + 8) | p <- [0,8..n-1]]
-
-splitHalf :: (Bits a, Integral a) => a -> [Word8]
-splitHalf = splitBytes 16
-
-splitWord :: (Bits a, Integral a) => a -> [Word8]
-splitWord = splitBytes 32
-
-splitDouble :: (Bits a, Integral a) => a -> [Word8]
-splitDouble = splitBytes 64
-*)
-
-(*
-Inductive WordWithSignedness(sz: nat): Set :=
-| SignedWord: word sz -> WordWithSignedness sz
-| UnsignedWord: word sz -> WordWithSignedness sz.
-*)
-
-Inductive SignedWord(sz: nat): Set := mkSignedWord: word sz -> SignedWord sz.
-Inductive UnsignedWord(sz: nat): Set := mkUnsignedWord: word sz -> UnsignedWord sz.
-
-Arguments mkSignedWord {_} _.
-Arguments mkUnsignedWord {_} _.
-
-Definition Int8 : Set := SignedWord  8.
-Definition Int16: Set := SignedWord 16.
-Definition Int32: Set := SignedWord 32.
-Definition Int64: Set := SignedWord 64.
-
-Definition Word8 : Set := UnsignedWord  8.
-Definition Word16: Set := UnsignedWord 16.
-Definition Word32: Set := UnsignedWord 32.
-Definition Word64: Set := UnsignedWord 64.
-
-Class Convertible(s u: Set) := mkConvertible {
-  unsigned: s -> u;
-  signed: u -> s;
-}.
-
-Definition signed0{sz: nat}(w: UnsignedWord sz): SignedWord sz :=
-  match w with
-  | mkUnsignedWord x => mkSignedWord x
-  end.
-
-Definition unsigned0{sz: nat}(w: SignedWord sz): UnsignedWord sz :=
-  match w with
-  | mkSignedWord x => mkUnsignedWord x
-  end.
-
-Definition Convertible_Int_Word(sz: nat): Convertible (SignedWord sz) (UnsignedWord sz) := {|
-  unsigned := unsigned0;
-  signed := signed0;
-|}.
-
-Instance Convertible_Int8_Word8: Convertible Int8 Word8 := Convertible_Int_Word 8.
-Instance Convertible_Int16_Word16: Convertible Int16 Word16 := Convertible_Int_Word 16.
-Instance Convertible_Int32_Word32: Convertible Int32 Word32 := Convertible_Int_Word 32.
-Instance Convertible_Int64_Word64: Convertible Int64 Word64 := Convertible_Int_Word 64.
-
-Definition Int32ToMachineInt(i: Int32): MachineInt :=
-  match i with
-  | mkSignedWord w => wordToZ w
-  end.
 
 Class MachineWidth(t: Set) := mkMachineWidth {
-  (* the bits of the "shift amount" field to be used for in a shift operation *)
-  shiftBits: t -> Z;
-  (* should select bits [2*XLEN-1 ... XLEN] *)
+  (* constants *)
+  zero: t;
+  one: t;
+
+  (* arithmetic operations (inherited from Integral in Haskell) *)
+  add: t -> t -> t;
+  sub: t -> t -> t;
+  mul: t -> t -> t;
+  div: t -> t -> t;
+  rem: t -> t -> t;
+
+  (* comparison operators (inherited from Eq and Ord in Haskell) *)
+  signed_less_than: t -> t -> bool;
+  signed_eqb: t -> t -> bool;
+
+  (* logical operations (inherited from Bits in Haskell) *)
+  xor: t -> t -> t;
+  or: t -> t -> t;
+  and: t -> t -> t;
+
+  (* operations also defined in MachineWidth in Haskell: *)
+
+  fromImm: MachineInt -> t;
+
+  regToInt8: t -> word 8;
+  regToInt16: t -> word 16;
+  regToInt32: t -> word 32;
+  regToInt64: t -> word 64;
+
+  uInt8ToReg: word 8 -> t;
+  uInt16ToReg: word 16 -> t;
+  uInt32ToReg: word 32 -> t;
+  uInt64ToReg: word 64 -> t;
+
+  int8ToReg: word 8 -> t;
+  int16ToReg: word 16 -> t;
+  int32ToReg: word 32 -> t;
+  int64ToReg: word 64 -> t;
+
+  regToZ_signed: t -> Z;
+  regToZ_unsigned: t -> Z;
+
+  sll: t -> Z -> t;
+  srl: t -> Z -> t;
+  sra: t -> Z -> t;
+
+  ltu: t -> t -> bool;
+  divu: t -> t -> t;
+  remu: t -> t -> t;
+
+  maxSigned: t;
+  maxUnsigned: t;
+  minSigned: t;
+
+  regToShamt5: t -> Z;
+  regToShamt: t -> Z;
+
   highBits: Z -> t;
 }.
 
+Instance MachineWidth32: MachineWidth (word 32) := {|
+  zero := $0;
+  one := $1;
+  add := @wplus 32;
+  sub := @wminus 32;
+  mul := @wmult 32;
+  div x y := @ZToWord 32 (Z.div (wordToZ x) (wordToZ y));
+  rem x y := @ZToWord 32 (Z.modulo (wordToZ x) (wordToZ y));
+  signed_less_than a b := if wslt_dec a b then true else false;
+  signed_eqb := @weqb 32;
+  xor := @wxor 32;
+  or := @wor 32;
+  and := @wand 32;
+  fromImm := ZToWord 32;
+  regToInt8 := split1 8 24;
+  regToInt16 := split1 16 16;
+  regToInt32 := id;
+  regToInt64 x := combine x (wzero 32);
+  uInt8ToReg x := zext x 24;
+  uInt16ToReg x := zext x 16;
+  uInt32ToReg := id;
+  uInt64ToReg := split1 32 32; (* unused *)
+  int8ToReg x := sext x 24;
+  int16ToReg x := sext x 16;
+  int32ToReg := id;
+  int64ToReg := split1 32 32; (* unused *)
+  regToZ_signed := @wordToZ 32;
+  regToZ_unsigned x := Z.of_N (wordToN x);
+  sll w n := wlshift w (Z.to_nat n);
+  srl w n := wrshift w (Z.to_nat n);
+  sra w n := wrshift w (Z.to_nat n);
+  ltu a b := if wlt_dec a b then true else false;
+  divu := @wdiv 32;
+  remu := @wmod 32;
+  maxSigned := combine (wones 31) (wzero 1);
+  maxUnsigned := wones 32;
+  minSigned := wones 32;
+  regToShamt5 x := Z.of_N (wordToN (split1 5 27 x));
+  regToShamt  x := Z.of_N (wordToN (split1 5 27 x));
+  highBits x := ZToWord 32 (bitSlice x 32 64);
+|}.
 
-Definition MachineWidthInst(log2XLEN: Z)(t: Set)
-  {ic0: IntegralConversion Z t}{ic1: IntegralConversion t Z}:
-MachineWidth t := {|
-  shiftBits := lower log2XLEN;
-  highBits n := fromIntegral (bitSlice n (2 ^ log2XLEN) (2 * 2 ^ log2XLEN));
+Instance MachineWidth64: MachineWidth (word 64) := {|
+  zero := $0;
+  one := $1;
+  add := @wplus 64;
+  sub := @wminus 64;
+  mul := @wmult 64;
+  div x y := @ZToWord 64 (Z.div (wordToZ x) (wordToZ y));
+  rem x y := @ZToWord 64 (Z.modulo (wordToZ x) (wordToZ y));
+  signed_less_than a b := if wslt_dec a b then true else false;
+  signed_eqb := @weqb 64;
+  xor := @wxor 64;
+  or := @wor 64;
+  and := @wand 64;
+  fromImm := ZToWord 64;
+  regToInt8 := split1 8 56;
+  regToInt16 := split1 16 48;
+  regToInt32 := split1 32 32;
+  regToInt64 := id;
+  uInt8ToReg x := zext x 56;
+  uInt16ToReg x := zext x 48;
+  uInt32ToReg x := zext x 32;
+  uInt64ToReg := id;
+  int8ToReg x := sext x 56;
+  int16ToReg x := sext x 48;
+  int32ToReg x := sext x 32;
+  int64ToReg := id;
+  regToZ_signed := @wordToZ 64;
+  regToZ_unsigned x := Z.of_N (wordToN x);
+  sll w n := wlshift w (Z.to_nat n);
+  srl w n := wrshift w (Z.to_nat n);
+  sra w n := wrshift w (Z.to_nat n);
+  ltu a b := if wlt_dec a b then true else false;
+  divu := @wdiv 64;
+  remu := @wmod 64;
+  maxSigned := combine (wones 63) (wzero 1);
+  maxUnsigned := wones 64;
+  minSigned := wones 64;
+  regToShamt5 x := Z.of_N (wordToN (split1 5 59 x));
+  regToShamt  x := Z.of_N (wordToN (split1 6 58 x));
+  highBits x := ZToWord 64 (bitSlice x 64 128);
 |}.

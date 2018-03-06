@@ -18,88 +18,7 @@ Section Riscv.
 
   Context {B: RiscvBitWidths}.
 
-  Instance A: Alu (word wXLEN) (word wXLEN) := {|
-    zero := $0;
-    one := $1;
-    add := @wplus wXLEN;
-    sub := @wminus wXLEN;
-    mul := @wmult wXLEN;
-    div := @wdiv wXLEN;
-    rem := @wmod wXLEN;
-    signed_less_than a b := if wslt_dec a b then true else false;
-    unsigned_less_than a (b: word wXLEN) := if wlt_dec a b then true else false;
-    signed_eqb := @weqb wXLEN;
-    shiftL w n := wlshift w (Z.to_nat n);
-    signed_shiftR w n := wrshifta w (Z.to_nat n);
-    unsigned_shiftR w n := wrshift w (Z.to_nat n);
-    xor := @wxor wXLEN;
-    or := @wor wXLEN;
-    and := @wand wXLEN;
-  |}.
-
-  (* TODO this is not the way to do it *)
-
-  Instance immmm: IntegralConversion MachineInt (word wXLEN).
-    unfold MachineInt. constructor. apply ZToWord.
-  Defined.
-  Instance immmm': IntegralConversion (word wXLEN) MachineInt.
-    unfold MachineInt. constructor. apply ZToWord || apply wordToZ.
-  Defined.
-  Instance c: Convertible (word wXLEN) (word wXLEN).
-    unfold MachineInt. constructor; apply id || apply ZToWord || apply wordToZ.
-  Defined.
-  Instance ic8: IntegralConversion Int8 (word wXLEN).
-    cbv -[wXLEN]. constructor. intro. destruct H.
-    refine (nat_cast _ _ (sext w (wXLEN - 8))). abstract bitwidth_omega.
-  Defined.
-  Instance ic16: IntegralConversion Int16 (word wXLEN).
-    cbv -[wXLEN]. constructor. intro. destruct H.
-    refine (nat_cast _ _ (sext w (wXLEN - 16))). abstract bitwidth_omega.
-  Defined.
-  Instance ic32: IntegralConversion Int32 (word wXLEN).
-    cbv -[wXLEN]. constructor. intro. destruct H.
-    refine (nat_cast _ _ (sext w (wXLEN - 32))). abstract bitwidth_omega.
-  Defined.
-  Instance ic8': IntegralConversion (word wXLEN) Int8.
-    cbv -[wXLEN]. constructor. intro. constructor.
-    refine (split1 _ (wXLEN - 8) (nat_cast _ _ H)). abstract bitwidth_omega.
-  Defined.
-  Instance ic16': IntegralConversion (word wXLEN) Int16.
-    cbv -[wXLEN]. constructor. intro. constructor.
-    refine (split1 _ (wXLEN - 16) (nat_cast _ _ H)). abstract bitwidth_omega.
-  Defined.
-  Instance ic32': IntegralConversion (word wXLEN) Int32.
-    cbv -[wXLEN]. constructor. intro. constructor.
-    refine (split1 _ (wXLEN - 32) (nat_cast _ _ H)). abstract bitwidth_omega.
-  Defined.
-  Instance ic8u: IntegralConversion Word8 (word wXLEN).
-    cbv -[wXLEN]. constructor. intro. destruct H.
-    refine (nat_cast _ _ (zext w (wXLEN - 8))). abstract bitwidth_omega.
-  Defined.
-  Instance ic16u: IntegralConversion Word16 (word wXLEN).
-    cbv -[wXLEN]. constructor. intro. destruct H.
-    refine (nat_cast _ _ (zext w (wXLEN - 16))). abstract bitwidth_omega.
-  Defined.
-  Instance ic32u: IntegralConversion Word32 (word wXLEN).
-    cbv -[wXLEN]. constructor. intro. destruct H.
-    refine (nat_cast _ _ (zext w (wXLEN - 32))). abstract bitwidth_omega.
-  Defined.
-  Instance icZt: IntegralConversion Z (word wXLEN).
-    unfold MachineInt. constructor. apply ZToWord.
-  Defined.
-  Instance icZu: IntegralConversion Z (word wXLEN).
-    unfold MachineInt. constructor. apply ZToWord.
-  Defined.
-  Instance icut: IntegralConversion (word wXLEN) (word wXLEN).
-    constructor. exact id.
-  Defined.
-  Instance ictu: IntegralConversion (word wXLEN) (word wXLEN).
-    constructor. exact id.
-  Defined.
-
-  Definition MW: MachineWidth (word wXLEN) := MachineWidthInst (Z.of_nat log2wXLEN) (word wXLEN).
-
-  Existing Instance MW.
+  Context {MW: MachineWidth (word wXLEN)}.
 
   Definition Register := Z.
 
@@ -112,14 +31,14 @@ Section Riscv.
   Definition run1{M: Type -> Type}{MM: Monad M}{RVS: RiscvState M}: M unit :=
     pc <- getPC;
     inst <- loadWord pc;
-    execute (decode (Z.of_nat wXLEN) (Int32ToMachineInt inst));;
+    execute (decode (Z.of_nat wXLEN) (wordToZ inst));;
     step.
 
   Definition run{M: Type -> Type}{MM: Monad M}{RVS: RiscvState M}: nat -> M unit :=
     fun n => power_func (fun m => run1 ;; m) n (Return tt).
 
   Inductive TraceEvent: Set :=
-  | TraceLoad(sz: nat)(addr: word wXLEN)(val: SignedWord sz)
+  | TraceLoad(sz: nat)(addr: word wXLEN)(val: word sz)
   | TraceLoadFailure(addr: word wXLEN).
 
   Record RiscvMachine := mkRiscvMachine {
@@ -144,8 +63,8 @@ Section Riscv.
   Definition with_executionTrace t ma :=
     mkRiscvMachine ma.(machineMem) ma.(registers) ma.(pc) ma.(nextPC) ma.(exceptionHandlerAddr) t.
 
-  Definition liftLoad{sz: nat}(f: mem 8 -> word wXLEN -> option (SignedWord sz))(a: word wXLEN)
-    : State RiscvMachine (SignedWord sz) :=
+  Definition liftLoad{sz: nat}(f: mem 8 -> word wXLEN -> option (word sz))(a: word wXLEN)
+    : State RiscvMachine (word sz) :=
     m <- get;
     match f m.(machineMem) a with
     | Some v =>
@@ -154,11 +73,11 @@ Section Riscv.
     | None =>
         put (with_nextPC m.(exceptionHandlerAddr) m);;
         put (with_executionTrace (m.(executionTrace) ++ [TraceLoadFailure a]) m);;
-        Return (mkSignedWord $0)
+        Return $0
     end.
 
-  Definition liftStore{sz: nat}(f: mem 8 -> word wXLEN -> SignedWord sz -> option (mem 8))
-    (a: word wXLEN)(v: SignedWord sz) : State RiscvMachine unit :=
+  Definition liftStore{sz: nat}(f: mem 8 -> word wXLEN -> word sz -> option (mem 8))
+    (a: word wXLEN)(v: word sz) : State RiscvMachine unit :=
     m <- get;
     match f m.(machineMem) a v with
     | Some mem' => put (with_machineMem mem' m)
@@ -173,13 +92,13 @@ Section Riscv.
         else
           machine <- get; Return (machine.(registers) reg);
 
-      setRegister := fun s ic (reg: name) (v: s) =>
+      setRegister := fun (reg: name) v =>
         if dec (reg = Register0) then
           Return tt
         else
           machine <- get;
           let newRegs := (fun reg2 => if dec (reg = reg2)
-                                      then (fromIntegral v)
+                                      then v
                                       else machine.(registers) reg2) in
           put (with_registers newRegs machine);
 
@@ -212,7 +131,7 @@ Section Riscv.
     match l with
     | nil => Some m
     | cons w l' =>
-        match Memory.storeWord m a (mkSignedWord w) with
+        match Memory.storeWord m a w with
         | Some m' => storeWords l' (a ^+ $4) m'
         | None => None
         end

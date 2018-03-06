@@ -8,14 +8,14 @@ Require Import riscv.Utility.
 Require Import riscv.util.Monad.
 
 Class Memory(m: Set)(a: Set) := mkMemory {
-  loadByte : m -> a -> option Int8;
-  loadHalf : m -> a -> option Int16;
-  loadWord : m -> a -> option Int32;
-  loadDouble : m -> a -> option Int64;
-  storeByte : m -> a -> Int8 -> option m;
-  storeHalf : m -> a -> Int16 -> option m;
-  storeWord : m -> a -> Int32 -> option m;
-  storeDouble : m -> a -> Int64 -> option m;
+  loadByte : m -> a -> option (word 8);
+  loadHalf : m -> a -> option (word 16);
+  loadWord : m -> a -> option (word 32);
+  loadDouble : m -> a -> option (word 64);
+  storeByte : m -> a -> word 8 -> option m;
+  storeHalf : m -> a -> word 16 -> option m;
+  storeWord : m -> a -> word 32 -> option m;
+  storeDouble : m -> a -> word 64 -> option m;
 }.
 
 (* memory addresses are represented using Z because word does not restrict them enough,
@@ -77,17 +77,10 @@ Definition write_double(m: mem 8)(a: Z)(v: word 64): option (mem 8) :=
 Definition uwordToZ{sz: nat}(w: word sz): Z := Z.of_N (wordToN w).
 
 Definition wrapLoad{aw sz: nat}(f: mem 8 -> Z -> option (word sz))
-  (m: mem 8)(a: word aw): option (SignedWord sz) :=
-  match (f m (uwordToZ a)) with
-  | Some x => Some (mkSignedWord x)
-  | None => None
-  end.
+  (m: mem 8)(a: word aw): option (word sz) := f m (uwordToZ a).
 
 Definition wrapStore{aw sz: nat}(f: mem 8 -> Z -> word sz -> option (mem 8))
-  (m: mem 8)(a: word aw)(v: SignedWord sz): option (mem 8) :=
-  match v with
-  | mkSignedWord w => f m (uwordToZ a) w
-  end.
+  (m: mem 8)(a: word aw)(v: word sz): option (mem 8) := f m (uwordToZ a) v.
 
 Instance mem_is_Memory(aw: nat): Memory (mem 8) (word aw) := {|
   loadByte   := wrapLoad read_byte;
