@@ -55,6 +55,7 @@ def convert_line(line):
     line = line.replace('mod ', 'rem ')
     line = line.replace('quot ', 'div ')
     line = line.replace('not ', 'negb ')
+    line = line.replace(' 8', ' eight')
     line = line.replace(' 4', ' four')
     line = line.replace(' 2', ' two')
     line = line.replace(' 1', ' one')
@@ -97,20 +98,27 @@ def convert(hs_filepath, coq_filepath):
     with open(hs_filepath) as f, open(coq_filepath, 'w') as g:
         g.write(prefix)
         is_inside = False
+        found_begin = False
+        found_end = False
         for l in f:
             line = l.rstrip()
             if line == "-- begin ast":
                 is_inside = True
+                found_begin = True
             elif line == "-- end ast":
                 is_inside = False
+                found_end = True
             elif is_inside:
                 g.write(convert_line(line))
                 g.write('\n')
         g.write(suffix)
+        assert found_begin, "Couldn't find '-- begin ast' marker in " + hs_filepath
+        assert found_end, "Couldn't find '-- end ast' marker in " + hs_filepath
 
 if len(sys.argv) == 2:
     max_number_of_cases = int(sys.argv[1])
 
-for ext in ['I', 'M']:
+for ext in ['I', 'M', 'I64']:
+    print ext
     convert('../../riscv-semantics/src/Execute' + ext + '.hs', '../src/Execute' + ext + '.v')
 

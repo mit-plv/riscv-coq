@@ -53,6 +53,9 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   int32ToReg: word 32 -> t;
   int64ToReg: word 64 -> t;
 
+  s32: t -> t;
+  u32: t -> t;
+
   regToZ_signed: t -> Z;
   regToZ_unsigned: t -> Z;
 
@@ -100,6 +103,8 @@ Section Constants.
 
   Definition four: t := two + two.
 
+  Definition eight: t := four + four.
+
   Definition minusone: t := zero - one.
 
 End Constants.
@@ -131,6 +136,8 @@ Instance MachineWidth32: MachineWidth (word 32) := {|
   int16ToReg x := sext x 16;
   int32ToReg := id;
   int64ToReg := split1 32 32; (* unused *)
+  s32 := id;
+  u32 := id;
   regToZ_signed := @wordToZ 32;
   regToZ_unsigned x := Z.of_N (wordToN x);
   sll w n := wlshift w (Z.to_nat n);
@@ -173,6 +180,8 @@ Instance MachineWidth64: MachineWidth (word 64) := {|
   int16ToReg x := sext x 48;
   int32ToReg x := sext x 32;
   int64ToReg := id;
+  s32 x := sext (split1 32 32 x) 32;
+  u32 x := zext (split1 32 32 x) 32;
   regToZ_signed := @wordToZ 64;
   regToZ_unsigned x := Z.of_N (wordToN x);
   sll w n := wlshift w (Z.to_nat n);

@@ -27,6 +27,56 @@ Section Riscv.
     (i: Instruction): M unit :=
     match i with
     (* begin ast *)
+    | Lwu rd rs1 oimm12 =>
+        a <- getRegister rs1;
+        withTranslation Load four (a + fromImm oimm12)
+          (fun addr => 
+              x <- loadWord addr;
+              setRegister rd (uInt32ToReg x))
+    | Ld rd rs1 oimm12 =>
+        a <- getRegister rs1;
+        withTranslation Load eight (a + fromImm oimm12)
+          (fun addr => 
+              x <- loadDouble addr;
+              setRegister rd (int64ToReg x))
+    | Sd rs1 rs2 simm12 =>
+        a <- getRegister rs1;
+        withTranslation Store eight (a + fromImm simm12)
+          (fun addr => 
+              x <- getRegister rs2;
+              storeDouble addr (regToInt64 x))
+    | Addiw rd rs1 imm12 =>
+        x <- getRegister rs1;
+        setRegister rd (s32 (x + fromImm imm12))
+    | Slliw rd rs1 shamt5 =>
+        x <- getRegister rs1;
+        setRegister rd (s32 (sll x (regToShamt5 (fromImm shamt5 : t))))
+    | Srliw rd rs1 shamt5 =>
+        x <- getRegister rs1;
+        setRegister rd (s32 (srl (u32 x) (regToShamt5 (fromImm shamt5 : t))))
+    | Sraiw rd rs1 shamt5 =>
+        x <- getRegister rs1;
+        setRegister rd (s32 (sra (s32 x) (regToShamt5 (fromImm shamt5 : t))))
+    | Addw rd rs1 rs2 =>
+        x <- getRegister rs1;
+        y <- getRegister rs2;
+        setRegister rd (s32 (x + y))
+    | Subw rd rs1 rs2 =>
+        x <- getRegister rs1;
+        y <- getRegister rs2;
+        setRegister rd (s32 (x - y))
+    | Sllw rd rs1 rs2 =>
+        x <- getRegister rs1;
+        y <- getRegister rs2;
+        setRegister rd (s32 (sll x (regToShamt5 y)))
+    | Srlw rd rs1 rs2 =>
+        x <- getRegister rs1;
+        y <- getRegister rs2;
+        setRegister rd (s32 (srl (u32 x) (regToShamt5 y)))
+    | Sraw rd rs1 rs2 =>
+        x <- getRegister rs1;
+        y <- getRegister rs2;
+        setRegister rd (s32 (sra (s32 x) (regToShamt5 y)))
     (* end ast *)
     | _ => mzero
     end.
