@@ -53,14 +53,21 @@ Definition zeroedRiscvMachine: RiscvMachine := {|
 Definition initialRiscvMachine(imem: list MachineInt): RiscvMachine :=
   putProgram (map (@ZToWord 32) imem) zeroedRiscvMachine.
 
-Definition fib6_L_final(fuel: nat): RiscvMachine :=
-  execState (run fuel) (initialRiscvMachine fib6_riscv).
+(* TODO here the option used to encode selection in execute bubbles up until here,
+   how can we avoid this? *)
+Definition fib6_L_final(fuel: nat): option RiscvMachine :=
+  match run fuel (initialRiscvMachine fib6_riscv) with
+  | Some (answer, state) => Some state
+  | None => None
+  end.
 
-Definition fib6_L_res(fuel: nat): word wXLEN :=
-  (fib6_L_final fuel).(registers) 18.
+Definition fib6_L_res(fuel: nat): option (word wXLEN) :=
+  r <- fib6_L_final fuel;
+  Return (r.(registers) 18).
 
-Definition fib6_L_trace(fuel: nat): list TraceEvent :=
-  (fib6_L_final fuel).(executionTrace).
+Definition fib6_L_trace(fuel: nat): option (list TraceEvent) :=
+  r <- fib6_L_final fuel;
+  Return (r.(executionTrace)).
 
 Transparent wlt_dec.
 

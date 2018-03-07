@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
-Require Import riscv.util.Monad.
+Require Import riscv.util.StateMonad.
 Require Import riscv.Utility.
 Require Import riscv.NoVirtualMemory.
 Require Import riscv.Decode.
@@ -22,9 +22,8 @@ Section Riscv.
 
   Context {MW: MachineWidth t}.
 
-  Notation "'when' a b" := (if a then b else Return tt) (at level 60, a at level 0, b at level 0).
-
-  Definition execute{M: Type -> Type}{MM: Monad M}{RVS: RiscvState M}(i: Instruction): M unit :=
+  Definition execute{M: Type -> Type}{MM: Monad M}{MP: MonadPlus M}{RVS: RiscvState M}
+    (i: Instruction): M unit :=
     match i with
     (* begin ast *)
     | Lui rd imm20 =>
@@ -219,7 +218,7 @@ Section Riscv.
         y <- getRegister rs2;
         setRegister rd (x <&> y)
     (* end ast *)
-    | _ => Return tt
+    | _ => mzero
     end.
 
 End Riscv.
