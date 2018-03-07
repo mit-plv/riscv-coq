@@ -30,7 +30,7 @@ Section Riscv.
   Definition run1{M: Type -> Type}{MM: Monad M}{MP: MonadPlus M}{RVS: RiscvState M}: M unit :=
     pc <- getPC;
     inst <- loadWord pc;
-    execute (decode (Z.of_nat wXLEN) (wordToZ inst));;
+    execute64 (decode (Z.of_nat wXLEN) (wordToZ inst));;
     step.
 
   Definition run{M: Type -> Type}{MM: Monad M}{MP: MonadPlus M}{RVS: RiscvState M}: nat -> M unit :=
