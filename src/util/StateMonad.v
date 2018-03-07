@@ -1,6 +1,6 @@
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Export riscv.util.Monad.
-
+Require Export riscv.util.MonadPlus.
 
 Definition State(S A: Type) := S -> (A * S).
 
@@ -26,3 +26,31 @@ Definition evalState{S A: Type}(m: State S A)(initial: S): A := fst (m initial).
 (* Evaluate state computation with given initial state, discard final answer, return final state *)
 Definition execState{S A: Type}(m: State S A)(initial: S): S := snd (m initial).
 
+
+Definition OAState(S A: Type) := S -> option (A * S).
+
+Instance OAState_Monad(S: Type): Monad (OAState S) := {|
+  Bind := fun {A B: Type} (m: OAState S A) (f: A -> OAState S B) =>
+            fun (s: S) => match m s with
+            | Some (a, s') => f a s'
+            | None => None
+            end;
+  Return := fun {A: Type} (a: A) =>
+              fun (s: S) => Some (a, s)
+|}.
+- intros. reflexivity.
+- intros. extensionality s. destruct (m s); [|reflexivity]. destruct p. reflexivity.
+- intros. extensionality s. destruct (m s); [|reflexivity]. destruct p. reflexivity.
+Defined.
+
+Instance State_MonadPlus(S: Type): MonadPlus (OAState S) := {|
+  mzero A s := @None (A * S);
+  mplus A m1 m2 s := match m1 s with
+    | Some p => Some p
+    | None => m2 s
+    end;
+|}.
+- intros. reflexivity.
+- intros. simpl. extensionality s. destruct (v s); [|reflexivity]. destruct p. reflexivity.
+- intros. extensionality s. destruct (m1 s); reflexivity.
+Defined.
