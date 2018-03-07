@@ -1,32 +1,7 @@
 Require Import riscv.util.NameWithEq.
-Require Import riscv.util.Monad.
 Require Import riscv.Utility.
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
-
-Notation "a <|> b" := (or a b)  (at level 50, left associativity) : alu_scope.
-Notation "a <&> b" := (and a b) (at level 40, left associativity) : alu_scope.
-Notation "a + b"   := (add a b) (at level 50, left associativity) : alu_scope.
-Notation "a - b"   := (sub a b) (at level 50, left associativity) : alu_scope.
-
-Notation "a /= b" := (negb (signed_eqb a b))        (at level 70, no associativity) : alu_scope.
-Notation "a == b" := (signed_eqb a b)               (at level 70, no associativity) : alu_scope.
-Notation "a < b"  := (signed_less_than a b)         (at level 70, no associativity) : alu_scope.
-Notation "a >= b" := (negb (signed_less_than a b))  (at level 70, no associativity) : alu_scope.
-Notation "'when' a b" := (if a then b else Return tt)
-  (at level 60, a at level 0, b at level 0) : alu_scope.
-
-Section Constants.
-  Context {t: Set}.
-  Context {MW: MachineWidth t}.
-
-  Local Open Scope alu_scope.
-
-  Definition two: t := one + one.
-
-  Definition four: t := two + two.
-
-End Constants.
 
 Section Riscv.
 

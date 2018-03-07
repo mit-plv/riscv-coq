@@ -9,6 +9,7 @@ Require Import riscv.Program.
 
 Local Open Scope Z.
 Local Open Scope alu_scope.
+Local Open Scope bool_scope.
 
 Section Riscv.
 

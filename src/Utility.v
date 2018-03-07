@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
+Require Import riscv.util.Monad.
 
 (* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
    no matter whether it's a 32-bit or 64-bit machine. *)
@@ -72,6 +73,37 @@ Class MachineWidth(t: Set) := mkMachineWidth {
 
   highBits: Z -> t;
 }.
+
+
+Notation "a <|> b" := (or a b)  (at level 50, left associativity) : alu_scope.
+Notation "a <&> b" := (and a b) (at level 40, left associativity) : alu_scope.
+Notation "a + b"   := (add a b) (at level 50, left associativity) : alu_scope.
+Notation "a - b"   := (sub a b) (at level 50, left associativity) : alu_scope.
+Notation "a * b"   := (mul a b) (at level 40, left associativity) : alu_scope.
+
+Notation "a /= b" := (negb (signed_eqb a b))        (at level 38, no associativity) : alu_scope.
+Notation "a == b" := (signed_eqb a b)               (at level 38, no associativity) : alu_scope.
+Notation "a < b"  := (signed_less_than a b)         (at level 70, no associativity) : alu_scope.
+Notation "a >= b" := (negb (signed_less_than a b))  (at level 70, no associativity) : alu_scope.
+Notation "'when' a b" := (if a then b else Return tt)
+  (at level 60, a at level 0, b at level 0) : alu_scope.
+
+
+Section Constants.
+
+  Context {t: Set}.
+  Context {MW: MachineWidth t}.
+
+  Local Open Scope alu_scope.
+
+  Definition two: t := one + one.
+
+  Definition four: t := two + two.
+
+  Definition minusone: t := zero - one.
+
+End Constants.
+
 
 Instance MachineWidth32: MachineWidth (word 32) := {|
   zero := $0;

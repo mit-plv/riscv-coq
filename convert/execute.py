@@ -36,7 +36,12 @@ def convert_line(line):
     line = line.split("--")[0].rstrip()
 
     line = re.sub(r'^(.*<-.*)$', r'\1;', line)
-    line = re.sub(r'^(\s*let [^=]+)=(.*)$', r'\1:=\2 in', line)
+    line = re.sub(r'^(\s*let [^=|]+)=([^|]*)$', r'\1:=\2 in', line)
+
+    line = re.sub(r'^(\s*let\s*[^ |]+\s*)\|(.*)=(.*)$', r'\1:= (if\2then\3', line)
+    line = re.sub(r'^(\s*)\|\s*otherwise\s*=(.*)$', r'   \1 else\2)', line)
+    line = re.sub(r'^(\s*)\|(.*)=(.*)$', r'   \1 else if\2then\3', line)
+
     line = re.sub(r'\\([^ ->]+)\s*->', r'fun \1 =>', line)
     
     # in most cases, setRegister is the last statement and therefore does
@@ -48,11 +53,13 @@ def convert_line(line):
     line = line.replace('.&.', '<&>')
     line = line.replace('.|.', '<|>')
     line = line.replace('mod ', 'rem ')
+    line = line.replace('quot ', 'div ')
     line = line.replace('not ', 'negb ')
     line = line.replace(' 4', ' four')
     line = line.replace(' 2', ' two')
     line = line.replace(' 1', ' one')
     line = line.replace(' 0', ' zero')
+    line = line.replace('-1', 'minusone')
 
     m = re.match(r'execute\s*\((([^ ]+)[^)]+)\)\s*=\s*(\w+)(.*)', line)
     if m:
@@ -104,5 +111,6 @@ def convert(hs_filepath, coq_filepath):
 if len(sys.argv) == 2:
     max_number_of_cases = int(sys.argv[1])
 
-convert('../../riscv-semantics/src/ExecuteI.hs', '../src/Execute.v')
+for ext in ['I', 'M']:
+    convert('../../riscv-semantics/src/Execute' + ext + '.hs', '../src/Execute' + ext + '.v')
 
