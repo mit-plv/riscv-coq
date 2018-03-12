@@ -46,7 +46,7 @@ Section Riscv.
     registers: Register -> word wXLEN;
     pc: word wXLEN;
     nextPC: word wXLEN;
-    exceptionHandlerAddr: word wXLEN;
+    exceptionHandlerAddr: MachineInt;
     executionTrace: list TraceEvent;
   }.
 
@@ -70,10 +70,9 @@ Section Riscv.
     | Some v =>
         put (with_executionTrace (m.(executionTrace) ++ [TraceLoad sz a v]) m);;
         Return v
-    | None =>
-        put (with_nextPC m.(exceptionHandlerAddr) m);;
-        put (with_executionTrace (m.(executionTrace) ++ [TraceLoadFailure a]) m);;
-        Return $0
+    | None => put (with_executionTrace (m.(executionTrace) ++ [TraceLoadFailure a]) m);;
+              (* TODO can't "raiseException zero four" because we don't have the instance yet *)
+              fun _ => None (* TODO this throws away the whole trace! *)
     end.
 
   Definition liftStore{sz: nat}(f: mem 8 -> word wXLEN -> word sz -> option (mem 8))
@@ -81,7 +80,8 @@ Section Riscv.
     m <- get;
     match f m.(machineMem) a v with
     | Some mem' => put (with_machineMem mem' m)
-    | None => put (with_nextPC m.(exceptionHandlerAddr) m)
+    | None => (* TODO can't "raiseException zero four" because we don't have the instance yet *)
+              fun _ => None
     end.
 
   Instance IsRiscvMachine: RiscvState (OState RiscvMachine) :=
@@ -122,10 +122,12 @@ Section Riscv.
         m <- get;
         put (with_nextPC (m.(nextPC) ^+ $4) (with_pc m.(nextPC) m));
 
-      raiseException _ _ :=
-        m <- get;
-        put (with_nextPC m.(exceptionHandlerAddr) m);
+      getCSRField_MTVecBase :=
+        gets exceptionHandlerAddr;
+
+      endCycle A := fun _ => None; (* TODO that's wrong, TODO get monad transformer stuff right *)
   |}.
+
 
   Fixpoint storeWords(l: list (word 32))(a: word wXLEN)(m: mem 8): option (mem 8) :=
     match l with

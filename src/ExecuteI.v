@@ -105,52 +105,44 @@ Section Riscv.
             else setPC addr)
     | Lb rd rs1 oimm12 =>
         a <- getRegister rs1;
-        withTranslation Load one (a + fromImm oimm12)
-          (fun addr => 
-              x <- loadByte addr;
-              setRegister rd (int8ToReg x))
+        addr <- translate Load one (a + fromImm oimm12);
+        x <- loadByte addr;
+        setRegister rd (int8ToReg x)
     | Lh rd rs1 oimm12 =>
         a <- getRegister rs1;
-        withTranslation Load two (a + fromImm oimm12)
-          (fun addr => 
-              x <- loadHalf addr;
-              setRegister rd (int16ToReg x))
+        addr <- translate Load two (a + fromImm oimm12);
+        x <- loadHalf addr;
+        setRegister rd (int16ToReg x)
     | Lw rd rs1 oimm12 =>
         a <- getRegister rs1;
-        withTranslation Load four (a + fromImm oimm12)
-          (fun addr => 
-              x <- loadWord addr;
-              setRegister rd (int32ToReg x))
+        addr <- translate Load four (a + fromImm oimm12);
+        x <- loadWord addr;
+        setRegister rd (int32ToReg x)
     | Lbu rd rs1 oimm12 =>
         a <- getRegister rs1;
-        withTranslation Load one (a + fromImm oimm12)
-          (fun addr => 
-              x <- loadByte addr;
-              setRegister rd (uInt8ToReg x))
+        addr <- translate Load one (a + fromImm oimm12);
+        x <- loadByte addr;
+        setRegister rd (uInt8ToReg x)
     | Lhu rd rs1 oimm12 =>
         a <- getRegister rs1;
-        withTranslation Load two (a + fromImm oimm12)
-          (fun addr => 
-              x <- loadHalf addr;
-              setRegister rd (uInt16ToReg x))
+        addr <- translate Load two (a + fromImm oimm12);
+        x <- loadHalf addr;
+        setRegister rd (uInt16ToReg x)
     | Sb rs1 rs2 simm12 =>
         a <- getRegister rs1;
-        withTranslation Store one (a + fromImm simm12)
-          (fun addr => 
-              x <- getRegister rs2;
-              storeByte addr (regToInt8 x))
+        addr <- translate Store one (a + fromImm simm12);
+        x <- getRegister rs2;
+        storeByte addr (regToInt8 x)
     | Sh rs1 rs2 simm12 =>
         a <- getRegister rs1;
-        withTranslation Store two (a + fromImm simm12)
-          (fun addr => 
-              x <- getRegister rs2;
-              storeHalf addr (regToInt16 x))
+        addr <- translate Store two (a + fromImm simm12);
+        x <- getRegister rs2;
+        storeHalf addr (regToInt16 x)
     | Sw rs1 rs2 simm12 =>
         a <- getRegister rs1;
-        withTranslation Store four (a + fromImm simm12)
-          (fun addr => 
-              x <- getRegister rs2;
-              storeWord addr (regToInt32 x))
+        addr <- translate Store four (a + fromImm simm12);
+        x <- getRegister rs2;
+        storeWord addr (regToInt32 x)
     | Addi rd rs1 imm12 =>
         x <- getRegister rs1;
         setRegister rd (x + fromImm imm12)

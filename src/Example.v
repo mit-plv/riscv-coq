@@ -46,7 +46,7 @@ Definition zeroedRiscvMachine: RiscvMachine := {|
   registers := fun (r: Register) => $0;
   pc := $0;
   nextPC := $4;
-  exceptionHandlerAddr := wneg $4;
+  exceptionHandlerAddr := -4;
   executionTrace := nil;
 |}.
 

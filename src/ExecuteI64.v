@@ -29,22 +29,19 @@ Section Riscv.
     (* begin ast *)
     | Lwu rd rs1 oimm12 =>
         a <- getRegister rs1;
-        withTranslation Load four (a + fromImm oimm12)
-          (fun addr => 
-              x <- loadWord addr;
-              setRegister rd (uInt32ToReg x))
+        addr <- translate Load four (a + fromImm oimm12);
+        x <- loadWord addr;
+        setRegister rd (uInt32ToReg x)
     | Ld rd rs1 oimm12 =>
         a <- getRegister rs1;
-        withTranslation Load eight (a + fromImm oimm12)
-          (fun addr => 
-              x <- loadDouble addr;
-              setRegister rd (int64ToReg x))
+        addr <- translate Load eight (a + fromImm oimm12);
+        x <- loadDouble addr;
+        setRegister rd (int64ToReg x)
     | Sd rs1 rs2 simm12 =>
         a <- getRegister rs1;
-        withTranslation Store eight (a + fromImm simm12)
-          (fun addr => 
-              x <- getRegister rs2;
-              storeDouble addr (regToInt64 x))
+        addr <- translate Store eight (a + fromImm simm12);
+        x <- getRegister rs2;
+        storeDouble addr (regToInt64 x)
     | Addiw rd rs1 imm12 =>
         x <- getRegister rs1;
         setRegister rd (s32 (x + fromImm imm12))

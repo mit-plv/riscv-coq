@@ -1,4 +1,5 @@
 Require Import riscv.util.NameWithEq.
+Require Import riscv.util.Monad.
 Require Import riscv.Utility.
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
@@ -25,9 +26,21 @@ Section Riscv.
     getPC: M t;
     setPC: t -> M unit;
 
+    (* TODO support all get/setCSRField, this one is just for the exception handler address *)
+    getCSRField_MTVecBase: M MachineInt;
+
     step: M unit; (* updates PC *)
 
-    raiseException: t -> t -> M unit;
+    endCycle: forall {A}, M A;
   }.
+
+
+  Definition raiseException{A: Type}{t: Set}{MW: MachineWidth t}{M: Type -> Type}
+    {MM: Monad M}{RVS: RiscvState M}
+    (isInterrupt: t)(exceptionCode: t): M A :=
+    pc <- getPC;
+    addr <- getCSRField_MTVecBase;
+    setPC (fromImm (addr * 4)%Z);;
+    endCycle.
 
 End Riscv.
