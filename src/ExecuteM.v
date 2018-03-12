@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
-Require Import riscv.util.StateMonad.
+Require Import riscv.util.Monads.
 Require Import riscv.Utility.
 Require Import riscv.NoVirtualMemory.
 Require Import riscv.Decode.

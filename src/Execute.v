@@ -2,7 +2,7 @@ Require Import Coq.Lists.List.
 Import ListNotations.
 Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
-Require Import riscv.util.MonadPlus.
+Require Import riscv.util.Monads.
 Require Import riscv.Utility.
 Require Import riscv.Decode.
 Require Import riscv.Program.

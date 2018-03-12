@@ -6,7 +6,7 @@ Require Import bbv.Word.
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.util.Decidable.
 Require Import riscv.Utility.
-Require Import riscv.util.Monad.
+Require Import riscv.util.Monads.
 
 Class Memory(m: Set)(a: Set) := mkMemory {
   loadByte : m -> a -> option (word 8);

@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
-Require Import riscv.util.Monad.
+Require Import riscv.util.Monads.
 
 (* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
    no matter whether it's a 32-bit or 64-bit machine. *)

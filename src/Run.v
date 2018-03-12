@@ -3,8 +3,7 @@ Require Import bbv.WordScope.
 Require Import bbv.DepEqNat.
 Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
-Require Import riscv.util.MonadPlus.
-Require Import riscv.util.OStateMonad.
+Require Import riscv.util.Monads.
 Require Import riscv.Decode.
 Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)
 Require Import riscv.Program.

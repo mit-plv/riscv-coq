@@ -1,6 +1,6 @@
 Require Import riscv.Utility.
 Require Import riscv.Program.
-Require Import riscv.util.Monad.
+Require Import riscv.util.Monads.
 Require Import riscv.util.NameWithEq.
 
 Inductive AccessType: Set := Instruction | Load | Store.
