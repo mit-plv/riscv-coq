@@ -1,3 +1,4 @@
+Require Import Coq.Logic.FunctionalExtensionality.
 
 Class Monad(M: Type -> Type) := mkMonad {
   Bind: forall {A B}, M A -> (A -> M B) -> M B;
@@ -26,5 +27,25 @@ Instance option_Monad: Monad option := {|
 - intros. reflexivity.
 - intros. destruct m; reflexivity.
 - intros. destruct m; reflexivity.
+Defined.
+
+
+(* T for transformer, corresponds to Haskell's MaybeT: *)
+Definition optionT(M: Type -> Type)(A: Type) := M (option A).
+
+Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
+  Bind{A}{B}(m: M (option A))(f: A -> M (option B)) :=
+    Bind m (fun (o: option A) =>
+      match o with
+      | Some a => f a
+      | None => Return None
+      end);
+  Return{A}(a: A) := Return (Some a);
+|}.
+- intros. rewrite left_identity. reflexivity.
+- intros. rewrite <- right_identity. f_equal. extensionality o. destruct o; reflexivity.
+- intros. rewrite associativity. f_equal. extensionality o. destruct o.
+  + reflexivity.
+  + rewrite left_identity. reflexivity.
 Defined.
 
