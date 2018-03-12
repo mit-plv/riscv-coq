@@ -1,11 +1,12 @@
 Require Import Coq.omega.Omega.
 Require Import bbv.NatLib.
 
+Inductive RiscvBitWidth := Bitwidth32 | Bitwidth64.
+
 Class RiscvBitWidths := mkRiscvBitWidths {
-  (* ``There are 31 general-purpose registers x1-x31, which hold integer values. Register x0 is
-     hardwired to the constant 0. [...] This document uses the term XLEN to refer to the current
-     width of an x register in bits (either 32 or 64).'' *)
-  wXLEN: nat;
+  bitwidth: RiscvBitWidth;
+
+(* TODO add these back if needed:
 
   log2wXLEN: nat;
   log2wXLEN_spec: pow2 log2wXLEN = wXLEN;
@@ -34,9 +35,24 @@ Class RiscvBitWidths := mkRiscvBitWidths {
   wXLEN_lbound: wXLEN >= wInstr;
 
   wXLEN_ge_32: wXLEN >= 32;
+*)
 }.
 
+Section Widths.
+
+  Context {B: RiscvBitWidths}.
+
+  Definition wXLEN: nat :=
+    match bitwidth with
+    | Bitwidth32 => 32
+    | Bitwidth64 => 64
+    end.
+
+End Widths.
+
+(*
 Ltac bitwidth_omega :=
   match goal with
   | B: RiscvBitWidths |- _ => abstract (destruct B; simpl in *; omega)
   end.
+*)
