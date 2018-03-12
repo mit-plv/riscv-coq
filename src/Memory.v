@@ -1,6 +1,7 @@
 (* import List before bbv.Word, otherwise Word.combine gets shadowed and huge type class
    inference failure messages will appear *)
 Require Import Coq.Lists.List.
+Require Import Coq.omega.Omega.
 Require Import bbv.Word.
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.util.Decidable.
@@ -67,11 +68,11 @@ Definition hibits(sz: nat)(w: word (sz + sz)): word sz := split2 sz sz w.
 
 Definition write_byte(m: mem 8)(a: Z)(v: word 8): option (mem 8) := write_mem a v m.
 Definition write_half(m: mem 8)(a: Z)(v: word 16): option (mem 8) :=
-  m <- write_byte m a (lobits 8 v); write_byte m a (hibits 8 v).
+  m <- write_byte m a (lobits 8 v); write_byte m (a + 1) (hibits 8 v).
 Definition write_word(m: mem 8)(a: Z)(v: word 32): option (mem 8) :=
-  m <- write_half m a (lobits 16 v); write_half m a (hibits 16 v).
+  m <- write_half m a (lobits 16 v); write_half m (a + 2) (hibits 16 v).
 Definition write_double(m: mem 8)(a: Z)(v: word 64): option (mem 8) :=
-  m <- write_word m a (lobits 32 v); write_word m a (hibits 32 v).
+  m <- write_word m a (lobits 32 v); write_word m (a + 4) (hibits 32 v).
 
 
 Definition uwordToZ{sz: nat}(w: word sz): Z := Z.of_N (wordToN w).
@@ -92,3 +93,93 @@ Instance mem_is_Memory(aw: nat): Memory (mem 8) (word aw) := {|
   storeWord   := wrapStore write_word;
   storeDouble := wrapStore write_double;
 |}.
+
+
+Section store_retrieve.
+
+  Context {sz: nat}.
+
+  Fixpoint storeWords(l: list (word 32))(a: word sz)(m: mem 8): option (mem 8) :=
+    match l with
+    | nil => Some m
+    | cons w l' =>
+        match storeWord m a w with
+        | Some m' => storeWords l' (a ^+ $4) m'
+        | None => None
+        end
+    end.
+
+  Fixpoint mem_to_word_list(m: mem 8)(start: Z)(count: nat): list (option (word 32)) :=
+    match count with
+    | S c => read_word m start :: mem_to_word_list m (start + 4) c
+    | O => nil
+    end.
+
+  Lemma write_read_byte: forall m m' a v ,
+    write_byte m a v = Some m' ->
+    read_byte m' a = Some v.
+  Proof.
+    intros. unfold write_byte, read_byte, read_mem, write_mem in *.
+    destruct (m a) eqn: E; [|discriminate].
+    inversion H. clear H. subst.
+    match goal with
+    | |- context [@dec ?P ?d] =>
+      let x := constr:(@dec P d) in destruct x; [reflexivity|contradiction]
+    end.
+  Qed.
+
+  Lemma write_read_byte_diff: forall a1 a2 m m' v o,
+    a2 <> a1 ->
+    read_byte m a1 = o ->
+    write_byte m a2 v = Some m' ->
+    read_byte m' a1 = o.
+  Proof.
+    intros. unfold read_byte, write_byte, read_mem, write_mem in *.
+    destruct (m a2) eqn: E; [|discriminate].
+    inversion H1.
+    match goal with
+    | |- context [@dec ?P ?d] =>
+      let x := constr:(@dec P d) in destruct x; [contradiction|assumption]
+    end.
+  Qed.
+
+  Lemma write_read_half: forall m m' a v ,
+    write_half m a v = Some m' ->
+    read_half m' a = Some v.
+  Proof.
+    intros. unfold write_half, read_half in *. simpl in *.
+    match goal with
+    | H: match ?x with _ => _ end = Some _ |- _ => destruct x eqn: E; [|discriminate]
+    end.
+    pose proof H as H'.
+    apply write_read_byte in H'. rewrite H'.
+    pose proof E as E'.
+    apply write_read_byte in E'.
+    assert (a + 1 <> a) as Q by omega.
+    pose proof (write_read_byte_diff a _ m0 m' _ _ Q E' H) as P.
+    rewrite P.
+    f_equal.
+    unfold lobits, hibits.
+    apply combine_split.
+  Qed.
+
+  Lemma write_read_word: forall m m' a v ,
+    write_word m a v = Some m' ->
+    read_word m' a = Some v.
+  Admitted.
+
+  Lemma store_retrieve_word_list: forall l a m m',
+    storeWords l a m = Some m' ->
+    mem_to_word_list m' (uwordToZ a) (length l) = map Some l.
+  Proof.
+    induction l; intros; simpl in *; try reflexivity.
+    destruct (wrapStore write_word m a0 a) eqn: F; [|discriminate].
+    specialize IHl with (1 := H).
+    assert (uwordToZ (a0 ^+ $4) = uwordToZ a0 + 4) as E by admit.
+    rewrite E in IHl.
+    rewrite IHl.
+    f_equal.
+    unfold wrapStore in F.
+  Abort.
+
+End store_retrieve.
