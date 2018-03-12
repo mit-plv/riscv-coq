@@ -115,7 +115,7 @@ Definition put{S: Type}(s: S): OState S unit := fun _ => Some (tt, s).
 (* T for transformer, corresponds to Haskell's MaybeT: *)
 Definition optionT(M: Type -> Type)(A: Type) := M (option A).
 
-Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
+Instance OptionT_is_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
   Bind{A}{B}(m: M (option A))(f: A -> M (option B)) :=
     Bind m (fun (o: option A) =>
       match o with
@@ -131,3 +131,48 @@ Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
   + rewrite left_identity. reflexivity.
 Defined.
 
+Instance optionT_is_MonadPlus(M: Type -> Type){MM: Monad M}: MonadPlus (optionT M) := {|
+  mzero A := Return None : M (option A);
+  mplus A m1 m2 := @Bind _ _ (option A) _ m1 (fun (o1: option A) => match o1 with
+    | Some a1 => Return (Some a1)
+    | None => m2
+    end) : M (option A);
+|}.
+- intros. simpl. rewrite left_identity. reflexivity.
+- intros. simpl.
+  replace (fun o : option A =>
+      match o return (M (option B)) with
+      | Some _ => @Return M MM (option B) (@None B)
+      | None => @Return M MM (option B) (@None B)
+      end)
+  with (fun o : option A => (@Return M MM (option B) (@None B))).
+  + simpl. admit.
+  + admit.
+- intros.
+  rewrite associativity. f_equal. extensionality o1. destruct o1.
+  + rewrite left_identity. reflexivity.
+  + reflexivity.
+Admitted.
+
+
+Class MonadTrans(T: (Type -> Type) -> (Type -> Type)) := mkMonadTrans {
+  lift{M: Type -> Type}{MM: Monad M}{A: Type}: M A -> T M A;
+  transformed_monad{M: Type -> Type}{MM: Monad M}: Monad (T M);
+  lift_return{M: Type -> Type}{MM: Monad M}{A: Type}:
+    forall a: A, lift (Return a) = Return a;
+  lift_bind{M: Type -> Type}{MM: Monad M}{A B: Type}:
+    forall (m: M A) (f: A -> M B), lift (Bind m f) = Bind (lift m) (fun x => lift (f x));
+}.
+
+(* Promote a function to a monad. *)
+Definition liftM{M: Type -> Type}{MM: Monad M}{A B: Type}(f: A -> B): M A -> M B :=
+  fun m => x <- m; Return (f x).
+
+Instance optionT_is_MonadTrans: MonadTrans optionT := {|
+  lift M MM A := liftM Some;
+  transformed_monad := OptionT_is_Monad;
+|}.
+- intros. unfold liftM. simpl. rewrite left_identity. reflexivity.
+- intros. unfold liftM. simpl. rewrite? associativity. f_equal. extensionality a.
+  rewrite left_identity. reflexivity.
+Defined.
