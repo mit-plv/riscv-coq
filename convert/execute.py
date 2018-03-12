@@ -118,7 +118,6 @@ def convert(hs_filepath, coq_filepath):
 if len(sys.argv) == 2:
     max_number_of_cases = int(sys.argv[1])
 
-for ext in ['I', 'M', 'I64']:
-    print ext
+for ext in ['I', 'M', 'I64', 'M64']:
     convert('../../riscv-semantics/src/Execute' + ext + '.hs', '../src/Execute' + ext + '.v')
 

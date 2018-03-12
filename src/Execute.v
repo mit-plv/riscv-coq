@@ -9,6 +9,7 @@ Require Import riscv.Program.
 Require riscv.ExecuteI.
 Require riscv.ExecuteM.
 Require riscv.ExecuteI64.
+Require riscv.ExecuteM64.
 
 Section Riscv.
 
@@ -38,6 +39,6 @@ Section Riscv.
     execute [ExecuteI.execute; ExecuteM.execute].
 
   Definition execute64: Instruction -> M unit :=
-    execute [ExecuteI.execute; ExecuteM.execute; ExecuteI64.execute].
+    execute [ExecuteI.execute; ExecuteM.execute; ExecuteI64.execute; ExecuteM64.execute].
 
 End Riscv.
