@@ -13,10 +13,13 @@ Class Monad(M: Type -> Type) := mkMonad {
     Bind (Bind m f) g = Bind m (fun x => Bind (f x) g)
 }.
 
+
 Notation "x <- m1 ; m2" := (Bind m1 (fun x => m2))
-  (right associativity, at level 60).
+  (right associativity, at level 60) : monad_scope.
 Notation "m1 ;; m2" := (Bind m1 (fun _ => m2))
-  (right associativity, at level 60).
+  (right associativity, at level 60) : monad_scope.
+
+Open Scope monad_scope.
 
 Instance option_Monad: Monad option := {|
   Bind := fun {A B: Type} (o: option A) (f: A -> option B) => match o with
@@ -130,6 +133,21 @@ Instance OptionT_is_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
   + rewrite left_identity. reflexivity.
 Defined.
 
+Lemma discard_left: forall {M : Type -> Type} {MM : Monad M} {A B : Type} (m: M A) (b: B),
+  Bind m (fun _  => Return b) = Return b.
+Proof.
+  intros. (* Note: This does not hold for the state monad! *)
+Admitted.
+
+Definition OpSt(S: Type): Type -> Type := optionT (State S).
+
+Definition OpSt_Monad(S: Type): Monad (OpSt S).
+  unfold OpSt. apply OptionT_is_Monad. apply State_Monad.
+Defined.
+
+Goal forall (S: Type), False. intro S. set (b := @Bind (OpSt S) (OpSt_Monad S)).
+Abort.
+
 Instance optionT_is_MonadPlus(M: Type -> Type){MM: Monad M}: MonadPlus (optionT M) := {|
   mzero A := Return None : M (option A);
   mplus A m1 m2 := @Bind _ _ (option A) _ m1 (fun (o1: option A) => match o1 with
@@ -139,20 +157,14 @@ Instance optionT_is_MonadPlus(M: Type -> Type){MM: Monad M}: MonadPlus (optionT 
 |}.
 - intros. simpl. rewrite left_identity. reflexivity.
 - intros. simpl.
-  replace (fun o : option A =>
-      match o return (M (option B)) with
-      | Some _ => @Return M MM (option B) (@None B)
-      | None => @Return M MM (option B) (@None B)
-      end)
-  with (fun o : option A => (@Return M MM (option B) (@None B))).
-  + simpl. admit.
-  + admit.
+  transitivity (Bind v (fun o : option A => Return (@None B))).
+  + f_equal. extensionality o. destruct o; reflexivity.
+  + apply discard_left.
 - intros.
   rewrite associativity. f_equal. extensionality o1. destruct o1.
   + rewrite left_identity. reflexivity.
   + reflexivity.
-Admitted.
-
+Defined.
 
 Class MonadTrans(T: (Type -> Type) -> (Type -> Type)) := mkMonadTrans {
   lift{M: Type -> Type}{MM: Monad M}{A: Type}: M A -> T M A;
