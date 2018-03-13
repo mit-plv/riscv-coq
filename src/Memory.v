@@ -8,6 +8,8 @@ Require Import riscv.util.Decidable.
 Require Import riscv.Utility.
 Require Import riscv.util.Monads.
 
+(* TODO remove option here, making it very simple,
+   and only use option based memory in compiler *)
 Class Memory(m: Set)(a: Set) := mkMemory {
   loadByte : m -> a -> option (word 8);
   loadHalf : m -> a -> option (word 16);

@@ -7,7 +7,8 @@ Require Import Coq.ZArith.BinInt.
 Require Import bbv.WordScope.
 Require Import riscv.Utility.
 Require Import riscv.Memory.
-Require Import riscv.RunTrace.
+Require Import riscv.Minimal.
+Require Import riscv.Run.
 
 Definition fib6_riscv: list MachineInt := [ (* TODO should be "word 32", not MachineInt *)
   Ox"00600993";         (* li s3,6 *)
@@ -39,6 +40,8 @@ Goal False.
   (* decoder seems to work :) *)
 Abort.
 
+Definition RiscvMachine := @RiscvMachine _ (mem 8).
+
 (* This example uses the memory only as instruction memory
    TODO make an example which uses memory to store data *)
 Definition zeroedRiscvMachine: RiscvMachine := {|
@@ -47,7 +50,6 @@ Definition zeroedRiscvMachine: RiscvMachine := {|
   pc := $0;
   nextPC := $4;
   exceptionHandlerAddr := -4;
-  executionTrace := nil;
 |}.
 
 Definition initialRiscvMachine(imem: list MachineInt): RiscvMachine :=
@@ -62,12 +64,16 @@ Definition fib6_L_final(fuel: nat): option RiscvMachine :=
   end.
 
 Definition fib6_L_res(fuel: nat): option (word wXLEN) :=
-  r <- fib6_L_final fuel;
-  Return (r.(registers) 18).
+  match fib6_L_final fuel with
+  | Some r => Some (r.(registers) 18)
+  | None => None
+  end.
 
+(*
 Definition fib6_L_trace(fuel: nat): option (list TraceEvent) :=
   r <- fib6_L_final fuel;
   Return (r.(executionTrace)).
+*)
 
 Transparent wlt_dec.
 

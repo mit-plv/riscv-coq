@@ -29,16 +29,18 @@ Section Riscv.
 
   Context {RVS: RiscvState M}.
 
-  Definition execute(l: list (Instruction -> M unit))(i: Instruction): M unit :=
-    match i with
-    | InvalidInstruction => raiseException zero two
-    | _                  => msum (map (fun f => f i) l)
+  Context {B: RiscvBitWidths}.
+
+  Definition get_execute_list: list (Instruction -> M unit) :=
+    match bitwidth with
+    | Bitwidth32 => [ExecuteI.execute; ExecuteM.execute]
+    | Bitwidth64 => [ExecuteI.execute; ExecuteM.execute; ExecuteI64.execute; ExecuteM64.execute]
     end.
 
-  Definition execute32: Instruction -> M unit :=
-    execute [ExecuteI.execute; ExecuteM.execute].
-
-  Definition execute64: Instruction -> M unit :=
-    execute [ExecuteI.execute; ExecuteM.execute; ExecuteI64.execute; ExecuteM64.execute].
+  Definition execute(i: Instruction): M unit :=
+    match i with
+    | InvalidInstruction => raiseException zero two
+    | _                  => msum (map (fun f => f i) get_execute_list)
+    end.
 
 End Riscv.

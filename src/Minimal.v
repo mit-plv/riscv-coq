@@ -18,7 +18,7 @@ Section Riscv.
 
   Context {MW: MachineWidth (word wXLEN)}.
 
-  Variable Mem: Set.
+  Context {Mem: Set}.
 
   Context {MemIsMemory: Memory Mem (word wXLEN)}.
 
