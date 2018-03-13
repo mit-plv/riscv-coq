@@ -72,12 +72,11 @@ Instance State_Monad(S: Type): Monad (State S) := {|
 - intros. extensionality s. destruct (m s). reflexivity.
 Defined.
 
-(*
+Module StateM.
 Definition get{S: Type}: State S S := fun (s: S) => (s, s).
 Definition gets{S A: Type}(f: S -> A): State S A := fun (s: S) => (f s, s).
 Definition put{S: Type}(s: S): State S unit := fun _ => (tt, s).
-*)
-
+End StateM.
 
 Definition OState(S A: Type) := S -> option (A * S).
 
