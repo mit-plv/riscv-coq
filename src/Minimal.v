@@ -49,23 +49,13 @@ Section Riscv.
   Definition with_exceptionHandlerAddr eh ma :=
     mkRiscvMachine ma.(machineMem) ma.(registers) ma.(pc) ma.(nextPC) eh.
 
-  Definition liftLoad{sz: nat}(f: Mem -> word wXLEN -> option (word sz))(a: word wXLEN)
+  Definition liftLoad{sz: nat}(f: Mem -> word wXLEN -> word sz)(a: word wXLEN)
     : OState RiscvMachine (word sz) :=
-    m <- get;
-    match f m.(machineMem) a with
-    | Some v => Return v
-    | None => (* TODO can't "raiseException zero four" because we don't have the instance yet *)
-              fun _ => None
-    end.
+    m <- gets machineMem; Return (f m a).
 
-  Definition liftStore{sz: nat}(f: Mem -> word wXLEN -> word sz -> option Mem)
+  Definition liftStore{sz: nat}(f: Mem -> word wXLEN -> word sz -> Mem)
     (a: word wXLEN)(v: word sz) : OState RiscvMachine unit :=
-    m <- get;
-    match f m.(machineMem) a v with
-    | Some mem' => put (with_machineMem mem' m)
-    | None => (* TODO can't "raiseException zero four" because we don't have the instance yet *)
-              fun _ => None
-    end.
+    m <- get; let mem' := f m.(machineMem) a v in put (with_machineMem mem' m).
 
   Instance IsRiscvMachine: RiscvState (OState RiscvMachine) :=
   {|
@@ -111,22 +101,6 @@ Section Riscv.
       endCycle A := fun _ => None; (* TODO that's wrong, TODO get monad transformer stuff right *)
   |}.
 
-  Fixpoint storeWords(l: list (word 32))(a: word wXLEN)(m: Mem): option Mem :=
-    match l with
-    | nil => Some m
-    | cons w l' =>
-        match Memory.storeWord m a w with
-        | Some m' => storeWords l' (a ^+ $4) m'
-        | None => None
-        end
-    end.
-
-  Definition storeWords_if_mem_accepts(l: list (word 32))(m: Mem): Mem :=
-    match storeWords l $0 m with
-    | Some m' => m'
-    | None => m
-    end.
-
   (* Puts given program at address 0, and makes pc point to beginning of program, i.e. 0.
      TODO maybe later allow any address?
      Note: Keeps the original exceptionHandlerAddr, and the values of the registers,
@@ -136,7 +110,7 @@ Section Riscv.
   Definition putProgram(prog: list (word 32))(m: RiscvMachine): RiscvMachine :=
     match m with
     | mkRiscvMachine m regs _ _ eh =>
-        mkRiscvMachine (storeWords_if_mem_accepts prog m) regs $0 $4 eh
+        mkRiscvMachine (store_word_list prog $0 m) regs $0 $4 eh
     end.
 
 End Riscv.
