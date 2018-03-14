@@ -318,3 +318,25 @@ Hint Unfold
   Encoder
   apply_InstructionMapper
 : mappers.
+
+Goal (respects_bounds (Jal 0 3)).
+  simpl. unfold verify_UJ.
+  (* wrong, as expected *)
+Abort.
+
+Goal (respects_bounds (Jal 0 4)).
+  simpl. unfold verify_UJ.
+  cbn.
+  omega.
+Qed.
+
+Require Import bbv.HexNotationZ.
+
+(* This expression will generate a runtime exception, because the jump target is not
+   a multiple of 4 *)
+Example invalid_Jal_encode_example: encode (Jal 0 3) = Ox"20006F". reflexivity. Qed.
+
+(* Note: The least significant bit of the jump target is not encoded, because even
+   in compressed instructions, jump targets are always a multiple of 2. *)
+Example Jal_encode_loses_lsb: decode 64 (Ox"20006F") = Jal 0 2. reflexivity. Qed.
+
