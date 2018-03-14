@@ -3,197 +3,244 @@ Require Import bbv.Word.
 Require Import riscv.util.Decidable.
 Require Import riscv.Decode.
 Require Import riscv.encode.Encode.
+Require Import riscv.Utility.
 
+Local Open Scope bool_scope.
 Local Open Scope Z_scope.
 
-Lemma invert_encode_InvalidInstruction: forall (inst: word 32),
-  None = Some inst -> False.
-Proof. intros. discriminate H. Qed.
+Lemma invert_encode_InvalidInstruction:
+  verify_Invalid ->
+  forall inst,
+  encode_Invalid = inst ->
+  False.
+Proof. intros. assumption. Qed.
 
-Lemma invert_encode_R: forall opcode rd rs1 rs2 funct3 funct7 inst,
-  encode_R opcode rd rs1 rs2 funct3 funct7 = Some inst ->
-  opcode = bitSlice' inst 0 7 /\
-  funct3 = bitSlice' inst 12 15 /\
-  funct7 = bitSlice' inst 25 32 /\
-  rd = bitSlice' inst 7 12 /\
-  rs1 = bitSlice' inst 15 20 /\
-  rs2 = bitSlice' inst 20 25.
+Lemma invert_encode_R: forall {opcode rd rs1 rs2 funct3 funct7},
+  verify_R opcode rd rs1 rs2 funct3 funct7 ->
+  forall inst,
+  encode_R opcode rd rs1 rs2 funct3 funct7 = inst ->
+  opcode = bitSlice inst 0 7 /\
+  funct3 = bitSlice inst 12 15 /\
+  funct7 = bitSlice inst 25 32 /\
+  rd = bitSlice inst 7 12 /\
+  rs1 = bitSlice inst 15 20 /\
+  rs2 = bitSlice inst 20 25.
 Proof. Admitted.
 
-Lemma invert_encode_I: forall opcode rd rs1 funct3 oimm12 inst,
-  encode_I opcode rd rs1 funct3 oimm12 = Some inst ->
-  - 2 ^ 11 <= oimm12 < 2 ^ 11 /\
-  opcode = bitSlice' inst 0 7 /\
-  funct3 = bitSlice' inst 12 15 /\
-  rd = bitSlice' inst 7 12 /\
-  rs1 = bitSlice' inst 15 20 /\
+Lemma invert_encode_I: forall {opcode rd rs1 funct3 oimm12},
+  verify_I opcode rd rs1 funct3 oimm12 ->
+  forall inst,
+  encode_I opcode rd rs1 funct3 oimm12 = inst ->
+  opcode = bitSlice inst 0 7 /\
+  funct3 = bitSlice inst 12 15 /\
+  rd = bitSlice inst 7 12 /\
+  rs1 = bitSlice inst 15 20 /\
   oimm12 = signExtend 12 (bitSlice inst 20 32).
 Proof. Admitted.
 
-Lemma invert_encode_I_shift: forall opcode rd rs1 shamt5 funct3 funct7 inst,
-  encode_I_shift opcode rd rs1 shamt5 funct3 funct7 = Some inst ->
-  (shamt5 < 32)%nat /\
-  opcode = bitSlice' inst 0 7 /\
-  funct3 = bitSlice' inst 12 15 /\
-  funct7 = bitSlice' inst 25 32 /\
-  rd = bitSlice' inst 7 12 /\
-  rs1 = bitSlice' inst 15 20 /\
-  shamt5 = wordToNat (bitSlice inst 20 25).
+Lemma invert_encode_I_shift: forall {opcode rd rs1 shamt5 funct3 funct7},
+  verify_I_shift opcode rd rs1 shamt5 funct3 funct7 ->
+  forall inst,
+  encode_I_shift opcode rd rs1 shamt5 funct3 funct7 = inst ->
+  opcode = bitSlice inst 0 7 /\
+  funct3 = bitSlice inst 12 15 /\
+  funct7 = bitSlice inst 25 32 /\
+  rd = bitSlice inst 7 12 /\
+  rs1 = bitSlice inst 15 20 /\
+  shamt5 = bitSlice inst 20 25.
 Proof. Admitted.
 
-Lemma invert_encode_I_system: forall opcode rd rs1 funct3 funct12 inst,
-  encode_I_system opcode rd rs1 funct3 funct12 = Some inst ->
-  opcode = bitSlice' inst 0 7 /\
-  funct3 = bitSlice' inst 12 15 /\
-  funct12 = bitSlice' inst 20 32 /\
-  rd = bitSlice' inst 7 12 /\
-  rs1 = bitSlice' inst 15 20.
+Lemma invert_encode_I_system: forall {opcode rd rs1 funct3 funct12},
+  verify_I_system opcode rd rs1 funct3 funct12 ->
+  forall inst,
+  encode_I_system opcode rd rs1 funct3 funct12 = inst ->
+  opcode = bitSlice inst 0 7 /\
+  funct3 = bitSlice inst 12 15 /\
+  funct12 = bitSlice inst 20 32 /\
+  rd = bitSlice inst 7 12 /\
+  rs1 = bitSlice inst 15 20.
 Proof. Admitted.
 
-Lemma invert_encode_S(opcode: word 7)(rs1 rs2: word 5)(funct3: word 3)(simm12: Z)(inst: word 32):
-  encode_S opcode rs1 rs2 funct3 simm12 = Some inst ->
-  - 2 ^ 11 <= simm12 < 2 ^ 11 /\
-  opcode = bitSlice' inst 0 7 /\
-  funct3 = bitSlice' inst 12 15 /\
-  rs1 = bitSlice' inst 15 20 /\
-  rs2 = bitSlice' inst 20 25 /\
+Lemma invert_encode_S: forall {opcode rs1 rs2 funct3 simm12},
+  verify_S opcode rs1 rs2 funct3 simm12 ->
+  forall inst,
+  encode_S opcode rs1 rs2 funct3 simm12 = inst ->
+  opcode = bitSlice inst 0 7 /\
+  funct3 = bitSlice inst 12 15 /\
+  rs1 = bitSlice inst 15 20 /\
+  rs2 = bitSlice inst 20 25 /\
   simm12 = signExtend 12 (shift (bitSlice inst 25 32) 5 <|> bitSlice inst 7 12).
 Proof. Admitted.
 
-Lemma invert_encode_SB(opcode: word 7)(rs1 rs2: word 5)(funct3: word 3)(sbimm12: Z)(inst: word 32):
-  encode_SB opcode rs1 rs2 funct3 sbimm12 = Some inst ->
-  - 2 ^ 12 <= sbimm12 < 2 ^ 12 /\ sbimm12 mod 2 = 0 /\
-  opcode = bitSlice' inst 0 7 /\
-  funct3 = bitSlice' inst 12 15 /\
-  rs1 = bitSlice' inst 15 20 /\
-  rs2 = bitSlice' inst 20 25 /\
+Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
+  verify_SB opcode rs1 rs2 funct3 sbimm12 ->
+  forall inst,
+  encode_SB opcode rs1 rs2 funct3 sbimm12 = inst ->
+  opcode = bitSlice inst 0 7 /\
+  funct3 = bitSlice inst 12 15 /\
+  rs1 = bitSlice inst 15 20 /\
+  rs2 = bitSlice inst 20 25 /\
   sbimm12 = signExtend 13 (shift (bitSlice inst 31 32) 12 <|>
                            shift (bitSlice inst 25 31) 5 <|>
                            shift (bitSlice inst 8 12) 1  <|>
                            shift (bitSlice inst 7 8) 11).
 Proof. Admitted.
 
-Lemma invert_encode_U(opcode: word 7)(rd: word 5)(imm20: Z)(inst: word 32):
-  encode_U opcode rd imm20 = Some inst ->
-  - 2 ^ 31 <= imm20 < 2 ^ 31 /\ imm20 mod 2 ^ 12 = 0 /\
-  opcode = bitSlice' inst 0 7 /\
-  rd = bitSlice' inst 7 12 /\
+Lemma invert_encode_U: forall {opcode rd imm20},
+  verify_U opcode rd imm20 ->
+  forall inst,
+  encode_U opcode rd imm20 = inst ->
+  opcode = bitSlice inst 0 7 /\
+  rd = bitSlice inst 7 12 /\
   imm20 = signExtend 32 (shift (bitSlice inst 12 32) 12).
 Proof. Admitted.
 
-Lemma invert_encode_UJ(opcode: word 7)(rd: word 5)(jimm20: Z)(inst: word 32):
-  encode_UJ opcode rd jimm20 = Some inst ->
-  - 2 ^ 20 <= jimm20 < 2 ^ 20 /\ jimm20 mod 2 = 0 /\
-  opcode = bitSlice' inst 0 7 /\
-  rd = bitSlice' inst 7 12 /\
+Lemma invert_encode_UJ: forall {opcode rd jimm20},
+  verify_UJ opcode rd jimm20 ->
+  forall inst,
+  encode_UJ opcode rd jimm20 = inst ->
+  opcode = bitSlice inst 0 7 /\
+  rd = bitSlice inst 7 12 /\
   jimm20 = signExtend 21 (shift (bitSlice inst 31 32) 20  <|>
                                 shift (bitSlice inst 21 31) 1  <|>
                                 shift (bitSlice inst 20 21) 11 <|>
                                 shift (bitSlice inst 12 20) 12).
 Proof. Admitted.
 
-Lemma simpl_dec_and_eq: forall (A: Type) (a: A) (P: Prop) (T: Type) (e1 e2 e3: T) da dP,
-  (if @dec P dP then e1 else e2) = e3 ->
-  (if @dec_and (a = a) P da dP then e1 else e2) = e3.
+Lemma invert_encode_Fence: forall {opcode rd rs1 funct3 prd scc msb4},
+  verify_Fence opcode rd rs1 funct3 prd scc msb4 ->
+  forall inst,
+  encode_Fence opcode rd rs1 funct3 prd scc msb4 = inst ->
+  opcode = bitSlice inst 0 7 /\
+  funct3 = bitSlice inst 12 15 /\
+  rd = bitSlice inst 7 12 /\
+  rs1 = bitSlice inst 15 20 /\
+  scc = bitSlice inst 20 24 /\
+  prd = bitSlice inst 24 28 /\
+  msb4 = bitSlice inst 28 32.
+Proof. Admitted.
+
+(*
+Lemma simpl_dec_and_eq: forall (a: Z) (P: bool) (T: Type) (e1 e2 e3: T),
+  (if P then e1 else e2) = e3 ->
+  (if (a =? a) && P then e1 else e2) = e3.
 Proof.
-  intros. destruct da; [|contradiction]. destruct (@dec P dP) eqn: E.
-  - unfold dec_and. unfold dec in E. rewrite E. assumption.
-  - unfold dec_and. unfold dec in E. rewrite E. assumption.
+  intros. rewrite Z.eqb_refl. rewrite Bool.andb_true_l. assumption.
 Qed.
 
-Lemma simpl_dec_final_eq: forall (A: Type) (a: A) (T: Type) (e1 e2 e3: T) da,
+Lemma simpl_dec_final_eq: forall (a: Z) (T: Type) (e1 e2 e3: T),
   e1 = e3 ->
-  (if @dec (a = a) da then e1 else e2) = e3.
+  (if a =? a then e1 else e2) = e3.
 Proof.
-  intros. unfold dec. destruct da; [|contradiction]. assumption.
+  intros. rewrite Z.eqb_refl. assumption.
 Qed.
 
-Lemma simpl_dec_and_neq: forall (A: Type) (a1 a2: A) (P: Prop) (T: Type) (e1 e2 e3: T) da dP,
+Lemma simpl_dec_and_neq: forall (a1 a2: Z) (P: bool) (T: Type) (e1 e2 e3: T),
   a1 <> a2 ->
   e2 = e3 ->
-  (if @dec_and (a1 = a2) P da dP then e1 else e2) = e3.
+  (if (a1 =? a2) && P then e1 else e2) = e3.
 Proof.
-  intros. destruct da; [contradiction|]. destruct (@dec P dP) eqn: E.
-  - unfold dec_and. unfold dec in E. rewrite E. assumption.
-  - unfold dec_and. unfold dec in E. rewrite E. assumption.
+  intros. destruct (a1 =? a2) eqn: F.
+  + apply Z.eqb_eq in F. contradiction.
+  + simpl. assumption.
 Qed.
 
-Lemma simpl_dec_and_neq_2: forall (A T: Type) (a1 a2: A) (P1 P2: Prop) (e1 e2 e3: T) da dP1 dP2,
+Lemma simpl_dec_and_neq_2: forall (T: Type) (a1 a2: Z) (P1 P2: bool) (e1 e2 e3: T),
   a1 <> a2 ->
   e2 = e3 ->
-  (if @dec_and P1 (a1 = a2 /\ P2) dP1 (@dec_and (a1 = a2) P2 da dP2) then e1 else e2) = e3.
+  (if P1 && ((a1 =? a2) && P2) then e1 else e2) = e3.
 Proof.
-  intros. destruct da; [contradiction|]. destruct (@dec P1 dP1) eqn: E.
-  - unfold dec_and. unfold dec in E. rewrite E. destruct dP2 eqn: E2; assumption.
-  - unfold dec_and. unfold dec in E. rewrite E. destruct dP2 eqn: E2; assumption.
+  intros. destruct (a1 =? a2) eqn: F.
+  + apply Z.eqb_eq in F. contradiction.
+  + rewrite Bool.andb_comm. simpl. assumption.
 Qed.
 
-Lemma simpl_dec_final_neq: forall (A: Type) (a1 a2: A) (T: Type) (e1 e2 e3: T) da,
+Lemma simpl_dec_final_neq: forall (a1 a2: Z) (T: Type) (e1 e2 e3: T),
   a1 <> a2 ->
   e2 = e3 ->
-  (if @dec (a1 = a2) da then e1 else e2) = e3.
+  (if a1 =? a2 then e1 else e2) = e3.
 Proof.
-  intros. unfold dec. destruct da; [contradiction|]. assumption.
+  intros. destruct (a1 =? a2) eqn: F.
+  + apply Z.eqb_eq in F. contradiction.
+  + assumption.
 Qed.
+*)
 
-Ltac deep_destruct_and H :=
-  lazymatch type of H with
-  | _ /\ _ => let H' := fresh H in destruct H as [H' H]; deep_destruct_and H'; deep_destruct_and H
-  | _ => idtac
-  end.
+Ltac prove_simpl_andb :=
+  intros;
+  repeat match goal with
+  | b: bool |- _ => destruct b
+  end;
+  reflexivity.
 
-Set Ltac Profiling.
+Lemma simpl_andb_false_1_1: false = false. prove_simpl_andb. Qed.
+Lemma simpl_andb_false_2_1: forall {b2}, false && b2 = false. prove_simpl_andb. Qed.
+Lemma simpl_andb_false_2_2: forall {b1}, b1 && false = false. prove_simpl_andb. Qed.
+Lemma simpl_andb_false_3_1: forall {b2 b3}, false && b2 && b3 = false. prove_simpl_andb. Qed.
+Lemma simpl_andb_false_3_2: forall {b1 b3}, b1 && false && b3 = false. prove_simpl_andb. Qed.
+Lemma simpl_andb_false_3_3: forall {b1 b2}, b1 && b2 && false = false. prove_simpl_andb. Qed.
+Lemma simpl_andb_false_4_1: forall {b2 b3 b4}, false && b2 && b3 && b4 = false. prove_simpl_andb. Qed.
+Lemma simpl_andb_false_4_2: forall {b1 b3 b4}, b1 && false && b3 && b4 = false. prove_simpl_andb. Qed.
+Lemma simpl_andb_false_4_3: forall {b1 b2 b4}, b1 && b2 && false && b4 = false. prove_simpl_andb. Qed.
+Lemma simpl_andb_false_4_4: forall {b1 b2 b3}, b1 && b2 && b3 && false = false. prove_simpl_andb. Qed.
+Lemma simpl_andb_false_5_1: forall {b2 b3 b4 b5}, false && b2 && b3 && b4 && b5 = false. prove_simpl_andb. Qed.
+Lemma simpl_andb_false_5_2: forall {b1 b3 b4 b5}, b1 && false && b3 && b4 && b5 = false. prove_simpl_andb. Qed.
+Lemma simpl_andb_false_5_3: forall {b1 b2 b4 b5}, b1 && b2 && false && b4 && b5 = false. prove_simpl_andb. Qed.
+Lemma simpl_andb_false_5_4: forall {b1 b2 b3 b5}, b1 && b2 && b3 && false && b5 = false. prove_simpl_andb. Qed.
+Lemma simpl_andb_false_5_5: forall {b1 b2 b3 b4}, b1 && b2 && b3 && b4 && false = false. prove_simpl_andb. Qed.
 
-Lemma decode_encode: forall (inst: Instruction) (w: word 32),
-  encode inst = Some w ->
-  decode w = inst.
+Lemma decode_encode: forall (inst: Instruction),
+  respects_bounds inst ->
+  decode 64 (encode inst) = inst.
 Proof.
-  intros.
-  let d := eval cbv delta [decode] in decode in change decode with d.
-  cbv beta zeta.
+  intros. unfold encode. repeat autounfold with mappers.
+  Time
   destruct inst;
-  let force_evaluation_order_dummy := constr:(0) in time (
-  tryif (solve [ abstract (
-    unfold encode in H;
-    first
-    [ apply invert_encode_R in H
-    | apply invert_encode_I in H
-    | apply invert_encode_I_shift in H
-    | apply invert_encode_I_system in H
-    | apply invert_encode_S in H
-    | apply invert_encode_SB in H
-    | apply invert_encode_U in H
-    | apply invert_encode_UJ in H
-    | apply invert_encode_InvalidInstruction in H; contradiction H ];
-    deep_destruct_and H;
-    repeat match goal with
-    | v: _ |- _ => subst v
-    end;
-    repeat match goal with
-    | E: _ = _ |- _ => rewrite <- E
-    end;
-    repeat (
-       (apply simpl_dec_and_neq; [
-        match goal with
-        | |- ?x <> ?y => unfold x, y; intro C; discriminate C
-        end | ])
-    || (apply simpl_dec_and_neq_2; [
-        match goal with
-        | |- ?x <> ?y => unfold x, y; intro C; discriminate C
-        end | ])
-    || (apply simpl_dec_final_neq; [
-        match goal with
-        | |- ?x <> ?y => unfold x, y; intro C; discriminate C
-        end | ])
-    || (apply simpl_dec_and_eq)
-    || (apply simpl_dec_final_eq; reflexivity))
-  )]) then (
-    idtac "subgoal solved"
-  ) else (
-    match goal with
-    | |- ?G => fail 100 "subgoal not solved:" G
-    end
-  )).
-Time Qed.
+  try reflexivity;
+  simpl in H;
+  match goal with
+  | |- decode _ ?inst = _ =>
+          try pose proof (invert_encode_InvalidInstruction H inst eq_refl);
+          try pose proof (invert_encode_R H inst eq_refl);
+          try pose proof (invert_encode_I H inst eq_refl);
+          try pose proof (invert_encode_I_shift H inst eq_refl);
+          try pose proof (invert_encode_I_system H inst eq_refl);
+          try pose proof (invert_encode_S H inst eq_refl);
+          try pose proof (invert_encode_SB H inst eq_refl);
+          try pose proof (invert_encode_U H inst eq_refl);
+          try pose proof (invert_encode_UJ H inst eq_refl);
+          try pose proof (invert_encode_Fence H inst eq_refl)
+  end;
+  repeat match goal with
+  | H: _ /\ _ |- _ => destruct H
+  end;
+  unfold decode;
+  repeat match goal with
+  | E: _ = ?x |- context [?x] => rewrite <- E
+  end;
+  repeat match goal with
+  | |- (if ?x then ?a else ?b) = ?c => replace x with false by (symmetry; (
+          apply simpl_andb_false_1_1 ||
+          apply simpl_andb_false_2_1 ||
+          apply simpl_andb_false_2_2 ||
+          apply simpl_andb_false_3_1 ||
+          apply simpl_andb_false_3_2 ||
+          apply simpl_andb_false_3_3 ||
+          apply simpl_andb_false_4_1 ||
+          apply simpl_andb_false_4_2 ||
+          apply simpl_andb_false_4_3 ||
+          apply simpl_andb_false_4_4 ||
+          apply simpl_andb_false_5_1 ||
+          apply simpl_andb_false_5_2 ||
+          apply simpl_andb_false_5_3 ||
+          apply simpl_andb_false_5_4 ||
+          apply simpl_andb_false_5_5))
+  end;
+  try reflexivity.
+  Focus 15.
+  (* oops, bug in Decoder: returns Csrrw 3x, Csrrwi 3x *)
 
-Show Ltac Profile.
+  repeat match goal with
+  | |- (if ?x then ?a else ?b) = ?c => change (b = c) || change (a = c)
+  end.
+Abort.

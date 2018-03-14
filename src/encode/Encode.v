@@ -93,16 +93,16 @@ Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)
 
   | Lui rd imm20 => mapper.(map_U) opcode_LUI rd imm20
 
-  | Addw  rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_ADDW  funct7_ADDW
-  | Subw  rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SUBW  funct7_SUBW
-  | Sllw  rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SLLW  funct7_SLLW
-  | Srlw  rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SRLW  funct7_SRLW
-  | Sraw  rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SRAW  funct7_SRAW
-  | Mulw  rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_MULW  funct7_MULW
-  | Divw  rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_DIVW  funct7_DIVW
-  | Divuw rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_DIVUW funct7_DIVUW
-  | Remw  rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_REMW  funct7_REMW
-  | Remuw rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_REMUW funct7_REMUW
+  | Addw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_ADDW  funct7_ADDW
+  | Subw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_SUBW  funct7_SUBW
+  | Sllw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_SLLW  funct7_SLLW
+  | Srlw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_SRLW  funct7_SRLW
+  | Sraw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_SRAW  funct7_SRAW
+  | Mulw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_MULW  funct7_MULW
+  | Divw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_DIVW  funct7_DIVW
+  | Divuw rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_DIVUW funct7_DIVUW
+  | Remw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_REMW  funct7_REMW
+  | Remuw rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_REMUW funct7_REMUW
 
   | Beq  rs1 rs2 sbimm12 => mapper.(map_SB) opcode_BRANCH rs1 rs2 funct3_BEQ  sbimm12
   | Bne  rs1 rs2 sbimm12 => mapper.(map_SB) opcode_BRANCH rs1 rs2 funct3_BNE  sbimm12
@@ -132,48 +132,47 @@ Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)
   end.
 
 
-Definition Encoder: InstructionMapper MachineInt := {|
-  map_Invalid := 0; (* all zeroes is indeed an invalid expression *)
+Definition encode_Invalid := 0. (* all zeroes is indeed an invalid expression *)
 
-  map_R(opcode: MachineInt)(rd rs1 rs2: Register)(funct3: MachineInt)(funct7: MachineInt) :=
+Definition encode_R(opcode: MachineInt)(rd rs1 rs2: Register)(funct3 funct7: MachineInt) :=
     opcode <|>
     shift rd 7 <|>
     shift funct3 12 <|>
     shift rs1 15 <|>
     shift rs2 20 <|>
-    shift funct7 25;
+    shift funct7 25.
 
-  map_I(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(oimm12: Z) :=
+Definition encode_I(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(oimm12: Z) :=
     opcode <|>
     shift rd 7 <|>
     shift funct3 12 <|>
     shift rs1 15 <|>
-    shift oimm12 20;
+    shift oimm12 20.
 
-  map_I_shift(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt) := 
+Definition encode_I_shift(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt) := 
     opcode <|>
     shift rd 7 <|>
     shift funct3 12 <|>
     shift rs1 15 <|>
     shift shamt5 20 <|>
-    shift funct7 25;
+    shift funct7 25.
 
-  map_I_system(opcode: MachineInt)(rd rs1: Register)(funct3 funct12: MachineInt) :=
+Definition encode_I_system(opcode: MachineInt)(rd rs1: Register)(funct3 funct12: MachineInt) :=
     opcode <|>
     shift rd 7 <|>
     shift funct3 12 <|>
     shift rs1 15 <|>
-    shift funct12 20;
+    shift funct12 20.
 
-  map_S(opcode: MachineInt)(rs1 rs2: Register)(funct3: MachineInt)(simm12: Z) :=
+Definition encode_S(opcode: MachineInt)(rs1 rs2: Register)(funct3: MachineInt)(simm12: Z) :=
     opcode <|>
     shift (bitSlice simm12 0 5) 7 <|>
     shift funct3 12 <|>
     shift rs1 15 <|>
     shift rs2 20 <|>
-    shift (bitSlice simm12 5 12) 25;
+    shift (bitSlice simm12 5 12) 25.
 
-  map_SB(opcode: MachineInt)(rs1 rs2: Register)(funct3: MachineInt)(sbimm12: Z) :=
+Definition encode_SB(opcode: MachineInt)(rs1 rs2: Register)(funct3: MachineInt)(sbimm12: Z) :=
     opcode <|>                                   (*  0..7  (7 bit) *)
     shift (bitSlice sbimm12 11 12) 7 <|>         (*  7..8  (1 bit) *)
     shift (bitSlice sbimm12 1 5) 8 <|>           (*  8..12 (4 bit) *)
@@ -181,28 +180,141 @@ Definition Encoder: InstructionMapper MachineInt := {|
     shift rs1 15 <|>                             (* 15..20 (5 bit) *)
     shift rs2 20 <|>                             (* 20..25 (5 bit) *)
     shift (bitSlice sbimm12 5 11) 25 <|>         (* 25..31 (6 bit) *)
-    shift (bitSlice sbimm12 12 13) 31;           (* 31..32 (1 bit) *)
+    shift (bitSlice sbimm12 12 13) 31.           (* 31..32 (1 bit) *)
 
-  map_U(opcode: MachineInt)(rd: Register)(imm20: Z) :=
+Definition encode_U(opcode: MachineInt)(rd: Register)(imm20: Z) :=
     opcode <|>
     shift rd 7 <|>
-    imm20;
+    imm20.
 
-  map_UJ(opcode: MachineInt)(rd: Register)(jimm20: Z) :=
+Definition encode_UJ(opcode: MachineInt)(rd: Register)(jimm20: Z) :=
     opcode <|>
     shift rd 7 <|>
     shift (bitSlice jimm20 12 20) 12 <|>
     shift (bitSlice jimm20 11 12) 20 <|>
     shift (bitSlice jimm20 1 11) 21 <|>
-    shift (bitSlice jimm20 20 21) 31;
+    shift (bitSlice jimm20 20 21) 31.
 
-  map_Fence(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(prd scc msb4: MachineInt) :=
+Definition encode_Fence(opcode: MachineInt)(rd rs1: Register)(funct3 prd scc msb4: MachineInt) :=
     opcode <|>                                (*  0..7  (7 bit) *)
     shift rd 7 <|>                            (*  7..12 (5 bit) *)
     shift funct3 12 <|>                       (* 12..15 (3 bit) *)
     shift rs1 15 <|>                          (* 15..20 (5 bit) *)
     shift scc 20 <|>                          (* 20..24 (4 bit) *)
     shift prd 24 <|>                          (* 24..28 (4 bit) *)
-    shift msb4 28;                            (* 28..32 (4 bit) *)
+    shift msb4 28.                            (* 28..32 (4 bit) *)
+
+Definition Encoder: InstructionMapper MachineInt := {|
+  map_Invalid := encode_Invalid;
+  map_R := encode_R;
+  map_I := encode_I;
+  map_I_shift := encode_I_shift;
+  map_I_system := encode_I_system;
+  map_S := encode_S;
+  map_SB := encode_SB;
+  map_U := encode_U;
+  map_UJ := encode_UJ;
+  map_Fence := encode_Fence;
 |}.
 
+Definition encode: Instruction -> MachineInt := apply_InstructionMapper Encoder.
+
+
+Definition verify_Invalid :=
+    False.
+
+Definition verify_R(opcode: MachineInt)(rd rs1 rs2: Register)(funct3 funct7: MachineInt) :=
+    0 <= opcode < 128 /\
+    0 <= rd < 32 /\
+    0 <= rs1 < 32 /\
+    0 <= rs2 < 32 /\
+    0 <= funct3 < 8 /\
+    0 <= funct7 < 128.
+
+Definition verify_I(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(oimm12: Z) :=
+    0 <= opcode < 128 /\
+    0 <= rd < 32 /\
+    0 <= rs1 < 32 /\
+    0 <= funct3 < 8 /\
+    - 2 ^ 11 <= oimm12 < 2 ^ 11.
+
+Definition verify_I_shift(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt) :=
+    0 <= opcode < 128 /\
+    0 <= rd < 32 /\
+    0 <= rs1 < 32 /\
+    0 <= shamt5 < 32 /\
+    0 <= funct3 < 8 /\
+    0 <= funct7 < 128.
+
+Definition verify_I_system(opcode: MachineInt)(rd rs1: Register)(funct3 funct12: MachineInt) :=
+    0 <= opcode < 128 /\
+    0 <= rd < 32 /\
+    0 <= rs1 < 32 /\
+    0 <= funct3 < 8 /\
+    0 <= funct12 < 4096.
+
+Definition verify_S(opcode: MachineInt)(rs1 rs2: Register)(funct3: MachineInt)(simm12: Z) :=
+    0 <= opcode < 128 /\
+    0 <= rs1 < 32 /\
+    0 <= rs2 < 32 /\
+    0 <= funct3 < 8 /\
+    - 2 ^ 11 <= simm12 < 2 ^ 11.
+
+Definition verify_SB(opcode: MachineInt)(rs1 rs2: Register)(funct3: MachineInt)(sbimm12: Z) :=
+    0 <= opcode < 128 /\
+    0 <= rs1 < 32 /\
+    0 <= rs2 < 32 /\
+    0 <= funct3 < 8 /\
+    - 2 ^ 12 <= sbimm12 < 2 ^ 12 /\ sbimm12 mod 2 = 0.
+
+Definition verify_U(opcode: MachineInt)(rd: Register)(imm20: Z) :=
+    0 <= opcode < 128 /\
+    0 <= rd < 32 /\
+    - 2 ^ 31 <= imm20 < 2 ^ 31 /\ imm20 mod 2 ^ 12 = 0.
+
+Definition verify_UJ(opcode: MachineInt)(rd: Register)(jimm20: Z) :=
+    0 <= opcode < 128 /\
+    0 <= rd < 32 /\
+    - 2 ^ 20 <= jimm20 < 2 ^ 20 /\ jimm20 mod 2 = 0.
+
+Definition verify_Fence(opcode: MachineInt)(rd rs1: Register)(funct3 prd scc msb4: MachineInt) :=
+    0 <= opcode < 128 /\
+    0 <= rd < 32 /\
+    0 <= rs1 < 32 /\
+    0 <= funct3 < 8 /\
+    0 <= prd < 16 /\
+    0 <= scc < 16 /\
+    0 <= msb4 < 16.
+
+(* Only verifies that each field is within bounds and has the correct modulus.
+   Validity of opcodes and funct codes follows from the fact that it was an Instruction. *)
+Definition Verifier: InstructionMapper Prop := {|
+  map_Invalid := verify_Invalid;
+  map_R := verify_R;
+  map_I := verify_I;
+  map_I_shift := verify_I_shift;
+  map_I_system := verify_I_system;
+  map_S := verify_S;
+  map_SB := verify_SB;
+  map_U := verify_U;
+  map_UJ := verify_UJ;
+  map_Fence := verify_Fence;
+|}.
+
+Definition respects_bounds: Instruction -> Prop := apply_InstructionMapper Verifier.
+
+Hint Unfold
+  map_Invalid
+  map_R
+  map_I
+  map_I_shift
+  map_I_system
+  map_S
+  map_SB
+  map_U
+  map_UJ
+  map_Fence
+  Verifier
+  Encoder
+  apply_InstructionMapper
+: mappers.
