@@ -14,22 +14,19 @@ Require riscv.ExecuteM64.
 Section Riscv.
 
   Context {Name: NameWithEq}. (* register name *)
-  Notation Register := (@name Name).
+  Let Register := @name Name.
   Existing Instance eq_name_dec.
 
-  Context {t: Set}.
-
-  Context {MW: MachineWidth t}.
+  Context {B: RiscvBitWidths}.
 
   Context {M: Type -> Type}.
-
   Context {MM: Monad M}.
-
+  Context {t: Set}.
+  Context {MW: MachineWidth t}.
   Context {MP: MonadPlus M}.
+  Context {RVP: RiscvProgram M t}.
+  Context {RVS: RiscvState M t}.
 
-  Context {RVS: RiscvState M}.
-
-  Context {B: RiscvBitWidths}.
 
   Definition get_execute_list: list (Instruction -> M unit) :=
     match bitwidth with

@@ -3,7 +3,6 @@ Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
 Require Import riscv.util.Monads.
 Require Import riscv.Utility.
-Require Import riscv.NoVirtualMemory.
 Require Import riscv.Decode.
 Require Import riscv.Program.
 
@@ -14,17 +13,20 @@ Local Open Scope bool_scope.
 Section Riscv.
 
   Context {Name: NameWithEq}. (* register name *)
-  Notation Register := (@name Name).
+  Let Register := @name Name.
   Existing Instance eq_name_dec.
 
   Context {B: RiscvBitWidths}.
 
+  Context {M: Type -> Type}.
+  Context {MM: Monad M}.
   Context {t: Set}.
-
   Context {MW: MachineWidth t}.
+  Context {MP: MonadPlus M}.
+  Context {RVP: RiscvProgram M t}.
+  Context {RVS: RiscvState M t}.
 
-  Definition execute{M: Type -> Type}{MM: Monad M}{MP: MonadPlus M}{RVS: RiscvState M}
-    (i: Instruction): M unit :=
+  Definition execute(i: Instruction): M unit :=
     match i with
     (* begin ast *)
     | Lwu rd rs1 oimm12 =>

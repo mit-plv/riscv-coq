@@ -27,13 +27,20 @@ Section Riscv.
     name := Z
   |}.
 
-  Definition run1{M: Type -> Type}{MM: Monad M}{MP: MonadPlus M}{RVS: RiscvState M}: M unit :=
+  Context {M: Type -> Type}.
+  Context {MM: Monad M}.
+  Context {MP: MonadPlus M}.
+  Context {RVP: RiscvProgram M (word wXLEN)}.
+  Context {RVS: RiscvState M (word wXLEN)}.
+
+  Definition run1:
+    M unit :=
     pc <- getPC;
     inst <- loadWord pc;
     execute (decode (Z.of_nat wXLEN) (wordToZ inst));;
     step.
 
-  Definition run{M: Type -> Type}{MM: Monad M}{MP: MonadPlus M}{RVS: RiscvState M}: nat -> M unit :=
+  Definition run: nat -> M unit :=
     fun n => power_func (fun m => run1 ;; m) n (Return tt).
 
 End Riscv.

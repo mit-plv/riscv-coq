@@ -68,7 +68,7 @@ Section Riscv.
     (* TODO lift MemIsMonadicMemory *)
   Admitted.
 
-  Instance IsRiscvMachine: RiscvState (OState RiscvMachine) :=
+  Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) (word wXLEN) :=
   {|
       getRegister := fun (reg: name) =>
         if dec (reg = Register0) then
