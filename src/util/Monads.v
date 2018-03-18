@@ -169,6 +169,7 @@ Definition put{S: Type}(s: S): OState S unit := fun _ => Some (tt, s).
    m2 is run, instead of keeping m1's exception.
    The problem is that "None" can mean both "unhandled, please try next" or
    "handled, but exception"
+*)
 Definition OState(S A: Type) := S -> (option A) * S.
 
 Instance OState_Monad(S: Type): Monad (OState S) := {|
@@ -185,6 +186,11 @@ Instance OState_Monad(S: Type): Monad (OState S) := {|
 - intros. extensionality s. destruct (m s). destruct o; reflexivity.
 Defined.
 
+(* TODO if we want to use MonadPlus, we'd have to define a custom equivalence on
+   the state monad which only considers A, but not S *)
+Axiom OStateEq_to_eq: forall {S A: Type} (s1 s2: S) (a1 a2: option A),
+  a1 = a2 -> (a1, s1) = (a2, s2).
+
 Instance OState_MonadPlus(S: Type): MonadPlus (OState S) := {|
   mzero A s := (@None A, s);
   mplus A m1 m2 s := match m1 s with
@@ -193,13 +199,14 @@ Instance OState_MonadPlus(S: Type): MonadPlus (OState S) := {|
     end;
 |}.
 - intros. reflexivity.
-- intros. simpl. extensionality s. destruct (v s). destruct o.
-Abort.
+- intros. simpl. extensionality s. destruct (v s).
+  destruct o; apply OStateEq_to_eq; reflexivity.
+- intros. simpl. extensionality s. destruct (m1 s). destruct o; reflexivity.
+Defined.
 
-Definition get{S: Type}: OState S S := fun (s: S) => Some (s, s).
-Definition gets{S A: Type}(f: S -> A): OState S A := fun (s: S) => Some (f s, s).
-Definition put{S: Type}(s: S): OState S unit := fun _ => Some (tt, s).
-*)
+Definition get{S: Type}: OState S S := fun (s: S) => (Some s, s).
+Definition gets{S A: Type}(f: S -> A): OState S A := fun (s: S) => (Some (f s), s).
+Definition put{S: Type}(s: S): OState S unit := fun _ => (Some tt, s).
 
 (* T for transformer, corresponds to Haskell's MaybeT: *)
 Definition optionT(M: Type -> Type)(A: Type) := M (option A).
