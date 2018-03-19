@@ -8,8 +8,12 @@ Require Import bbv.WordScope.
 Require Import riscv.Utility.
 Require Import riscv.Memory.
 Require Import riscv.Minimal.
+Require Import riscv.MinimalLogging.
 Require Import riscv.Run.
 Require Import riscv.FunctionMemory.
+Require Import riscv.util.Monads.
+
+Existing Instance DefaultRiscvState.
 
 Definition fib6_riscv: list MachineInt := [ (* TODO should be "word 32", not MachineInt *)
   Ox"00600993";         (* li s3,6 *)
@@ -45,51 +49,58 @@ Definition RiscvMachine := @RiscvMachine _ (mem 32).
 
 (* This example uses the memory only as instruction memory
    TODO make an example which uses memory to store data *)
-Definition zeroedRiscvMachine: RiscvMachine := {|
-  machineMem := const_mem $0;
+Definition zeroedRiscvMachineCore: RiscvMachineCore := {|
   registers := fun (r: Register) => $0;
   pc := $0;
   nextPC := $4;
-  exceptionHandlerAddr := -4;
+  exceptionHandlerAddr := 3;
 |}.
 
-Definition initialRiscvMachine(imem: list MachineInt): RiscvMachine :=
-  putProgram (map (@ZToWord 32) imem) zeroedRiscvMachine.
+Definition zeroedRiscvMachine: RiscvMachine := {|
+    core := zeroedRiscvMachineCore;
+    machineMem := zero_mem;
+|}.
 
-(* TODO here the option used to encode selection in execute bubbles up until here,
-   how can we avoid this? *)
-Definition fib6_L_final(fuel: nat): option RiscvMachine :=
-  match run fuel (initialRiscvMachine fib6_riscv) with
-  | Some (answer, state) => Some state
-  | None => None
+Definition zeroedRiscvMachineL: RiscvMachineL := {|
+    machine := zeroedRiscvMachine;
+    log := nil;
+|}.
+
+Definition initialRiscvMachineL(imem: list MachineInt): RiscvMachineL :=
+  putProgram (map (@ZToWord 32) imem) zeroedRiscvMachineL.
+
+Definition run: nat -> RiscvMachineL -> (option unit) * RiscvMachineL := run.
+ (* @run RiscvBitWidths32 MachineWidth32 (OState RiscvMachineL) (OState_Monad _) _ _ _ *)
+
+Definition fib6_L_final(fuel: nat): RiscvMachineL :=
+  match run fuel (initialRiscvMachineL fib6_riscv) with
+  | (answer, state) => state
   end.
 
-Definition fib6_L_res(fuel: nat): option (word wXLEN) :=
-  match fib6_L_final fuel with
-  | Some r => Some (r.(registers) 18)
-  | None => None
-  end.
+Definition fib6_L_res(fuel: nat): word wXLEN :=
+  (fib6_L_final fuel).(machine).(core).(registers) 18.
 
-(*
-Definition fib6_L_trace(fuel: nat): option (list TraceEvent) :=
-  r <- fib6_L_final fuel;
-  Return (r.(executionTrace)).
-*)
+Definition fib6_L_trace(fuel: nat): Log :=
+  (fib6_L_final fuel).(log).
 
 Transparent wlt_dec.
 
 (* only uncomment this if you're sure there are no admits in the computational parts,
-   otherwise this will eat all your memory
+   otherwise this will eat all your memory *)
 
+Eval cbv in (map (@wordToZ 32) (fib6_L_trace 50)).
+
+(*
 Eval cbv in (load_byte_list (initialRiscvMachine fib6_riscv).(machineMem) $0 40).
 
 Eval cbv in (load_word_list (initialRiscvMachine fib6_riscv).(machineMem) $0 10).
 
 Eval cbv in (fib6_L_res 27).
+ *)
 
 Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_L_res fuel = $13.
   exists 50%nat.
   cbv.
-Abort.
+  reflexivity.
+Qed.
 
-*)

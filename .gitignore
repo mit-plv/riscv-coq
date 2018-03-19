@@ -1,4 +1,5 @@
 *.vo
+*.v~
 *.glob
 *.aux
 .depend
