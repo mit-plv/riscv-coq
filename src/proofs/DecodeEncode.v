@@ -166,28 +166,10 @@ Proof.
 Qed.
 *)
 
-Ltac prove_simpl_andb :=
-  intros;
-  repeat match goal with
-  | b: bool |- _ => destruct b
-  end;
-  reflexivity.
+Ltac prove_andb_false :=
+  repeat (reflexivity || apply Bool.andb_false_r || apply Bool.andb_false_intro1).
 
-Lemma simpl_andb_false_1_1: false = false. prove_simpl_andb. Qed.
-Lemma simpl_andb_false_2_1: forall {b2}, false && b2 = false. prove_simpl_andb. Qed.
-Lemma simpl_andb_false_2_2: forall {b1}, b1 && false = false. prove_simpl_andb. Qed.
-Lemma simpl_andb_false_3_1: forall {b2 b3}, false && b2 && b3 = false. prove_simpl_andb. Qed.
-Lemma simpl_andb_false_3_2: forall {b1 b3}, b1 && false && b3 = false. prove_simpl_andb. Qed.
-Lemma simpl_andb_false_3_3: forall {b1 b2}, b1 && b2 && false = false. prove_simpl_andb. Qed.
-Lemma simpl_andb_false_4_1: forall {b2 b3 b4}, false && b2 && b3 && b4 = false. prove_simpl_andb. Qed.
-Lemma simpl_andb_false_4_2: forall {b1 b3 b4}, b1 && false && b3 && b4 = false. prove_simpl_andb. Qed.
-Lemma simpl_andb_false_4_3: forall {b1 b2 b4}, b1 && b2 && false && b4 = false. prove_simpl_andb. Qed.
-Lemma simpl_andb_false_4_4: forall {b1 b2 b3}, b1 && b2 && b3 && false = false. prove_simpl_andb. Qed.
-Lemma simpl_andb_false_5_1: forall {b2 b3 b4 b5}, false && b2 && b3 && b4 && b5 = false. prove_simpl_andb. Qed.
-Lemma simpl_andb_false_5_2: forall {b1 b3 b4 b5}, b1 && false && b3 && b4 && b5 = false. prove_simpl_andb. Qed.
-Lemma simpl_andb_false_5_3: forall {b1 b2 b4 b5}, b1 && b2 && false && b4 && b5 = false. prove_simpl_andb. Qed.
-Lemma simpl_andb_false_5_4: forall {b1 b2 b3 b5}, b1 && b2 && b3 && false && b5 = false. prove_simpl_andb. Qed.
-Lemma simpl_andb_false_5_5: forall {b1 b2 b3 b4}, b1 && b2 && b3 && b4 && false = false. prove_simpl_andb. Qed.
+Goal forall b1 b3 b4 b5, b1 && false && b3 && b4 && b5 = false. intros. prove_andb_false. Qed.
 
 Lemma decode_encode: forall (inst: Instruction),
   respects_bounds inst ->
@@ -219,28 +201,14 @@ Proof.
   | E: _ = ?x |- context [?x] => rewrite <- E
   end;
   repeat match goal with
-  | |- (if ?x then ?a else ?b) = ?c => replace x with false by (symmetry; (
-          apply simpl_andb_false_1_1 ||
-          apply simpl_andb_false_2_1 ||
-          apply simpl_andb_false_2_2 ||
-          apply simpl_andb_false_3_1 ||
-          apply simpl_andb_false_3_2 ||
-          apply simpl_andb_false_3_3 ||
-          apply simpl_andb_false_4_1 ||
-          apply simpl_andb_false_4_2 ||
-          apply simpl_andb_false_4_3 ||
-          apply simpl_andb_false_4_4 ||
-          apply simpl_andb_false_5_1 ||
-          apply simpl_andb_false_5_2 ||
-          apply simpl_andb_false_5_3 ||
-          apply simpl_andb_false_5_4 ||
-          apply simpl_andb_false_5_5))
-  end;
+         | |- (if ?x then ?a else ?b) = ?c =>
+           replace x with false by (symmetry; prove_andb_false)
+         end;
   try reflexivity.
-  Focus 15.
-  (* oops, bug in Decoder: returns Csrrw 3x, Csrrwi 3x *)
+  admit. (* funct6 *)
+  admit. (* funct6 *)
+  admit. (* funct6 *)
+  admit. (* sfence_vm *)
+  (* and 4 left because of Csr typos *)
 
-  repeat match goal with
-  | |- (if ?x then ?a else ?b) = ?c => change (b = c) || change (a = c)
-  end.
 Abort.
