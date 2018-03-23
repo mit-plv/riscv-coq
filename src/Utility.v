@@ -107,6 +107,7 @@ Section Constants.
 
   Definition minusone: t := zero - one.
 
+  Definition lnot(x: t): t := xor x maxUnsigned.
 End Constants.
 
 
