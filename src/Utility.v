@@ -105,9 +105,12 @@ Section Constants.
 
   Definition eight: t := four + four.
 
-  Definition minusone: t := zero - one.
+  Definition negate(x: t): t := zero - x.
+             
+  Definition minusone: t := negate one.
 
   Definition lnot(x: t): t := xor x maxUnsigned.
+
 End Constants.
 
 Definition machineIntToShamt: MachineInt -> Z := id.

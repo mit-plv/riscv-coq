@@ -1,78 +1,84 @@
-Require Import Coq.ZArith.BinInt.
-Require Import riscv.util.NameWithEq.
-Require Import riscv.RiscvBitWidths.
-Require Import riscv.util.Monads.
-Require Import riscv.Utility.
-Require Import riscv.Decode.
-Require Import riscv.Program.
+(* Default settings (from HsToCoq.Coq.Preamble) *)
 
-Local Open Scope Z.
+Generalizable All Variables.
+
+Unset Implicit Arguments.
+Set Maximal Implicit Insertion.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
+
+Require Coq.Program.Tactics.
+Require Coq.Program.Wf.
+
+(* Preamble *)
+
+Require Import Utility.
 Local Open Scope alu_scope.
-Local Open Scope bool_scope.
 
-Section Riscv.
+(* Converted imports: *)
 
-  Context {Name: NameWithEq}. (* register name *)
-  Let Register := @name Name.
-  Existing Instance eq_name_dec.
+Require Decode.
+Require GHC.Num.
+Require Import GHC.Real.
+Require Import Monads.
+Require Import Program.
+Require Import Utility.
 
-  Context {B: RiscvBitWidths}.
+(* No type declarations to convert. *)
+(* Converted value declarations: *)
 
-  Context {M: Type -> Type}.
-  Context {MM: Monad M}.
-  Context {t: Set}.
-  Context {MW: MachineWidth t}.
-  Context {MP: MonadPlus M}.
-  Context {RVP: RiscvProgram M t}.
-  Context {RVS: RiscvState M t}.
-
-  Definition execute(i: Instruction): M unit :=
-    match i with
-    (* begin ast *)
-    | Mul rd rs1 rs2 =>
-        x <- getRegister rs1;
-        y <- getRegister rs2;
-        setRegister rd (x * y)
-    | Mulh rd rs1 rs2 =>
-        x <- getRegister rs1;
-        y <- getRegister rs2;
-        setRegister rd (highBits ((regToZ_signed x) * (regToZ_signed y)) : t)
-    | Mulhsu rd rs1 rs2 =>
-        x <- getRegister rs1;
-        y <- getRegister rs2;
-        setRegister rd (highBits ((regToZ_signed x) * (regToZ_unsigned y)) : t)
-    | Mulhu rd rs1 rs2 =>
-        x <- getRegister rs1;
-        y <- getRegister rs2;
-        setRegister rd (highBits ((regToZ_unsigned x) * (regToZ_unsigned y)) : t)
-    | Div rd rs1 rs2 =>
-        x <- getRegister rs1;
-        y <- getRegister rs2;
-        let q := (if x == minSigned && y == minusone then x
-                  else if y == zero then minusone
-                  else div x y)
-          in setRegister rd q
-    | Divu rd rs1 rs2 =>
-        x <- getRegister rs1;
-        y <- getRegister rs2;
-        let q := (if y == zero then maxUnsigned
-                  else divu x y)
-          in setRegister rd q
-    | Rem rd rs1 rs2 =>
-        x <- getRegister rs1;
-        y <- getRegister rs2;
-        let r := (if x == minSigned && y == minusone then zero
-                  else if y == zero then x
-                  else rem x y)
-          in setRegister rd r
-    | Remu rd rs1 rs2 =>
-        x <- getRegister rs1;
-        y <- getRegister rs2;
-        let r := (if y == zero then x
-                  else remu x y)
-          in setRegister rd r
-    (* end ast *)
-    | _ => mzero
+Definition execute {p} {t} `{(RiscvState p t)}
+   : Decode.InstructionM -> p unit :=
+  fun arg_0__ =>
+    match arg_0__ with
+    | Decode.Mul rd rs1 rs2 =>
+        Bind (getRegister rs1) (fun x =>
+                Bind (getRegister rs2) (fun y => setRegister rd (mul x y)))
+    | Decode.Mulh rd rs1 rs2 =>
+        Bind (getRegister rs1) (fun x =>
+                Bind (getRegister rs2) (fun y =>
+                        setRegister rd (highBits (mul (regToZ_signed x) (regToZ_signed y)) : t)))
+    | Decode.Mulhsu rd rs1 rs2 =>
+        Bind (getRegister rs1) (fun x =>
+                Bind (getRegister rs2) (fun y =>
+                        setRegister rd (highBits (mul (regToZ_signed x) (regToZ_unsigned y)) : t)))
+    | Decode.Mulhu rd rs1 rs2 =>
+        Bind (getRegister rs1) (fun x =>
+                Bind (getRegister rs2) (fun y =>
+                        setRegister rd (highBits (mul (regToZ_unsigned x) (regToZ_unsigned y)) : t)))
+    | Decode.Div rd rs1 rs2 =>
+        Bind (getRegister rs1) (fun x =>
+                Bind (getRegister rs2) (fun y =>
+                        let q :=
+                          if andb (signed_eqb x minSigned) (signed_eqb y (GHC.Num.negate one)) : bool
+                          then x else
+                          if signed_eqb y zero : bool then GHC.Num.negate one else
+                          quot x y in
+                        setRegister rd q))
+    | Decode.Divu rd rs1 rs2 =>
+        Bind (getRegister rs1) (fun x =>
+                Bind (getRegister rs2) (fun y =>
+                        let q := if signed_eqb y zero : bool then maxUnsigned else divu x y in
+                        setRegister rd q))
+    | Decode.Rem rd rs1 rs2 =>
+        Bind (getRegister rs1) (fun x =>
+                Bind (getRegister rs2) (fun y =>
+                        let r :=
+                          if andb (signed_eqb x minSigned) (signed_eqb y (GHC.Num.negate one)) : bool
+                          then zero else
+                          if signed_eqb y zero : bool then x else
+                          rem x y in
+                        setRegister rd r))
+    | Decode.Remu rd rs1 rs2 =>
+        Bind (getRegister rs1) (fun x =>
+                Bind (getRegister rs2) (fun y =>
+                        let r := if signed_eqb y zero : bool then x else remu x y in setRegister rd r))
+    | inst => Return tt
     end.
 
-End Riscv.
+(* Unbound variables:
+     Bind Return RiscvState andb bool divu getRegister highBits maxUnsigned minSigned
+     mul one quot regToZ_signed regToZ_unsigned rem remu setRegister signed_eqb tt
+     unit zero Decode.Div Decode.Divu Decode.InstructionM Decode.Mul Decode.Mulh
+     Decode.Mulhsu Decode.Mulhu Decode.Rem Decode.Remu GHC.Num.negate
+*)

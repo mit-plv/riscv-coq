@@ -9,3 +9,5 @@ rename value Data.Bits.complement = Utility.lnot
 rename value Data.Bits.xor = Utility.xor
 rename value Data.Bits..|. = Utility.or
 rename type Program.RiscvProgram = Program.RiscvState
+rename value GHC.Num.* = Utility.mul
+rewrite forall, GHC.Num.negate = Utility.negate
