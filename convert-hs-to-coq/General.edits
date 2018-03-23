@@ -1,7 +1,6 @@
 
 import module Utility
 import module Program
-import module GHC.Real
 import module Monads
 import module Coq.ZArith.BinInt
 
@@ -14,13 +13,10 @@ rename value GHC.Base.when = Utility.when
 rewrite forall x y, x GHC.Base.< y = x < y
 rewrite forall x y, x GHC.Base.>= y = x >= y
 rewrite forall x y, x GHC.Base./= y = x /= y
-# rewrite forall x y, x GHC.Base.op_zgze__
-# rewrite forall x y, x GHC.Base.op_zl__
-# rewrite forall x y, x GHC.Base.op_zsze__
 rewrite forall x y, x GHC.Num.- y = x - y
 rewrite forall x y, x GHC.Num.+ y = x + y
-# rewrite forall x y, x GHC.Num.op_zm__
-# rewrite forall x y, x GHC.Num.op_zp__
+rewrite forall x y, x GHC.Num.* y = x * y
+
 rewrite forall x y, GHC.Real.mod_ x y = Utility.rem x y
 
 rename value GHC.Base.map = Coq.Lists.List.map

@@ -12,14 +12,14 @@ Require Coq.Program.Wf.
 
 (* Preamble *)
 
+Require Import Coq.ZArith.BinInt.
+Local Open Scope Z.
 Require Import Utility.
 Local Open Scope alu_scope.
 
 (* Converted imports: *)
 
 Require Decode.
-Require GHC.Num.
-Require Import GHC.Real.
 Require Import Monads.
 Require Import Program.
 Require Import Utility.
@@ -33,15 +33,14 @@ Definition execute {p} {t} `{(RiscvState p t)}
     match arg_0__ with
     | Decode.Mulw rd rs1 rs2 =>
         Bind (getRegister rs1) (fun x =>
-                Bind (getRegister rs2) (fun y => setRegister rd (s32 (mul x y))))
+                Bind (getRegister rs2) (fun y => setRegister rd (s32 (x * y))))
     | Decode.Divw rd rs1 rs2 =>
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
                         let q :=
-                          if andb (signed_eqb x minSigned) (signed_eqb y (GHC.Num.negate one)) : bool
-                          then x else
-                          if signed_eqb y zero : bool then GHC.Num.negate one else
-                          quot x y in
+                          if andb (signed_eqb x minSigned) (signed_eqb y (negate one)) : bool then x else
+                          if signed_eqb y zero : bool then negate one else
+                          div x y in
                         setRegister rd (s32 q)))
     | Decode.Divuw rd rs1 rs2 =>
         Bind (getRegister rs1) (fun x =>
@@ -52,7 +51,7 @@ Definition execute {p} {t} `{(RiscvState p t)}
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
                         let r :=
-                          if andb (signed_eqb x minSigned) (signed_eqb y (GHC.Num.negate one)) : bool
+                          if andb (signed_eqb x minSigned) (signed_eqb y (negate one)) : bool
                           then zero else
                           if signed_eqb y zero : bool then x else
                           rem x y in
@@ -66,7 +65,7 @@ Definition execute {p} {t} `{(RiscvState p t)}
     end.
 
 (* Unbound variables:
-     Bind Return RiscvState andb bool divu getRegister maxUnsigned minSigned mul one
-     quot rem remu s32 setRegister signed_eqb tt unit zero Decode.Divuw Decode.Divw
-     Decode.InstructionM64 Decode.Mulw Decode.Remuw Decode.Remw GHC.Num.negate
+     Bind Return RiscvState andb bool div divu getRegister maxUnsigned minSigned
+     negate one op_zt__ rem remu s32 setRegister signed_eqb tt unit zero Decode.Divuw
+     Decode.Divw Decode.InstructionM64 Decode.Mulw Decode.Remuw Decode.Remw
 *)

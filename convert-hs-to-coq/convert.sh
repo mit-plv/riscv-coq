@@ -7,5 +7,5 @@ stack exec hs-to-coq -- -e ./Execute.edits -p ./Execute_preamble.v -e ./General.
 stack exec hs-to-coq -- -e ./Execute.edits -p ./Execute_preamble.v -e ./General.edits -e ./Base.edits -N -i ../../riscv-semantics/src -o ../src ../../riscv-semantics/src/ExecuteI64.hs
 stack exec hs-to-coq -- -e ./Execute.edits -p ./Execute_preamble.v -e ./General.edits -e ./Base.edits -N -i ../../riscv-semantics/src -o ../src ../../riscv-semantics/src/ExecuteM.hs
 stack exec hs-to-coq -- -e ./Execute.edits -p ./Execute_preamble.v -e ./General.edits -e ./Base.edits -N -i ../../riscv-semantics/src -o ../src ../../riscv-semantics/src/ExecuteM64.hs
-stack exec hs-to-coq -- -e ./Execute.edits -p ./Execute_preamble.v -e ./General.edits -e ./Base.edits -N -i ../../riscv-semantics/src -o ../src ../../riscv-semantics/src/ExecuteCSR.hs
+
 
