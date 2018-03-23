@@ -1,43 +1,23 @@
-Require Import Coq.Lists.List.
-Import ListNotations.
-Require Import riscv.util.NameWithEq.
-Require Import riscv.RiscvBitWidths.
-Require Import riscv.util.Monads.
-Require Import riscv.Utility.
-Require Import riscv.Decode.
-Require Import riscv.Program.
-Require riscv.ExecuteI.
-Require riscv.ExecuteM.
-Require riscv.ExecuteI64.
-Require riscv.ExecuteM64.
 
-Section Riscv.
+Require Import Decode.
+Require ExecuteI.
+Require ExecuteI64.
+Require ExecuteM.
+Require ExecuteM64.
+Require Import Monads.
+Require Import Program.
+Require Import Utility.
 
-  Context {Name: NameWithEq}. (* register name *)
-  Let Register := @name Name.
-  Existing Instance eq_name_dec.
+(* No type declarations to convert. *)
+(* Converted value declarations: *)
 
-  Context {B: RiscvBitWidths}.
-
-  Context {M: Type -> Type}.
-  Context {MM: Monad M}.
-  Context {t: Set}.
-  Context {MW: MachineWidth t}.
-  Context {MP: MonadPlus M}.
-  Context {RVP: RiscvProgram M t}.
-  Context {RVS: RiscvState M t}.
-
-
-  Definition get_execute_list: list (Instruction -> M unit) :=
-    match bitwidth with
-    | Bitwidth32 => [ExecuteI.execute; ExecuteM.execute]
-    | Bitwidth64 => [ExecuteI.execute; ExecuteM.execute; ExecuteI64.execute; ExecuteM64.execute]
-    end.
-
-  Definition execute(i: Instruction): M unit :=
-    match i with
-    | InvalidInstruction => raiseException zero two
-    | _                  => msum (map (fun f => f i) get_execute_list)
-    end.
-
-End Riscv.
+(* Note: Filtering of unsupported instructions was already done in Decode.
+   Note: We don't support CSR instructions yet. *)
+Definition execute {p} {t} `{(RiscvState p t)}(inst: Instruction): p unit :=
+  match inst with
+  | IInstruction i     => ExecuteI.execute i
+  | MInstruction i     => ExecuteM.execute i
+  | I64Instruction i   => ExecuteI64.execute i
+  | M64Instruction i   => ExecuteM64.execute i
+  | _                  => raiseException zero two
+  end.
