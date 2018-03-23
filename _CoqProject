@@ -1,2 +1,2 @@
 -Q ../bbv bbv
--Q ./src riscv
+-R ./src riscv

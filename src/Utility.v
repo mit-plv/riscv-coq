@@ -110,6 +110,7 @@ Section Constants.
   Definition lnot(x: t): t := xor x maxUnsigned.
 End Constants.
 
+Definition machineIntToShamt: MachineInt -> Z := id.
 
 Instance MachineWidth32: MachineWidth (word 32) := {|
   zero := $0;

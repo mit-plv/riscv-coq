@@ -1,0 +1,41 @@
+
+import module Utility
+import module Program
+import module GHC.Real
+import module Monads
+import module Coq.ZArith.BinInt
+
+rename type Utility.MachineInt = Coq.ZArith.BinInt.Z
+rename type GHC.Types.Int = Coq.ZArith.BinInt.Z
+rename value GHC.Real.fromIntegral = id
+
+rename value GHC.Base.when = Utility.when
+
+rewrite forall x y, x GHC.Base.< y = x < y
+rewrite forall x y, x GHC.Base.>= y = x >= y
+rewrite forall x y, x GHC.Base./= y = x /= y
+# rewrite forall x y, x GHC.Base.op_zgze__
+# rewrite forall x y, x GHC.Base.op_zl__
+# rewrite forall x y, x GHC.Base.op_zsze__
+rewrite forall x y, x GHC.Num.- y = x - y
+rewrite forall x y, x GHC.Num.+ y = x + y
+# rewrite forall x y, x GHC.Num.op_zm__
+# rewrite forall x y, x GHC.Num.op_zp__
+rewrite forall x y, GHC.Real.mod_ x y = Utility.rem x y
+
+rename value GHC.Base.map = Coq.Lists.List.map
+
+rewrite forall, GHC.Err.error "ambiguous decoding result" = InvalidInstruction
+rewrite forall x, GHC.Err.error GHC.Base.$ (Coq.Init.Datatypes.app "dispatch bug: " (GHC.Show.show x)) = Monads.Return tt
+
+# only put into Decode, but in Execute, we want letter constants
+# rewrite forall x, GHC.Num.fromInteger x = x
+rewrite forall x y, (x GHC.Real.^ y) = Coq.ZArith.BinInt.Z.pow x y
+
+rewrite forall x y, x GHC.Base.>>= y = Monads.Bind x y
+rewrite forall x y, x GHC.Base.>> y = Monads.Bind x (fun _ => y)
+
+rename value VirtualMemory.translate = Program.translate
+rename value VirtualMemory.Load = Program.Load
+rename value VirtualMemory.Instr = Program.Instr
+rename value VirtualMemory.Store = Program.Store
