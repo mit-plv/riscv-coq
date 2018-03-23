@@ -5,6 +5,7 @@ Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
 Require Import riscv.util.Monads.
 Require Import riscv.Decode.
+Require Import riscv.RiscvBitWidths.
 Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)
 Require Import riscv.Program.
 Require Import riscv.Execute.
@@ -16,8 +17,6 @@ Section Riscv.
   Context {B: RiscvBitWidths}.
 
   Context {MW: MachineWidth (word wXLEN)}.
-
-  Definition Register := Z.
 
   Definition Register0: Register := 0%Z.
 
@@ -31,11 +30,17 @@ Section Riscv.
   Context {RVP: RiscvProgram M (word wXLEN)}.
   Context {RVS: RiscvState M (word wXLEN)}.
 
+  Definition RV_wXLEN_IM: InstructionSet :=
+    match bitwidth with
+    | Bitwidth32 => RV32IM
+    | Bitwidth64 => RV64IM
+    end.
+  
   Definition run1:
     M unit :=
     pc <- getPC;
     inst <- loadWord pc;
-    execute (decode (Z.of_nat wXLEN) (wordToZ inst));;
+    execute (decode RV_wXLEN_IM (wordToZ inst));;
     step.
 
   Definition run: nat -> M unit :=

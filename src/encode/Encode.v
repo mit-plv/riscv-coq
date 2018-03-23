@@ -12,8 +12,6 @@ Definition funct3_JALR := Ob"000". (* TODO why does Decode not define & check th
 
 Local Open Scope Z_scope.
 
-Definition Register := Z.
-
 Record InstructionMapper{T: Type} := mkInstructionMapper {
   map_Invalid: T;
   map_R(opcode: MachineInt)(rd rs1 rs2: Register)(funct3: MachineInt)(funct7: MachineInt): T;

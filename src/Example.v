@@ -40,7 +40,7 @@ Notation s5 := (WO~1~0~1~0~1)%word.
 Open Scope Z_scope.
 
 Goal False.
-  set (l := map (decode 32) fib6_riscv).
+  set (l := map (decode RV32IM) fib6_riscv).
   cbv in l.
   (* decoder seems to work :) *)
 Abort.
@@ -91,16 +91,12 @@ Transparent wlt_dec.
 Eval cbv in (map (@wordToZ 32) (fib6_L_trace 50)).
 
 (*
-Eval cbv in (load_byte_list (initialRiscvMachine fib6_riscv).(machineMem) $0 40).
-
-Eval cbv in (load_word_list (initialRiscvMachine fib6_riscv).(machineMem) $0 10).
-
 Eval cbv in (fib6_L_res 27).
+Eval cbv in (fib6_L_res 50).
  *)
 
 Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_L_res fuel = $13.
   exists 50%nat.
-  cbv.
   reflexivity.
 Qed.
 

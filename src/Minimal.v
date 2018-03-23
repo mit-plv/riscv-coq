@@ -22,8 +22,6 @@ Section Riscv.
 
   Context {MemIsMem: Memory Mem (word wXLEN)}.
 
-  Definition Register := Z.
-
   Definition Register0: Register := 0%Z.
 
   Instance ZName: NameWithEq := {|
@@ -70,13 +68,13 @@ Section Riscv.
   
   Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) (word wXLEN) :=
   {|
-      getRegister := fun (reg: name) =>
+      getRegister := fun (reg: Register) =>
         if dec (reg = Register0) then
           Return $0
         else
           machine <- get; Return (machine.(core).(registers) reg);
 
-      setRegister := fun (reg: name) v =>
+      setRegister := fun (reg: Register) v =>
         if dec (reg = Register0) then
           Return tt
         else

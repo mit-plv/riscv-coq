@@ -3,10 +3,9 @@ Require Import riscv.util.Monads.
 Require Import riscv.Utility.
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
+Require Import Decode.
 
 Inductive AccessType: Set := Instr | Load | Store.
-
-Definition Register := Z.
 
   Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
     getRegister: Register -> M t;
