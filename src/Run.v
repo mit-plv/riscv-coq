@@ -10,8 +10,6 @@ Require Import riscv.Program.
 Require Import riscv.Execute.
 Require Import riscv.util.PowerFunc.
 Require Import riscv.Utility.
-Require Import Coq.Lists.List.
-Require Import riscv.Minimal.
 
 Section Riscv.
 

@@ -81,6 +81,56 @@ Definition gets{S A: Type}(f: S -> A): State S A := fun (s: S) => (f s, s).
 Definition put{S: Type}(s: S): State S unit := fun _ => (tt, s).
 End StateM.
 
+(*
+Inductive StateOutcome(S A: Type) :=
+| Success: S -> A -> StateOutcome S A
+| Break: S -> StateOutcome S A
+| Unhandled: StateOutcome S A.
+
+Definition OState(S A: Type) := S -> StateOutcome S A.
+
+Instance OState_Monad(S: Type): Monad (OState S) := {|
+  Bind := fun {A B: Type} (m: OState S A) (f: A -> OState S B) =>
+            fun (s: S) => match m s with
+              | Success _ _ s' a => f a s'
+              | Break _ _ s' => Break S B s'
+              | Unhandled _ _ => Unhandled S B
+              end;
+  Return := fun {A: Type} (a: A) =>
+              fun (s: S) => Success S A s a
+|}.
+- intros. reflexivity.
+- intros. extensionality s. destruct (m s); reflexivity.
+- intros. extensionality s. destruct (m s); reflexivity.
+Defined.
+
+Instance OState_MonadPlus(S: Type): MonadPlus (OState S) := {|
+  mzero A s := Unhandled S A;
+  mplus A m1 m2 s := match m1 s with
+    | Success _ _ s' a => Success _ _ s' a
+    | Break _ _ s' => Break _ _ s'
+    | Unhandled _ _ => m2 s
+    end
+|}.
+- intros. reflexivity.
+- intros. Close Scope monad_scope.
+  unfold Bind, OState_Monad.
+  extensionality s. destruct (v s); try reflexivity.
+  (* Note: does not hold: If after break, we find out that actually it's unhandled,
+     it's still break, because after break, nothing more is run. *)
+Abort.
+
+Definition get{S: Type}: OState S S := fun (s: S) => Some (s, s).
+Definition gets{S A: Type}(f: S -> A): OState S A := fun (s: S) => Some (f s, s).
+Definition put{S: Type}(s: S): OState S unit := fun _ => Some (tt, s).
+
+*)
+
+
+
+(* Note: This one is not what we want either, because it throws away all the state
+   on endCycle/raiseException:
+
 Definition OState(S A: Type) := S -> option (A * S).
 
 Instance OState_Monad(S: Type): Monad (OState S) := {|
@@ -112,7 +162,51 @@ Defined.
 Definition get{S: Type}: OState S S := fun (s: S) => Some (s, s).
 Definition gets{S A: Type}(f: S -> A): OState S A := fun (s: S) => Some (f s, s).
 Definition put{S: Type}(s: S): OState S unit := fun _ => Some (tt, s).
+ *)
 
+
+(* Note: This one is not what we want because in "mplus m1 m2", if m1 throws an exception,
+   m2 is run, instead of keeping m1's exception.
+   The problem is that "None" can mean both "unhandled, please try next" or
+   "handled, but exception"
+*)
+Definition OState(S A: Type) := S -> (option A) * S.
+
+Instance OState_Monad(S: Type): Monad (OState S) := {|
+  Bind := fun {A B: Type} (m: OState S A) (f: A -> OState S B) =>
+            fun (s: S) => match m s with
+            | (Some a, s') => f a s'
+            | (None, s') => (None, s')
+            end;
+  Return := fun {A: Type} (a: A) =>
+              fun (s: S) => (Some a, s)
+|}.
+- intros. reflexivity.
+- intros. extensionality s. destruct (m s). destruct o; reflexivity.
+- intros. extensionality s. destruct (m s). destruct o; reflexivity.
+Defined.
+
+(* TODO if we want to use MonadPlus, we'd have to define a custom equivalence on
+   the state monad which only considers A, but not S *)
+Axiom OStateEq_to_eq: forall {S A: Type} (s1 s2: S) (a1 a2: option A),
+  a1 = a2 -> (a1, s1) = (a2, s2).
+
+Instance OState_MonadPlus(S: Type): MonadPlus (OState S) := {|
+  mzero A s := (@None A, s);
+  mplus A m1 m2 s := match m1 s with
+    | (Some a, s') => (Some a, s')
+    | (None, s') => m2 s
+    end;
+|}.
+- intros. reflexivity.
+- intros. simpl. extensionality s. destruct (v s).
+  destruct o; apply OStateEq_to_eq; reflexivity.
+- intros. simpl. extensionality s. destruct (m1 s). destruct o; reflexivity.
+Defined.
+
+Definition get{S: Type}: OState S S := fun (s: S) => (Some s, s).
+Definition gets{S A: Type}(f: S -> A): OState S A := fun (s: S) => (Some (f s), s).
+Definition put{S: Type}(s: S): OState S unit := fun _ => (Some tt, s).
 
 (* T for transformer, corresponds to Haskell's MaybeT: *)
 Definition optionT(M: Type -> Type)(A: Type) := M (option A).

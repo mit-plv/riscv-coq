@@ -6,7 +6,6 @@ Require Import riscv.RiscvBitWidths.
 Require Import riscv.util.Monads.
 Require Import riscv.Decode.
 Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)
-Require Import riscv.MonadicMemory.
 Require Import riscv.Program.
 Require Import riscv.Execute.
 Require Import riscv.util.PowerFunc.
@@ -22,8 +21,6 @@ Section Riscv.
   Context {Mem: Set}.
 
   Context {MemIsMem: Memory Mem (word wXLEN)}.
-
-  Context {MemIsMonadicMemory: MonadicMemory (OState Mem) (word wXLEN)}.
 
   Definition Register := Z.
 
@@ -64,10 +61,13 @@ Section Riscv.
   Definition with_machineMem m ma :=
     mkRiscvMachine ma.(core) m.
 
-  Instance MM: MonadicMemory (OState RiscvMachine) (word wXLEN).
-    (* TODO lift MemIsMonadicMemory *)
-  Admitted.
+  Definition liftLoad{R}(f: Mem -> word wXLEN -> R): word wXLEN -> OState RiscvMachine R :=
+    fun a => m <- gets machineMem; Return (f m a).
 
+  Definition liftStore{R}(f: Mem -> word wXLEN -> R -> Mem):
+    word wXLEN -> R -> OState RiscvMachine unit :=
+    fun a v => m <- get; put (with_machineMem (f m.(machineMem) a v) m).
+  
   Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) (word wXLEN) :=
   {|
       getRegister := fun (reg: name) =>
@@ -92,15 +92,15 @@ Section Riscv.
         machine <- get;
         put (with_nextPC newPC machine);
 
-      loadByte   := MonadicMemory.loadByte;
-      loadHalf   := MonadicMemory.loadHalf;
-      loadWord   := MonadicMemory.loadWord;
-      loadDouble := MonadicMemory.loadDouble;
+      loadByte   := liftLoad Memory.loadByte;
+      loadHalf   := liftLoad Memory.loadHalf;
+      loadWord   := liftLoad Memory.loadWord;
+      loadDouble := liftLoad Memory.loadDouble;
 
-      storeByte   := MonadicMemory.storeByte;
-      storeHalf   := MonadicMemory.storeHalf;
-      storeWord   := MonadicMemory.storeWord;
-      storeDouble := MonadicMemory.storeDouble;
+      storeByte   := liftStore Memory.storeByte;
+      storeHalf   := liftStore Memory.storeHalf;
+      storeWord   := liftStore Memory.storeWord;
+      storeDouble := liftStore Memory.storeDouble;
 
       step :=
         m <- get;
@@ -110,8 +110,7 @@ Section Riscv.
         machine <- get;
         Return machine.(core).(exceptionHandlerAddr);
 
-      endCycle A := fun _ => None; (* TODO that's wrong, TODO get monad transformer stuff right *)
-
+      endCycle A := Return None;
   |}.
 
   (* Puts given program at address 0, and makes pc point to beginning of program, i.e. 0.
