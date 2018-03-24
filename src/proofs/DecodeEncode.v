@@ -158,23 +158,6 @@ Goal forall b1 b2, b1 = true -> b2 = true -> true && b1 && (b2 && true) = true.
   intros. prove_andb_true.
 Qed.
 
-(*
-Ltac invert_encode :=
-  match goal with
-  | V: context[verify_Invalid   ] |- decode _ ?inst = _ => pose proof (invert_encode_InvalidInstruction V inst eq_refl)
-  | V: context[verify_R         ] |- decode _ ?inst = _ => pose proof (invert_encode_R                  V inst eq_refl)
-  | V: context[verify_I         ] |- decode _ ?inst = _ => pose proof (invert_encode_I                  V inst eq_refl)
-  | V: context[verify_I_shift_57] |- decode _ ?inst = _ => pose proof (invert_encode_I_shift_57         V inst eq_refl)
-  | V: context[verify_I_shift_66] |- decode _ ?inst = _ => pose proof (invert_encode_I_shift_66         V inst eq_refl)
-  | V: context[verify_I_system  ] |- decode _ ?inst = _ => pose proof (invert_encode_I_system           V inst eq_refl)
-  | V: context[verify_S         ] |- decode _ ?inst = _ => pose proof (invert_encode_S                  V inst eq_refl)
-  | V: context[verify_SB        ] |- decode _ ?inst = _ => pose proof (invert_encode_SB                 V inst eq_refl)
-  | V: context[verify_U         ] |- decode _ ?inst = _ => pose proof (invert_encode_U                  V inst eq_refl)
-  | V: context[verify_UJ        ] |- decode _ ?inst = _ => pose proof (invert_encode_UJ                 V inst eq_refl)
-  | V: context[verify_Fence     ] |- decode _ ?inst = _ => pose proof (invert_encode_Fence              V inst eq_refl)
-  end.
-*)
-
 Ltac invert_encode :=
   match goal with
   | V: context[verify_Invalid   ], H: _ |- _ => pose proof (invert_encode_InvalidInstruction V _ H)
@@ -232,5 +215,4 @@ Proof.
            (replace x with true  by (symmetry; prove_andb_true))
          end;
   try reflexivity.
-  admit. (* TODO  Sfence_vm went lost in Decoder *)
-Admitted.
+Time Qed.

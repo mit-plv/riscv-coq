@@ -798,6 +798,10 @@ Definition decode : InstructionSet -> Z -> Instruction :=
       nil in
     let decodeCSR :=
       if andb (Z.eqb opcode opcode_SYSTEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
+                                                                           funct3_PRIV) (Z.eqb funct7
+                                                                                               funct7_SFENCE_VM))) : bool
+      then cons (Sfence_vm rs1 rs2) nil else
+      if andb (Z.eqb opcode opcode_SYSTEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
                                                                            funct3_PRIV) (andb (Z.eqb rs1 0) (Z.eqb
                                                                                                funct12
                                                                                                funct12_ECALL)))) : bool
