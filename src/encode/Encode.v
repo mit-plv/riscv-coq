@@ -16,7 +16,8 @@ Record InstructionMapper{T: Type} := mkInstructionMapper {
   map_Invalid: T;
   map_R(opcode: MachineInt)(rd rs1 rs2: Register)(funct3: MachineInt)(funct7: MachineInt): T;
   map_I(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(oimm12: Z): T;
-  map_I_shift(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt): T;
+  map_I_shift_57(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt): T;
+  map_I_shift_66(opcode: MachineInt)(rd rs1: Register)(shamt6 funct3 funct6: MachineInt): T;
   map_I_system(opcode: MachineInt)(rd rs1: Register)(funct3 funct12: MachineInt): T;
   map_S(opcode: MachineInt)(rs1 rs2: Register)(funct3: MachineInt)(simm12: Z): T;
   map_SB(opcode: MachineInt)(rs1 rs2: Register)(funct3: MachineInt)(sbimm12: Z): T;
@@ -27,110 +28,107 @@ Record InstructionMapper{T: Type} := mkInstructionMapper {
 
 Arguments InstructionMapper: clear implicits.
 
-
-Local Instance ZName: NameWithEq := {|
-  name := Z
-|}.
-
-Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)
-  (inst: @Instruction ZName): T :=
+Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)(inst: Instruction): T :=
   match inst with
   | InvalidInstruction => mapper.(map_Invalid)
 
-  | Lb  rd rs1 oimm12 => mapper.(map_I) opcode_LOAD rd rs1 funct3_LB  oimm12
-  | Lh  rd rs1 oimm12 => mapper.(map_I) opcode_LOAD rd rs1 funct3_LH  oimm12
-  | Lw  rd rs1 oimm12 => mapper.(map_I) opcode_LOAD rd rs1 funct3_LW  oimm12
-  | Ld  rd rs1 oimm12 => mapper.(map_I) opcode_LOAD rd rs1 funct3_LD  oimm12
-  | Lbu rd rs1 oimm12 => mapper.(map_I) opcode_LOAD rd rs1 funct3_LBU oimm12
-  | Lhu rd rs1 oimm12 => mapper.(map_I) opcode_LOAD rd rs1 funct3_LHU oimm12
-  | Lwu rd rs1 oimm12 => mapper.(map_I) opcode_LOAD rd rs1 funct3_LWU oimm12
+  | IInstruction   (Lb  rd rs1 oimm12) => mapper.(map_I) opcode_LOAD rd rs1 funct3_LB  oimm12
+  | IInstruction   (Lh  rd rs1 oimm12) => mapper.(map_I) opcode_LOAD rd rs1 funct3_LH  oimm12
+  | IInstruction   (Lw  rd rs1 oimm12) => mapper.(map_I) opcode_LOAD rd rs1 funct3_LW  oimm12
+  | I64Instruction (Ld  rd rs1 oimm12) => mapper.(map_I) opcode_LOAD rd rs1 funct3_LD  oimm12
+  | IInstruction   (Lbu rd rs1 oimm12) => mapper.(map_I) opcode_LOAD rd rs1 funct3_LBU oimm12
+  | IInstruction   (Lhu rd rs1 oimm12) => mapper.(map_I) opcode_LOAD rd rs1 funct3_LHU oimm12
+  | I64Instruction (Lwu rd rs1 oimm12) => mapper.(map_I) opcode_LOAD rd rs1 funct3_LWU oimm12
 
-  | Fence pred succ => mapper.(map_Fence) opcode_MISC_MEM 0 0 funct3_FENCE pred succ 0
-  | Fence_i =>         mapper.(map_Fence) opcode_MISC_MEM 0 0 funct3_FENCE_I 0 0 0
+  | IInstruction (Fence pred succ) => mapper.(map_Fence) opcode_MISC_MEM 0 0 funct3_FENCE pred succ 0
+  | IInstruction (Fence_i) =>         mapper.(map_Fence) opcode_MISC_MEM 0 0 funct3_FENCE_I 0 0 0
 
-  | Addi  rd rs1 imm12  => mapper.(map_I) opcode_OP_IMM rd rs1 funct3_ADDI imm12
-  | Slli  rd rs1 shamt5 => mapper.(map_I_shift) opcode_OP_IMM rd rs1 shamt5 funct3_SLLI funct7_SLLI
-  | Slti  rd rs1 imm12  => mapper.(map_I) opcode_OP_IMM rd rs1 funct3_SLTI imm12
-  | Sltiu rd rs1 imm12  => mapper.(map_I) opcode_OP_IMM rd rs1 funct3_SLTIU imm12
-  | Xori  rd rs1 imm12  => mapper.(map_I) opcode_OP_IMM rd rs1 funct3_XORI imm12
-  | Ori   rd rs1 imm12  => mapper.(map_I) opcode_OP_IMM rd rs1 funct3_ORI imm12
-  | Andi  rd rs1 imm12  => mapper.(map_I) opcode_OP_IMM rd rs1 funct3_ANDI imm12
-  | Srli  rd rs1 shamt5 => mapper.(map_I_shift) opcode_OP_IMM rd rs1 shamt5 funct3_SRLI funct7_SRLI
-  | Srai  rd rs1 shamt5 => mapper.(map_I_shift) opcode_OP_IMM rd rs1 shamt5 funct3_SRAI funct7_SRAI
+  | IInstruction (Addi  rd rs1 imm12 ) => mapper.(map_I) opcode_OP_IMM rd rs1 funct3_ADDI imm12
+  | IInstruction (Slli  rd rs1 shamt6) => mapper.(map_I_shift_66) opcode_OP_IMM rd rs1 shamt6 funct3_SLLI funct6_SLLI
+  | IInstruction (Slti  rd rs1 imm12 ) => mapper.(map_I) opcode_OP_IMM rd rs1 funct3_SLTI imm12
+  | IInstruction (Sltiu rd rs1 imm12 ) => mapper.(map_I) opcode_OP_IMM rd rs1 funct3_SLTIU imm12
+  | IInstruction (Xori  rd rs1 imm12 ) => mapper.(map_I) opcode_OP_IMM rd rs1 funct3_XORI imm12
+  | IInstruction (Ori   rd rs1 imm12 ) => mapper.(map_I) opcode_OP_IMM rd rs1 funct3_ORI imm12
+  | IInstruction (Andi  rd rs1 imm12 ) => mapper.(map_I) opcode_OP_IMM rd rs1 funct3_ANDI imm12
+  | IInstruction (Srli  rd rs1 shamt6) => mapper.(map_I_shift_66) opcode_OP_IMM rd rs1 shamt6 funct3_SRLI funct6_SRLI
+  | IInstruction (Srai  rd rs1 shamt6) => mapper.(map_I_shift_66) opcode_OP_IMM rd rs1 shamt6 funct3_SRAI funct6_SRAI
 
-  | Auipc rd oimm20 => mapper.(map_U) opcode_AUIPC rd oimm20
+  | IInstruction (Auipc rd oimm20) => mapper.(map_U) opcode_AUIPC rd oimm20
 
-  | Addiw rd rs1 imm12 => mapper.(map_I) opcode_OP_IMM_32 rd rs1 funct3_ADDIW imm12
-  | Slliw rd rs1 shm5  => mapper.(map_I_shift) opcode_OP_IMM_32 rd rs1 shm5 funct3_SLLI funct7_SLLI
-  | Srliw rd rs1 shm5  => mapper.(map_I_shift) opcode_OP_IMM_32 rd rs1 shm5 funct3_SRLI funct7_SRLI
-  | Sraiw rd rs1 shm5  => mapper.(map_I_shift) opcode_OP_IMM_32 rd rs1 shm5 funct3_SRAI funct7_SRAI
+  | I64Instruction (Addiw rd rs1 imm12) => mapper.(map_I) opcode_OP_IMM_32 rd rs1 funct3_ADDIW imm12
+  | I64Instruction (Slliw rd rs1 shm5 ) => mapper.(map_I_shift_57) opcode_OP_IMM_32 rd rs1 shm5 funct3_SLLI funct7_SLLIW
+  | I64Instruction (Srliw rd rs1 shm5 ) => mapper.(map_I_shift_57) opcode_OP_IMM_32 rd rs1 shm5 funct3_SRLI funct7_SRLIW
+  | I64Instruction (Sraiw rd rs1 shm5 ) => mapper.(map_I_shift_57) opcode_OP_IMM_32 rd rs1 shm5 funct3_SRAI funct7_SRAIW
 
-  | Sb rs1 rs2 simm12 => mapper.(map_S) opcode_STORE rs1 rs2 funct3_SB simm12
-  | Sh rs1 rs2 simm12 => mapper.(map_S) opcode_STORE rs1 rs2 funct3_SH simm12
-  | Sw rs1 rs2 simm12 => mapper.(map_S) opcode_STORE rs1 rs2 funct3_SW simm12
-  | Sd rs1 rs2 simm12 => mapper.(map_S) opcode_STORE rs1 rs2 funct3_SD simm12
+  | IInstruction   (Sb rs1 rs2 simm12) => mapper.(map_S) opcode_STORE rs1 rs2 funct3_SB simm12
+  | IInstruction   (Sh rs1 rs2 simm12) => mapper.(map_S) opcode_STORE rs1 rs2 funct3_SH simm12
+  | IInstruction   (Sw rs1 rs2 simm12) => mapper.(map_S) opcode_STORE rs1 rs2 funct3_SW simm12
+  | I64Instruction (Sd rs1 rs2 simm12) => mapper.(map_S) opcode_STORE rs1 rs2 funct3_SD simm12
 
-  | Add    rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_ADD    funct7_ADD
-  | Sub    rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SUB    funct7_SUB
-  | Sll    rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SLL    funct7_SLL
-  | Slt    rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SLT    funct7_SLT
-  | Sltu   rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SLTU   funct7_SLTU
-  | Xor    rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_XOR    funct7_XOR
-  | Srl    rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SRL    funct7_SRL
-  | Sra    rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SRA    funct7_SRA
-  | Or     rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_OR     funct7_OR
-  | And    rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_AND    funct7_AND
-  | Mul    rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_MUL    funct7_MUL
-  | Mulh   rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_MULH   funct7_MULH
-  | Mulhsu rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_MULHSU funct7_MULHSU
-  | Mulhu  rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_MULHU  funct7_MULHU
-  | Div    rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_DIV    funct7_DIV
-  | Divu   rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_DIVU   funct7_DIVU
-  | Rem    rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_REM    funct7_REM
-  | Remu   rd rs1 rs2 => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_REMU   funct7_REMU
+  | IInstruction (Add    rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_ADD    funct7_ADD
+  | IInstruction (Sub    rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SUB    funct7_SUB
+  | IInstruction (Sll    rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SLL    funct7_SLL
+  | IInstruction (Slt    rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SLT    funct7_SLT
+  | IInstruction (Sltu   rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SLTU   funct7_SLTU
+  | IInstruction (Xor    rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_XOR    funct7_XOR
+  | IInstruction (Srl    rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SRL    funct7_SRL
+  | IInstruction (Sra    rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_SRA    funct7_SRA
+  | IInstruction (Or     rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_OR     funct7_OR
+  | IInstruction (And    rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_AND    funct7_AND
+  | MInstruction (Mul    rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_MUL    funct7_MUL
+  | MInstruction (Mulh   rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_MULH   funct7_MULH
+  | MInstruction (Mulhsu rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_MULHSU funct7_MULHSU
+  | MInstruction (Mulhu  rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_MULHU  funct7_MULHU
+  | MInstruction (Div    rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_DIV    funct7_DIV
+  | MInstruction (Divu   rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_DIVU   funct7_DIVU
+  | MInstruction (Rem    rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_REM    funct7_REM
+  | MInstruction (Remu   rd rs1 rs2) => mapper.(map_R) opcode_OP rd rs1 rs2 funct3_REMU   funct7_REMU
 
-  | Lui rd imm20 => mapper.(map_U) opcode_LUI rd imm20
+  | IInstruction (Lui rd imm20) => mapper.(map_U) opcode_LUI rd imm20
 
-  | Addw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_ADDW  funct7_ADDW
-  | Subw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_SUBW  funct7_SUBW
-  | Sllw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_SLLW  funct7_SLLW
-  | Srlw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_SRLW  funct7_SRLW
-  | Sraw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_SRAW  funct7_SRAW
-  | Mulw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_MULW  funct7_MULW
-  | Divw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_DIVW  funct7_DIVW
-  | Divuw rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_DIVUW funct7_DIVUW
-  | Remw  rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_REMW  funct7_REMW
-  | Remuw rd rs1 rs2 => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_REMUW funct7_REMUW
+  | I64Instruction (Addw  rd rs1 rs2) => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_ADDW  funct7_ADDW
+  | I64Instruction (Subw  rd rs1 rs2) => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_SUBW  funct7_SUBW
+  | I64Instruction (Sllw  rd rs1 rs2) => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_SLLW  funct7_SLLW
+  | I64Instruction (Srlw  rd rs1 rs2) => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_SRLW  funct7_SRLW
+  | I64Instruction (Sraw  rd rs1 rs2) => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_SRAW  funct7_SRAW
+  | M64Instruction (Mulw  rd rs1 rs2) => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_MULW  funct7_MULW
+  | M64Instruction (Divw  rd rs1 rs2) => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_DIVW  funct7_DIVW
+  | M64Instruction (Divuw rd rs1 rs2) => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_DIVUW funct7_DIVUW
+  | M64Instruction (Remw  rd rs1 rs2) => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_REMW  funct7_REMW
+  | M64Instruction (Remuw rd rs1 rs2) => mapper.(map_R) opcode_OP_32 rd rs1 rs2 funct3_REMUW funct7_REMUW
 
-  | Beq  rs1 rs2 sbimm12 => mapper.(map_SB) opcode_BRANCH rs1 rs2 funct3_BEQ  sbimm12
-  | Bne  rs1 rs2 sbimm12 => mapper.(map_SB) opcode_BRANCH rs1 rs2 funct3_BNE  sbimm12
-  | Blt  rs1 rs2 sbimm12 => mapper.(map_SB) opcode_BRANCH rs1 rs2 funct3_BLT  sbimm12
-  | Bge  rs1 rs2 sbimm12 => mapper.(map_SB) opcode_BRANCH rs1 rs2 funct3_BGE  sbimm12
-  | Bltu rs1 rs2 sbimm12 => mapper.(map_SB) opcode_BRANCH rs1 rs2 funct3_BLTU sbimm12
-  | Bgeu rs1 rs2 sbimm12 => mapper.(map_SB) opcode_BRANCH rs1 rs2 funct3_BGEU sbimm12
+  | IInstruction (Beq  rs1 rs2 sbimm12) => mapper.(map_SB) opcode_BRANCH rs1 rs2 funct3_BEQ  sbimm12
+  | IInstruction (Bne  rs1 rs2 sbimm12) => mapper.(map_SB) opcode_BRANCH rs1 rs2 funct3_BNE  sbimm12
+  | IInstruction (Blt  rs1 rs2 sbimm12) => mapper.(map_SB) opcode_BRANCH rs1 rs2 funct3_BLT  sbimm12
+  | IInstruction (Bge  rs1 rs2 sbimm12) => mapper.(map_SB) opcode_BRANCH rs1 rs2 funct3_BGE  sbimm12
+  | IInstruction (Bltu rs1 rs2 sbimm12) => mapper.(map_SB) opcode_BRANCH rs1 rs2 funct3_BLTU sbimm12
+  | IInstruction (Bgeu rs1 rs2 sbimm12) => mapper.(map_SB) opcode_BRANCH rs1 rs2 funct3_BGEU sbimm12
 
-  | Jalr rd rs1 oimm12 => mapper.(map_I) opcode_JALR rd rs1 funct3_JALR oimm12
-  | Jal rd jimm20 => mapper.(map_UJ) opcode_JAL rd jimm20
+  | IInstruction (Jalr rd rs1 oimm12) => mapper.(map_I) opcode_JALR rd rs1 funct3_JALR oimm12
+  | IInstruction (Jal rd jimm20) => mapper.(map_UJ) opcode_JAL rd jimm20
 
-  | Ecall  => mapper.(map_I_system) opcode_SYSTEM 0 0 funct3_PRIV funct12_ECALL
-  | Ebreak => mapper.(map_I_system) opcode_SYSTEM 0 0 funct3_PRIV funct12_EBREAK
-  | Uret   => mapper.(map_I_system) opcode_SYSTEM 0 0 funct3_PRIV funct12_URET
-  | Sret   => mapper.(map_I_system) opcode_SYSTEM 0 0 funct3_PRIV funct12_SRET
-  | Mret   => mapper.(map_I_system) opcode_SYSTEM 0 0 funct3_PRIV funct12_MRET
-  | Wfi    => mapper.(map_I_system) opcode_SYSTEM 0 0 funct3_PRIV funct12_WFI
+  | CSRInstruction (Ecall ) => mapper.(map_I_system) opcode_SYSTEM 0 0 funct3_PRIV funct12_ECALL
+  | CSRInstruction (Ebreak) => mapper.(map_I_system) opcode_SYSTEM 0 0 funct3_PRIV funct12_EBREAK
+  | CSRInstruction (Uret  ) => mapper.(map_I_system) opcode_SYSTEM 0 0 funct3_PRIV funct12_URET
+  | CSRInstruction (Sret  ) => mapper.(map_I_system) opcode_SYSTEM 0 0 funct3_PRIV funct12_SRET
+  | CSRInstruction (Mret  ) => mapper.(map_I_system) opcode_SYSTEM 0 0 funct3_PRIV funct12_MRET
+  | CSRInstruction (Wfi   ) => mapper.(map_I_system) opcode_SYSTEM 0 0 funct3_PRIV funct12_WFI
 
-  | Sfence_vm rs1 rs2 => mapper.(map_R) opcode_SYSTEM 0 rs1 rs2 funct3_PRIV funct7_SFENCE_VM
+  | CSRInstruction (Sfence_vm rs1 rs2) => mapper.(map_R) opcode_SYSTEM 0 rs1 rs2 funct3_PRIV funct7_SFENCE_VM
 
-  | Csrrw  rd rs1  csr12 => mapper.(map_I_system) opcode_SYSTEM rd rs1  funct3_CSRRW  csr12
-  | Csrrs  rd rs1  csr12 => mapper.(map_I_system) opcode_SYSTEM rd rs1  funct3_CSRRS  csr12
-  | Csrrc  rd rs1  csr12 => mapper.(map_I_system) opcode_SYSTEM rd rs1  funct3_CSRRC  csr12
-  | Csrrwi rd zimm csr12 => mapper.(map_I_system) opcode_SYSTEM rd zimm funct3_CSRRWI csr12
-  | Csrrsi rd zimm csr12 => mapper.(map_I_system) opcode_SYSTEM rd zimm funct3_CSRRSI csr12
-  | Csrrci rd zimm csr12 => mapper.(map_I_system) opcode_SYSTEM rd zimm funct3_CSRRCI csr12
+  | CSRInstruction (Csrrw  rd rs1  csr12) => mapper.(map_I_system) opcode_SYSTEM rd rs1  funct3_CSRRW  csr12
+  | CSRInstruction (Csrrs  rd rs1  csr12) => mapper.(map_I_system) opcode_SYSTEM rd rs1  funct3_CSRRS  csr12
+  | CSRInstruction (Csrrc  rd rs1  csr12) => mapper.(map_I_system) opcode_SYSTEM rd rs1  funct3_CSRRC  csr12
+  | CSRInstruction (Csrrwi rd zimm csr12) => mapper.(map_I_system) opcode_SYSTEM rd zimm funct3_CSRRWI csr12
+  | CSRInstruction (Csrrsi rd zimm csr12) => mapper.(map_I_system) opcode_SYSTEM rd zimm funct3_CSRRSI csr12
+  | CSRInstruction (Csrrci rd zimm csr12) => mapper.(map_I_system) opcode_SYSTEM rd zimm funct3_CSRRCI csr12
   end.
 
 
 Definition encode_Invalid := 0. (* all zeroes is indeed an invalid expression *)
+
+Notation "a <|> b" := (Z.lor a b) (at level 50, left associativity).
+Definition shift := Z.shiftl.
 
 Definition encode_R(opcode: MachineInt)(rd rs1 rs2: Register)(funct3 funct7: MachineInt) :=
     opcode <|>
@@ -147,13 +145,21 @@ Definition encode_I(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(oi
     shift rs1 15 <|>
     shift oimm12 20.
 
-Definition encode_I_shift(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt) := 
+Definition encode_I_shift_57(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt) := 
     opcode <|>
     shift rd 7 <|>
     shift funct3 12 <|>
     shift rs1 15 <|>
     shift shamt5 20 <|>
     shift funct7 25.
+
+Definition encode_I_shift_66(opcode: MachineInt)(rd rs1: Register)(shamt6 funct3 funct6: MachineInt) := 
+    opcode <|>
+    shift rd 7 <|>
+    shift funct3 12 <|>
+    shift rs1 15 <|>
+    shift shamt6 20 <|>
+    shift funct6 26.
 
 Definition encode_I_system(opcode: MachineInt)(rd rs1: Register)(funct3 funct12: MachineInt) :=
     opcode <|>
@@ -206,7 +212,8 @@ Definition Encoder: InstructionMapper MachineInt := {|
   map_Invalid := encode_Invalid;
   map_R := encode_R;
   map_I := encode_I;
-  map_I_shift := encode_I_shift;
+  map_I_shift_57 := encode_I_shift_57;
+  map_I_shift_66 := encode_I_shift_66;
   map_I_system := encode_I_system;
   map_S := encode_S;
   map_SB := encode_SB;
@@ -236,13 +243,21 @@ Definition verify_I(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(oi
     0 <= funct3 < 8 /\
     - 2 ^ 11 <= oimm12 < 2 ^ 11.
 
-Definition verify_I_shift(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt) :=
+Definition verify_I_shift_57(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt) :=
     0 <= opcode < 128 /\
     0 <= rd < 32 /\
     0 <= rs1 < 32 /\
     0 <= shamt5 < 32 /\
     0 <= funct3 < 8 /\
     0 <= funct7 < 128.
+
+Definition verify_I_shift_66(bitwidth: Z)(opcode: MachineInt)(rd rs1: Register)(shamt6 funct3 funct6: MachineInt) :=
+    0 <= opcode < 128 /\
+    0 <= rd < 32 /\
+    0 <= rs1 < 32 /\
+    0 <= shamt6 < bitwidth /\
+    0 <= funct3 < 8 /\
+    0 <= funct6 < 64.
 
 Definition verify_I_system(opcode: MachineInt)(rd rs1: Register)(funct3 funct12: MachineInt) :=
     0 <= opcode < 128 /\
@@ -286,11 +301,12 @@ Definition verify_Fence(opcode: MachineInt)(rd rs1: Register)(funct3 prd scc msb
 
 (* Only verifies that each field is within bounds and has the correct modulus.
    Validity of opcodes and funct codes follows from the fact that it was an Instruction. *)
-Definition Verifier: InstructionMapper Prop := {|
+Definition Verifier(bitwidth: Z): InstructionMapper Prop := {|
   map_Invalid := verify_Invalid;
   map_R := verify_R;
   map_I := verify_I;
-  map_I_shift := verify_I_shift;
+  map_I_shift_57 := verify_I_shift_57;
+  map_I_shift_66 := verify_I_shift_66 bitwidth;
   map_I_system := verify_I_system;
   map_S := verify_S;
   map_SB := verify_SB;
@@ -299,13 +315,15 @@ Definition Verifier: InstructionMapper Prop := {|
   map_Fence := verify_Fence;
 |}.
 
-Definition respects_bounds: Instruction -> Prop := apply_InstructionMapper Verifier.
+Definition respects_bounds(bitwidth: Z): Instruction -> Prop :=
+  apply_InstructionMapper (Verifier bitwidth).
 
 Hint Unfold
   map_Invalid
   map_R
   map_I
-  map_I_shift
+  map_I_shift_57
+  map_I_shift_66
   map_I_system
   map_S
   map_SB
@@ -317,13 +335,14 @@ Hint Unfold
   apply_InstructionMapper
 : mappers.
 
-Goal (respects_bounds (Jal 0 3)).
+Goal (respects_bounds 32 (IInstruction (Jal 0 3))).
   simpl. unfold verify_UJ.
   (* wrong, as expected *)
 Abort.
 
-Goal (respects_bounds (Jal 0 4)).
+Goal (respects_bounds 32 (IInstruction (Jal 0 4))).
   simpl. unfold verify_UJ.
+  unfold opcode_JAL.
   cbn.
   omega.
 Qed.
@@ -332,9 +351,9 @@ Require Import bbv.HexNotationZ.
 
 (* This expression will generate a runtime exception, because the jump target is not
    a multiple of 4 *)
-Example invalid_Jal_encode_example: encode (Jal 0 3) = Ox"20006F". reflexivity. Qed.
+Example invalid_Jal_encode_example: encode (IInstruction (Jal 0 3)) = Ox"20006F". reflexivity. Qed.
 
 (* Note: The least significant bit of the jump target is not encoded, because even
    in compressed instructions, jump targets are always a multiple of 2. *)
-Example Jal_encode_loses_lsb: decode 64 (Ox"20006F") = Jal 0 2. reflexivity. Qed.
+Example Jal_encode_loses_lsb: decode RV64IM (Ox"20006F") = IInstruction (Jal 0 2). reflexivity. Qed.
 

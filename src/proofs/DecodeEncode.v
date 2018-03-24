@@ -38,16 +38,29 @@ Lemma invert_encode_I: forall {opcode rd rs1 funct3 oimm12},
   oimm12 = signExtend 12 (bitSlice inst 20 32).
 Proof. Admitted.
 
-Lemma invert_encode_I_shift: forall {opcode rd rs1 shamt5 funct3 funct7},
-  verify_I_shift opcode rd rs1 shamt5 funct3 funct7 ->
+Lemma invert_encode_I_shift_57: forall {opcode rd rs1 shamt5 funct3 funct7},
+  verify_I_shift_57 opcode rd rs1 shamt5 funct3 funct7 ->
   forall inst,
-  encode_I_shift opcode rd rs1 shamt5 funct3 funct7 = inst ->
+  encode_I_shift_57 opcode rd rs1 shamt5 funct3 funct7 = inst ->
   opcode = bitSlice inst 0 7 /\
   funct3 = bitSlice inst 12 15 /\
   funct7 = bitSlice inst 25 32 /\
   rd = bitSlice inst 7 12 /\
   rs1 = bitSlice inst 15 20 /\
   shamt5 = bitSlice inst 20 25.
+Proof. Admitted.
+
+Lemma invert_encode_I_shift_66: forall {bitwidth opcode rd rs1 shamt6 funct3 funct6},
+  verify_I_shift_66 bitwidth opcode rd rs1 shamt6 funct3 funct6 ->
+  forall inst,
+  encode_I_shift_66  opcode rd rs1 shamt6 funct3 funct6 = inst ->
+  opcode = bitSlice inst 0 7 /\
+  funct3 = bitSlice inst 12 15 /\
+  funct6 = bitSlice inst 26 32 /\
+  rd = bitSlice inst 7 12 /\
+  rs1 = bitSlice inst 15 20 /\
+  shamt6 = bitSlice inst 20 26 /\
+  ((Z.eqb (bitSlice inst 25 26) 0) || (Z.eqb bitwidth 64)) = true.
 Proof. Admitted.
 
 Lemma invert_encode_I_system: forall {opcode rd rs1 funct3 funct12},
@@ -120,91 +133,193 @@ Lemma invert_encode_Fence: forall {opcode rd rs1 funct3 prd scc msb4},
   msb4 = bitSlice inst 28 32.
 Proof. Admitted.
 
-(*
-Lemma simpl_dec_and_eq: forall (a: Z) (P: bool) (T: Type) (e1 e2 e3: T),
-  (if P then e1 else e2) = e3 ->
-  (if (a =? a) && P then e1 else e2) = e3.
-Proof.
-  intros. rewrite Z.eqb_refl. rewrite Bool.andb_true_l. assumption.
-Qed.
-
-Lemma simpl_dec_final_eq: forall (a: Z) (T: Type) (e1 e2 e3: T),
-  e1 = e3 ->
-  (if a =? a then e1 else e2) = e3.
-Proof.
-  intros. rewrite Z.eqb_refl. assumption.
-Qed.
-
-Lemma simpl_dec_and_neq: forall (a1 a2: Z) (P: bool) (T: Type) (e1 e2 e3: T),
-  a1 <> a2 ->
-  e2 = e3 ->
-  (if (a1 =? a2) && P then e1 else e2) = e3.
-Proof.
-  intros. destruct (a1 =? a2) eqn: F.
-  + apply Z.eqb_eq in F. contradiction.
-  + simpl. assumption.
-Qed.
-
-Lemma simpl_dec_and_neq_2: forall (T: Type) (a1 a2: Z) (P1 P2: bool) (e1 e2 e3: T),
-  a1 <> a2 ->
-  e2 = e3 ->
-  (if P1 && ((a1 =? a2) && P2) then e1 else e2) = e3.
-Proof.
-  intros. destruct (a1 =? a2) eqn: F.
-  + apply Z.eqb_eq in F. contradiction.
-  + rewrite Bool.andb_comm. simpl. assumption.
-Qed.
-
-Lemma simpl_dec_final_neq: forall (a1 a2: Z) (T: Type) (e1 e2 e3: T),
-  a1 <> a2 ->
-  e2 = e3 ->
-  (if a1 =? a2 then e1 else e2) = e3.
-Proof.
-  intros. destruct (a1 =? a2) eqn: F.
-  + apply Z.eqb_eq in F. contradiction.
-  + assumption.
-Qed.
-*)
-
 Ltac prove_andb_false :=
-  repeat (reflexivity || apply Bool.andb_false_r || apply Bool.andb_false_intro1).
-
+  reflexivity ||
+  match goal with
+  | E: _ = ?t |- ?t =? _ = false => rewrite <- E; reflexivity
+  end ||
+  (apply Bool.andb_false_intro1; prove_andb_false) ||
+  (apply Bool.andb_false_intro2; prove_andb_false).
+  
 Goal forall b1 b3 b4 b5, b1 && false && b3 && b4 && b5 = false. intros. prove_andb_false. Qed.
+Goal forall b1 b2 b4 b5, b1 && (b2 && false) && b4 && b5 = false. intros. prove_andb_false. Qed.
+Goal forall b1 b3 b4 b5, (b1 && (false && b3) && b4) && b5 = false. intros. prove_andb_false. Qed.
+
+Lemma andb_true: forall b1 b2,
+    b1 = true -> b2 = true -> b1 && b2 = true.
+Proof. intros. subst. reflexivity. Qed.
+
+Ltac prove_andb_true :=
+  reflexivity ||
+  assumption ||              
+  match goal with
+  | E: _ = ?t |- ?t =? _ = true => rewrite <- E; reflexivity
+  end ||
+  (apply andb_true; prove_andb_true).
+
+Goal forall b1 b2, b1 = true -> b2 = true -> true && b1 && (b2 && true) = true.
+  intros. prove_andb_true.
+Qed.
+
+Ltac invert_encode :=
+  match goal with
+  | V: context[verify_Invalid   ] |- decode _ ?inst = _ => pose proof (invert_encode_InvalidInstruction V inst eq_refl)
+  | V: context[verify_R         ] |- decode _ ?inst = _ => pose proof (invert_encode_R                  V inst eq_refl)
+  | V: context[verify_I         ] |- decode _ ?inst = _ => pose proof (invert_encode_I                  V inst eq_refl)
+  | V: context[verify_I_shift_57] |- decode _ ?inst = _ => pose proof (invert_encode_I_shift_57         V inst eq_refl)
+  | V: context[verify_I_shift_66] |- decode _ ?inst = _ => pose proof (invert_encode_I_shift_66         V inst eq_refl)
+  | V: context[verify_I_system  ] |- decode _ ?inst = _ => pose proof (invert_encode_I_system           V inst eq_refl)
+  | V: context[verify_S         ] |- decode _ ?inst = _ => pose proof (invert_encode_S                  V inst eq_refl)
+  | V: context[verify_SB        ] |- decode _ ?inst = _ => pose proof (invert_encode_SB                 V inst eq_refl)
+  | V: context[verify_U         ] |- decode _ ?inst = _ => pose proof (invert_encode_U                  V inst eq_refl)
+  | V: context[verify_UJ        ] |- decode _ ?inst = _ => pose proof (invert_encode_UJ                 V inst eq_refl)
+  | V: context[verify_Fence     ] |- decode _ ?inst = _ => pose proof (invert_encode_Fence              V inst eq_refl)
+  end.
+
+Lemma pull_let: forall {A B: Type} (a: A) (b: A -> B) (c: B),
+  let x := a in (b x = c) ->
+  (let x := a in b x) = c.
+Proof. intros. simpl. subst x. assumption. Qed.
 
 Lemma decode_encode: forall (inst: Instruction),
-  respects_bounds inst ->
-  decode 64 (encode inst) = inst.
+  respects_bounds 64 inst ->
+  decode RV64IM (encode inst) = inst.
 Proof.
-  intros. unfold encode. repeat autounfold with mappers.
+  intros.
+  let d := eval cbv delta [decode] in decode in change decode with d.
+  cbv beta.
+  repeat match goal with
+  | |- (let x := ?a in ?b) = ?c => cut (let x := a in (b = c));
+       [apply (pull_let a (fun x => b) c) | intro]
+  end.
+  unfold encode in *. repeat autounfold with mappers in *.
   Time
-  destruct inst;
+  destruct inst; [destruct i..|reflexivity];
   try reflexivity;
   simpl in H;
-  match goal with
-  | |- decode _ ?inst = _ =>
-          try pose proof (invert_encode_InvalidInstruction H inst eq_refl);
-          try pose proof (invert_encode_R H inst eq_refl);
-          try pose proof (invert_encode_I H inst eq_refl);
-          try pose proof (invert_encode_I_shift H inst eq_refl);
-          try pose proof (invert_encode_I_system H inst eq_refl);
-          try pose proof (invert_encode_S H inst eq_refl);
-          try pose proof (invert_encode_SB H inst eq_refl);
-          try pose proof (invert_encode_U H inst eq_refl);
-          try pose proof (invert_encode_UJ H inst eq_refl);
-          try pose proof (invert_encode_Fence H inst eq_refl)
-  end;
+  invert_encode;
   repeat match goal with
   | H: _ /\ _ |- _ => destruct H
-  end;
-  unfold decode;
+  end.
+
+  Focus 23.
+  let d := eval cbv delta [decode] in decode in change decode with d.
+  cbv beta.
+  unfold decode.
+{
+
+repeat lazymatch goal with
+         | |- context [if ?x then ?a else ?b] =>
+           replace x with false by (symmetry; prove_andb_false) ||
+           replace x with true  by (symmetry; prove_andb_true)
+         end.
+
+  lazymatch goal with
+         | |- context [if ?x then ?a else ?b] =>
+           replace x with true
+  end.
+
+repeat lazymatch goal with
+         | |- context [if ?x then ?a else ?b] =>
+           replace x with false (*by (symmetry; prove_andb_false) ||
+           replace x with true  by (symmetry; prove_andb_true) *)
+         end.
+
+  
+  reflexivity.
+  admit.
+
+  
+symmetry.
+
+apply andb_true.
+{
+
+  match goal with
+  | E: _ = ?t |- ?t =? _ = true => rewrite <- E; reflexivity
+  end.
+  }
+
+apply andb_true.
+{
+
+  match goal with
+  | E: _ = ?t |- ?t =? _ = true => rewrite <- E; reflexivity
+  end.
+  }
+{
+
+  match goal with
+  | E: _ = ?t |- ?t =? _ = true => rewrite <- E; reflexivity
+  end.
+  }
+}
+
+
+(apply andb_true; prove_andb_true).
+
+
+  reflexivity ||
+  assumption ||              
+  match goal with
+  | E: _ = ?t |- ?t =? _ = false => rewrite <- E; reflexivity
+  end ||
+  (apply andb_true; prove_andb_true).
+
+
+prove_andb_true.
+
+Ltac prove_andb_false2 :=
+  reflexivity ||
+  match goal with
+  | E: _ = ?t |- ?t =? _ = false => rewrite <- E; reflexivity
+  end ||
+  (apply Bool.andb_false_intro1; prove_andb_false2) ||
+  (apply Bool.andb_false_intro2; prove_andb_false2).
+
+
+prove_andb_false2.
+  
   repeat match goal with
-  | E: _ = ?x |- context [?x] => rewrite <- E
-  end;
-  repeat match goal with
-         | |- (if ?x then ?a else ?b) = ?c =>
-           replace x with false by (symmetry; prove_andb_false)
+         | |- context [if ?x then ?a else ?b] =>
+           replace x with false by (symmetry; prove_andb_false) ||
+           replace x with true  by (symmetry; prove_andb_true)
          end;
   try reflexivity.
+{
+  lazymatch goal with
+         | |- context [if ?x then ?a else ?b] =>
+           replace x with true
+  end.
+  
+admit.
+{ symmetry.
+prove_andb_false.
+Search (?b1 && ?b2 = true).
+
+Lemma andb_true: forall b1 b2,
+    b1 = true -> b2 = true -> b1 && b2 = true.
+Proof. intros. subst. reflexivity. Qed.
+
+Ltac prove_andb_true :=
+  reflexivity ||
+  assumption ||
+  (apply andb_true; prove_andb_true).
+
+Goal forall b1 b2, b1 = true -> b2 = true -> true && b1 && (b2 && true) = true.
+  intros. prove_andb_true.
+Qed.
+{
+match goal with
+         | |- context [if ?x then ?a else ?b] =>
+           replace x with true by (symmetry; prove_andb_true)
+         end.
+reflexivity.
+Focus 16.
+symmetry.
+prove_andb_false2.
+
+  cbv [List.map List.app supportsM bitwidth].
   admit. (* funct6 *)
   admit. (* funct6 *)
   admit. (* funct6 *)
