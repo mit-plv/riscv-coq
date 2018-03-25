@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
 Require Import riscv.util.Monads.
+Require Import riscv.RiscvBitWidths.
 
 (* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
    no matter whether it's a 32-bit or 64-bit machine. *)
@@ -202,3 +203,8 @@ Instance MachineWidth64: MachineWidth (word 64) := {|
   regToShamt  x := Z.of_N (wordToN (split1 6 58 x));
   highBits x := ZToWord 64 (bitSlice x 64 128);
 |}.
+
+Instance MachineWidthInst{B: RiscvBitWidths}: MachineWidth (word wXLEN).
+  unfold wXLEN.
+  destruct bitwidth; [exact MachineWidth32 | exact MachineWidth64].
+Defined.

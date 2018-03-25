@@ -208,6 +208,9 @@ Definition get{S: Type}: OState S S := fun (s: S) => (Some s, s).
 Definition gets{S A: Type}(f: S -> A): OState S A := fun (s: S) => (Some (f s), s).
 Definition put{S: Type}(s: S): OState S unit := fun _ => (Some tt, s).
 
+Definition execState{S A: Type}(m: OState S A)(initial: S): S :=
+  snd (m initial).
+
 (* T for transformer, corresponds to Haskell's MaybeT: *)
 Definition optionT(M: Type -> Type)(A: Type) := M (option A).
 
