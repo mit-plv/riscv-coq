@@ -72,11 +72,12 @@ Definition execute {p} {t} `{(RiscvState p t)}
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
                         let r := if signed_eqb y zero : bool then x else remu x y in setRegister rd r))
+    | inst => Return tt
     end.
 
 (* Unbound variables:
-     Bind RiscvState andb bool div divu getRegister highBits maxUnsigned minSigned
-     negate one op_zt__ regToZ_signed regToZ_unsigned rem remu setRegister signed_eqb
-     unit zero Decode.Div Decode.Divu Decode.InstructionM Decode.Mul Decode.Mulh
-     Decode.Mulhsu Decode.Mulhu Decode.Rem Decode.Remu
+     Bind Return RiscvState andb bool div divu getRegister highBits maxUnsigned
+     minSigned negate one op_zt__ regToZ_signed regToZ_unsigned rem remu setRegister
+     signed_eqb tt unit zero Decode.Div Decode.Divu Decode.InstructionM Decode.Mul
+     Decode.Mulh Decode.Mulhsu Decode.Mulhu Decode.Rem Decode.Remu
 *)

@@ -19,7 +19,6 @@ Local Open Scope Z_scope.
 (* Converted imports: *)
 
 Require Coq.Init.Datatypes.
-Require Coq.Lists.List.
 Require Import Coq.ZArith.BinInt.
 Require Import Utility.
 
@@ -42,7 +41,8 @@ Inductive InstructionM64 : Type
   |  Divw : Register -> Register -> Register -> InstructionM64
   |  Divuw : Register -> Register -> Register -> InstructionM64
   |  Remw : Register -> Register -> Register -> InstructionM64
-  |  Remuw : Register -> Register -> Register -> InstructionM64.
+  |  Remuw : Register -> Register -> Register -> InstructionM64
+  |  InvalidM64 : InstructionM64.
 
 Inductive InstructionM : Type
   := Mul : Register -> Register -> Register -> InstructionM
@@ -52,7 +52,8 @@ Inductive InstructionM : Type
   |  Div : Register -> Register -> Register -> InstructionM
   |  Divu : Register -> Register -> Register -> InstructionM
   |  Rem : Register -> Register -> Register -> InstructionM
-  |  Remu : Register -> Register -> Register -> InstructionM.
+  |  Remu : Register -> Register -> Register -> InstructionM
+  |  InvalidM : InstructionM.
 
 Inductive InstructionI64 : Type
   := Ld : Register -> Register -> Z -> InstructionI64
@@ -66,7 +67,8 @@ Inductive InstructionI64 : Type
   |  Subw : Register -> Register -> Register -> InstructionI64
   |  Sllw : Register -> Register -> Register -> InstructionI64
   |  Srlw : Register -> Register -> Register -> InstructionI64
-  |  Sraw : Register -> Register -> Register -> InstructionI64.
+  |  Sraw : Register -> Register -> Register -> InstructionI64
+  |  InvalidI64 : InstructionI64.
 
 Inductive InstructionI : Type
   := Lb : Register -> Register -> Z -> InstructionI
@@ -107,7 +109,8 @@ Inductive InstructionI : Type
   |  Bltu : Register -> Register -> Z -> InstructionI
   |  Bgeu : Register -> Register -> Z -> InstructionI
   |  Jalr : Register -> Register -> Z -> InstructionI
-  |  Jal : Register -> Z -> InstructionI.
+  |  Jal : Register -> Z -> InstructionI
+  |  InvalidI : InstructionI.
 
 Inductive InstructionCSR : Type
   := Ecall : InstructionCSR
@@ -122,7 +125,8 @@ Inductive InstructionCSR : Type
   |  Csrrc : Register -> Register -> Z -> InstructionCSR
   |  Csrrwi : Register -> Z -> Z -> InstructionCSR
   |  Csrrsi : Register -> Z -> Z -> InstructionCSR
-  |  Csrrci : Register -> Z -> Z -> InstructionCSR.
+  |  Csrrci : Register -> Z -> Z -> InstructionCSR
+  |  InvalidCSR : InstructionCSR.
 
 Inductive Instruction : Type
   := IInstruction : InstructionI -> Instruction
@@ -628,244 +632,257 @@ Definition decode : InstructionSet -> Z -> Instruction :=
     let opcode := bitSlice inst 0 7 in
     let decodeI :=
       if andb (Z.eqb opcode opcode_LOAD) (Z.eqb funct3 funct3_LB) : bool
-      then cons (Lb rd rs1 oimm12) nil else
+      then Lb rd rs1 oimm12 else
       if andb (Z.eqb opcode opcode_LOAD) (Z.eqb funct3 funct3_LH) : bool
-      then cons (Lh rd rs1 oimm12) nil else
+      then Lh rd rs1 oimm12 else
       if andb (Z.eqb opcode opcode_LOAD) (Z.eqb funct3 funct3_LW) : bool
-      then cons (Lw rd rs1 oimm12) nil else
+      then Lw rd rs1 oimm12 else
       if andb (Z.eqb opcode opcode_LOAD) (Z.eqb funct3 funct3_LBU) : bool
-      then cons (Lbu rd rs1 oimm12) nil else
+      then Lbu rd rs1 oimm12 else
       if andb (Z.eqb opcode opcode_LOAD) (Z.eqb funct3 funct3_LHU) : bool
-      then cons (Lhu rd rs1 oimm12) nil else
+      then Lhu rd rs1 oimm12 else
       if andb (Z.eqb opcode opcode_MISC_MEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
                                                                              funct3_FENCE) (andb (Z.eqb rs1 0) (Z.eqb
                                                                                                   msb4 0)))) : bool
-      then cons (Fence pred succ) nil else
+      then Fence pred succ else
       if andb (Z.eqb opcode opcode_MISC_MEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
                                                                              funct3_FENCE_I) (andb (Z.eqb rs1 0) (Z.eqb
                                                                                                     imm12 0)))) : bool
-      then cons Fence_i nil else
+      then Fence_i else
       if andb (Z.eqb opcode opcode_OP_IMM) (Z.eqb funct3 funct3_ADDI) : bool
-      then cons (Addi rd rs1 imm12) nil else
+      then Addi rd rs1 imm12 else
       if andb (Z.eqb opcode opcode_OP_IMM) (Z.eqb funct3 funct3_SLTI) : bool
-      then cons (Slti rd rs1 imm12) nil else
+      then Slti rd rs1 imm12 else
       if andb (Z.eqb opcode opcode_OP_IMM) (Z.eqb funct3 funct3_SLTIU) : bool
-      then cons (Sltiu rd rs1 imm12) nil else
+      then Sltiu rd rs1 imm12 else
       if andb (Z.eqb opcode opcode_OP_IMM) (Z.eqb funct3 funct3_XORI) : bool
-      then cons (Xori rd rs1 imm12) nil else
+      then Xori rd rs1 imm12 else
       if andb (Z.eqb opcode opcode_OP_IMM) (Z.eqb funct3 funct3_ORI) : bool
-      then cons (Ori rd rs1 imm12) nil else
+      then Ori rd rs1 imm12 else
       if andb (Z.eqb opcode opcode_OP_IMM) (Z.eqb funct3 funct3_ANDI) : bool
-      then cons (Andi rd rs1 imm12) nil else
+      then Andi rd rs1 imm12 else
       if andb (Z.eqb opcode opcode_OP_IMM) (andb (Z.eqb funct3 funct3_SLLI) (andb
                                                   (Z.eqb funct6 funct6_SLLI) shamtHiTest)) : bool
-      then cons (Slli rd rs1 shamt6) nil else
+      then Slli rd rs1 shamt6 else
       if andb (Z.eqb opcode opcode_OP_IMM) (andb (Z.eqb funct3 funct3_SRLI) (andb
                                                   (Z.eqb funct6 funct6_SRLI) shamtHiTest)) : bool
-      then cons (Srli rd rs1 shamt6) nil else
+      then Srli rd rs1 shamt6 else
       if andb (Z.eqb opcode opcode_OP_IMM) (andb (Z.eqb funct3 funct3_SRAI) (andb
                                                   (Z.eqb funct6 funct6_SRAI) shamtHiTest)) : bool
-      then cons (Srai rd rs1 shamt6) nil else
-      if Z.eqb opcode opcode_AUIPC : bool then cons (Auipc rd oimm20) nil else
+      then Srai rd rs1 shamt6 else
+      if Z.eqb opcode opcode_AUIPC : bool then Auipc rd oimm20 else
       if andb (Z.eqb opcode opcode_STORE) (Z.eqb funct3 funct3_SB) : bool
-      then cons (Sb rs1 rs2 simm12) nil else
+      then Sb rs1 rs2 simm12 else
       if andb (Z.eqb opcode opcode_STORE) (Z.eqb funct3 funct3_SH) : bool
-      then cons (Sh rs1 rs2 simm12) nil else
+      then Sh rs1 rs2 simm12 else
       if andb (Z.eqb opcode opcode_STORE) (Z.eqb funct3 funct3_SW) : bool
-      then cons (Sw rs1 rs2 simm12) nil else
+      then Sw rs1 rs2 simm12 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_ADD) (Z.eqb funct7
                                                                               funct7_ADD)) : bool
-      then cons (Add rd rs1 rs2) nil else
+      then Add rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_SUB) (Z.eqb funct7
                                                                               funct7_SUB)) : bool
-      then cons (Sub rd rs1 rs2) nil else
+      then Sub rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_SLL) (Z.eqb funct7
                                                                               funct7_SLL)) : bool
-      then cons (Sll rd rs1 rs2) nil else
+      then Sll rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_SLT) (Z.eqb funct7
                                                                               funct7_SLT)) : bool
-      then cons (Slt rd rs1 rs2) nil else
+      then Slt rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_SLTU) (Z.eqb funct7
                                                                                funct7_SLTU)) : bool
-      then cons (Sltu rd rs1 rs2) nil else
+      then Sltu rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_XOR) (Z.eqb funct7
                                                                               funct7_XOR)) : bool
-      then cons (Xor rd rs1 rs2) nil else
+      then Xor rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_SRL) (Z.eqb funct7
                                                                               funct7_SRL)) : bool
-      then cons (Srl rd rs1 rs2) nil else
+      then Srl rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_SRA) (Z.eqb funct7
                                                                               funct7_SRA)) : bool
-      then cons (Sra rd rs1 rs2) nil else
+      then Sra rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_OR) (Z.eqb funct7
                                                                              funct7_OR)) : bool
-      then cons (Or rd rs1 rs2) nil else
+      then Or rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_AND) (Z.eqb funct7
                                                                               funct7_AND)) : bool
-      then cons (And rd rs1 rs2) nil else
-      if Z.eqb opcode opcode_LUI : bool then cons (Lui rd imm20) nil else
+      then And rd rs1 rs2 else
+      if Z.eqb opcode opcode_LUI : bool then Lui rd imm20 else
       if andb (Z.eqb opcode opcode_BRANCH) (Z.eqb funct3 funct3_BEQ) : bool
-      then cons (Beq rs1 rs2 sbimm12) nil else
+      then Beq rs1 rs2 sbimm12 else
       if andb (Z.eqb opcode opcode_BRANCH) (Z.eqb funct3 funct3_BNE) : bool
-      then cons (Bne rs1 rs2 sbimm12) nil else
+      then Bne rs1 rs2 sbimm12 else
       if andb (Z.eqb opcode opcode_BRANCH) (Z.eqb funct3 funct3_BLT) : bool
-      then cons (Blt rs1 rs2 sbimm12) nil else
+      then Blt rs1 rs2 sbimm12 else
       if andb (Z.eqb opcode opcode_BRANCH) (Z.eqb funct3 funct3_BGE) : bool
-      then cons (Bge rs1 rs2 sbimm12) nil else
+      then Bge rs1 rs2 sbimm12 else
       if andb (Z.eqb opcode opcode_BRANCH) (Z.eqb funct3 funct3_BLTU) : bool
-      then cons (Bltu rs1 rs2 sbimm12) nil else
+      then Bltu rs1 rs2 sbimm12 else
       if andb (Z.eqb opcode opcode_BRANCH) (Z.eqb funct3 funct3_BGEU) : bool
-      then cons (Bgeu rs1 rs2 sbimm12) nil else
-      if Z.eqb opcode opcode_JALR : bool then cons (Jalr rd rs1 oimm12) nil else
-      if Z.eqb opcode opcode_JAL : bool then cons (Jal rd jimm20) nil else
-      nil in
+      then Bgeu rs1 rs2 sbimm12 else
+      if Z.eqb opcode opcode_JALR : bool then Jalr rd rs1 oimm12 else
+      if Z.eqb opcode opcode_JAL : bool then Jal rd jimm20 else
+      InvalidI in
     let decodeM :=
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_MUL) (Z.eqb funct7
                                                                               funct7_MUL)) : bool
-      then cons (Mul rd rs1 rs2) nil else
+      then Mul rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_MULH) (Z.eqb funct7
                                                                                funct7_MULH)) : bool
-      then cons (Mulh rd rs1 rs2) nil else
+      then Mulh rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_MULHSU) (Z.eqb
                                               funct7 funct7_MULHSU)) : bool
-      then cons (Mulhsu rd rs1 rs2) nil else
+      then Mulhsu rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_MULHU) (Z.eqb funct7
                                                                                 funct7_MULHU)) : bool
-      then cons (Mulhu rd rs1 rs2) nil else
+      then Mulhu rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_DIV) (Z.eqb funct7
                                                                               funct7_DIV)) : bool
-      then cons (Div rd rs1 rs2) nil else
+      then Div rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_DIVU) (Z.eqb funct7
                                                                                funct7_DIVU)) : bool
-      then cons (Divu rd rs1 rs2) nil else
+      then Divu rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_REM) (Z.eqb funct7
                                                                               funct7_REM)) : bool
-      then cons (Rem rd rs1 rs2) nil else
+      then Rem rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP) (andb (Z.eqb funct3 funct3_REMU) (Z.eqb funct7
                                                                                funct7_REMU)) : bool
-      then cons (Remu rd rs1 rs2) nil else
-      nil in
+      then Remu rd rs1 rs2 else
+      InvalidM in
     let decodeI64 :=
       if andb (Z.eqb opcode opcode_LOAD) (Z.eqb funct3 funct3_LD) : bool
-      then cons (Ld rd rs1 oimm12) nil else
+      then Ld rd rs1 oimm12 else
       if andb (Z.eqb opcode opcode_LOAD) (Z.eqb funct3 funct3_LWU) : bool
-      then cons (Lwu rd rs1 oimm12) nil else
+      then Lwu rd rs1 oimm12 else
       if andb (Z.eqb opcode opcode_OP_IMM_32) (Z.eqb funct3 funct3_ADDIW) : bool
-      then cons (Addiw rd rs1 imm12) nil else
+      then Addiw rd rs1 imm12 else
       if andb (Z.eqb opcode opcode_OP_IMM_32) (andb (Z.eqb funct3 funct3_SLLIW) (Z.eqb
                                                      funct7 funct7_SLLIW)) : bool
-      then cons (Slliw rd rs1 shamt5) nil else
+      then Slliw rd rs1 shamt5 else
       if andb (Z.eqb opcode opcode_OP_IMM_32) (andb (Z.eqb funct3 funct3_SRLIW) (Z.eqb
                                                      funct7 funct7_SRLIW)) : bool
-      then cons (Srliw rd rs1 shamt5) nil else
+      then Srliw rd rs1 shamt5 else
       if andb (Z.eqb opcode opcode_OP_IMM_32) (andb (Z.eqb funct3 funct3_SRAIW) (Z.eqb
                                                      funct7 funct7_SRAIW)) : bool
-      then cons (Sraiw rd rs1 shamt5) nil else
+      then Sraiw rd rs1 shamt5 else
       if andb (Z.eqb opcode opcode_STORE) (Z.eqb funct3 funct3_SD) : bool
-      then cons (Sd rs1 rs2 simm12) nil else
+      then Sd rs1 rs2 simm12 else
       if andb (Z.eqb opcode opcode_OP_32) (andb (Z.eqb funct3 funct3_ADDW) (Z.eqb
                                                  funct7 funct7_ADDW)) : bool
-      then cons (Addw rd rs1 rs2) nil else
+      then Addw rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP_32) (andb (Z.eqb funct3 funct3_SUBW) (Z.eqb
                                                  funct7 funct7_SUBW)) : bool
-      then cons (Subw rd rs1 rs2) nil else
+      then Subw rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP_32) (andb (Z.eqb funct3 funct3_SLLW) (Z.eqb
                                                  funct7 funct7_SLLW)) : bool
-      then cons (Sllw rd rs1 rs2) nil else
+      then Sllw rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP_32) (andb (Z.eqb funct3 funct3_SRLW) (Z.eqb
                                                  funct7 funct7_SRLW)) : bool
-      then cons (Srlw rd rs1 rs2) nil else
+      then Srlw rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP_32) (andb (Z.eqb funct3 funct3_SRAW) (Z.eqb
                                                  funct7 funct7_SRAW)) : bool
-      then cons (Sraw rd rs1 rs2) nil else
-      nil in
+      then Sraw rd rs1 rs2 else
+      InvalidI64 in
     let decodeM64 :=
       if andb (Z.eqb opcode opcode_OP_32) (andb (Z.eqb funct3 funct3_MULW) (Z.eqb
                                                  funct7 funct7_MULW)) : bool
-      then cons (Mulw rd rs1 rs2) nil else
+      then Mulw rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP_32) (andb (Z.eqb funct3 funct3_DIVW) (Z.eqb
                                                  funct7 funct7_DIVW)) : bool
-      then cons (Divw rd rs1 rs2) nil else
+      then Divw rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP_32) (andb (Z.eqb funct3 funct3_DIVUW) (Z.eqb
                                                  funct7 funct7_DIVUW)) : bool
-      then cons (Divuw rd rs1 rs2) nil else
+      then Divuw rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP_32) (andb (Z.eqb funct3 funct3_REMW) (Z.eqb
                                                  funct7 funct7_REMW)) : bool
-      then cons (Remw rd rs1 rs2) nil else
+      then Remw rd rs1 rs2 else
       if andb (Z.eqb opcode opcode_OP_32) (andb (Z.eqb funct3 funct3_REMUW) (Z.eqb
                                                  funct7 funct7_REMUW)) : bool
-      then cons (Remuw rd rs1 rs2) nil else
-      nil in
+      then Remuw rd rs1 rs2 else
+      InvalidM64 in
     let decodeCSR :=
       if andb (Z.eqb opcode opcode_SYSTEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
                                                                            funct3_PRIV) (Z.eqb funct7
                                                                                                funct7_SFENCE_VM))) : bool
-      then cons (Sfence_vm rs1 rs2) nil else
+      then Sfence_vm rs1 rs2 else
       if andb (Z.eqb opcode opcode_SYSTEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
                                                                            funct3_PRIV) (andb (Z.eqb rs1 0) (Z.eqb
                                                                                                funct12
                                                                                                funct12_ECALL)))) : bool
-      then cons Ecall nil else
+      then Ecall else
       if andb (Z.eqb opcode opcode_SYSTEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
                                                                            funct3_PRIV) (andb (Z.eqb rs1 0) (Z.eqb
                                                                                                funct12
                                                                                                funct12_EBREAK)))) : bool
-      then cons Ebreak nil else
+      then Ebreak else
       if andb (Z.eqb opcode opcode_SYSTEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
                                                                            funct3_PRIV) (andb (Z.eqb rs1 0) (Z.eqb
                                                                                                funct12
                                                                                                funct12_URET)))) : bool
-      then cons Uret nil else
+      then Uret else
       if andb (Z.eqb opcode opcode_SYSTEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
                                                                            funct3_PRIV) (andb (Z.eqb rs1 0) (Z.eqb
                                                                                                funct12
                                                                                                funct12_SRET)))) : bool
-      then cons Sret nil else
+      then Sret else
       if andb (Z.eqb opcode opcode_SYSTEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
                                                                            funct3_PRIV) (andb (Z.eqb rs1 0) (Z.eqb
                                                                                                funct12
                                                                                                funct12_MRET)))) : bool
-      then cons Mret nil else
+      then Mret else
       if andb (Z.eqb opcode opcode_SYSTEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
                                                                            funct3_PRIV) (andb (Z.eqb rs1 0) (Z.eqb
                                                                                                funct12
                                                                                                funct12_WFI)))) : bool
-      then cons Wfi nil else
+      then Wfi else
       if andb (Z.eqb opcode opcode_SYSTEM) (Z.eqb funct3 funct3_CSRRW) : bool
-      then cons (Csrrw rd rs1 csr12) nil else
+      then Csrrw rd rs1 csr12 else
       if andb (Z.eqb opcode opcode_SYSTEM) (Z.eqb funct3 funct3_CSRRS) : bool
-      then cons (Csrrs rd rs1 csr12) nil else
+      then Csrrs rd rs1 csr12 else
       if andb (Z.eqb opcode opcode_SYSTEM) (Z.eqb funct3 funct3_CSRRC) : bool
-      then cons (Csrrc rd rs1 csr12) nil else
+      then Csrrc rd rs1 csr12 else
       if andb (Z.eqb opcode opcode_SYSTEM) (Z.eqb funct3 funct3_CSRRWI) : bool
-      then cons (Csrrwi rd zimm csr12) nil else
+      then Csrrwi rd zimm csr12 else
       if andb (Z.eqb opcode opcode_SYSTEM) (Z.eqb funct3 funct3_CSRRSI) : bool
-      then cons (Csrrsi rd zimm csr12) nil else
+      then Csrrsi rd zimm csr12 else
       if andb (Z.eqb opcode opcode_SYSTEM) (Z.eqb funct3 funct3_CSRRCI) : bool
-      then cons (Csrrci rd zimm csr12) nil else
-      nil in
-    let resultCSR := Coq.Lists.List.map CSRInstruction decodeCSR in
-    let resultM64 := Coq.Lists.List.map M64Instruction decodeM64 in
-    let resultI64 := Coq.Lists.List.map I64Instruction decodeI64 in
-    let resultM := Coq.Lists.List.map MInstruction decodeM in
-    let resultI := Coq.Lists.List.map IInstruction decodeI in
+      then Csrrci rd zimm csr12 else
+      InvalidCSR in
+    let resultCSR :=
+      match decodeCSR with
+      | InvalidCSR => nil
+      | inst => cons (CSRInstruction inst) nil
+      end in
+    let resultM64 :=
+      match decodeM64 with
+      | InvalidM64 => nil
+      | inst =>
+          if andb (Z.eqb (bitwidth iset) 64) (supportsM iset) : bool
+          then cons (M64Instruction inst) nil
+          else nil
+      end in
+    let resultI64 :=
+      match decodeI64 with
+      | InvalidI64 => nil
+      | inst =>
+          if Z.eqb (bitwidth iset) 64 : bool
+          then cons (I64Instruction inst) nil
+          else nil
+      end in
+    let resultM :=
+      match decodeM with
+      | InvalidM => nil
+      | inst => if supportsM iset : bool then cons (MInstruction inst) nil else nil
+      end in
+    let resultI :=
+      match decodeI with
+      | InvalidI => nil
+      | inst => cons (IInstruction inst) nil
+      end in
     let results : list Instruction :=
-      Coq.Init.Datatypes.app resultI (Coq.Init.Datatypes.app (if supportsM iset : bool
-                                                              then resultM
-                                                              else nil) (Coq.Init.Datatypes.app (if Z.eqb (bitwidth
-                                                                                                           iset)
-                                                                                                          64 : bool
-                                                                                                 then resultI64
-                                                                                                 else nil)
-                                                                                                (Coq.Init.Datatypes.app
-                                                                                                 (if andb (Z.eqb
-                                                                                                           (bitwidth
-                                                                                                            iset) 64)
-                                                                                                          (supportsM
-                                                                                                           iset) : bool
-                                                                                                  then resultM64
-                                                                                                  else nil)
-                                                                                                 resultCSR))) in
+      Coq.Init.Datatypes.app resultI (Coq.Init.Datatypes.app resultM
+                                                             (Coq.Init.Datatypes.app resultI64 (Coq.Init.Datatypes.app
+                                                                                      resultM64 resultCSR))) in
     match results with
     | cons singleResult nil => singleResult
     | nil => InvalidInstruction
@@ -874,5 +891,5 @@ Definition decode : InstructionSet -> Z -> Instruction :=
 
 (* Unbound variables:
      Z Z.eqb Z.lor Z.shiftl andb bitSlice bool cons false list machineIntToShamt nil
-     orb signExtend true Coq.Init.Datatypes.app Coq.Lists.List.map
+     orb signExtend true Coq.Init.Datatypes.app
 *)

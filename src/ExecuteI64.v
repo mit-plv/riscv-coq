@@ -68,12 +68,13 @@ Definition execute {p} {t} `{(RiscvState p t)}
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
                         setRegister rd (s32 (sra (s32 x) (regToShamt5 y)))))
+    | inst => Return tt
     end.
 
 (* Unbound variables:
-     Bind Load RiscvState Store eight four fromImm getRegister int64ToReg loadDouble
-     loadWord op_zm__ op_zp__ regToInt64 regToShamt5 s32 setRegister sll sra srl
-     storeDouble translate u32 uInt32ToReg unit Decode.Addiw Decode.Addw
+     Bind Load Return RiscvState Store eight four fromImm getRegister int64ToReg
+     loadDouble loadWord op_zm__ op_zp__ regToInt64 regToShamt5 s32 setRegister sll
+     sra srl storeDouble translate tt u32 uInt32ToReg unit Decode.Addiw Decode.Addw
      Decode.InstructionI64 Decode.Ld Decode.Lwu Decode.Sd Decode.Slliw Decode.Sllw
      Decode.Sraiw Decode.Sraw Decode.Srliw Decode.Srlw Decode.Subw
 *)

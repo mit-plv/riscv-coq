@@ -195,11 +195,12 @@ Proof.
   | x := ?t : ?T |- _ => assert (x = t) by (subst x; reflexivity); clearbody x
   end.
   unfold encode in *. repeat autounfold with mappers in *.
-  Time
   destruct inst; [destruct i..|subst; reflexivity];
   try reflexivity;
+  abstract (time (
   simpl in H;
   invert_encode;
+  try (exfalso; assumption);
   repeat match goal with
          | H: _ /\ _ |- _ =>
            let E := fresh "E" in
@@ -214,5 +215,8 @@ Proof.
            (replace x with false by (symmetry; prove_andb_false)) ||
            (replace x with true  by (symmetry; prove_andb_true))
          end;
-  try reflexivity.
+  (reflexivity || (idtac "Failed to solve:"; match goal with
+                   | |- ?G => idtac G
+                   end))
+  )).
 Time Qed.
