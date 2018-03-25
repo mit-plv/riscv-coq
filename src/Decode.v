@@ -523,6 +523,21 @@ Definition funct7_SUBW : Z :=
 Definition funct7_XOR : Z :=
   0.
 
+Definition isValidCSR :=
+  fun inst => match inst with | InvalidCSR => false | _ => true end.
+
+Definition isValidI :=
+  fun inst => match inst with | InvalidI => false | _ => true end.
+
+Definition isValidI64 :=
+  fun inst => match inst with | InvalidI64 => false | _ => true end.
+
+Definition isValidM :=
+  fun inst => match inst with | InvalidM => false | _ => true end.
+
+Definition isValidM64 :=
+  fun inst => match inst with | InvalidM64 => false | _ => true end.
+
 Definition opcode_AMO : Opcode :=
   47.
 
@@ -849,40 +864,42 @@ Definition decode : InstructionSet -> Z -> Instruction :=
       then Csrrci rd zimm csr12 else
       InvalidCSR in
     let resultCSR :=
-      match decodeCSR with
-      | InvalidCSR => nil
-      | inst => cons (CSRInstruction inst) nil
-      end in
+      if isValidCSR decodeCSR : bool
+      then cons (CSRInstruction decodeCSR) nil
+      else nil in
     let resultM64 :=
-      match decodeM64 with
-      | InvalidM64 => nil
-      | inst =>
-          if andb (Z.eqb (bitwidth iset) 64) (supportsM iset) : bool
-          then cons (M64Instruction inst) nil
-          else nil
-      end in
+      if isValidM64 decodeM64 : bool
+      then cons (M64Instruction decodeM64) nil
+      else nil in
     let resultI64 :=
-      match decodeI64 with
-      | InvalidI64 => nil
-      | inst =>
-          if Z.eqb (bitwidth iset) 64 : bool
-          then cons (I64Instruction inst) nil
-          else nil
-      end in
+      if isValidI64 decodeI64 : bool
+      then cons (I64Instruction decodeI64) nil
+      else nil in
     let resultM :=
-      match decodeM with
-      | InvalidM => nil
-      | inst => if supportsM iset : bool then cons (MInstruction inst) nil else nil
-      end in
+      if isValidM decodeM : bool
+      then cons (MInstruction decodeM) nil
+      else nil in
     let resultI :=
-      match decodeI with
-      | InvalidI => nil
-      | inst => cons (IInstruction inst) nil
-      end in
+      if isValidI decodeI : bool
+      then cons (IInstruction decodeI) nil
+      else nil in
     let results : list Instruction :=
-      Coq.Init.Datatypes.app resultI (Coq.Init.Datatypes.app resultM
-                                                             (Coq.Init.Datatypes.app resultI64 (Coq.Init.Datatypes.app
-                                                                                      resultM64 resultCSR))) in
+      Coq.Init.Datatypes.app resultI (Coq.Init.Datatypes.app (if supportsM iset : bool
+                                                              then resultM
+                                                              else nil) (Coq.Init.Datatypes.app (if Z.eqb (bitwidth
+                                                                                                           iset)
+                                                                                                          64 : bool
+                                                                                                 then resultI64
+                                                                                                 else nil)
+                                                                                                (Coq.Init.Datatypes.app
+                                                                                                 (if andb (Z.eqb
+                                                                                                           (bitwidth
+                                                                                                            iset) 64)
+                                                                                                          (supportsM
+                                                                                                           iset) : bool
+                                                                                                  then resultM64
+                                                                                                  else nil)
+                                                                                                 resultCSR))) in
     match results with
     | cons singleResult nil => singleResult
     | nil => InvalidInstruction

@@ -1,4 +1,5 @@
 rewrite forall x y, x GHC.Base.== y = Utility.signed_eqb x y
+rewrite forall x y, x GHC.Base./= y = x /= y
 rewrite forall, GHC.Num.fromInteger 0 = zero
 rewrite forall, GHC.Num.fromInteger 1 = one
 rewrite forall, GHC.Num.fromInteger 2 = two

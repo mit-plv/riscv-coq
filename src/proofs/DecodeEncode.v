@@ -197,7 +197,7 @@ Proof.
   unfold encode in *. repeat autounfold with mappers in *.
   destruct inst; [destruct i..|subst; reflexivity];
   try reflexivity;
-  abstract (time (
+  try (time (
   simpl in H;
   invert_encode;
   try (exfalso; assumption);
@@ -211,9 +211,9 @@ Proof.
   end;
   subst;
   repeat lazymatch goal with
-         | |- context [if ?x then ?a else ?b] =>
-           (replace x with false by (symmetry; prove_andb_false)) ||
-           (replace x with true  by (symmetry; prove_andb_true))
+         | |- context [if (?x && ?y) then ?a else ?b] =>
+           (replace (x && y) with false by (symmetry; prove_andb_false)) ||
+           (replace (x && y) with true  by (symmetry; prove_andb_true))
          end;
   (reflexivity || (idtac "Failed to solve:"; match goal with
                    | |- ?G => idtac G

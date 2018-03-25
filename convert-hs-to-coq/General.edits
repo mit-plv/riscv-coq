@@ -12,7 +12,6 @@ rename value GHC.Base.when = Utility.when
 
 rewrite forall x y, x GHC.Base.< y = x < y
 rewrite forall x y, x GHC.Base.>= y = x >= y
-rewrite forall x y, x GHC.Base./= y = x /= y
 rewrite forall x y, x GHC.Num.- y = x - y
 rewrite forall x y, x GHC.Num.+ y = x + y
 rewrite forall x y, x GHC.Num.* y = x * y
