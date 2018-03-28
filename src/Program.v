@@ -1,4 +1,3 @@
-Require Import riscv.util.NameWithEq.
 Require Import riscv.util.Monads.
 Require Import riscv.Utility.
 Require Import Coq.ZArith.BinInt.

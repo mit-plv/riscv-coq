@@ -4,7 +4,6 @@ Require Import bbv.WordScope.
 Require Import bbv.BinNotationZ.
 Require Import riscv.RiscvBitWidths.
 Require Import riscv.Decode.
-Require Import riscv.util.NameWithEq.
 Require Import riscv.Utility.
 
 

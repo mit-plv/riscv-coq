@@ -1,6 +1,5 @@
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
-Require Import riscv.util.Decidable.
 Require Import riscv.Decode.
 Require Import riscv.encode.Encode.
 Require Import riscv.Utility.

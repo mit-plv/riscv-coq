@@ -1,7 +1,5 @@
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.WordScope.
-Require Import bbv.DepEqNat.
-Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
 Require Import riscv.util.Monads.
 Require Import riscv.Decode.
@@ -26,10 +24,6 @@ Section Riscv.
   Context {RF: Type}.
   Context {RFI: RegisterFile RF Register (word wXLEN)}.
   
-  Instance ZName: NameWithEq := {|
-    name := Z
-  |}.
-
   Definition Log := list (word wXLEN). (* just load addresses for now *)
   
   Record RiscvMachineL := mkRiscvMachineL {

@@ -1,7 +1,5 @@
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.WordScope.
-Require Import bbv.DepEqNat.
-Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
 Require Import riscv.util.Monads.
 Require Import riscv.Decode.
@@ -19,10 +17,6 @@ Section Riscv.
   Context {MW: MachineWidth (word wXLEN)}.
 
   Definition Register0: Register := 0%Z.
-
-  Instance ZName: NameWithEq := {|
-    name := Z
-  |}.
 
   Context {M: Type -> Type}.
   Context {MM: Monad M}.

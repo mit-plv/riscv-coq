@@ -1,7 +1,5 @@
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.WordScope.
-Require Import bbv.DepEqNat.
-Require Import riscv.util.NameWithEq.
 Require Import riscv.RiscvBitWidths.
 Require Import riscv.util.Monads.
 Require Import riscv.Decode.
@@ -35,10 +33,6 @@ Section Riscv.
   Context {RF: Type}.
   Context {RFI: RegisterFile RF Register (word wXLEN)}.
   
-  Instance ZName: NameWithEq := {|
-    name := Z
-  |}.
-
   Record RiscvMachineCore := mkRiscvMachineCore {
     registers: RF;
     pc: word wXLEN;
@@ -80,14 +74,14 @@ Section Riscv.
   Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) (word wXLEN) :=
   {|
       getRegister reg :=
-        if dec (reg = Register0) then
+        if Z.eq_dec reg Register0 then
           Return $0
         else
           machine <- get;
           Return (getReg machine.(core).(registers) reg);
 
       setRegister reg v :=
-        if dec (reg = Register0) then
+        if Z.eq_dec reg Register0 then
           Return tt
         else
           machine <- get;

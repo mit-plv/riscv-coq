@@ -1,5 +1,4 @@
 Require Import bbv.Word.
-Require Import riscv.util.Decidable.
 Require Import Coq.Lists.List.
 
 Section Memory.
@@ -12,7 +11,7 @@ Section Memory.
 
   Definition write_mem(x: word w)(v: word w)(m: mem): option (mem) :=
     match m x with
-    | Some old_value => Some (fun y => if dec (x = y) then Some v else m y)
+    | Some old_value => Some (fun y => if weqb x y then Some v else m y)
     | None => None
     end.
 

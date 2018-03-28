@@ -4,7 +4,6 @@ Require Import Coq.Lists.List.
 Require Import Coq.omega.Omega.
 Require Import bbv.Word.
 Require Import Coq.ZArith.BinInt.
-Require Import riscv.util.Decidable.
 Require Import riscv.Utility.
 Require Import riscv.util.Monads.
 Require Import riscv.Memory.
