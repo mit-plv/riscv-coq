@@ -23,6 +23,9 @@ Section Riscv.
 
   Context {MemIsMem: Memory Mem (word wXLEN)}.
 
+  Context {RF: Type}.
+  Context {RFI: RegisterFile RF Register (word wXLEN)}.
+  
   Instance ZName: NameWithEq := {|
     name := Z
   |}.
@@ -30,7 +33,7 @@ Section Riscv.
   Definition Log := list (word wXLEN). (* just load addresses for now *)
   
   Record RiscvMachineL := mkRiscvMachineL {
-    machine: @RiscvMachine _ Mem;
+    machine: @RiscvMachine _ Mem RF;
     log: Log;
   }.
 

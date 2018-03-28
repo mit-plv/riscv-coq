@@ -12,6 +12,14 @@ Require Import riscv.util.PowerFunc.
 Require Import riscv.Utility.
 Require Import Coq.Lists.List.
 
+Class RegisterFile{RF R V: Type} := mkRegisterFile {
+  getReg: RF -> R -> V;
+  setReg: RF -> R -> V -> RF;
+  initialRegs: RF;
+}.
+
+Arguments RegisterFile: clear implicits.
+
 Section Riscv.
 
   Context {B: RiscvBitWidths}.
@@ -24,12 +32,15 @@ Section Riscv.
 
   Definition Register0: Register := 0%Z.
 
+  Context {RF: Type}.
+  Context {RFI: RegisterFile RF Register (word wXLEN)}.
+  
   Instance ZName: NameWithEq := {|
     name := Z
   |}.
 
   Record RiscvMachineCore := mkRiscvMachineCore {
-    registers: Register -> word wXLEN;
+    registers: RF;
     pc: word wXLEN;
     nextPC: word wXLEN;
     exceptionHandlerAddr: MachineInt;
@@ -68,25 +79,24 @@ Section Riscv.
   
   Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) (word wXLEN) :=
   {|
-      getRegister := fun (reg: Register) =>
+      getRegister reg :=
         if dec (reg = Register0) then
           Return $0
         else
-          machine <- get; Return (machine.(core).(registers) reg);
+          machine <- get;
+          Return (getReg machine.(core).(registers) reg);
 
-      setRegister := fun (reg: Register) v =>
+      setRegister reg v :=
         if dec (reg = Register0) then
           Return tt
         else
           machine <- get;
-          let newRegs := (fun reg2 => if dec (reg = reg2)
-                                      then v
-                                      else machine.(core).(registers) reg2) in
+          let newRegs := setReg machine.(core).(registers) reg v in
           put (with_registers newRegs machine);
 
       getPC := machine <- get; Return machine.(core).(pc);
 
-      setPC := fun newPC =>
+      setPC newPC :=
         machine <- get;
         put (with_nextPC newPC machine);
 

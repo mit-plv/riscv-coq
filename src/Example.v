@@ -15,6 +15,13 @@ Require Import riscv.util.Monads.
 
 Existing Instance DefaultRiscvState.
 
+Instance FunctionRegisterFile: RegisterFile (Register -> word wXLEN) Register (word wXLEN) := {|
+  getReg(rf: Register -> word wXLEN) := rf;
+  setReg(rf: Register -> word wXLEN)(r: Register)(v: word wXLEN) :=
+    fun r' => if (Z.eqb r' r) then v else rf r';
+  initialRegs := fun r => $0;
+|}.
+
 Definition fib6_riscv: list MachineInt := [ (* TODO should be "word 32", not MachineInt *)
   Ox"00600993";         (* li s3,6 *)
   Ox"00000a13";         (* li s4,0 *)
@@ -45,12 +52,12 @@ Goal False.
   (* decoder seems to work :) *)
 Abort.
 
-Definition RiscvMachine := @RiscvMachine _ (mem 32).
+Definition RiscvMachine := @RiscvMachine _ (mem 32) (Register -> word wXLEN).
 
 (* This example uses the memory only as instruction memory
    TODO make an example which uses memory to store data *)
 Definition zeroedRiscvMachineCore: RiscvMachineCore := {|
-  registers := fun (r: Register) => $0;
+  registers := initialRegs;
   pc := $0;
   nextPC := $4;
   exceptionHandlerAddr := 3;
@@ -99,4 +106,3 @@ Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_L_res fuel = $13.
   exists 50%nat.
   reflexivity.
 Qed.
-
