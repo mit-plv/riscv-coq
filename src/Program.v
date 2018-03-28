@@ -7,42 +7,42 @@ Require Import Decode.
 
 Inductive AccessType: Set := Instr | Load | Store.
 
-  Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
-    getRegister: Register -> M t;
-    setRegister: Register -> t -> M unit;
+Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
+  getRegister: Register -> M t;
+  setRegister: Register -> t -> M unit;
 
-    loadByte: t -> M (word 8);
-    loadHalf: t -> M (word 16);
-    loadWord: t -> M (word 32);
-    loadDouble: t -> M (word 64);
+  loadByte: t -> M (word 8);
+  loadHalf: t -> M (word 16);
+  loadWord: t -> M (word 32);
+  loadDouble: t -> M (word 64);
 
-    storeByte: t -> word 8 -> M unit;
-    storeHalf: t -> word 16 -> M unit;
-    storeWord: t -> word 32 -> M unit;
-    storeDouble: t -> word 64 -> M unit;
+  storeByte: t -> word 8 -> M unit;
+  storeHalf: t -> word 16 -> M unit;
+  storeWord: t -> word 32 -> M unit;
+  storeDouble: t -> word 64 -> M unit;
 
-    getPC: M t;
-    setPC: t -> M unit;
+  getPC: M t;
+  setPC: t -> M unit;
 
-    (* TODO support all get/setCSRField, this one is just for the exception handler address *)
-    getCSRField_MTVecBase: M MachineInt;
+  (* TODO support all get/setCSRField, this one is just for the exception handler address *)
+  getCSRField_MTVecBase: M MachineInt;
 
-    step: M unit; (* updates PC *)
+  step: M unit; (* updates PC *)
 
-    endCycle: forall {A}, M A;
-  }.
+  endCycle: forall {A}, M A;
+}.
 
 
-  (* The Haskell spec defines concrete implementations for raiseException and translate,
-     but we prefer to leave them abstract, so that we can prove more general theorems *)
-  Class RiscvState`{MP: RiscvProgram} := mkRiscvState {
-    (* ends current cycle, sets exception flag, and sets PC to exception handler address *)
-    raiseException{A: Type}(isInterrupt: t)(exceptionCode: t): M A;
+(* The Haskell spec defines concrete implementations for raiseException and translate,
+   but we prefer to leave them abstract, so that we can prove more general theorems *)
+Class RiscvState`{MP: RiscvProgram} := mkRiscvState {
+  (* ends current cycle, sets exception flag, and sets PC to exception handler address *)
+  raiseException{A: Type}(isInterrupt: t)(exceptionCode: t): M A;
 
-    (* checks that addr is aligned, and translates the (possibly virtual) addr to a physical
-       address, raising an exception if the address is invalid *)
-    translate(accessType: AccessType)(alignment: t)(addr: t): M t;
-  }.
+  (* checks that addr is aligned, and translates the (possibly virtual) addr to a physical
+     address, raising an exception if the address is invalid *)
+  translate(accessType: AccessType)(alignment: t)(addr: t): M t;
+}.
 
 
 Section Riscv.
