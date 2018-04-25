@@ -1,5 +1,3 @@
 Require Import riscv.RiscvBitWidths.
 
-Instance RiscvBitWidths32: RiscvBitWidths := {|
-  bitwidth := Bitwidth32
-|}.
+Instance RiscvBitWidths32: RiscvBitWidths := Bitwidth32.
