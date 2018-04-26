@@ -81,6 +81,8 @@ Section Riscv.
 
 End Riscv.
 
+Definition Register0: Register := 0%Z.
+
 Arguments RiscvProgram: clear implicits.
 Arguments RiscvProgram (M) (t) {_} {_}.
 Arguments RiscvState: clear implicits.

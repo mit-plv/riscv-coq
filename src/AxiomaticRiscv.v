@@ -1,11 +1,10 @@
 Require Import Coq.ZArith.BinInt.
-Require Export Coq.omega.Omega.
 Require Import bbv.Word.
 Require Import riscv.util.Monads.
 Require Import riscv.Decode.
+Require Import riscv.Memory.
 Require Import riscv.Program.
-Require Import riscv.Minimal.
-Require Import riscv.FunctionMemory.
+Require Import riscv.RiscvMachine.
 Require Import riscv.RiscvBitWidths.
 
 Set Implicit Arguments.
@@ -20,85 +19,101 @@ Section AxiomaticRiscv.
   Context {RF: Type}.
   Context {RFI: RegisterFile RF Register (word wXLEN)}.
 
+  Context {Mem: Set}.
+  Context {MemIsMem: Memory Mem (word wXLEN)}.
+
+  Local Notation RiscvMachine := (@RiscvMachine Bw Mem RF).
+
+  Context {RVM: RiscvProgram (OState RiscvMachine) (word wXLEN)}.
+  
   (* assumes generic translate and raiseException functions *)
-  Context {RVS: @RiscvState (OState RiscvMachine) (word wXLEN) _ _ IsRiscvMachine}.  
+  Context {RVS: @RiscvState (OState RiscvMachine) (word wXLEN) _ _ RVM}.  
 
+  Class AxiomaticRiscv :=  mkAxiomaticRiscv {
+      
+      Bind_getRegister0: forall {A: Type} (f: word wXLEN -> OState RiscvMachine A),
+        Bind (getRegister Register0) f = f $0;
+      
+      Bind_getRegister: forall {A: Type} x (f: word wXLEN -> OState RiscvMachine A)
+                          (initialL: RiscvMachine),
+          valid_register x ->
+          execState (Bind (getRegister x) f) initialL =
+          execState (f (getReg initialL.(core).(registers) x)) initialL;
 
-  Local Notation RiscvMachine := (@RiscvMachine Bw (mem wXLEN) RF).
+      Bind_setRegister: forall {A: Type} x (v: word wXLEN)
+                          (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
+          valid_register x ->
+          execState (Bind (setRegister x v) f) initialL =
+          execState (f tt) (with_registers (setReg initialL.(core).(registers) x v) initialL);
 
-  Lemma Bind_getRegister0: forall {A: Type} (f: word wXLEN -> OState RiscvMachine A),
-      Bind (getRegister Register0) f = f $0.
-  Proof.
-    intros. reflexivity.
-  Qed.
+      Bind_setRegister0: forall {A: Type} (v: word wXLEN)
+                           (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
+          execState (Bind (setRegister Register0 v) f) initialL =
+          execState (f tt) initialL;
 
-  Ltac destruct_if :=
-    match goal with
-    | |- context [if ?x then _ else _] => destruct x
-    end.
-  
-  Lemma Bind_getRegister: forall {A: Type} x
-                                 (f: word wXLEN -> OState RiscvMachine A)
-                                 (initialL: RiscvMachine),
-      valid_register x ->
-      execState (Bind (getRegister x) f) initialL =
-      execState (f (getReg initialL.(core).(registers) x)) initialL.
-  Proof.
-    intros. simpl. destruct_if.
-    - exfalso. unfold valid_register, Register0 in *. omega.
-    - reflexivity.
-  Qed.
+      Bind_loadByte: forall {A: Type} (addr: word wXLEN) (f: word 8 -> OState RiscvMachine A)
+                       (initialL: RiscvMachine),
+          execState (Bind (loadByte addr) f) initialL =
+          execState (f (Memory.loadByte initialL.(machineMem) addr)) initialL;
 
-  Lemma Bind_setRegister: forall {A: Type} x (v: word wXLEN)
-                                 (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
-      valid_register x ->
-      execState (Bind (setRegister x v) f) initialL =
-      execState (f tt) (with_registers (setReg initialL.(core).(registers) x v) initialL).
-  Proof.
-    intros. simpl.
-    destruct_if.
-    - exfalso. unfold valid_register, Register0 in *. omega.
-    - reflexivity.
-  Qed.
+      Bind_loadHalf: forall {A: Type} (addr: word wXLEN) (f: word 16 -> OState RiscvMachine A)
+                       (initialL: RiscvMachine),
+          execState (Bind (loadHalf addr) f) initialL =
+          execState (f (Memory.loadHalf initialL.(machineMem) addr)) initialL;
 
-  Lemma Bind_setRegister0: forall {A: Type} (v: word wXLEN)
-                                 (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
-      execState (Bind (setRegister Register0 v) f) initialL =
-      execState (f tt) initialL.
-  Proof.
-    intros. simpl. reflexivity.
-  Qed.
+      Bind_loadWord: forall {A: Type} (addr: word wXLEN) (f: word 32 -> OState RiscvMachine A)
+                       (initialL: RiscvMachine),
+          execState (Bind (loadWord addr) f) initialL =
+          execState (f (Memory.loadWord initialL.(machineMem) addr)) initialL;
+      
+      Bind_loadDouble: forall {A: Type} (addr: word wXLEN) (f: word 64 -> OState RiscvMachine A)
+                       (initialL: RiscvMachine),
+          execState (Bind (loadDouble addr) f) initialL =
+          execState (f (Memory.loadDouble initialL.(machineMem) addr)) initialL;
 
-  Lemma Bind_getPC: forall {A: Type} (f: word wXLEN -> OState RiscvMachine A) (initialL: RiscvMachine),
-      execState (Bind getPC f) initialL =
-      execState (f initialL.(core).(pc)) initialL.
-  Proof.
-    intros. reflexivity.
-  Qed.
+      Bind_storeByte: forall {A: Type} (addr: word wXLEN) (v: word 8)
+                        (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
+          execState (Bind (storeByte addr v) f) initialL =
+          execState (f tt) (with_machineMem (Memory.storeByte initialL.(machineMem) addr v)
+                                            initialL);
 
-  Lemma Bind_setPC: forall {A: Type} (v: word wXLEN)
-                                 (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
-      execState (Bind (setPC v) f) initialL =
-      execState (f tt) (with_nextPC v initialL).
-  Proof.
-    intros. simpl. reflexivity.
-  Qed.
-  
-  Lemma Bind_step: forall {A: Type} (f: unit -> OState RiscvMachine A) m,
-      execState (Bind step f) m =
-      execState (f tt) (with_nextPC (m.(core).(nextPC) ^+ $4) (with_pc m.(core).(nextPC) m)).
-  Proof.
-    intros. reflexivity.
-  Qed.
+      Bind_storeHalf: forall {A: Type} (addr: word wXLEN) (v: word 16)
+                        (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
+          execState (Bind (storeHalf addr v) f) initialL =
+          execState (f tt) (with_machineMem (Memory.storeHalf initialL.(machineMem) addr v)
+                                            initialL);
 
-  Lemma execState_step: forall m,
-      execState step m = with_nextPC (m.(core).(nextPC) ^+ $4) (with_pc m.(core).(nextPC) m).
-  Proof.
-    intros. reflexivity.
-  Qed.
-  
-  Lemma execState_Return: forall {S A} (s: S) (a: A),
-      execState (Return a) s = s.
-  Proof. intros. reflexivity. Qed.
+      Bind_storeWord: forall {A: Type} (addr: word wXLEN) (v: word 32)
+                        (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
+          execState (Bind (storeWord addr v) f) initialL =
+          execState (f tt) (with_machineMem (Memory.storeWord initialL.(machineMem) addr v)
+                                            initialL);
+
+      Bind_storeDouble: forall {A: Type} (addr: word wXLEN) (v: word 64)
+                        (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
+          execState (Bind (storeDouble addr v) f) initialL =
+          execState (f tt) (with_machineMem (Memory.storeDouble initialL.(machineMem) addr v)
+                                            initialL);
+
+      Bind_getPC: forall {A: Type} (f: word wXLEN -> OState RiscvMachine A) (initialL: RiscvMachine),
+          execState (Bind getPC f) initialL =
+          execState (f initialL.(core).(pc)) initialL;
+
+      Bind_setPC: forall {A: Type} (v: word wXLEN)
+                    (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
+          execState (Bind (setPC v) f) initialL =
+          execState (f tt) (with_nextPC v initialL);
+      
+      Bind_step: forall {A: Type} (f: unit -> OState RiscvMachine A) m,
+          execState (Bind step f) m =
+          execState (f tt) (with_nextPC (m.(core).(nextPC) ^+ $4) (with_pc m.(core).(nextPC) m));
+
+      execState_step: forall m,
+          execState step m = with_nextPC (m.(core).(nextPC) ^+ $4) (with_pc m.(core).(nextPC) m);
+      
+      execState_Return: forall {S A} (s: S) (a: A),
+          execState (Return a) s = s;
+
+  }.
 
 End AxiomaticRiscv.

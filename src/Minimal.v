@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.BinInt.
+Require Import Coq.omega.Omega.
 Require Import bbv.WordScope.
 Require Import riscv.RiscvBitWidths.
 Require Import riscv.util.Monads.
@@ -6,19 +7,16 @@ Require Import riscv.Decode.
 Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)
 Require Import riscv.Program.
 Require Import riscv.Utility.
+Require Import riscv.AxiomaticRiscv.
 Require Export riscv.RiscvMachine.
 
 Section Riscv.
 
   Context {B: RiscvBitWidths}.
 
-  Context {MW: MachineWidth (word wXLEN)}.
-
   Context {Mem: Set}.
 
   Context {MemIsMem: Memory Mem (word wXLEN)}.
-
-  Definition Register0: Register := 0%Z.
 
   Context {RF: Type}.
   Context {RFI: RegisterFile RF Register (word wXLEN)}.
@@ -85,6 +83,19 @@ Section Riscv.
   Definition putProgram(prog: list (word 32))(ma: RiscvMachine): RiscvMachine :=
     with_pc $0 (with_nextPC $4 (with_machineMem (store_word_list prog $0 ma.(machineMem)) ma)).
 
+  Ltac destruct_if :=
+    match goal with
+    | |- context [if ?x then _ else _] => destruct x
+    end.
+
+  Instance MinimalRiscvSatisfiesAxioms: @AxiomaticRiscv B RF RFI Mem MemIsMem IsRiscvMachine.
+  Proof.
+    constructor; intros; simpl; try reflexivity; destruct_if; try reflexivity;
+      subst; unfold valid_register, Register0 in *; omega.
+  Qed.
+  
 End Riscv.
 
-Existing Instance IsRiscvMachine. (* needed because it was defined inside a Section *)
+(* needed because it was defined inside a Section *)
+Existing Instance IsRiscvMachine.
+Existing Instance MinimalRiscvSatisfiesAxioms.
