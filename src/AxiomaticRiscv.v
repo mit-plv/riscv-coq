@@ -10,6 +10,8 @@ Require Import riscv.RiscvBitWidths.
 
 Set Implicit Arguments.
 
+(* Note: Register 0 is not considered valid because it cannot be written *)
+Definition valid_register(r: Register): Prop := (0 < r < 32)%Z.
 
 Section AxiomaticRiscv.
 
@@ -21,8 +23,6 @@ Section AxiomaticRiscv.
   (* assumes generic translate and raiseException functions *)
   Context {RVS: @RiscvState (OState RiscvMachine) (word wXLEN) _ _ IsRiscvMachine}.  
 
-  (* Note: Register 0 is not considered valid because it cannot be written *)
-  Definition valid_register(r: Register): Prop := (0 < r < 32)%Z.
 
   Local Notation RiscvMachine := (@RiscvMachine Bw (mem wXLEN) RF).
 

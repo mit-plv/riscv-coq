@@ -5,18 +5,8 @@ Require Import riscv.util.Monads.
 Require Import riscv.Decode.
 Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)
 Require Import riscv.Program.
-Require Import riscv.Execute.
-Require Import riscv.util.PowerFunc.
 Require Import riscv.Utility.
-Require Import Coq.Lists.List.
-
-Class RegisterFile{RF R V: Type} := mkRegisterFile {
-  getReg: RF -> R -> V;
-  setReg: RF -> R -> V -> RF;
-  initialRegs: RF;
-}.
-
-Arguments RegisterFile: clear implicits.
+Require Export riscv.RiscvMachine.
 
 Section Riscv.
 
@@ -32,37 +22,8 @@ Section Riscv.
 
   Context {RF: Type}.
   Context {RFI: RegisterFile RF Register (word wXLEN)}.
-  
-  Record RiscvMachineCore := mkRiscvMachineCore {
-    registers: RF;
-    pc: word wXLEN;
-    nextPC: word wXLEN;
-    exceptionHandlerAddr: MachineInt;
-  }.
 
-  Record RiscvMachine := mkRiscvMachine {
-    core: RiscvMachineCore;
-    machineMem: Mem;
-  }.
-
-  Definition with_registers r ma :=
-    mkRiscvMachine (mkRiscvMachineCore
-        r ma.(core).(pc) ma.(core).(nextPC) ma.(core).(exceptionHandlerAddr))
-        ma.(machineMem).
-  Definition with_pc p ma :=
-    mkRiscvMachine (mkRiscvMachineCore
-        ma.(core).(registers) p ma.(core).(nextPC) ma.(core).(exceptionHandlerAddr))
-        ma.(machineMem).
-  Definition with_nextPC npc ma :=
-    mkRiscvMachine (mkRiscvMachineCore
-        ma.(core).(registers) ma.(core).(pc) npc ma.(core).(exceptionHandlerAddr))
-        ma.(machineMem).
-  Definition with_exceptionHandlerAddr eh ma :=
-    mkRiscvMachine (mkRiscvMachineCore
-        ma.(core).(registers) ma.(core).(pc) ma.(core).(nextPC) eh)
-        ma.(machineMem).
-  Definition with_machineMem m ma :=
-    mkRiscvMachine ma.(core) m.
+  Local Notation RiscvMachine := (@RiscvMachine B Mem RF).
 
   Definition liftLoad{R}(f: Mem -> word wXLEN -> R): word wXLEN -> OState RiscvMachine R :=
     fun a => m <- gets machineMem; Return (f m a).
