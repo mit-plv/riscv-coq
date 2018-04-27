@@ -119,7 +119,7 @@ Inductive InstructionCSR : Type
   |  Sret : InstructionCSR
   |  Mret : InstructionCSR
   |  Wfi : InstructionCSR
-  |  Sfence_vm : Register -> Register -> InstructionCSR
+  |  Sfence_vma : Register -> Register -> InstructionCSR
   |  Csrrw : Register -> Register -> Z -> InstructionCSR
   |  Csrrs : Register -> Register -> Z -> InstructionCSR
   |  Csrrc : Register -> Register -> Z -> InstructionCSR
@@ -134,7 +134,7 @@ Inductive Instruction : Type
   |  I64Instruction : InstructionI64 -> Instruction
   |  M64Instruction : InstructionM64 -> Instruction
   |  CSRInstruction : InstructionCSR -> Instruction
-  |  InvalidInstruction : Instruction.
+  |  InvalidInstruction : Z -> Instruction.
 (* Converted value declarations: *)
 
 (* Translating `instance Show__Instruction' failed: OOPS! Cannot find
@@ -478,7 +478,7 @@ Definition funct7_REMUW : Z :=
 Definition funct7_REMW : Z :=
   1.
 
-Definition funct7_SFENCE_VM : Z :=
+Definition funct7_SFENCE_VMA : Z :=
   9.
 
 Definition funct7_SLL : Z :=
@@ -818,8 +818,8 @@ Definition decode : InstructionSet -> Z -> Instruction :=
     let decodeCSR :=
       if andb (Z.eqb opcode opcode_SYSTEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
                                                                            funct3_PRIV) (Z.eqb funct7
-                                                                                               funct7_SFENCE_VM))) : bool
-      then Sfence_vm rs1 rs2 else
+                                                                                               funct7_SFENCE_VMA))) : bool
+      then Sfence_vma rs1 rs2 else
       if andb (Z.eqb opcode opcode_SYSTEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
                                                                            funct3_PRIV) (andb (Z.eqb rs1 0) (Z.eqb
                                                                                                funct12
@@ -902,11 +902,11 @@ Definition decode : InstructionSet -> Z -> Instruction :=
                                                                                                  resultCSR))) in
     match results with
     | cons singleResult nil => singleResult
-    | nil => InvalidInstruction
-    | _ => InvalidInstruction
+    | nil => InvalidInstruction inst
+    | _ => InvalidInstruction inst
     end.
 
-(* Unbound variables:
+(* External variables:
      Z Z.eqb Z.lor Z.shiftl andb bitSlice bool cons false list machineIntToShamt nil
      orb signExtend true Coq.Init.Datatypes.app
 *)

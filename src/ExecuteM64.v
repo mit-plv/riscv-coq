@@ -64,7 +64,7 @@ Definition execute {p} {t} `{(RiscvState p t)}
     | inst => Return tt
     end.
 
-(* Unbound variables:
+(* External variables:
      Bind Return RiscvState andb bool div divu getRegister maxUnsigned minSigned
      negate one op_zt__ rem remu s32 setRegister signed_eqb tt unit zero Decode.Divuw
      Decode.Divw Decode.InstructionM64 Decode.Mulw Decode.Remuw Decode.Remw

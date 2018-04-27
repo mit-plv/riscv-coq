@@ -71,7 +71,7 @@ Definition execute {p} {t} `{(RiscvState p t)}
     | inst => Return tt
     end.
 
-(* Unbound variables:
+(* External variables:
      Bind Load Return RiscvState Store eight four fromImm getRegister int64ToReg
      loadDouble loadWord op_zm__ op_zp__ regToInt64 regToShamt5 s32 setRegister sll
      sra srl storeDouble translate tt u32 uInt32ToReg unit Decode.Addiw Decode.Addw

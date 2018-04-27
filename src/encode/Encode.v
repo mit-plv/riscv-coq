@@ -29,7 +29,7 @@ Arguments InstructionMapper: clear implicits.
 
 Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)(inst: Instruction): T :=
   match inst with
-  | InvalidInstruction        => mapper.(map_Invalid)
+  | InvalidInstruction inst   => mapper.(map_Invalid)
   | IInstruction   InvalidI   => mapper.(map_Invalid)
   | MInstruction   InvalidM   => mapper.(map_Invalid)
   | I64Instruction InvalidI64 => mapper.(map_Invalid)
@@ -118,7 +118,7 @@ Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)(inst: I
   | CSRInstruction (Mret  ) => mapper.(map_I_system) opcode_SYSTEM 0 0 funct3_PRIV funct12_MRET
   | CSRInstruction (Wfi   ) => mapper.(map_I_system) opcode_SYSTEM 0 0 funct3_PRIV funct12_WFI
 
-  | CSRInstruction (Sfence_vm rs1 rs2) => mapper.(map_R) opcode_SYSTEM 0 rs1 rs2 funct3_PRIV funct7_SFENCE_VM
+  | CSRInstruction (Sfence_vma rs1 rs2) => mapper.(map_R) opcode_SYSTEM 0 rs1 rs2 funct3_PRIV funct7_SFENCE_VMA
 
   | CSRInstruction (Csrrw  rd rs1  csr12) => mapper.(map_I_system) opcode_SYSTEM rd rs1  funct3_CSRRW  csr12
   | CSRInstruction (Csrrs  rd rs1  csr12) => mapper.(map_I_system) opcode_SYSTEM rd rs1  funct3_CSRRS  csr12

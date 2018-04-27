@@ -179,19 +179,22 @@ Definition execute {p} {t} `{(RiscvState p t)}
     | Decode.And rd rs1 rs2 =>
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y => setRegister rd (and x y)))
+    | Decode.Fence pred succ => Return tt
+    | Decode.Fence_i => Return tt
     | inst => Return tt
     end.
 
-(* Unbound variables:
+(* External variables:
      Bind Load Return RiscvState Store and bool four fromImm getPC getRegister
      int16ToReg int32ToReg int8ToReg lnot loadByte loadHalf loadWord ltu negb one
      op_zgze__ op_zl__ op_zm__ op_zp__ op_zsze__ or raiseException regToInt16
      regToInt32 regToInt8 regToShamt rem setPC setRegister signed_eqb sll sra srl
      storeByte storeHalf storeWord translate tt two uInt16ToReg uInt8ToReg unit when
      xor zero Decode.Add Decode.Addi Decode.And Decode.Andi Decode.Auipc Decode.Beq
-     Decode.Bge Decode.Bgeu Decode.Blt Decode.Bltu Decode.Bne Decode.InstructionI
-     Decode.Jal Decode.Jalr Decode.Lb Decode.Lbu Decode.Lh Decode.Lhu Decode.Lui
-     Decode.Lw Decode.Or Decode.Ori Decode.Sb Decode.Sh Decode.Sll Decode.Slli
-     Decode.Slt Decode.Slti Decode.Sltiu Decode.Sltu Decode.Sra Decode.Srai
-     Decode.Srl Decode.Srli Decode.Sub Decode.Sw Decode.Xor Decode.Xori
+     Decode.Bge Decode.Bgeu Decode.Blt Decode.Bltu Decode.Bne Decode.Fence
+     Decode.Fence_i Decode.InstructionI Decode.Jal Decode.Jalr Decode.Lb Decode.Lbu
+     Decode.Lh Decode.Lhu Decode.Lui Decode.Lw Decode.Or Decode.Ori Decode.Sb
+     Decode.Sh Decode.Sll Decode.Slli Decode.Slt Decode.Slti Decode.Sltiu Decode.Sltu
+     Decode.Sra Decode.Srai Decode.Srl Decode.Srli Decode.Sub Decode.Sw Decode.Xor
+     Decode.Xori
 *)

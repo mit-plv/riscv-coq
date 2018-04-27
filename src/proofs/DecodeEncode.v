@@ -194,7 +194,7 @@ Proof.
   | x := ?t : ?T |- _ => assert (x = t) by (subst x; reflexivity); clearbody x
   end.
   unfold encode in *. repeat autounfold with mappers in *.
-  destruct inst; [destruct i..|subst; reflexivity];
+  destruct inst;  [destruct i..|subst; exfalso; assumption];
   try reflexivity;
   try (time (
   simpl in H;
