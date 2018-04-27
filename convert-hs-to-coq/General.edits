@@ -20,7 +20,7 @@ rewrite forall x y, GHC.Real.mod_ x y = Utility.rem x y
 
 rename value GHC.Base.map = Coq.Lists.List.map
 
-rewrite forall, GHC.Err.error "ambiguous decoding result" = InvalidInstruction
+rewrite forall, GHC.Err.error "ambiguous decoding result" = InvalidInstruction inst
 rewrite forall x, GHC.Err.error GHC.Base.$ (Coq.Init.Datatypes.app "dispatch bug: " (GHC.Show.show x)) = Monads.Return tt
 
 # only put into Decode, but in Execute, we want letter constants

@@ -23,6 +23,13 @@ skip Decode.Eq___InstructionCSR
 skip Decode.Eq___InstructionSet
 skip Decode.Eq___Instruction
 
+skip Decode.Default__InstructionSet
+skip Decode.Default__InstructionM64
+skip Decode.Default__InstructionM
+skip Decode.Default__InstructionI64
+skip Decode.Default__InstructionI
+skip Decode.Default__InstructionCSR
+
 skip Decode.rd
 skip Decode.rs1
 skip Decode.rs2
@@ -44,3 +51,4 @@ skip Decode.i64Instruction
 skip Decode.iInstruction
 skip Decode.m64Instruction
 skip Decode.mInstruction
+skip Decode.inst
