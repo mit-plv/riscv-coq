@@ -7,10 +7,10 @@ Require Import riscv.Utility.
 Local Open Scope bool_scope.
 Local Open Scope Z_scope.
 
-Lemma invert_encode_InvalidInstruction:
-  verify_Invalid ->
+Lemma invert_encode_InvalidInstruction: forall i,
+  verify_Invalid i ->
   forall inst,
-  encode_Invalid = inst ->
+  encode_Invalid i = inst ->
   False.
 Proof. intros. assumption. Qed.
 

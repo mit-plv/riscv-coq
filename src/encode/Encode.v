@@ -12,7 +12,7 @@ Definition funct3_JALR := Ob"000". (* TODO why does Decode not define & check th
 Local Open Scope Z_scope.
 
 Record InstructionMapper{T: Type} := mkInstructionMapper {
-  map_Invalid: T;
+  map_Invalid: Z -> T;
   map_R(opcode: MachineInt)(rd rs1 rs2: Register)(funct3: MachineInt)(funct7: MachineInt): T;
   map_I(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(oimm12: Z): T;
   map_I_shift_57(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt): T;
@@ -29,12 +29,12 @@ Arguments InstructionMapper: clear implicits.
 
 Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)(inst: Instruction): T :=
   match inst with
-  | InvalidInstruction inst   => mapper.(map_Invalid)
-  | IInstruction   InvalidI   => mapper.(map_Invalid)
-  | MInstruction   InvalidM   => mapper.(map_Invalid)
-  | I64Instruction InvalidI64 => mapper.(map_Invalid)
-  | M64Instruction InvalidM64 => mapper.(map_Invalid)
-  | CSRInstruction InvalidCSR => mapper.(map_Invalid)
+  | InvalidInstruction inst   => mapper.(map_Invalid) inst
+  | IInstruction   InvalidI   => mapper.(map_Invalid) 0
+  | MInstruction   InvalidM   => mapper.(map_Invalid) 0
+  | I64Instruction InvalidI64 => mapper.(map_Invalid) 0
+  | M64Instruction InvalidM64 => mapper.(map_Invalid) 0
+  | CSRInstruction InvalidCSR => mapper.(map_Invalid) 0
 
   | IInstruction   (Lb  rd rs1 oimm12) => mapper.(map_I) opcode_LOAD rd rs1 funct3_LB  oimm12
   | IInstruction   (Lh  rd rs1 oimm12) => mapper.(map_I) opcode_LOAD rd rs1 funct3_LH  oimm12
@@ -129,7 +129,7 @@ Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)(inst: I
   end.
 
 
-Definition encode_Invalid := 0. (* all zeroes is indeed an invalid expression *)
+Definition encode_Invalid: Z -> Z := id.
 
 Notation "a <|> b" := (Z.lor a b) (at level 50, left associativity).
 
@@ -228,7 +228,7 @@ Definition Encoder: InstructionMapper MachineInt := {|
 Definition encode: Instruction -> MachineInt := apply_InstructionMapper Encoder.
 
 
-Definition verify_Invalid :=
+Definition verify_Invalid(i: Z) :=
     False.
 
 Definition verify_R(opcode: MachineInt)(rd rs1 rs2: Register)(funct3 funct7: MachineInt) :=
