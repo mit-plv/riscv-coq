@@ -56,29 +56,76 @@ Instance mem_is_Memory(w: nat): Memory (mem w) (word w) := {|
   storeDouble := write_double;
 |}.
 
-Lemma write_read_byte: forall sz m (a: word sz) v ,
-  read_byte (write_byte m a v) a = v.
+Lemma write_read_byte_eq: forall sz m (a1 a2: word sz) v,
+    a2 = a1 ->
+    read_byte (write_byte m a1 v) a2 = v.
 Proof.
-  intros. unfold write_byte, read_byte in *.
+  intros. subst. unfold write_byte, read_byte in *.
   simpl.
   rewrite (rewrite_weq eq_refl). reflexivity.
 Qed.
 
-Lemma write_read_byte_diff: forall sz (a1 a2: word sz) m v,
-  a2 <> a1 ->
-  read_byte (write_byte m a2 v) a1 = read_byte m a1.
+Lemma write_read_byte_ne: forall sz m (a1 a2: word sz) v,
+    a2 <> a1 ->
+    read_byte (write_byte m a1 v) a2 = read_byte m a2.
 Proof.
   intros. unfold read_byte, write_byte in *.
-  destruct (weq a1 a2); congruence.
+  destruct (weq a2 a1); congruence.
 Qed.
 
-Lemma write_read_half: forall sz m (a: word (S sz)) v ,
-  read_half (write_half m a v) a = v.
+Local Ltac solve_eq write_read_eq write_read_ne :=
+  intros; subst;
+  (* note the order: we only unfold one layer *)
+  unfold write_half, read_half, write_word, read_word, write_double, read_double in *;
+  repeat match goal with
+  | |- context [read_byte (write_byte ?m ?a1 ?v) ?a2] =>
+    rewrite (write_read_eq _ m a1 a2 v) by reflexivity
+  | |- context [read_byte (write_byte ?m ?a1 ?v) ?a2] =>
+    rewrite (write_read_ne _ m a1 a2 v) by
+        (pose proof @wplus_one_neq; congruence)
+  end;
+  match goal with
+  | |- context [lobits ?half_sz _] => apply (combine_split half_sz half_sz)
+  end.
+
+Lemma write_read_half_eq: forall sz m (a1 a2: word (S sz)) v,
+    a2 = a1 ->
+    read_half (write_half m a1 v) a2 = v.
 Proof.
-  intros. unfold write_half, read_half in *.
-  rewrite (write_read_byte _ (write_byte m a (lobits 8 v)) (a ^+ $1) (hibits 8 v)).
-  assert (a ^+ $1 <> a) as Q by apply wplus_one_neq.
-  rewrite (write_read_byte_diff _ a (a ^+ $1) _ (hibits 8 v) Q).
-  rewrite write_read_byte.
-  apply (combine_split 8 8).
+  solve_eq write_read_byte_eq write_read_byte_ne.
+Qed.
+
+Lemma write_read_half_ne: forall sz m (a1 a2: word sz) v,
+    (wordToZ a1) mod 2 = 0 ->
+    (wordToZ a2) mod 2 = 0 ->
+    a2 <> a1 ->
+    read_half (write_half m a1 v) a2 = read_half m a2.
+Proof.
+  intros. subst. unfold write_half, read_half in *.
+  pose proof wplus_cancel.
+  match goal with
+  | |- context [read_byte (write_byte ?m ?a1 ?v) ?a2] =>
+    rewrite (write_read_byte_ne _ m a1 a2 v) (*by congruence*)
+  end.
+  admit.
+  intro. subst.
+  (* Search wordToZ wplus. *)
+  (* annoying *)
+Admitted.
+
+Lemma write_read_half_eq': forall sz m (a1 a2: word (S sz)) v,
+    a2 = a1 ->
+    read_half (write_half m a1 v) a2 = v.
+Proof.
+  intros. subst. unfold write_half, read_half in *.
+  repeat match goal with
+  | |- context [read_byte (write_byte ?m ?a1 ?v) ?a2] =>
+    rewrite (write_read_byte_eq _ m a1 a2 v) by reflexivity
+  | |- context [read_byte (write_byte ?m ?a1 ?v) ?a2] =>
+    rewrite (write_read_byte_ne _ m a1 a2 v) by
+        (pose proof @wplus_one_neq; congruence)
+  end.
+  match goal with
+  | |- context [lobits ?half_sz _] => apply (combine_split half_sz half_sz)
+  end.
 Qed.
