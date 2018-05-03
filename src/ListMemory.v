@@ -109,18 +109,252 @@ Proof.
         apply IHa2; simpl in *; try omega.
 Qed.
 
+Lemma skipn_length_le: forall A n (l: list A),
+    n <= length l ->
+    length (skipn n l) = length l - n.
+Proof.
+  induction n; intros.
+  - simpl. omega.
+  - simpl. destruct l; [simpl in *; omega|].
+    simpl in *.
+    apply IHn; omega.
+Qed.
+
+Lemma write_byte_preserves_mem_size: forall m a v,
+    a < mem_size m ->
+    mem_size (write_byte m a v) = mem_size m.
+Proof.
+  intros. unfold mem_size, write_byte in *.
+  repeat rewrite app_length.
+  rewrite firstn_length_le by omega.
+  rewrite skipn_length_le by omega.
+  simpl.
+  omega.
+Qed.
+
 Lemma write_read_half_eq: forall m a1 a2 v,
     a1 + 1 < mem_size m ->
     a2 = a1 ->
     read_half (write_half m a1 v) a2 = v.
 Proof.
   intros. subst. unfold write_half, read_half in *.
-Admitted.
-(*
-  rewrite (write_read_byte_eq (write_byte m a1 (lobits 8 v))). (a1 + 1) _ (hibits 8 v)).
-  assert (a ^+ $1 <> a) as Q by apply wplus_one_neq.
-  rewrite (write_read_byte_diff _ a (a ^+ $1) _ (hibits 8 v) Q).
-  rewrite write_read_byte.
-  apply (combine_split 8 8).
+  pose proof H.
+  rewrite (write_read_byte_eq _ (a1 + 1) (a1 + 1)); try reflexivity.
+  - rewrite write_read_byte_ne; try omega.
+    + rewrite write_read_byte_eq; try reflexivity; try omega.
+      apply (combine_split 8 8).
+    + rewrite write_byte_preserves_mem_size; omega.
+    + rewrite write_byte_preserves_mem_size; omega.
+  - rewrite write_byte_preserves_mem_size; omega.
 Qed.
-*)
+
+Lemma write_read_half_ne: forall m a1 a2 v,
+    a1 + 1 < mem_size m ->
+    a1 mod 2 = 0 ->
+    a2 + 1 < mem_size m ->
+    a2 mod 2 = 0 ->
+    a2 <> a1 ->
+    read_half (write_half m a1 v) a2 = read_half m a2.
+Proof.
+  intros. unfold write_half, read_half in *.
+  f_equal.
+  - rewrite write_read_byte_ne.
+    + apply write_read_byte_ne; omega.
+    + rewrite write_byte_preserves_mem_size; omega.
+    + rewrite write_byte_preserves_mem_size; omega.
+    + intro. subst. rewrite Nat.add_mod in H2; try omega.
+      rewrite H0 in H2.
+      simpl in H2.
+      discriminate.
+  - rewrite write_read_byte_ne.
+    + apply write_read_byte_ne; try omega.
+      intro. subst. rewrite Nat.add_mod in H0; try omega.
+      rewrite H2 in H0.
+      simpl in H0.
+      discriminate.
+    + rewrite write_byte_preserves_mem_size; omega.
+    + rewrite write_byte_preserves_mem_size; omega.
+    + omega.
+Qed.
+
+Lemma add_mod_r: forall a m,
+    m <> 0 ->
+    (a + m) mod m = a mod m.
+Proof.
+  intros.
+  rewrite Nat.add_mod by assumption.
+  rewrite Nat.mod_same by assumption.
+  rewrite Nat.add_0_r.
+  apply Nat.mod_mod.
+  assumption.
+Qed.
+
+Lemma weaken_alignment: forall n al,
+    n mod (al * 2) = 0 ->
+    al <> 0 ->
+    n mod al = 0.
+Proof.
+  intros.
+  pose proof H.
+  apply Nat.mod_divides in H; try omega.
+  destruct H as [n' H]. subst.
+  rewrite <- Nat.mul_assoc.
+  rewrite Nat.mul_mod by omega.
+  rewrite Nat.mod_same by assumption.
+  apply Nat.mod_0_l.
+  assumption.
+Qed.  
+
+Lemma write_half_preserves_mem_size: forall m a v,
+    a + 1 < mem_size m ->
+    mem_size (write_half m a v) = mem_size m.
+Proof.
+  intros. unfold write_half, mem_size in *.
+  repeat rewrite write_byte_preserves_mem_size; unfold mem_size; omega.
+Qed.
+
+Lemma diviBy4_implies_diviBy2: forall n,
+    n mod 4 = 0 ->
+    n mod 2 = 0.
+Proof.
+  intros.
+  apply weaken_alignment; [assumption | omega].
+Qed.  
+
+Lemma write_read_word_eq: forall m a1 a2 v,
+    a1 + 4 <= mem_size m ->
+    a1 mod 4 = 0 ->
+    a2 = a1 ->
+    read_word (write_word m a1 v) a2 = v.
+Proof.
+  intros. subst. unfold write_word, read_word in *.
+  pose proof H.
+  rewrite (write_read_half_eq _ (a1 + 2) (a1 + 2)); try reflexivity.
+  - rewrite write_read_half_ne; try omega.
+    + rewrite write_read_half_eq; try reflexivity; try omega.
+      apply (combine_split 16 16).
+    + rewrite write_half_preserves_mem_size; omega.
+    + apply diviBy4_implies_diviBy2 in H0. rewrite Nat.add_mod by omega.
+      rewrite H0.
+      reflexivity.
+    + rewrite write_half_preserves_mem_size; omega.
+    + apply diviBy4_implies_diviBy2. assumption.
+  - rewrite write_half_preserves_mem_size; omega.
+Qed.
+
+Lemma write_read_word_ne: forall m a1 a2 v,
+    a1 + 4 <= mem_size m ->
+    a1 mod 4 = 0 ->
+    a2 + 4 <= mem_size m ->
+    a2 mod 4 = 0 ->
+    a2 <> a1 ->
+    read_word (write_word m a1 v) a2 = read_word m a2.
+Proof.
+  intros. unfold write_word, read_word in *.
+  pose proof (diviBy4_implies_diviBy2 _ H0).
+  pose proof (diviBy4_implies_diviBy2 _ H2).
+  f_equal.
+  - rewrite write_read_half_ne.
+    + apply write_read_half_ne; omega.
+    + rewrite write_half_preserves_mem_size; omega.
+    + rewrite Nat.add_mod by omega.
+      rewrite H4.
+      reflexivity.
+    + rewrite write_half_preserves_mem_size; omega.
+    + assumption.
+    + intro. subst. rewrite Nat.add_mod in H2; try omega.
+      rewrite H0 in H2.
+      simpl in H2.
+      discriminate.
+  - rewrite write_read_half_ne.
+    + apply write_read_half_ne; try omega.
+      * rewrite add_mod_r; omega.
+      * intro. subst. rewrite Nat.add_mod in H0; try omega.
+        rewrite H2 in H0.
+        simpl in H0.
+        discriminate.
+    + rewrite write_half_preserves_mem_size; omega.
+    + rewrite add_mod_r; omega.
+    + rewrite write_half_preserves_mem_size; omega.
+    + rewrite add_mod_r; omega.
+    + omega.
+Qed.
+
+
+Lemma write_word_preserves_mem_size: forall m a v,
+    a + 4 <= mem_size m ->
+    mem_size (write_word m a v) = mem_size m.
+Proof.
+  intros. unfold write_word, mem_size in *.
+  repeat rewrite write_half_preserves_mem_size; unfold mem_size; omega.
+Qed.
+
+Lemma diviBy8_implies_diviBy4: forall n,
+    n mod 8 = 0 ->
+    n mod 4 = 0.
+Proof.
+  intros.
+  apply weaken_alignment; [assumption | omega].
+Qed.  
+
+Lemma write_read_double_eq: forall m a1 a2 v,
+    a1 + 8 <= mem_size m ->
+    a1 mod 8 = 0 ->
+    a2 = a1 ->
+    read_double (write_double m a1 v) a2 = v.
+Proof.
+  intros. subst. unfold write_double, read_double in *.
+  pose proof H.
+  rewrite (write_read_word_eq _ (a1 + 4) (a1 + 4)); try reflexivity.
+  - rewrite write_read_word_ne; try omega.
+    + rewrite write_read_word_eq; try reflexivity; try omega.
+      * apply (combine_split 32 32).
+      * apply diviBy8_implies_diviBy4. assumption.
+    + rewrite write_word_preserves_mem_size; omega.
+    + apply diviBy8_implies_diviBy4 in H0. rewrite Nat.add_mod by omega.
+      rewrite H0.
+      reflexivity.
+    + rewrite write_word_preserves_mem_size; omega.
+    + apply diviBy8_implies_diviBy4. assumption.
+  - rewrite write_word_preserves_mem_size; omega.
+  - rewrite add_mod_r by omega.
+    apply diviBy8_implies_diviBy4. assumption.
+Qed.
+
+Lemma write_read_double_ne: forall m a1 a2 v,
+    a1 + 8 <= mem_size m ->
+    a1 mod 8 = 0 ->
+    a2 + 8 <= mem_size m ->
+    a2 mod 8 = 0 ->
+    a2 <> a1 ->
+    read_double (write_double m a1 v) a2 = read_double m a2.
+Proof.
+  intros. unfold write_double, read_double in *.
+  pose proof (diviBy8_implies_diviBy4 _ H0).
+  pose proof (diviBy8_implies_diviBy4 _ H2).
+  f_equal.
+  - rewrite write_read_word_ne.
+    + apply write_read_word_ne; omega.
+    + rewrite write_word_preserves_mem_size; omega.
+    + rewrite Nat.add_mod by omega.
+      rewrite H4.
+      reflexivity.
+    + rewrite write_word_preserves_mem_size; omega.
+    + assumption.
+    + intro. subst. rewrite Nat.add_mod in H2; try omega.
+      rewrite H0 in H2.
+      simpl in H2.
+      discriminate.
+  - rewrite write_read_word_ne.
+    + apply write_read_word_ne; try omega.
+      * rewrite add_mod_r; omega.
+      * intro. subst. rewrite Nat.add_mod in H0; try omega.
+        rewrite H2 in H0.
+        simpl in H0.
+        discriminate.
+    + rewrite write_word_preserves_mem_size; omega.
+    + rewrite add_mod_r; omega.
+    + rewrite write_word_preserves_mem_size; omega.
+    + rewrite add_mod_r; omega.
+    + omega.
+Qed.
