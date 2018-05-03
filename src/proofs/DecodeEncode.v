@@ -218,4 +218,5 @@ Proof.
                    | |- ?G => idtac G
                    end))
   )).
+  all: solve [exfalso; assumption].
 Time Qed.
