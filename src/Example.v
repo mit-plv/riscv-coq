@@ -65,8 +65,7 @@ Definition zeroedRiscvMachineCore: RiscvMachineCore := {|
 
 Definition zeroedRiscvMachine: RiscvMachine := {|
     core := zeroedRiscvMachineCore;
-    machineMem := zero_mem 7;
-    (* TODO this is less than we neeed to store the program, why does it still work? *)
+    machineMem := zero_mem 100;
 |}.
 
 Definition zeroedRiscvMachineL: RiscvMachineL := {|

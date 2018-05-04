@@ -28,7 +28,6 @@ Class Memory(m: Set)(w: nat) := mkMemory {
     loadByte (storeByte m a1 v) a2 = loadByte m a2;
 
   storeByte_preserves_memSize: forall m (a: word w) v,
-    valid_addr a 1 (memSize m) ->
     memSize (storeByte m a v) = memSize m;
 
   loadStoreHalf_eq: forall m (a1 a2: word w) v,
@@ -43,7 +42,6 @@ Class Memory(m: Set)(w: nat) := mkMemory {
     loadHalf (storeHalf m a1 v) a2 = loadHalf m a2;
 
   storeHalf_preserves_memSize: forall m (a: word w) v,
-    valid_addr a 2 (memSize m) ->
     memSize (storeHalf m a v) = memSize m;
 
   loadStoreWord_eq: forall m (a1 a2: word w) v,
@@ -58,7 +56,6 @@ Class Memory(m: Set)(w: nat) := mkMemory {
     loadWord (storeWord m a1 v) a2 = loadWord m a2;
 
   storeWord_preserves_memSize: forall m (a: word w) v,
-    valid_addr a 4 (memSize m) ->
     memSize (storeWord m a v) = memSize m;
 
   loadStoreDouble_eq: forall m (a1 a2: word w) v,
@@ -73,7 +70,6 @@ Class Memory(m: Set)(w: nat) := mkMemory {
     loadDouble (storeDouble m a1 v) a2 = loadDouble m a2;
 
   storeDouble_preserves_memSize: forall m (a: word w) v,
-    valid_addr a 8 (memSize m) ->
     memSize (storeDouble m a v) = memSize m;
 
 }.

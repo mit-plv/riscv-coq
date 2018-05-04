@@ -16,9 +16,16 @@ Section Memory.
   Definition mem_size(m: mem): nat := length m.
 
   Definition read_byte(m: mem)(a: nat): word 8 := nth a m $0.
-  Definition write_byte(m: mem)(a: nat)(v: word 8): mem :=
+
+  Definition write_byte'(m: mem)(a: nat)(v: word 8): mem :=
     (firstn a m) ++ [v] ++ (skipn (S a) m).
 
+  (* fix for the case when a is out of bounds to make sure length is always preserved:
+     allows for _preserves_mem_size lemmas with no hypotheses, and ensures things which
+     should not work because out of bounds writes-then-reads don't work *)
+  Definition write_byte(m: mem)(a: nat)(v: word 8): mem :=
+    firstn (length m) (write_byte' m a v).
+  
   Definition read_half(m: mem)(a: nat): word 16 :=
     let v0 := read_byte m a in let v1 := read_byte m (a + 1) in combine v0 v1.
   Definition read_word(m: mem)(a: nat): word 32 :=
@@ -46,14 +53,13 @@ Section Memory.
 
 End Memory.
 
-Arguments mem : clear implicits.
 
-Lemma write_read_byte_eq: forall m a1 a2 v,
+Lemma write_read_byte_eq': forall m a1 a2 v,
     a1 < mem_size m ->
     a2 = a1 ->
-    read_byte (write_byte m a1 v) a2 = v.
+    read_byte (write_byte' m a1 v) a2 = v.
 Proof.
-  intros. subst. unfold write_byte, read_byte, mem_size in *.
+  intros. subst. unfold write_byte', read_byte, mem_size in *.
   pose proof (@firstn_length_le _ m a1).
   rewrite app_nth2 by omega.
   rewrite H0 by omega.
@@ -61,13 +67,13 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma write_read_byte_ne: forall m a1 a2 v,
+Lemma write_read_byte_ne': forall m a1 a2 v,
     a1 < mem_size m ->
     a2 < mem_size m ->
     a2 <> a1 ->
-    read_byte (write_byte m a1 v) a2 = read_byte m a2.
+    read_byte (write_byte' m a1 v) a2 = read_byte m a2.
 Proof.
-  intros. unfold write_byte, read_byte, mem_size in *.
+  intros. unfold write_byte', read_byte, mem_size in *.
   pose proof (@firstn_length_le _ m a1).
   pose proof (@firstn_length_le _ m a2).
   assert (a2 < a1 \/ a1 < a2 < length m) as P by omega.
@@ -108,16 +114,61 @@ Proof.
     apply IHn; omega.
 Qed.
 
-Lemma write_byte_preserves_mem_size: forall m a v,
+Lemma write_byte_preserves_mem_size': forall m a v,
     a < mem_size m ->
-    mem_size (write_byte m a v) = mem_size m.
+    mem_size (write_byte' m a v) = mem_size m.
 Proof.
-  intros. unfold mem_size, write_byte in *.
+  intros. unfold mem_size, write_byte' in *.
   repeat rewrite app_length.
   rewrite firstn_length_le by omega.
   rewrite skipn_length_le by omega.
   simpl.
   omega.
+Qed.
+
+Lemma write_read_byte_eq: forall m a1 a2 v,
+    a1 < mem_size m ->
+    a2 = a1 ->
+    read_byte (write_byte m a1 v) a2 = v.
+Proof.
+  intros. unfold write_byte in *.
+  erewrite <- write_byte_preserves_mem_size' by eassumption.
+  unfold mem_size.
+  rewrite firstn_all.
+  apply write_read_byte_eq'; assumption.
+Qed.
+
+Lemma write_read_byte_ne: forall m a1 a2 v,
+    a1 < mem_size m ->
+    a2 < mem_size m ->
+    a2 <> a1 ->
+    read_byte (write_byte m a1 v) a2 = read_byte m a2.
+Proof.
+  intros. unfold write_byte in *.
+  erewrite <- write_byte_preserves_mem_size'; [|exact H].
+  unfold mem_size.
+  rewrite firstn_all.
+  apply write_read_byte_ne'; assumption.
+Qed.
+
+Lemma write_byte_preserves_mem_size: forall m a v,
+    mem_size (write_byte m a v) = mem_size m.
+Proof.
+  intros. unfold write_byte.
+  assert (a < mem_size m \/ a >= mem_size m) as C by omega. destruct C as [H | H].
+  - pose proof write_byte_preserves_mem_size' as P.
+    specialize P with (1 := H).
+    unfold mem_size in *.
+    rewrite <- (P v) at 1.
+    rewrite firstn_all.
+    apply P.
+  - unfold mem_size in *.
+    apply firstn_length_le.
+    unfold write_byte'.
+    rewrite? app_length.
+    rewrite firstn_length.
+    pose proof (Nat.min_spec a (length m)).
+    omega.
 Qed.
 
 Lemma write_read_half_eq: forall m a1 a2 v,
@@ -194,7 +245,6 @@ Proof.
 Qed.  
 
 Lemma write_half_preserves_mem_size: forall m a v,
-    a + 1 < mem_size m ->
     mem_size (write_half m a v) = mem_size m.
 Proof.
   intros. unfold write_half, mem_size in *.
@@ -270,7 +320,6 @@ Qed.
 
 
 Lemma write_word_preserves_mem_size: forall m a v,
-    a + 4 <= mem_size m ->
     mem_size (write_word m a v) = mem_size m.
 Proof.
   intros. unfold write_word, mem_size in *.
@@ -348,7 +397,6 @@ Proof.
 Qed.
 
 Lemma write_double_preserves_mem_size: forall m a v,
-    a + 8 <= mem_size m ->
     mem_size (write_double m a v) = mem_size m.
 Proof.
   intros. unfold write_double, mem_size in *.
