@@ -10,7 +10,7 @@ Require Import riscv.Memory.
 Require Import riscv.Minimal.
 Require Import riscv.MinimalLogging.
 Require Import riscv.Run.
-Require Import riscv.FunctionMemory.
+Require Import riscv.ListMemory.
 Require Import riscv.util.Monads.
 
 Existing Instance DefaultRiscvState.
@@ -52,7 +52,7 @@ Goal False.
   (* decoder seems to work :) *)
 Abort.
 
-Definition RiscvMachine := @RiscvMachine _ (mem 32) (Register -> word wXLEN).
+Definition RiscvMachine := @RiscvMachine _ mem (Register -> word wXLEN).
 
 (* This example uses the memory only as instruction memory
    TODO make an example which uses memory to store data *)
@@ -65,7 +65,8 @@ Definition zeroedRiscvMachineCore: RiscvMachineCore := {|
 
 Definition zeroedRiscvMachine: RiscvMachine := {|
     core := zeroedRiscvMachineCore;
-    machineMem := zero_mem;
+    machineMem := zero_mem 7;
+    (* TODO this is less than we neeed to store the program, why does it still work? *)
 |}.
 
 Definition zeroedRiscvMachineL: RiscvMachineL := {|

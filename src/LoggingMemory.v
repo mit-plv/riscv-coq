@@ -26,8 +26,8 @@ Definition myInst M A: Monad (State (LoggingMemory M A)) := State_Monad _.
 
 Existing Instance myInst.
 
-Instance StateLoggingMemory_is_MonadicMemory(M A: Set){MM: Memory M A}:
-  MonadicMemory (State (LoggingMemory M A)) A :=
+Instance StateLoggingMemory_is_MonadicMemory(M: Set)(w: nat){MM: Memory M w}:
+  MonadicMemory (State (LoggingMemory M (word w))) (word w) :=
 {|
   loadByte a :=
      m <- StateM.get;

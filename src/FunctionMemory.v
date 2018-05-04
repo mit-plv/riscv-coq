@@ -44,8 +44,8 @@ End Memory.
 
 Arguments mem : clear implicits.
 
-
-Instance mem_is_Memory(w: nat): Memory (mem w) (word w) := {|
+(*
+Instance mem_is_Memory(w: nat): Memory (mem w) w := {|
   loadByte    := read_byte;
   loadHalf    := read_half;
   loadWord    := read_word;
@@ -55,6 +55,7 @@ Instance mem_is_Memory(w: nat): Memory (mem w) (word w) := {|
   storeWord   := write_word;
   storeDouble := write_double;
 |}.
+*)
 
 Lemma write_read_byte_eq: forall sz m (a1 a2: word sz) v,
     a2 = a1 ->

@@ -48,18 +48,6 @@ End Memory.
 
 Arguments mem : clear implicits.
 
-
-Instance mem_is_Memory(w: nat): Memory mem (nat) := {|
-  loadByte    := read_byte;
-  loadHalf    := read_half;
-  loadWord    := read_word;
-  loadDouble  := read_double;
-  storeByte   := write_byte;
-  storeHalf   := write_half;
-  storeWord   := write_word;
-  storeDouble := write_double;
-|}.
-
 Lemma write_read_byte_eq: forall m a1 a2 v,
     a1 < mem_size m ->
     a2 = a1 ->

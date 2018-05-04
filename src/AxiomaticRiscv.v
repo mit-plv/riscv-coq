@@ -20,7 +20,7 @@ Section AxiomaticRiscv.
   Context {RFI: RegisterFile RF Register (word wXLEN)}.
 
   Context {Mem: Set}.
-  Context {MemIsMem: Memory Mem (word wXLEN)}.
+  Context {MemIsMem: Memory Mem wXLEN}.
 
   Local Notation RiscvMachine := (@RiscvMachine Bw Mem RF).
 

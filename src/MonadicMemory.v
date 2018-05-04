@@ -13,13 +13,14 @@ Class MonadicMemory(m: Type -> Type)(a: Set) := mkMonadicMemory {
   storeDouble: a -> word 64 -> m unit;
 }.
 
-Definition wrapLoadO{M A R: Set}{MM: Memory M A}(f: M -> A -> R): A -> OState M R :=
+Definition wrapLoadO{M R: Set}{w: nat}{MM: Memory M w}(f: M -> word w -> R): word w -> OState M R :=
   fun a => m <- get; Return (f m a).
 
-Definition wrapStoreO{M A R: Set}{MM: Memory M A}(f: M -> A -> R -> M): A -> R -> OState M unit :=
+Definition wrapStoreO{M R: Set}{w: nat}{MM: Memory M w}(f: M -> word w -> R -> M)
+  : word w -> R -> OState M unit :=
   fun a v => m <- get; put (f m a v).
 
-Instance OStateMemory(M A: Set){MM: Memory M A}: MonadicMemory (OState M) A := {|
+Instance OStateMemory(M: Set)(w: nat){MM: Memory M w}: MonadicMemory (OState M) (word w) := {|
   loadByte := wrapLoadO Memory.loadByte;
   loadHalf := wrapLoadO Memory.loadHalf;
   loadWord := wrapLoadO Memory.loadWord;

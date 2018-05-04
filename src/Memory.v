@@ -1,21 +1,88 @@
 Require Import bbv.Word.
+Require Import Coq.omega.Omega.
 
-Class Memory(m: Set)(a: Set) := mkMemory {
-  loadByte   : m -> a -> word  8;
-  loadHalf   : m -> a -> word 16;
-  loadWord   : m -> a -> word 32;
-  loadDouble : m -> a -> word 64;
-  storeByte  : m -> a -> word  8 -> m;
-  storeHalf  : m -> a -> word 16 -> m;
-  storeWord  : m -> a -> word 32 -> m;
-  storeDouble: m -> a -> word 64 -> m;
+Definition valid_addr{w: nat}(addr: word w)(alignment size: nat): Prop :=
+  wordToNat addr + alignment <= size /\ (wordToNat addr) mod alignment = 0.
+
+Class Memory(m: Set)(w: nat) := mkMemory {
+  memSize: m -> nat;
+
+  loadByte   : m -> (word w) -> word  8;
+  loadHalf   : m -> (word w) -> word 16;
+  loadWord   : m -> (word w) -> word 32;
+  loadDouble : m -> (word w) -> word 64;
+  storeByte  : m -> (word w) -> word  8 -> m;
+  storeHalf  : m -> (word w) -> word 16 -> m;
+  storeWord  : m -> (word w) -> word 32 -> m;
+  storeDouble: m -> (word w) -> word 64 -> m;
+
+  loadStoreByte_eq: forall m (a1 a2: word w) v,
+    valid_addr a1 1 (memSize m) ->
+    a2 = a1 ->
+    loadByte (storeByte m a1 v) a2 = v;
+
+  loadStoreByte_ne: forall m (a1 a2: word w) v,
+    valid_addr a1 1 (memSize m) ->
+    valid_addr a2 1 (memSize m) ->
+    a2 <> a1 ->
+    loadByte (storeByte m a1 v) a2 = loadByte m a2;
+
+  storeByte_preserves_memSize: forall m (a: word w) v,
+    valid_addr a 1 (memSize m) ->
+    memSize (storeByte m a v) = memSize m;
+
+  loadStoreHalf_eq: forall m (a1 a2: word w) v,
+    valid_addr a1 2 (memSize m) ->
+    a2 = a1 ->
+    loadHalf (storeHalf m a1 v) a2 = v;
+
+  loadStoreHalf_ne: forall m (a1 a2: word w) v,
+    valid_addr a1 2 (memSize m) ->
+    valid_addr a2 2 (memSize m) ->
+    a2 <> a1 ->
+    loadHalf (storeHalf m a1 v) a2 = loadHalf m a2;
+
+  storeHalf_preserves_memSize: forall m (a: word w) v,
+    valid_addr a 2 (memSize m) ->
+    memSize (storeHalf m a v) = memSize m;
+
+  loadStoreWord_eq: forall m (a1 a2: word w) v,
+    valid_addr a1 4 (memSize m) ->
+    a2 = a1 ->
+    loadWord (storeWord m a1 v) a2 = v;
+
+  loadStoreWord_ne: forall m (a1 a2: word w) v,
+    valid_addr a1 4 (memSize m) ->
+    valid_addr a2 4 (memSize m) ->
+    a2 <> a1 ->
+    loadWord (storeWord m a1 v) a2 = loadWord m a2;
+
+  storeWord_preserves_memSize: forall m (a: word w) v,
+    valid_addr a 4 (memSize m) ->
+    memSize (storeWord m a v) = memSize m;
+
+  loadStoreDouble_eq: forall m (a1 a2: word w) v,
+    valid_addr a1 8 (memSize m) ->
+    a2 = a1 ->
+    loadDouble (storeDouble m a1 v) a2 = v;
+
+  loadStoreDouble_ne: forall m (a1 a2: word w) v,
+    valid_addr a1 8 (memSize m) ->
+    valid_addr a2 8 (memSize m) ->
+    a2 <> a1 ->
+    loadDouble (storeDouble m a1 v) a2 = loadDouble m a2;
+
+  storeDouble_preserves_memSize: forall m (a: word w) v,
+    valid_addr a 8 (memSize m) ->
+    memSize (storeDouble m a v) = memSize m;
+
 }.
 
 Section MemoryHelpers.
 
   Context {sz: nat}.
   Context {Mem: Set}.
-  Context {MM: Memory Mem (word sz)}.
+  Context {MM: Memory Mem sz}.
 
   Fixpoint store_byte_list(l: list (word 8))(a: word sz)(m: Mem): Mem :=
     match l with

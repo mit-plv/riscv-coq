@@ -18,7 +18,7 @@ Section Riscv.
 
   Context {B: RiscvBitWidths}.
   Context {Mem: Set}.
-  Context {MemIsMem: Memory Mem (word wXLEN)}.
+  Context {MemIsMem: Memory Mem wXLEN}.
   Context {RF: Type}.
   Context {RFI: RegisterFile RF Register (word wXLEN)}.
   
