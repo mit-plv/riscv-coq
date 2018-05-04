@@ -195,18 +195,42 @@ Proof.
     unfold wmod in H0.
 Abort.
 
-(*
+Definition valid_addr{w}(m: mem)(alignment: nat)(addr: word w): Prop :=
+  wordToNat addr + alignment <= length (proj1_sig m) /\
+  (wordToNat addr) mod alignment = 0.
+
+Lemma write_read_half_eq: forall w m (a1 a2: word w) v,
+    valid_addr m 2 a1 ->
+    a2 = a1 ->
+    read_half (write_half m a1 v) a2 = v.
+Proof.
+  intros. destruct H.
+  destruct m as [m P]. unfold ListMemoryNatAddr.mem_size in *. simpl in H.
+  apply ListMemoryNatAddr.write_read_half_eq.
+  - simpl.
+    unfold ListMemoryNatAddr.mem_size. omega.
+  - f_equal. assumption.
+Qed.  
+
 Lemma write_read_half_ne: forall w m (a1 a2: word w) v,
-    wlt (a1 ^+ 1) (mem_end m) ->
-    a1 mod 2 = 0 ->
-    wlt (a2 ^+ 1) (mem_end m) ->
-    a2 mod 2 = 0 ->
+    valid_addr m 2 a1 ->
+    valid_addr m 2 a2 ->
     a2 <> a1 ->
     read_half (write_half m a1 v) a2 = read_half m a2.
 Proof.
-
+  intros. destruct H. destruct H0.
+  destruct m as [m P]. unfold ListMemoryNatAddr.mem_size in *. simpl in H, H0.
+  apply ListMemoryNatAddr.write_read_half_ne.
+  - simpl.
+    unfold ListMemoryNatAddr.mem_size. omega.
+  - assumption.
+  - simpl.
+    unfold ListMemoryNatAddr.mem_size. omega.
+  - assumption.
+  - apply (wordToNat_neq1 H1).
 Qed.
 
+(*
 Lemma write_half_preserves_mem_end: forall w m (a: word w) v,
     wlt (a ^+ 1) (mem_end m) ->
     mem_end (write_half m a v) = mem_end m.
