@@ -63,135 +63,85 @@ Instance mem_is_Memory(w: nat): Memory mem (word w) := {|
   storeDouble := write_double;
 |}.
 
+Local Ltac wrap L :=
+  intros;
+  repeat match goal with
+         | H: valid_addr _ _ _ |- _ => destruct H
+         end;
+  unfold mem_size, ListMemoryNatAddr.mem_size in *;
+  apply L;
+  unfold ListMemoryNatAddr.mem_size;
+  try apply wordToNat_neq1;
+  (congruence || omega || idtac).    
+
 Lemma write_read_byte_eq: forall w m (a1 a2: word w) v,
     valid_addr m 1 a1 ->
     a2 = a1 ->
     read_byte (write_byte m a1 v) a2 = v.
-Proof.
-  intros. destruct H.
-  unfold mem_size, ListMemoryNatAddr.mem_size in *.
-  unfold ListMemoryNatAddr.mem_size in *.
-  apply ListMemoryNatAddr.write_read_byte_eq.
-  - simpl.
-    unfold ListMemoryNatAddr.mem_size.
-    omega.
-  - f_equal. assumption.
-Qed.
+Proof. wrap ListMemoryNatAddr.write_read_byte_eq. Qed.
 
 Lemma write_read_byte_ne: forall w m (a1 a2: word w) v,
     valid_addr m 1 a1 ->
     valid_addr m 1 a2 ->
     a2 <> a1 ->
     read_byte (write_byte m a1 v) a2 = read_byte m a2.
-Proof.
-  intros.
-  destruct H, H0.
-  unfold mem_size, ListMemoryNatAddr.mem_size in *.
-  apply ListMemoryNatAddr.write_read_byte_ne; simpl; unfold ListMemoryNatAddr.mem_size.
-  - omega.
-  - omega.
-  - apply (wordToNat_neq1 H1).
-Qed.
+Proof. wrap ListMemoryNatAddr.write_read_byte_ne. Qed.
 
 Lemma write_byte_preserves_mem_size: forall w m (a: word w) v,
     valid_addr m 1 a ->
     mem_size (write_byte m a v) = mem_size m.
-Proof.
-  intros. destruct H.
-  unfold mem_size, write_byte in *.
-  apply ListMemoryNatAddr.write_byte_preserves_mem_size.
-  omega.
-Qed.
+Proof. wrap ListMemoryNatAddr.write_byte_preserves_mem_size. Qed.
 
 Lemma write_read_half_eq: forall w m (a1 a2: word w) v,
     valid_addr m 2 a1 ->
     a2 = a1 ->
     read_half (write_half m a1 v) a2 = v.
-Proof.
-  intros. destruct H, H0.
-  unfold mem_size, ListMemoryNatAddr.mem_size in *.
-  apply ListMemoryNatAddr.write_read_half_eq; try reflexivity.
-  unfold ListMemoryNatAddr.mem_size.
-  omega.
-Qed.
+Proof. wrap ListMemoryNatAddr.write_read_half_eq. Qed.
 
 Lemma write_read_half_ne: forall w m (a1 a2: word w) v,
     valid_addr m 2 a1 ->
     valid_addr m 2 a2 ->
     a2 <> a1 ->
     read_half (write_half m a1 v) a2 = read_half m a2.
-Proof.
-  intros. destruct H. destruct H0.
-  unfold mem_size, ListMemoryNatAddr.mem_size in *. simpl in H, H0.
-  apply ListMemoryNatAddr.write_read_half_ne.
-  - simpl.
-    unfold ListMemoryNatAddr.mem_size. omega.
-  - assumption.
-  - simpl.
-    unfold ListMemoryNatAddr.mem_size. omega.
-  - assumption.
-  - apply (wordToNat_neq1 H1).
-Qed.
+Proof. wrap ListMemoryNatAddr.write_read_half_ne. Qed.
 
-(*
-Lemma write_half_preserves_mem_end: forall w m (a: word w) v,
-    wlt (a ^+ 1) (mem_end m) ->
-    mem_end (write_half m a v) = mem_end m.
-Proof.
-
-Qed.
+Lemma write_half_preserves_mem_size: forall w m (a: word w) v,
+    valid_addr m 2 a ->
+    mem_size (write_half m a v) = mem_size m.
+Proof. wrap ListMemoryNatAddr.write_half_preserves_mem_size. Qed.
 
 Lemma write_read_word_eq: forall w m (a1 a2: word w) v,
-    a1 ^+ 4 <= mem_end m ->
-    a1 mod 4 = 0 ->
+    valid_addr m 4 a1 ->
     a2 = a1 ->
     read_word (write_word m a1 v) a2 = v.
-Proof.
-
-Qed.
+Proof. wrap ListMemoryNatAddr.write_read_word_eq. Qed.
 
 Lemma write_read_word_ne: forall w m (a1 a2: word w) v,
-    a1 ^+ 4 <= mem_end m ->
-    a1 mod 4 = 0 ->
-    a2 ^+ 4 <= mem_end m ->
-    a2 mod 4 = 0 ->
+    valid_addr m 4 a1 ->
+    valid_addr m 4 a2 ->
     a2 <> a1 ->
     read_word (write_word m a1 v) a2 = read_word m a2.
-Proof.
+Proof. wrap ListMemoryNatAddr.write_read_word_ne. Qed.
 
-Qed.
-
-Lemma write_word_preserves_mem_end: forall w m (a: word w) v,
-    a ^+ 4 <= mem_end m ->
-    mem_end (write_word m a v) = mem_end m.
-Proof.
-
-Qed.
+Lemma write_word_preserves_mem_size: forall w m (a: word w) v,
+    valid_addr m 4 a ->
+    mem_size (write_word m a v) = mem_size m.
+Proof. wrap ListMemoryNatAddr.write_word_preserves_mem_size. Qed.
 
 Lemma write_read_double_eq: forall w m (a1 a2: word w) v,
-    a1 ^+ 8 <= mem_end m ->
-    a1 mod 8 = 0 ->
+    valid_addr m 8 a1 ->
     a2 = a1 ->
     read_double (write_double m a1 v) a2 = v.
-Proof.
-
-Qed.
+Proof. wrap ListMemoryNatAddr.write_read_double_eq. Qed.
 
 Lemma write_read_double_ne: forall w m (a1 a2: word w) v,
-    a1 ^+ 8 <= mem_end m ->
-    a1 mod 8 = 0 ->
-    a2 ^+ 8 <= mem_end m ->
-    a2 mod 8 = 0 ->
+    valid_addr m 8 a1 ->
+    valid_addr m 8 a2 ->
     a2 <> a1 ->
     read_double (write_double m a1 v) a2 = read_double m a2.
-Proof.
+Proof. wrap ListMemoryNatAddr.write_read_double_ne. Qed.
 
-Qed.
-
-Lemma write_double_preserves_mem_end: forall w m (a: word w) v,
-    a ^+ 8 <= mem_end m ->
-    mem_end (write_double m a v) = mem_end m.
-Proof.
-
-Qed.
-*)
+Lemma write_double_preserves_mem_size: forall w m (a: word w) v,
+    valid_addr m 8 a ->
+    mem_size (write_double m a v) = mem_size m.
+Proof. wrap ListMemoryNatAddr.write_double_preserves_mem_size. Qed.

@@ -358,3 +358,11 @@ Proof.
     + rewrite add_mod_r; omega.
     + omega.
 Qed.
+
+Lemma write_double_preserves_mem_size: forall m a v,
+    a + 8 <= mem_size m ->
+    mem_size (write_double m a v) = mem_size m.
+Proof.
+  intros. unfold write_double, mem_size in *.
+  repeat rewrite write_word_preserves_mem_size; unfold mem_size; omega.
+Qed.
