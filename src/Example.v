@@ -95,7 +95,7 @@ Transparent wlt_dec.
 (* only uncomment this if you're sure there are no admits in the computational parts,
    otherwise this will eat all your memory *)
 
-Eval cbv in (map (@wordToZ 32) (fib6_L_trace 50)).
+Eval cbv in (fib6_L_trace 50).
 
 (*
 Eval cbv in (fib6_L_res 27).

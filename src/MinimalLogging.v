@@ -24,7 +24,7 @@ Section Riscv.
   Context {RF: Type}.
   Context {RFI: RegisterFile RF Register (word wXLEN)}.
   
-  Definition Log := list (word wXLEN). (* just load addresses for now *)
+  Definition Log := list (Z * Instruction). (* addr, decoded instruction *)
   
   Record RiscvMachineL := mkRiscvMachineL {
     machine: @RiscvMachine _ Mem RF;
@@ -51,7 +51,11 @@ Section Riscv.
       setPC := liftL1 setPC;
       loadByte   := liftL1 loadByte;
       loadHalf   := liftL1 loadHalf;
-      loadWord a := m <- get; put (with_log (m.(log) ++ [a]) m);;  liftL1 loadWord a;
+      loadWord a :=
+        m <- get;
+        res <- (liftL1 loadWord a);
+        put (with_log (m.(log) ++ [(wordToZ a, decode RV64IM (wordToZ res))]) m);;
+        Return res;
       loadDouble := liftL1 loadDouble;
       storeByte   := liftL2 storeByte;
       storeHalf   := liftL2 storeHalf;
