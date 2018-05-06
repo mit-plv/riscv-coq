@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
+Require Import bbv.DepEqNat.
 Require Import riscv.util.Monads.
 Require Import riscv.RiscvBitWidths.
 
@@ -116,6 +117,32 @@ End Constants.
 
 Definition machineIntToShamt: MachineInt -> Z := id.
 
+(* If you think that wlt_dec and wslt_dec are too expensive to reduce with
+   cbv, you can use these definitions instead, but it turned out that this
+   was not the problem. *)
+Definition wltb{sz: nat}(l r: word sz): bool := BinNat.N.ltb (wordToN l) (wordToN r).
+Definition wsltb{sz: nat}(l r: word sz): bool := Z.ltb (wordToZ l) (wordToZ r).
+
+(* Redefine wlshift so that it does not use eq_rect, which matches on add_comm,
+   which is an opaque proof, which makes cbv blow up *)
+Definition wlshift {sz : nat} (w : word sz) (n : nat) : word sz.
+  refine (split1 sz n (nat_cast _ _ _)).
+  apply PeanoNat.Nat.add_comm.
+  exact (combine (wzero n) w).
+Defined.
+
+Definition wrshift {sz : nat} (w : word sz) (n : nat) : word sz.
+  refine (split2 n sz (nat_cast _ _ _)).
+  apply PeanoNat.Nat.add_comm.
+  exact (combine w (wzero n)).
+Defined.
+
+Definition wrshifta {sz : nat} (w : word sz) (n : nat) : word sz.
+  refine (split2 n sz (nat_cast _ _ _)).
+  apply PeanoNat.Nat.add_comm.
+  exact (sext w _).
+Defined.
+
 Instance MachineWidth32: MachineWidth (word 32) := {|
   zero := $0;
   one := $1;
@@ -160,6 +187,54 @@ Instance MachineWidth32: MachineWidth (word 32) := {|
   highBits x := ZToWord 32 (bitSlice x 32 64);
 |}.
 
+(* bbv thinks this should be opaque, but we need it transparent to make sure it reduces *)
+Global Transparent wlt_dec.
+
+(* Test that all operations reduce under cbv.
+   If something prints a huge term with unreduced matches in it, running small examples
+   inside Coq will not work! *)
+Eval cbv in zero.
+Eval cbv in one.
+Eval cbv in add $7 $9.
+Eval cbv in sub $11 $4.
+Eval cbv in mul $16 $4.
+Eval cbv in div $100 $8.
+Eval cbv in rem $100 $8.
+Eval cbv in signed_less_than $4 $5.
+Eval cbv in signed_eqb $7 $9.
+Eval cbv in xor $8 $11.
+Eval cbv in or $3 $8.
+Eval cbv in and $7 $19.
+Eval cbv in fromImm 13%Z.
+Eval cbv in regToInt8 $5.
+Eval cbv in regToInt16 $5.
+Eval cbv in regToInt32 $5.
+Eval cbv in regToInt64 $5.
+Eval cbv in uInt8ToReg $5.
+Eval cbv in uInt16ToReg $5.
+Eval cbv in uInt32ToReg $5.
+Eval cbv in uInt64ToReg $5.
+Eval cbv in int8ToReg $5.
+Eval cbv in int16ToReg $5.
+Eval cbv in int32ToReg $5.
+Eval cbv in int64ToReg $5.
+Eval cbv in s32 $5.
+Eval cbv in u32 $5.
+Eval cbv in regToZ_signed $5.
+Eval cbv in regToZ_unsigned $5.
+Eval cbv in sll $5 7.
+Eval cbv in srl $5 7.
+Eval cbv in sra $5 7.
+Eval cbv in ltu $5 $7.
+Eval cbv in divu $50 $8.
+Eval cbv in remu $50 $8.
+Eval cbv in maxSigned.
+Eval cbv in maxUnsigned.
+Eval cbv in minSigned.
+Eval cbv in regToShamt5 $12.
+Eval cbv in regToShamt $12.
+Eval cbv in highBits (-9).
+
 Instance MachineWidth64: MachineWidth (word 64) := {|
   zero := $0;
   one := $1;
@@ -203,6 +278,48 @@ Instance MachineWidth64: MachineWidth (word 64) := {|
   regToShamt  x := Z.of_N (wordToN (split1 6 58 x));
   highBits x := ZToWord 64 (bitSlice x 64 128);
 |}.
+
+Eval cbv in zero.
+Eval cbv in one.
+Eval cbv in add $7 $9.
+Eval cbv in sub $11 $4.
+Eval cbv in mul $16 $4.
+Eval cbv in div $100 $8.
+Eval cbv in rem $100 $8.
+Eval cbv in signed_less_than $4 $5.
+Eval cbv in signed_eqb $7 $9.
+Eval cbv in xor $8 $11.
+Eval cbv in or $3 $8.
+Eval cbv in and $7 $19.
+Eval cbv in fromImm 13%Z.
+Eval cbv in regToInt8 $5.
+Eval cbv in regToInt16 $5.
+Eval cbv in regToInt32 $5.
+Eval cbv in regToInt64 $5.
+Eval cbv in uInt8ToReg $5.
+Eval cbv in uInt16ToReg $5.
+Eval cbv in uInt32ToReg $5.
+Eval cbv in uInt64ToReg $5.
+Eval cbv in int8ToReg $5.
+Eval cbv in int16ToReg $5.
+Eval cbv in int32ToReg $5.
+Eval cbv in int64ToReg $5.
+Eval cbv in s32 $5.
+Eval cbv in u32 $5.
+Eval cbv in regToZ_signed $5.
+Eval cbv in regToZ_unsigned $5.
+Eval cbv in sll $5 7.
+Eval cbv in srl $5 7.
+Eval cbv in sra $5 7.
+Eval cbv in ltu $5 $7.
+Eval cbv in divu $50 $8.
+Eval cbv in remu $50 $8.
+Eval cbv in maxSigned.
+Eval cbv in maxUnsigned.
+Eval cbv in minSigned.
+Eval cbv in regToShamt5 $12.
+Eval cbv in regToShamt $12.
+Eval cbv in highBits (-9).
 
 Instance MachineWidthInst{B: RiscvBitWidths}: MachineWidth (word wXLEN).
   unfold wXLEN.
