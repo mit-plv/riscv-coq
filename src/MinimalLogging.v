@@ -23,8 +23,12 @@ Section Riscv.
 
   Context {RF: Type}.
   Context {RFI: RegisterFile RF Register (word wXLEN)}.
+
+  Inductive LogEvent :=
+  | EvLoadWord(addr: Z)(i: Instruction)
+  | EvStoreWord(addr: Z)(v: word 32).
   
-  Definition Log := list (Z * Instruction). (* addr, decoded instruction *)
+  Definition Log := list LogEvent.
   
   Record RiscvMachineL := mkRiscvMachineL {
     machine: @RiscvMachine _ Mem RF;
@@ -54,12 +58,15 @@ Section Riscv.
       loadWord a :=
         m <- get;
         res <- (liftL1 loadWord a);
-        put (with_log (m.(log) ++ [(wordToZ a, decode RV64IM (wordToZ res))]) m);;
+        put (with_log (m.(log) ++ [EvLoadWord (wordToZ a) (decode RV64IM (wordToZ res))]) m);;
         Return res;
       loadDouble := liftL1 loadDouble;
       storeByte   := liftL2 storeByte;
       storeHalf   := liftL2 storeHalf;
-      storeWord   := liftL2 storeWord;
+      storeWord a v :=
+        m <- get;
+        put (with_log (m.(log) ++ [EvStoreWord (wordToZ a) v]) m);;
+        liftL2 storeWord a v;
       storeDouble := liftL2 storeDouble;
       step := liftL0 step;
       getCSRField_MTVecBase := liftL0 getCSRField_MTVecBase;
