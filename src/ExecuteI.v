@@ -37,14 +37,14 @@ Definition execute {p} {t} `{(RiscvState p t)}
     | Decode.Jal rd jimm20 =>
         Bind getPC (fun pc =>
                 let newPC := pc + fromImm jimm20 in
-                if (rem newPC four /= zero) : bool
+                if (remu newPC four /= zero) : bool
                 then raiseException zero zero
                 else (Bind (setRegister rd (pc + four)) (fun _ => setPC newPC)))
     | Decode.Jalr rd rs1 oimm12 =>
         Bind (getRegister rs1) (fun x =>
                 Bind getPC (fun pc =>
                         let newPC := and (x + fromImm oimm12) (lnot one) in
-                        if (rem newPC four /= zero) : bool
+                        if (remu newPC four /= zero) : bool
                         then raiseException zero zero
                         else (Bind (setRegister rd (pc + four)) (fun _ => setPC newPC))))
     | Decode.Beq rs1 rs2 sbimm12 =>
@@ -52,7 +52,7 @@ Definition execute {p} {t} `{(RiscvState p t)}
                 Bind (getRegister rs2) (fun y =>
                         Bind getPC (fun pc =>
                                 when (signed_eqb x y) (let newPC := (pc + fromImm sbimm12) in
-                                                       if (rem newPC four /= zero) : bool
+                                                       if (remu newPC four /= zero) : bool
                                                        then raiseException zero zero
                                                        else setPC newPC))))
     | Decode.Bne rs1 rs2 sbimm12 =>
@@ -60,7 +60,7 @@ Definition execute {p} {t} `{(RiscvState p t)}
                 Bind (getRegister rs2) (fun y =>
                         Bind getPC (fun pc =>
                                 when (x /= y) (let addr := (pc + fromImm sbimm12) in
-                                               if (rem addr four /= zero) : bool
+                                               if (remu addr four /= zero) : bool
                                                then raiseException zero zero
                                                else setPC addr))))
     | Decode.Blt rs1 rs2 sbimm12 =>
@@ -68,7 +68,7 @@ Definition execute {p} {t} `{(RiscvState p t)}
                 Bind (getRegister rs2) (fun y =>
                         Bind getPC (fun pc =>
                                 when (x < y) (let addr := (pc + fromImm sbimm12) in
-                                              if (rem addr four /= zero) : bool
+                                              if (remu addr four /= zero) : bool
                                               then raiseException zero zero
                                               else setPC addr))))
     | Decode.Bge rs1 rs2 sbimm12 =>
@@ -76,7 +76,7 @@ Definition execute {p} {t} `{(RiscvState p t)}
                 Bind (getRegister rs2) (fun y =>
                         Bind getPC (fun pc =>
                                 when (x >= y) (let addr := (pc + fromImm sbimm12) in
-                                               if (rem addr four /= zero) : bool
+                                               if (remu addr four /= zero) : bool
                                                then raiseException zero zero
                                                else setPC addr))))
     | Decode.Bltu rs1 rs2 sbimm12 =>
@@ -84,7 +84,7 @@ Definition execute {p} {t} `{(RiscvState p t)}
                 Bind (getRegister rs2) (fun y =>
                         Bind getPC (fun pc =>
                                 when ((ltu x y)) (let addr := (pc + fromImm sbimm12) in
-                                                  if (rem addr four /= zero) : bool
+                                                  if (remu addr four /= zero) : bool
                                                   then raiseException zero zero
                                                   else setPC addr))))
     | Decode.Bgeu rs1 rs2 sbimm12 =>
@@ -92,7 +92,7 @@ Definition execute {p} {t} `{(RiscvState p t)}
                 Bind (getRegister rs2) (fun y =>
                         Bind getPC (fun pc =>
                                 when (negb (ltu x y)) (let addr := (pc + fromImm sbimm12) in
-                                                       if (rem addr four /= zero) : bool
+                                                       if (remu addr four /= zero) : bool
                                                        then raiseException zero zero
                                                        else setPC addr))))
     | Decode.Lb rd rs1 oimm12 =>
@@ -188,7 +188,7 @@ Definition execute {p} {t} `{(RiscvState p t)}
      Bind Load Return RiscvState Store and bool four fromImm getPC getRegister
      int16ToReg int32ToReg int8ToReg lnot loadByte loadHalf loadWord ltu negb one
      op_zgze__ op_zl__ op_zm__ op_zp__ op_zsze__ or raiseException regToInt16
-     regToInt32 regToInt8 regToShamt rem setPC setRegister signed_eqb sll sra srl
+     regToInt32 regToInt8 regToShamt remu setPC setRegister signed_eqb sll sra srl
      storeByte storeHalf storeWord translate tt two uInt16ToReg uInt8ToReg unit when
      xor zero Decode.Add Decode.Addi Decode.And Decode.Andi Decode.Auipc Decode.Beq
      Decode.Bge Decode.Bgeu Decode.Blt Decode.Bltu Decode.Bne Decode.Fence

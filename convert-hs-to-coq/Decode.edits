@@ -14,6 +14,8 @@ rewrite forall x, x GHC.Base./= Decode.InvalidM = match x with | Decode.InvalidM
 rewrite forall x, x GHC.Base./= Decode.InvalidI64 = match x with | Decode.InvalidI64 => false | _ => true end
 rewrite forall x, x GHC.Base./= Decode.InvalidM64 = match x with | Decode.InvalidM64 => false | _ => true end
 rewrite forall x, x GHC.Base./= Decode.InvalidCSR = match x with | Decode.InvalidCSR => false | _ => true end
+rewrite forall x, x GHC.Base./= Decode.InvalidA = match x with | Decode.InvalidA => false | _ => true end
+rewrite forall x, x GHC.Base./= Decode.InvalidA64 = match x with | Decode.InvalidA64 => false | _ => true end
 
 skip Decode.Eq___InstructionI
 skip Decode.Eq___InstructionM
@@ -22,6 +24,8 @@ skip Decode.Eq___InstructionI64
 skip Decode.Eq___InstructionCSR
 skip Decode.Eq___InstructionSet
 skip Decode.Eq___Instruction
+skip Decode.Eq___InstructionA
+skip Decode.Eq___InstructionA64
 
 skip Decode.Default__InstructionSet
 skip Decode.Default__InstructionM64
@@ -29,6 +33,8 @@ skip Decode.Default__InstructionM
 skip Decode.Default__InstructionI64
 skip Decode.Default__InstructionI
 skip Decode.Default__InstructionCSR
+skip Decode.Default__InstructionA
+skip Decode.Default__InstructionA64
 
 skip Decode.rd
 skip Decode.rs1
@@ -51,4 +57,7 @@ skip Decode.i64Instruction
 skip Decode.iInstruction
 skip Decode.m64Instruction
 skip Decode.mInstruction
+skip Decode.a64Instruction
+skip Decode.aInstruction
 skip Decode.inst
+skip Decode.aqrl

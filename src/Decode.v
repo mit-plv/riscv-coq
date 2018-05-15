@@ -33,8 +33,12 @@ Definition Opcode :=
 Inductive InstructionSet : Type
   := RV32I : InstructionSet
   |  RV32IM : InstructionSet
+  |  RV32IA : InstructionSet
+  |  RV32IMA : InstructionSet
   |  RV64I : InstructionSet
-  |  RV64IM : InstructionSet.
+  |  RV64IM : InstructionSet
+  |  RV64IA : InstructionSet
+  |  RV64IMA : InstructionSet.
 
 Inductive InstructionM64 : Type
   := Mulw : Register -> Register -> Register -> InstructionM64
@@ -128,11 +132,41 @@ Inductive InstructionCSR : Type
   |  Csrrci : Register -> Z -> Z -> InstructionCSR
   |  InvalidCSR : InstructionCSR.
 
+Inductive InstructionA64 : Type
+  := Lr_d : Register -> Register -> Z -> InstructionA64
+  |  Sc_d : Register -> Register -> Register -> Z -> InstructionA64
+  |  Amoswap_d : Register -> Register -> Register -> Z -> InstructionA64
+  |  Amoadd_d : Register -> Register -> Register -> Z -> InstructionA64
+  |  Amoand_d : Register -> Register -> Register -> Z -> InstructionA64
+  |  Amoor_d : Register -> Register -> Register -> Z -> InstructionA64
+  |  Amoxor_d : Register -> Register -> Register -> Z -> InstructionA64
+  |  Amomax_d : Register -> Register -> Register -> Z -> InstructionA64
+  |  Amomaxu_d : Register -> Register -> Register -> Z -> InstructionA64
+  |  Amomin_d : Register -> Register -> Register -> Z -> InstructionA64
+  |  Amominu_d : Register -> Register -> Register -> Z -> InstructionA64
+  |  InvalidA64 : InstructionA64.
+
+Inductive InstructionA : Type
+  := Lr_w : Register -> Register -> Z -> InstructionA
+  |  Sc_w : Register -> Register -> Register -> Z -> InstructionA
+  |  Amoswap_w : Register -> Register -> Register -> Z -> InstructionA
+  |  Amoadd_w : Register -> Register -> Register -> Z -> InstructionA
+  |  Amoand_w : Register -> Register -> Register -> Z -> InstructionA
+  |  Amoor_w : Register -> Register -> Register -> Z -> InstructionA
+  |  Amoxor_w : Register -> Register -> Register -> Z -> InstructionA
+  |  Amomax_w : Register -> Register -> Register -> Z -> InstructionA
+  |  Amomaxu_w : Register -> Register -> Register -> Z -> InstructionA
+  |  Amomin_w : Register -> Register -> Register -> Z -> InstructionA
+  |  Amominu_w : Register -> Register -> Register -> Z -> InstructionA
+  |  InvalidA : InstructionA.
+
 Inductive Instruction : Type
   := IInstruction : InstructionI -> Instruction
   |  MInstruction : InstructionM -> Instruction
+  |  AInstruction : InstructionA -> Instruction
   |  I64Instruction : InstructionI64 -> Instruction
   |  M64Instruction : InstructionM64 -> Instruction
+  |  A64Instruction : InstructionA64 -> Instruction
   |  CSRInstruction : InstructionCSR -> Instruction
   |  InvalidInstruction : Z -> Instruction.
 (* Converted value declarations: *)
@@ -161,6 +195,14 @@ Inductive Instruction : Type
 
 (* Skipping instance Eq___InstructionM *)
 
+(* Translating `instance Show__InstructionA' failed: OOPS! Cannot find
+   information for class Qualified "GHC.Show" "Show" unsupported *)
+
+(* Translating `instance Read__InstructionA' failed: OOPS! Cannot find
+   information for class Qualified "GHC.Read" "Read" unsupported *)
+
+(* Skipping instance Eq___InstructionA *)
+
 (* Translating `instance Show__InstructionI64' failed: OOPS! Cannot find
    information for class Qualified "GHC.Show" "Show" unsupported *)
 
@@ -176,6 +218,14 @@ Inductive Instruction : Type
    information for class Qualified "GHC.Read" "Read" unsupported *)
 
 (* Skipping instance Eq___InstructionM64 *)
+
+(* Translating `instance Show__InstructionA64' failed: OOPS! Cannot find
+   information for class Qualified "GHC.Show" "Show" unsupported *)
+
+(* Translating `instance Read__InstructionA64' failed: OOPS! Cannot find
+   information for class Qualified "GHC.Read" "Read" unsupported *)
+
+(* Skipping instance Eq___InstructionA64 *)
 
 (* Translating `instance Show__InstructionCSR' failed: OOPS! Cannot find
    information for class Qualified "GHC.Show" "Show" unsupported *)
@@ -195,8 +245,12 @@ Definition bitwidth : InstructionSet -> Z :=
     match arg_0__ with
     | RV32I => 32
     | RV32IM => 32
+    | RV32IA => 32
+    | RV32IMA => 32
     | RV64I => 64
     | RV64IM => 64
+    | RV64IA => 64
+    | RV64IMA => 64
     end.
 
 Definition funct12_EBREAK : Z :=
@@ -228,6 +282,12 @@ Definition funct3_ADDIW : Z :=
 
 Definition funct3_ADDW : Z :=
   0.
+
+Definition funct3_AMOD : Z :=
+  3.
+
+Definition funct3_AMOW : Z :=
+  2.
 
 Definition funct3_AND : Z :=
   7.
@@ -418,6 +478,39 @@ Definition funct3_XOR : Z :=
 Definition funct3_XORI : Z :=
   4.
 
+Definition funct5_AMOADD : Z :=
+  0.
+
+Definition funct5_AMOAND : Z :=
+  12.
+
+Definition funct5_AMOMAX : Z :=
+  20.
+
+Definition funct5_AMOMAXU : Z :=
+  28.
+
+Definition funct5_AMOMIN : Z :=
+  16.
+
+Definition funct5_AMOMINU : Z :=
+  24.
+
+Definition funct5_AMOOR : Z :=
+  8.
+
+Definition funct5_AMOSWAP : Z :=
+  1.
+
+Definition funct5_AMOXOR : Z :=
+  4.
+
+Definition funct5_LR : Z :=
+  2.
+
+Definition funct5_SC : Z :=
+  3.
+
 Definition funct6_SLLI : Z :=
   0.
 
@@ -523,6 +616,12 @@ Definition funct7_SUBW : Z :=
 Definition funct7_XOR : Z :=
   0.
 
+Definition isValidA :=
+  fun inst => match inst with | InvalidA => false | _ => true end.
+
+Definition isValidA64 :=
+  fun inst => match inst with | InvalidA64 => false | _ => true end.
+
 Definition isValidCSR :=
   fun inst => match inst with | InvalidCSR => false | _ => true end.
 
@@ -601,17 +700,30 @@ Definition opcode_STORE_FP : Opcode :=
 Definition opcode_SYSTEM : Opcode :=
   115.
 
+Definition supportsA : InstructionSet -> bool :=
+  fun arg_0__ =>
+    match arg_0__ with
+    | RV32IA => true
+    | RV32IMA => true
+    | RV64IA => true
+    | RV64IMA => true
+    | _ => false
+    end.
+
 Definition supportsM : InstructionSet -> bool :=
   fun arg_0__ =>
     match arg_0__ with
-    | RV32I => false
     | RV32IM => true
-    | RV64I => false
+    | RV32IMA => true
     | RV64IM => true
+    | RV64IMA => true
+    | _ => false
     end.
 
 Definition decode : InstructionSet -> Z -> Instruction :=
   fun iset inst =>
+    let aqrl := bitSlice inst 25 27 in
+    let funct5 := bitSlice inst 27 32 in
     let zimm := bitSlice inst 15 20 in
     let funct6 := bitSlice inst 26 32 in
     let shamtHi := bitSlice inst 25 26 in
@@ -764,6 +876,41 @@ Definition decode : InstructionSet -> Z -> Instruction :=
                                                                                funct7_REMU)) : bool
       then Remu rd rs1 rs2 else
       InvalidM in
+    let decodeA :=
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOW) (andb (Z.eqb
+                                                                                funct5 funct5_LR) (Z.eqb rs2 0))) : bool
+      then Lr_w rd rs1 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOW) (Z.eqb funct5
+                                                                                funct5_SC)) : bool
+      then Sc_w rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOW) (Z.eqb funct5
+                                                                                funct5_AMOSWAP)) : bool
+      then Amoswap_w rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOW) (Z.eqb funct5
+                                                                                funct5_AMOADD)) : bool
+      then Amoadd_w rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOW) (Z.eqb funct5
+                                                                                funct5_AMOXOR)) : bool
+      then Amoxor_w rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOW) (Z.eqb funct5
+                                                                                funct5_AMOAND)) : bool
+      then Amoand_w rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOW) (Z.eqb funct5
+                                                                                funct5_AMOOR)) : bool
+      then Amoor_w rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOW) (Z.eqb funct5
+                                                                                funct5_AMOMIN)) : bool
+      then Amomin_w rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOW) (Z.eqb funct5
+                                                                                funct5_AMOMAX)) : bool
+      then Amomax_w rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOW) (Z.eqb funct5
+                                                                                funct5_AMOMINU)) : bool
+      then Amominu_w rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOW) (Z.eqb funct5
+                                                                                funct5_AMOMAXU)) : bool
+      then Amomaxu_w rd rs1 rs2 aqrl else
+      InvalidA in
     let decodeI64 :=
       if andb (Z.eqb opcode opcode_LOAD) (Z.eqb funct3 funct3_LD) : bool
       then Ld rd rs1 oimm12 else
@@ -815,6 +962,41 @@ Definition decode : InstructionSet -> Z -> Instruction :=
                                                  funct7 funct7_REMUW)) : bool
       then Remuw rd rs1 rs2 else
       InvalidM64 in
+    let decodeA64 :=
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOD) (andb (Z.eqb
+                                                                                funct5 funct5_LR) (Z.eqb rs2 0))) : bool
+      then Lr_d rd rs1 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOD) (Z.eqb funct5
+                                                                                funct5_SC)) : bool
+      then Sc_d rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOD) (Z.eqb funct5
+                                                                                funct5_AMOSWAP)) : bool
+      then Amoswap_d rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOD) (Z.eqb funct5
+                                                                                funct5_AMOADD)) : bool
+      then Amoadd_d rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOD) (Z.eqb funct5
+                                                                                funct5_AMOXOR)) : bool
+      then Amoxor_d rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOD) (Z.eqb funct5
+                                                                                funct5_AMOAND)) : bool
+      then Amoand_d rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOD) (Z.eqb funct5
+                                                                                funct5_AMOOR)) : bool
+      then Amoor_d rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOD) (Z.eqb funct5
+                                                                                funct5_AMOMIN)) : bool
+      then Amomin_d rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOD) (Z.eqb funct5
+                                                                                funct5_AMOMAX)) : bool
+      then Amomax_d rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOD) (Z.eqb funct5
+                                                                                funct5_AMOMINU)) : bool
+      then Amominu_d rd rs1 rs2 aqrl else
+      if andb (Z.eqb opcode opcode_AMO) (andb (Z.eqb funct3 funct3_AMOD) (Z.eqb funct5
+                                                                                funct5_AMOMAXU)) : bool
+      then Amomaxu_d rd rs1 rs2 aqrl else
+      InvalidA64 in
     let decodeCSR :=
       if andb (Z.eqb opcode opcode_SYSTEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
                                                                            funct3_PRIV) (Z.eqb funct7
@@ -867,6 +1049,10 @@ Definition decode : InstructionSet -> Z -> Instruction :=
       if isValidCSR decodeCSR : bool
       then cons (CSRInstruction decodeCSR) nil
       else nil in
+    let resultA64 :=
+      if isValidA64 decodeA64 : bool
+      then cons (A64Instruction decodeA64) nil
+      else nil in
     let resultM64 :=
       if isValidM64 decodeM64 : bool
       then cons (M64Instruction decodeM64) nil
@@ -874,6 +1060,10 @@ Definition decode : InstructionSet -> Z -> Instruction :=
     let resultI64 :=
       if isValidI64 decodeI64 : bool
       then cons (I64Instruction decodeI64) nil
+      else nil in
+    let resultA :=
+      if isValidA decodeA : bool
+      then cons (AInstruction decodeA) nil
       else nil in
     let resultM :=
       if isValidM decodeM : bool
@@ -886,20 +1076,33 @@ Definition decode : InstructionSet -> Z -> Instruction :=
     let results : list Instruction :=
       Coq.Init.Datatypes.app resultI (Coq.Init.Datatypes.app (if supportsM iset : bool
                                                               then resultM
-                                                              else nil) (Coq.Init.Datatypes.app (if Z.eqb (bitwidth
-                                                                                                           iset)
-                                                                                                          64 : bool
-                                                                                                 then resultI64
+                                                              else nil) (Coq.Init.Datatypes.app (if supportsA
+                                                                                                    iset : bool
+                                                                                                 then resultA
                                                                                                  else nil)
                                                                                                 (Coq.Init.Datatypes.app
-                                                                                                 (if andb (Z.eqb
-                                                                                                           (bitwidth
-                                                                                                            iset) 64)
-                                                                                                          (supportsM
-                                                                                                           iset) : bool
-                                                                                                  then resultM64
+                                                                                                 (if Z.eqb (bitwidth
+                                                                                                            iset)
+                                                                                                           64 : bool
+                                                                                                  then resultI64
                                                                                                   else nil)
-                                                                                                 resultCSR))) in
+                                                                                                 (Coq.Init.Datatypes.app
+                                                                                                  (if andb (Z.eqb
+                                                                                                            (bitwidth
+                                                                                                             iset) 64)
+                                                                                                           (supportsM
+                                                                                                            iset) : bool
+                                                                                                   then resultM64
+                                                                                                   else nil)
+                                                                                                  (Coq.Init.Datatypes.app
+                                                                                                   (if andb (Z.eqb
+                                                                                                             (bitwidth
+                                                                                                              iset) 64)
+                                                                                                            (supportsA
+                                                                                                             iset) : bool
+                                                                                                    then resultA64
+                                                                                                    else nil)
+                                                                                                   resultCSR))))) in
     match results with
     | cons singleResult nil => singleResult
     | nil => InvalidInstruction inst
