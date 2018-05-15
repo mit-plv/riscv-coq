@@ -16,6 +16,9 @@ Class Memory(m: Set)(w: nat) := mkMemory {
   storeWord  : m -> (word w) -> word 32 -> m;
   storeDouble: m -> (word w) -> word 64 -> m;
 
+  memSize_bound: forall m,
+    memSize m <= 2^w;
+        
   loadStoreByte_eq: forall m (a1 a2: word w) v,
     valid_addr a1 1 (memSize m) ->
     a2 = a1 ->
