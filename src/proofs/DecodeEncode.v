@@ -26,6 +26,19 @@ Lemma invert_encode_R: forall {opcode rd rs1 rs2 funct3 funct7},
   rs2 = bitSlice inst 20 25.
 Proof. Admitted.
 
+Lemma invert_encode_R_atomic: forall {opcode rd rs1 rs2 funct3 aqrl funct5},
+  verify_R_atomic opcode rd rs1 rs2 funct3 aqrl funct5 ->
+  forall inst,
+  encode_R_atomic opcode rd rs1 rs2 funct3 aqrl funct5 = inst ->
+  opcode = bitSlice inst 0 7 /\
+  funct3 = bitSlice inst 12 15 /\
+  aqrl = bitSlice inst 25 27 /\
+  funct5 = bitSlice inst 27 32 /\
+  rd = bitSlice inst 7 12 /\
+  rs1 = bitSlice inst 15 20 /\
+  rs2 = bitSlice inst 20 25.
+Proof. Admitted.
+
 Lemma invert_encode_I: forall {opcode rd rs1 funct3 oimm12},
   verify_I opcode rd rs1 funct3 oimm12 ->
   forall inst,
@@ -161,6 +174,7 @@ Ltac invert_encode :=
   match goal with
   | V: context[verify_Invalid   ], H: _ |- _ => pose proof (invert_encode_InvalidInstruction V _ H)
   | V: context[verify_R         ], H: _ |- _ => pose proof (invert_encode_R                  V _ H)
+  | V: context[verify_R_atomic  ], H: _ |- _ => pose proof (invert_encode_R_atomic           V _ H)
   | V: context[verify_I         ], H: _ |- _ => pose proof (invert_encode_I                  V _ H)
   | V: context[verify_I_shift_57], H: _ |- _ => pose proof (invert_encode_I_shift_57         V _ H)
   | V: context[verify_I_shift_66], H: _ |- _ => pose proof (invert_encode_I_shift_66         V _ H)
@@ -181,7 +195,7 @@ Proof. intros. simpl. subst x. assumption. Qed.
 Lemma decode_encode: forall (inst: Instruction) (z: Z),
     respects_bounds 64 inst ->
     encode inst = z ->
-    decode RV64IM z = inst.
+    decode RV64IMA z = inst.
 Proof.
   intros.
   let d := eval cbv delta [decode] in decode in change decode with d.

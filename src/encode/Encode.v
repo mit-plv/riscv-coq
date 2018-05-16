@@ -14,6 +14,7 @@ Local Open Scope Z_scope.
 Record InstructionMapper{T: Type} := mkInstructionMapper {
   map_Invalid: Z -> T;
   map_R(opcode: MachineInt)(rd rs1 rs2: Register)(funct3: MachineInt)(funct7: MachineInt): T;
+  map_R_atomic(opcode: MachineInt)(rd rs1 rs2: Register)(funct3: MachineInt)(aqrl: MachineInt)(funct5: MachineInt): T;
   map_I(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(oimm12: Z): T;
   map_I_shift_57(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt): T;
   map_I_shift_66(opcode: MachineInt)(rd rs1: Register)(shamt6 funct3 funct6: MachineInt): T;
@@ -32,8 +33,10 @@ Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)(inst: I
   | InvalidInstruction inst   => mapper.(map_Invalid) inst
   | IInstruction   InvalidI   => mapper.(map_Invalid) 0
   | MInstruction   InvalidM   => mapper.(map_Invalid) 0
+  | AInstruction   InvalidA   => mapper.(map_Invalid) 0
   | I64Instruction InvalidI64 => mapper.(map_Invalid) 0
   | M64Instruction InvalidM64 => mapper.(map_Invalid) 0
+  | A64Instruction InvalidA64 => mapper.(map_Invalid) 0
   | CSRInstruction InvalidCSR => mapper.(map_Invalid) 0
 
   | IInstruction   (Lb  rd rs1 oimm12) => mapper.(map_I) opcode_LOAD rd rs1 funct3_LB  oimm12
@@ -126,9 +129,31 @@ Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)(inst: I
   | CSRInstruction (Csrrwi rd zimm csr12) => mapper.(map_I_system) opcode_SYSTEM rd zimm funct3_CSRRWI csr12
   | CSRInstruction (Csrrsi rd zimm csr12) => mapper.(map_I_system) opcode_SYSTEM rd zimm funct3_CSRRSI csr12
   | CSRInstruction (Csrrci rd zimm csr12) => mapper.(map_I_system) opcode_SYSTEM rd zimm funct3_CSRRCI csr12
+
+  | AInstruction   (Lr_w      rd rs1     aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 0   funct3_AMOW aqrl funct5_LR
+  | AInstruction   (Sc_w      rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_SC         
+  | AInstruction   (Amoswap_w rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOSWAP    
+  | AInstruction   (Amoadd_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOADD     
+  | AInstruction   (Amoxor_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOXOR     
+  | AInstruction   (Amoand_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOAND     
+  | AInstruction   (Amoor_w   rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOOR      
+  | AInstruction   (Amomin_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOMIN     
+  | AInstruction   (Amomax_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOMAX     
+  | AInstruction   (Amominu_w rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOMINU    
+  | AInstruction   (Amomaxu_w rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOMAXU    
+  | A64Instruction (Lr_d      rd rs1     aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 0   funct3_AMOD aqrl funct5_LR
+  | A64Instruction (Sc_d      rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_SC         
+  | A64Instruction (Amoswap_d rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOSWAP    
+  | A64Instruction (Amoadd_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOADD     
+  | A64Instruction (Amoxor_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOXOR     
+  | A64Instruction (Amoand_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOAND     
+  | A64Instruction (Amoor_d   rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOOR      
+  | A64Instruction (Amomin_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOMIN     
+  | A64Instruction (Amomax_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOMAX     
+  | A64Instruction (Amominu_d rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOMINU    
+  | A64Instruction (Amomaxu_d rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOMAXU
   end.
-
-
+                                                                                               
 Definition encode_Invalid: Z -> Z := id.
 
 Notation "a <|> b" := (Z.lor a b) (at level 50, left associativity).
@@ -140,6 +165,15 @@ Definition encode_R(opcode: MachineInt)(rd rs1 rs2: Register)(funct3 funct7: Mac
     Z.shiftl rs1 15 <|>
     Z.shiftl rs2 20 <|>
     Z.shiftl funct7 25.
+
+Definition encode_R_atomic(opcode: MachineInt)(rd rs1 rs2: Register)(funct3 aqrl funct5: MachineInt) :=
+    opcode <|>
+    Z.shiftl rd 7 <|>
+    Z.shiftl funct3 12 <|>
+    Z.shiftl rs1 15 <|>
+    Z.shiftl rs2 20 <|>
+    Z.shiftl aqrl 25 <|>
+    Z.shiftl funct5 27.
 
 Definition encode_I(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(oimm12: Z) :=
     opcode <|>
@@ -214,6 +248,7 @@ Definition encode_Fence(opcode: MachineInt)(rd rs1: Register)(funct3 prd scc msb
 Definition Encoder: InstructionMapper MachineInt := {|
   map_Invalid := encode_Invalid;
   map_R := encode_R;
+  map_R_atomic := encode_R_atomic;
   map_I := encode_I;
   map_I_shift_57 := encode_I_shift_57;
   map_I_shift_66 := encode_I_shift_66;
@@ -238,6 +273,15 @@ Definition verify_R(opcode: MachineInt)(rd rs1 rs2: Register)(funct3 funct7: Mac
     0 <= rs2 < 32 /\
     0 <= funct3 < 8 /\
     0 <= funct7 < 128.
+
+Definition verify_R_atomic(opcode: MachineInt)(rd rs1 rs2: Register)(funct3 aqrl funct5: MachineInt) :=
+    0 <= opcode < 128 /\
+    0 <= rd < 32 /\
+    0 <= rs1 < 32 /\
+    0 <= rs2 < 32 /\
+    0 <= funct3 < 8 /\
+    0 <= aqrl < 4 /\
+    0 <= funct5 < 32.
 
 Definition verify_I(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(oimm12: Z) :=
     0 <= opcode < 128 /\
@@ -307,6 +351,7 @@ Definition verify_Fence(opcode: MachineInt)(rd rs1: Register)(funct3 prd scc msb
 Definition Verifier(bitwidth: Z): InstructionMapper Prop := {|
   map_Invalid := verify_Invalid;
   map_R := verify_R;
+  map_R_atomic := verify_R_atomic;
   map_I := verify_I;
   map_I_shift_57 := verify_I_shift_57;
   map_I_shift_66 := verify_I_shift_66 bitwidth;
@@ -324,6 +369,7 @@ Definition respects_bounds(bitwidth: Z): Instruction -> Prop :=
 Hint Unfold
   map_Invalid
   map_R
+  map_R_atomic
   map_I
   map_I_shift_57
   map_I_shift_66
