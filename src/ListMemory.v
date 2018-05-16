@@ -7,44 +7,46 @@ Require Import Coq.ZArith.BinInt.
 Require Import riscv.Utility.
 Require Import riscv.util.Monads.
 Require Import riscv.Memory.
+Require Import riscv.util.Tactics.
 Require riscv.ListMemoryNatAddr.
 
+(* bitwidth w is ignored on RHS, but we still want to carry it in the type *)
+Definition mem(w: nat) := ListMemoryNatAddr.mem.
 
 Section Memory.
 
   Context {w: nat}. (* bit width of memory addresses *)
 
-  Definition mem := ListMemoryNatAddr.mem.
-  Definition mem_size: mem -> nat := ListMemoryNatAddr.mem_size.
+  Definition mem_size(m: mem w): nat := min (pow2 w) (ListMemoryNatAddr.mem_size m).
 
-  Definition read_byte(m: mem)(a: word w): word 8 :=
+  Definition read_byte(m: mem w)(a: word w): word 8 :=
     ListMemoryNatAddr.read_byte m (wordToNat a).
 
-  Definition read_half(m: mem)(a: word w): word 16 :=
+  Definition read_half(m: mem w)(a: word w): word 16 :=
     ListMemoryNatAddr.read_half m (wordToNat a).
 
-  Definition read_word(m: mem)(a: word w): word 32 :=
+  Definition read_word(m: mem w)(a: word w): word 32 :=
     ListMemoryNatAddr.read_word m (wordToNat a).
 
-  Definition read_double(m: mem)(a: word w): word 64 :=
+  Definition read_double(m: mem w)(a: word w): word 64 :=
     ListMemoryNatAddr.read_double m (wordToNat a).
 
-  Definition write_byte(m: mem)(a: word w)(v: word 8): mem :=
+  Definition write_byte(m: mem w)(a: word w)(v: word 8): mem w :=
     ListMemoryNatAddr.write_byte m (wordToNat a) v.
 
-  Definition write_half(m: mem)(a: word w)(v: word 16): mem :=
+  Definition write_half(m: mem w)(a: word w)(v: word 16): mem w :=
     ListMemoryNatAddr.write_half m (wordToNat a) v.
 
-  Definition write_word(m: mem)(a: word w)(v: word 32): mem :=
+  Definition write_word(m: mem w)(a: word w)(v: word 32): mem w :=
     ListMemoryNatAddr.write_word m (wordToNat a) v.
 
-  Definition write_double(m: mem)(a: word w)(v: word 64): mem :=
+  Definition write_double(m: mem w)(a: word w)(v: word 64): mem w :=
     ListMemoryNatAddr.write_double m (wordToNat a) v.
 
-  Definition const_mem(default: word 8)(max_addr: nat): mem :=
+  Definition const_mem(default: word 8)(max_addr: nat): mem w :=
     ListMemoryNatAddr.const_mem default (S max_addr).
 
-  Definition zero_mem: nat -> mem := const_mem $0.
+  Definition zero_mem: nat -> mem w := const_mem $0.
 
 End Memory.
 
@@ -54,14 +56,12 @@ Local Ltac wrap L :=
          | H: valid_addr _ _ _ |- _ => destruct H
          end;
   unfold mem_size, ListMemoryNatAddr.mem_size in *;
-  apply L;
+  first [f_equal; apply L | apply L];
   unfold ListMemoryNatAddr.mem_size;
   try apply wordToNat_neq1;
-  (congruence || omega || idtac).    
+  (congruence || momega || idtac).    
 
-Definition TODO{T: Type}: T. Admitted.
-
-Instance mem_is_Memory(w: nat): Memory mem w := {|
+Instance mem_is_Memory(w: nat): Memory (mem w) w := {|
   memSize     := mem_size;
   loadByte    := read_byte;
   loadHalf    := read_half;
@@ -72,7 +72,7 @@ Instance mem_is_Memory(w: nat): Memory mem w := {|
   storeWord   := write_word;
   storeDouble := write_double;
 |}.
-- intros. unfold mem_size, ListMemoryNatAddr.mem_size. apply TODO.
+- intros. unfold mem_size. momega.
 - wrap ListMemoryNatAddr.write_read_byte_eq.
 - wrap ListMemoryNatAddr.write_read_byte_ne.
 - wrap ListMemoryNatAddr.write_byte_preserves_mem_size.
