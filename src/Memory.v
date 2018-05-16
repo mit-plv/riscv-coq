@@ -75,6 +75,24 @@ Class Memory(m: Set)(w: nat) := mkMemory {
   storeDouble_preserves_memSize: forall m (a: word w) v,
     memSize (storeDouble m a v) = memSize m;
 
+  loadHalf_spec: forall m a,
+    valid_addr a 2 (memSize m) ->
+    loadHalf m a = combine (loadByte m a) (loadByte m (a ^+ $1));
+
+  loadWord_spec: forall m a,
+    valid_addr a 4 (memSize m) ->
+    loadWord m a = combine (loadHalf m a) (loadHalf m (a ^+ $1));
+
+  loadDouble_spec: forall m a,
+    valid_addr a 2 (memSize m) ->
+    loadDouble m a = combine (loadWord m a) (loadWord m (a ^+ $1));
+  
+  (* Note: No storeHalf_spec, storeWord_spec, storeDouble_spec, because we don't
+     want to compare memories with = (too restrictive for implementors), nor start
+     using a custom equivalence (too complicated).
+     Also, it shouldn't be needed, because at the end you only need to know what
+     you get back when you do a load, and you can split a load into the unit on
+     which the store was done. *)
 }.
 
 Section MemoryHelpers.
