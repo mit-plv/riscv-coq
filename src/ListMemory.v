@@ -50,6 +50,13 @@ Section Memory.
 
 End Memory.
 
+Lemma wordToNat_wplus'': forall sz (a: word sz) (b: nat),
+    #a + b < pow2 sz -> #(a ^+ $b) = #a + b.
+Proof.
+  intros. rewrite wordToNat_wplus';
+  rewrite wordToNat_natToWord_2; omega.
+Qed.
+
 Local Ltac wrap L :=
   intros;
   repeat match goal with
@@ -60,8 +67,6 @@ Local Ltac wrap L :=
   unfold ListMemoryNatAddr.mem_size;
   try apply wordToNat_neq1;
   (congruence || momega || idtac).    
-
-Definition TODO{T: Type}: T. Admitted.
 
 Instance mem_is_Memory(w: nat): Memory (mem w) w := {|
   memSize     := mem_size;
@@ -87,10 +92,10 @@ Instance mem_is_Memory(w: nat): Memory (mem w) w := {|
 - wrap ListMemoryNatAddr.write_read_double_eq.
 - wrap ListMemoryNatAddr.write_read_double_ne.
 - wrap ListMemoryNatAddr.write_double_preserves_mem_size.
-- intros. unfold read_half. unfold ListMemoryNatAddr.read_half.
-  unfold read_byte.
-  unfold valid_addr, mem_size in *.
-  apply TODO. (* we need word lemmas not yet in Word.v *)
-- apply TODO.
-- apply TODO.
+- unfold read_byte.
+  intros. unfold valid_addr, mem_size in *. rewrite wordToNat_wplus'' by momega. reflexivity.
+- unfold read_half.
+  intros. unfold valid_addr, mem_size in *. rewrite wordToNat_wplus'' by momega. reflexivity.
+- unfold read_word.
+  intros. unfold valid_addr, mem_size in *. rewrite wordToNat_wplus'' by momega. reflexivity.
 Defined.

@@ -81,12 +81,12 @@ Class Memory(m: Set)(w: nat) := mkMemory {
 
   loadWord_spec: forall m a,
     valid_addr a 4 (memSize m) ->
-    loadWord m a = combine (loadHalf m a) (loadHalf m (a ^+ $1));
+    loadWord m a = combine (loadHalf m a) (loadHalf m (a ^+ $2));
 
   loadDouble_spec: forall m a,
-    valid_addr a 2 (memSize m) ->
-    loadDouble m a = combine (loadWord m a) (loadWord m (a ^+ $1));
-  
+    valid_addr a 8 (memSize m) ->
+    loadDouble m a = combine (loadWord m a) (loadWord m (a ^+ $4));
+
   (* Note: No storeHalf_spec, storeWord_spec, storeDouble_spec, because we don't
      want to compare memories with = (too restrictive for implementors), nor start
      using a custom equivalence (too complicated).
