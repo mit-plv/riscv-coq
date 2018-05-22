@@ -144,6 +144,19 @@ Proof.
   rewrite E in C. simpl in C. discriminate.
 Qed.
 
+Lemma wminus_wplus_undo: forall sz (a b: word sz),
+    a ^- b ^+ b = a.
+Proof.
+  intros.
+  rewrite wminus_def.
+  rewrite <- wplus_assoc.
+  rewrite (wplus_comm (^~ b)).
+  rewrite wminus_inv.
+  rewrite wplus_comm.
+  rewrite wplus_unit.
+  reflexivity.
+Qed.  
+
 Ltac demod :=  
   repeat match goal with
          | H: _ mod _ = 0 |- _ => apply Nat.mod_divides in H; [destruct H | congruence]
@@ -159,7 +172,7 @@ Section MemoryHelpers.
       valid_addr a1 8 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
       a2 <> a1 ->
-      a2 ^- $4 <> a1 ->
+      a2 <> a1 ^+ $4 ->
       loadWord (storeDouble m a1 v) a2 = loadWord m a2.
   Proof.
     intros.
@@ -228,19 +241,17 @@ Section MemoryHelpers.
         specialize (P (conj A X)).
         rewrite Sp1 in P by (split; assumption). clear Sp1.
         rewrite Sp2 in P by (split; assumption). clear Sp2.
-        assert (a2 ^- $4 <> a1) as Ne by assumption.
+        assert (a2 ^- $4 <> a1) as Ne. {
+          clear -H2.
+          intro. subst. apply H2.
+          symmetry. apply wminus_wplus_undo.
+        }
         specialize (P Ne).
         pose proof combine_inj as Q.
         specialize (Q 32 32 _ _ _ _ P).
         destruct Q as [_ Q].
-        replace (a2 ^- $ (4) ^+ $ (4)) with a2 in Q; [assumption|].
-        rewrite wminus_def.
-        rewrite <- wplus_assoc.
-        rewrite (wplus_comm (^~ $4)).
-        rewrite wminus_inv.
-        rewrite wplus_comm.
-        rewrite wplus_unit.
-        reflexivity.
+        rewrite wminus_wplus_undo in Q.
+        assumption.
       + rewrite wminus_minus.
         * rewrite wordToNat_natToWord_idempotent'; [reflexivity|omega].
         * apply wordToNat_le2.
