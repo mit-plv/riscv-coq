@@ -49,6 +49,12 @@ Section Memory.
     | S n => default :: (const_mem default n)
     end.
 
+  Lemma const_mem_mem_size: forall default size,
+      mem_size (const_mem default size) = size.
+  Proof.
+    intros. unfold mem_size. induction size; simpl; auto.
+  Qed.
+
   Definition zero_mem: nat -> mem := const_mem $0.
 
 End Memory.
