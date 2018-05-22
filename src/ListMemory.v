@@ -68,6 +68,8 @@ Local Ltac wrap L :=
   try apply wordToNat_neq1;
   (congruence || momega || idtac).    
 
+Definition TODO{T: Type}: T. Admitted.
+
 Instance mem_is_Memory(w: nat): Memory (mem w) w := {|
   memSize     := mem_size;
   loadByte    := read_byte;
@@ -80,6 +82,7 @@ Instance mem_is_Memory(w: nat): Memory (mem w) w := {|
   storeDouble := write_double;
 |}.
 - intros. unfold mem_size. momega.
+- apply TODO.
 - wrap ListMemoryNatAddr.write_read_byte_eq.
 - wrap ListMemoryNatAddr.write_read_byte_ne.
 - wrap ListMemoryNatAddr.write_byte_preserves_mem_size.

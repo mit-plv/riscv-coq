@@ -122,6 +122,28 @@ Proof.
   - apply Nat.mod_divide; assumption.
 Qed.
 
+Lemma mul_div_undo: forall i c,
+    c <> 0 ->
+    c * i / c = i.
+Proof.
+  intros.
+  pose proof (Nat.div_mul_cancel_l i 1 c) as P.
+  rewrite Nat.div_1_r in P.
+  rewrite Nat.mul_1_r in P.
+  apply P; auto.
+Qed.
+
+Lemma Smod2_1: forall k, S k mod 2 = 1 -> k mod 2 = 0.
+Proof.
+  intros k C.
+  change (S k) with (1 + k) in C.
+  rewrite Nat.add_mod in C by congruence.
+  pose proof (Nat.mod_upper_bound k 2).
+  assert (k mod 2 = 0 \/ k mod 2 = 1) as E by omega.
+  destruct E as [E | E]; [assumption|].
+  rewrite E in C. simpl in C. discriminate.
+Qed.
+
 Ltac demod :=  
   repeat match goal with
          | H: _ mod _ = 0 |- _ => apply Nat.mod_divides in H; [destruct H | congruence]
@@ -137,6 +159,7 @@ Section MemoryHelpers.
       valid_addr a1 8 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
       a2 <> a1 ->
+      a2 ^- $4 <> a1 ->
       loadWord (storeDouble m a1 v) a2 = loadWord m a2.
   Proof.
     intros.
@@ -147,15 +170,16 @@ Section MemoryHelpers.
     - specialize (P a2 v).
       assert (valid_addr a2 8 (memSize m)) as V. {
         unfold valid_addr in *.
+        destruct H, H0.
         assert (#a2 mod 8 = 0). {
           apply Nat.mod_divide; try congruence.
           change 8 with (2 * 4).
           replace #a2 with (#a2 / 4 * 4).
           - apply Nat.mul_divide_mono_r.
             apply Nat.mod_divide; try congruence.
-          - apply div_mul_undo; intuition.
+          - apply div_mul_undo; congruence.
         }
-        intuition.
+        split; try assumption.
         pose proof (memSize_mod8 m).
         demod. omega.
       }
@@ -181,34 +205,48 @@ Section MemoryHelpers.
           clear Sp1 Sp2.
           apply Nat.mod_divide; try congruence.
           change 8 with (2 * 4).
+          assert (((#a2 - 4) / 4) mod 2 = 0) as F. {
+            apply Nat.mod_divides in H4; [ | congruence].
+            destruct H4 as [k Y]. rewrite Y in C|-*.
+            destruct k; [omega|].
+            replace (4 * S k - 4) with (4 * k) by omega.
+            rewrite mul_div_undo in * by congruence.
+            apply Smod2_1. assumption.
+          }
           replace (#a2 - 4) with ((#a2 - 4) / 4 * 4).
           - apply Nat.mul_divide_mono_r.
-            apply Nat.mod_divide; try congruence.
-            admit.
-          - apply div_mul_undo. admit.
-            admit.
+            apply Nat.mod_divide; congruence.
+          - apply div_mul_undo; try congruence.
+            clear -H4 D. demod. rename H into Y. rewrite Y.
+            rewrite Nat.mod_eq in * by congruence.
+            destruct x; [omega|].
+            replace (4 * S x - 4) with (4 * x) by omega.
+            rewrite mul_div_undo in * by congruence.
+            omega.
         }
-        assert (#a2 - 4 + 8 <= memSize m) as A. {
-          admit.
-        }
+        assert (#a2 - 4 + 8 <= memSize m) as A by omega.
         specialize (P (conj A X)).
         rewrite Sp1 in P by (split; assumption). clear Sp1.
         rewrite Sp2 in P by (split; assumption). clear Sp2.
-        assert (a2 ^- $4 <> a1) as Ne. {
-          admit.
-        }
+        assert (a2 ^- $4 <> a1) as Ne by assumption.
         specialize (P Ne).
         pose proof combine_inj as Q.
         specialize (Q 32 32 _ _ _ _ P).
         destruct Q as [_ Q].
-        replace (a2 ^- $ (4) ^+ $ (4)) with a2 in Q by admit.
-        assumption.
+        replace (a2 ^- $ (4) ^+ $ (4)) with a2 in Q; [assumption|].
+        rewrite wminus_def.
+        rewrite <- wplus_assoc.
+        rewrite (wplus_comm (^~ $4)).
+        rewrite wminus_inv.
+        rewrite wplus_comm.
+        rewrite wplus_unit.
+        reflexivity.
       + rewrite wminus_minus.
         * rewrite wordToNat_natToWord_idempotent'; [reflexivity|omega].
         * apply wordToNat_le2.
           rewrite wordToNat_natToWord_idempotent'; omega.
   Qed.
-  
+
   Fixpoint store_byte_list(l: list (word 8))(a: word sz)(m: Mem): Mem :=
     match l with
     | nil => m
