@@ -3,6 +3,7 @@ Require Import bbv.Word.
 Require Import riscv.Decode.
 Require Import riscv.encode.Encode.
 Require Import riscv.Utility.
+Require Import Coq.omega.Omega.
 
 Local Open Scope bool_scope.
 Local Open Scope Z_scope.
@@ -14,6 +15,123 @@ Lemma invert_encode_InvalidInstruction: forall i,
   False.
 Proof. intros. assumption. Qed.
 
+(*
+Lemma bitSlice_split: forall a start mid eend,
+    bitSlice a start eend = bitSlice a start mid <|> bitSlice a mid eend.
+Admitted.
+
+Lemma encode_R_bound: forall {opcode rd rs1 rs2 funct3 funct7},
+    verify_R opcode rd rs1 rs2 funct3 funct7 ->
+    0 <= encode_R opcode rd rs1 rs2 funct3 funct7 < 2 ^ 32.
+Proof.
+  (* corresponding lemma for I does not hold if imm is negative, but we will make it
+     positive to make it work *)
+Admitted.
+
+Lemma bitSlice_all: forall w eend,
+    0 <= w < 2 ^ eend ->
+    w = bitSlice w 0 eend.
+Admitted.
+*)
+(*
+Search Z.testbit.
+
+(* give length? *)
+Fixpoint positive_to_bits(p: positive): list bool :=
+  match p with
+  | xI q => true :: positive_to_bits q
+  | xO q => false :: positive_to_bits q
+  | xH => true :: nil
+  end.
+
+Eval cbv in positive_to_bits 6%positive.
+
+Definition Z_to_bits(z: Z): list bool :=
+  match z with
+  | Z0 => nil
+            | 
+
+Search positive list.
+ *)
+
+(*
+Lemma invert_lor_eq: forall,
+    a <|> Z.shiftl start b = c <|> bitSlice d start eend ->
+*)  
+
+Eval cbv in (Z.modulo (-3) 8).
+(*
+111  -1
+110  -2
+101  -3
+ *)
+
+Definition bitSlice'(w start eend: Z): Z :=
+  (w / 2 ^ start) mod (2 ^ (eend - start)).
+
+Require Import List.
+
+Module bitSliceTest.
+
+  Import ListNotations.
+
+  Definition l1 := [-17; -16; -10; -1; 0; 1; 2; 3; 8].
+  Definition l2 := [0; 1; 2; 3; 4; 5; 6].
+  Definition inputs: list (Z * (Z * Z)) := (list_prod l1 (list_prod l2 l2)).
+
+  Goal (map (fun p => match p with
+                      | (w, (start, eend)) => bitSlice w start eend
+                      end)
+            inputs) =
+       (map (fun p => match p with
+                      | (w, (start, eend)) => bitSlice' w start eend
+                      end)
+            inputs).
+    cbv.
+    reflexivity.
+  Qed.
+
+End bitSliceTest.
+
+Lemma bitSlice_alt: forall w start eend, bitSlice w start eend = bitSlice' w start eend.
+Admitted.
+
+(* TODO replace Z.lor by + in my encoder, but what about usages in decoder? *)
+
+Module ThanksFiatCrypto.
+  Ltac div_mod_to_quot_rem_inequality_solver := omega.
+
+  Ltac generalize_div_eucl x y :=
+    let H := fresh in
+    let H' := fresh in
+    assert (H' : y <> 0) by div_mod_to_quot_rem_inequality_solver;
+    generalize (Z.div_mod x y H'); clear H';
+    first [ assert (H' : 0 < y) by div_mod_to_quot_rem_inequality_solver;
+            generalize (Z.mod_pos_bound x y H'); clear H'
+          | assert (H' : y < 0) by div_mod_to_quot_rem_inequality_solver;
+            generalize (Z.mod_neg_bound x y H'); clear H'
+          | assert (H' : y < 0 \/ 0 < y) by (apply Z.neg_pos_cases; div_mod_to_quot_rem_inequality_solver);
+            let H'' := fresh in
+            assert (H'' : y < x mod y <= 0 \/ 0 <= x mod y < y)
+              by (destruct H'; [ left; apply Z.mod_neg_bound; assumption
+                               | right; apply Z.mod_pos_bound; assumption ]);
+            clear H'; revert H'' ];
+    let q := fresh "q" in
+    let r := fresh "r" in
+    set (q := x / y) in *;
+    set (r := x mod y) in *;
+    clearbody q r.
+
+  Ltac div_mod_to_quot_rem_step :=
+    match goal with
+    | [ |- context[?x / ?y] ] => generalize_div_eucl x y
+    | [ |- context[?x mod ?y] ] => generalize_div_eucl x y
+    end.
+
+  Ltac div_mod_to_quot_rem := repeat div_mod_to_quot_rem_step; intros.
+
+End ThanksFiatCrypto.
+
 Lemma invert_encode_R: forall {opcode rd rs1 rs2 funct3 funct7},
   verify_R opcode rd rs1 rs2 funct3 funct7 ->
   forall inst,
@@ -24,7 +142,26 @@ Lemma invert_encode_R: forall {opcode rd rs1 rs2 funct3 funct7},
   rd = bitSlice inst 7 12 /\
   rs1 = bitSlice inst 15 20 /\
   rs2 = bitSlice inst 20 25.
-Proof. Admitted.
+Proof.
+  intros.
+  unfold encode_R, verify_R in *.
+  rewrite? bitSlice_alt in *. unfold bitSlice' in *.
+  rewrite? Z.shiftl_mul_pow2 in * by omega.
+  repeat match goal with
+         | _: context [2 ^ ?x] |- _ => let r := eval cbv in (2 ^ x) in change (2 ^ x) with r in *
+         | |- context [2 ^ ?x]      => let r := eval cbv in (2 ^ x) in change (2 ^ x) with r in *
+         end.
+  ThanksFiatCrypto.div_mod_to_quot_rem.
+  subst.
+  unfold MachineInt, Register in *.
+  rewrite? Z.mul_add_distr_l in *.
+  rewrite? Z.mul_assoc in *.
+  repeat match goal with
+         | _: context [?a * ?b * ?c] |- _ => let r := eval cbv in (a * b) in
+                                                 change (a * b) with r in *
+         end.
+  omega.
+Qed.
 
 Lemma invert_encode_R_atomic: forall {opcode rd rs1 rs2 funct3 aqrl funct5},
   verify_R_atomic opcode rd rs1 rs2 funct3 aqrl funct5 ->
