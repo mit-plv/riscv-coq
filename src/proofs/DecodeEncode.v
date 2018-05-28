@@ -96,6 +96,31 @@ End bitSliceTest.
 Lemma bitSlice_alt: forall w start eend, bitSlice w start eend = bitSlice' w start eend.
 Admitted.
 
+Definition signExtend'(l n: Z): Z := n - ((n / 2 ^ (l - 1)) mod 2) * 2 ^ l.
+
+Definition signExtend_alt: forall l n,
+    0 < l ->
+    signExtend l n = signExtend' l n.
+Proof.
+  intros. unfold signExtend, signExtend'.
+  destruct (Z.testbit n (l - 1)) eqn: E.
+  - apply (f_equal Z.b2z) in E.
+    rewrite Z.testbit_spec' in E by omega.
+    rewrite E.
+    rewrite Z.setbit_spec'.
+    rewrite Z.lor_0_l.
+    change (Z.b2z true) with 1.
+    rewrite Z.mul_1_l.
+    reflexivity.
+  - apply (f_equal Z.b2z) in E.
+    rewrite Z.testbit_spec' in E by omega.
+    rewrite E.
+    change (Z.b2z false) with 0.
+    rewrite Z.mul_0_l.
+    rewrite Z.sub_0_r.
+    reflexivity.
+Qed.
+
 (* TODO replace Z.lor by + in my encoder, but what about usages in decoder? *)
 
 Module ThanksFiatCrypto.
@@ -132,6 +157,27 @@ Module ThanksFiatCrypto.
 
 End ThanksFiatCrypto.
 
+Tactic Notation "so" tactic(f) :=
+  match goal with
+  | _: ?A |- _  => f A
+  |       |- ?A => f A
+  end.
+
+Ltac somega_pre :=
+  rewrite? bitSlice_alt in *; unfold bitSlice' in *;
+  rewrite? signExtend_alt in * by omega; unfold signExtend';
+  rewrite? Z.shiftl_mul_pow2 in * by omega;
+  repeat (so fun hyporgoal => match hyporgoal with
+     | context [2 ^ ?x] => let r := eval cbv in (2 ^ x) in change (2 ^ x) with r in *
+  end);
+  ThanksFiatCrypto.div_mod_to_quot_rem;
+  repeat match goal with
+         | z: ?T |- _ => progress change T with Z in *
+         end.
+
+(* omega which understands bitSlice and shift *)
+Ltac somega := somega_pre; omega.
+
 Lemma invert_encode_R: forall {opcode rd rs1 rs2 funct3 funct7},
   verify_R opcode rd rs1 rs2 funct3 funct7 ->
   forall inst,
@@ -145,15 +191,7 @@ Lemma invert_encode_R: forall {opcode rd rs1 rs2 funct3 funct7},
 Proof.
   intros.
   unfold encode_R, verify_R in *.
-  rewrite? bitSlice_alt in *. unfold bitSlice' in *.
-  rewrite? Z.shiftl_mul_pow2 in * by omega.
-  repeat match goal with
-         | _: context [2 ^ ?x] |- _ => let r := eval cbv in (2 ^ x) in change (2 ^ x) with r in *
-         | |- context [2 ^ ?x]      => let r := eval cbv in (2 ^ x) in change (2 ^ x) with r in *
-         end.
-  ThanksFiatCrypto.div_mod_to_quot_rem.
-  unfold MachineInt, Register in *.
-  omega.
+  somega.
 Qed.
 
 Lemma invert_encode_R_atomic: forall {opcode rd rs1 rs2 funct3 aqrl funct5},
@@ -167,7 +205,11 @@ Lemma invert_encode_R_atomic: forall {opcode rd rs1 rs2 funct3 aqrl funct5},
   rd = bitSlice inst 7 12 /\
   rs1 = bitSlice inst 15 20 /\
   rs2 = bitSlice inst 20 25.
-Proof. Admitted.
+Proof.
+  intros.
+  unfold encode_R_atomic, verify_R_atomic in *.
+  somega.
+Qed.
 
 Lemma invert_encode_I: forall {opcode rd rs1 funct3 oimm12},
   verify_I opcode rd rs1 funct3 oimm12 ->
@@ -178,7 +220,9 @@ Lemma invert_encode_I: forall {opcode rd rs1 funct3 oimm12},
   rd = bitSlice inst 7 12 /\
   rs1 = bitSlice inst 15 20 /\
   oimm12 = signExtend 12 (bitSlice inst 20 32).
-Proof. Admitted.
+Proof.
+  intros. unfold encode_I, verify_I in *. somega.
+Qed.
 
 Lemma invert_encode_I_shift_57: forall {opcode rd rs1 shamt5 funct3 funct7},
   verify_I_shift_57 opcode rd rs1 shamt5 funct3 funct7 ->
@@ -190,7 +234,9 @@ Lemma invert_encode_I_shift_57: forall {opcode rd rs1 shamt5 funct3 funct7},
   rd = bitSlice inst 7 12 /\
   rs1 = bitSlice inst 15 20 /\
   shamt5 = bitSlice inst 20 25.
-Proof. Admitted.
+Proof.
+  intros. unfold encode_I_shift_57, verify_I_shift_57 in *. somega.
+Qed.
 
 Lemma invert_encode_I_shift_66: forall {bitwidth opcode rd rs1 shamt6 funct3 funct6},
   verify_I_shift_66 bitwidth opcode rd rs1 shamt6 funct3 funct6 ->
@@ -203,7 +249,14 @@ Lemma invert_encode_I_shift_66: forall {bitwidth opcode rd rs1 shamt6 funct3 fun
   rs1 = bitSlice inst 15 20 /\
   shamt6 = bitSlice inst 20 26 /\
   ((Z.eqb (bitSlice inst 25 26) 0) || (Z.eqb bitwidth 64)) = true.
-Proof. Admitted.
+Proof.
+  intros. unfold encode_I_shift_66, verify_I_shift_66 in *.
+  rewrite Bool.orb_true_iff.
+  rewrite? Z.eqb_eq.
+  assert (bitwidth = 32 \/ bitwidth = 64) by admit.
+  (* TODO put additional hyp into verify *)
+  somega.
+Admitted.
 
 Lemma invert_encode_I_system: forall {opcode rd rs1 funct3 funct12},
   verify_I_system opcode rd rs1 funct3 funct12 ->
@@ -214,7 +267,9 @@ Lemma invert_encode_I_system: forall {opcode rd rs1 funct3 funct12},
   funct12 = bitSlice inst 20 32 /\
   rd = bitSlice inst 7 12 /\
   rs1 = bitSlice inst 15 20.
-Proof. Admitted.
+Proof.
+  intros. unfold encode_I_system, verify_I_system in *. somega.
+Qed.
 
 Lemma invert_encode_S: forall {opcode rs1 rs2 funct3 simm12},
   verify_S opcode rs1 rs2 funct3 simm12 ->
@@ -225,7 +280,17 @@ Lemma invert_encode_S: forall {opcode rs1 rs2 funct3 simm12},
   rs1 = bitSlice inst 15 20 /\
   rs2 = bitSlice inst 20 25 /\
   simm12 = signExtend 12 (Z.shiftl (bitSlice inst 25 32) 5 <|> bitSlice inst 7 12).
-Proof. Admitted.
+Proof.
+  intros. unfold encode_S, verify_S in *.
+  assert (Z.land (Z.shiftl (bitSlice inst 25 32) 5) (bitSlice inst 7 12) = 0) as L. {
+    Search Z.land Z.shiftl.
+    admit.
+  }
+  rewrite <- Z.lxor_lor by assumption.
+  rewrite <- Z.add_nocarry_lxor by assumption.
+  somega_pre.
+  (* TODO there are still some mod and div left! *)
+Admitted.
 
 Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
   verify_SB opcode rs1 rs2 funct3 sbimm12 ->
@@ -248,7 +313,10 @@ Lemma invert_encode_U: forall {opcode rd imm20},
   opcode = bitSlice inst 0 7 /\
   rd = bitSlice inst 7 12 /\
   imm20 = signExtend 32 (Z.shiftl (bitSlice inst 12 32) 12).
-Proof. Admitted.
+Proof.
+  intros. unfold encode_U, verify_U in *. somega_pre.
+  (* TODO there are still some mod and div left! *)
+Admitted.
 
 Lemma invert_encode_UJ: forall {opcode rd jimm20},
   verify_UJ opcode rd jimm20 ->
@@ -273,7 +341,9 @@ Lemma invert_encode_Fence: forall {opcode rd rs1 funct3 prd scc msb4},
   scc = bitSlice inst 20 24 /\
   prd = bitSlice inst 24 28 /\
   msb4 = bitSlice inst 28 32.
-Proof. Admitted.
+Proof.
+  intros. unfold encode_Fence, verify_Fence in *. somega.
+Qed.
 
 Ltac prove_andb_false :=
   reflexivity ||
