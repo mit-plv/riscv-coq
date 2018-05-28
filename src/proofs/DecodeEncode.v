@@ -152,14 +152,7 @@ Proof.
          | |- context [2 ^ ?x]      => let r := eval cbv in (2 ^ x) in change (2 ^ x) with r in *
          end.
   ThanksFiatCrypto.div_mod_to_quot_rem.
-  subst.
   unfold MachineInt, Register in *.
-  rewrite? Z.mul_add_distr_l in *.
-  rewrite? Z.mul_assoc in *.
-  repeat match goal with
-         | _: context [?a * ?b * ?c] |- _ => let r := eval cbv in (a * b) in
-                                                 change (a * b) with r in *
-         end.
   omega.
 Qed.
 
