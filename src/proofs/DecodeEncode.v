@@ -93,8 +93,21 @@ Module bitSliceTest.
 
 End bitSliceTest.
 
-Lemma bitSlice_alt: forall w start eend, bitSlice w start eend = bitSlice' w start eend.
-Admitted.
+Lemma bitSlice_alt: forall w start eend,
+    0 <= start <= eend ->
+    bitSlice w start eend = bitSlice' w start eend.
+Proof.
+  intros. unfold bitSlice, bitSlice'.
+  rewrite <- Z.land_ones by omega.
+  rewrite <- Z.shiftr_div_pow2 by omega.
+  f_equal.
+  rewrite Z.shiftl_mul_pow2 by omega.
+  rewrite Z.mul_comm.
+  rewrite <- Z.opp_eq_mul_m1.
+  replace (Z.lnot (- 2 ^ (eend - start))) with (2 ^ (eend - start) - 1).
+  - rewrite Z.ones_equiv. reflexivity.
+  - pose proof (Z.add_lnot_diag (- 2 ^ (eend - start))). omega.
+Qed.
 
 Definition signExtend'(l n: Z): Z := n - ((n / 2 ^ (l - 1)) mod 2) * 2 ^ l.
 
@@ -123,6 +136,12 @@ Qed.
 
 (* TODO replace Z.lor by + in my encoder, but what about usages in decoder? *)
 
+Tactic Notation "so" tactic(f) :=
+  match goal with
+  | _: ?A |- _  => f A
+  |       |- ?A => f A
+  end.
+
 Module ThanksFiatCrypto.
   Ltac div_mod_to_quot_rem_inequality_solver := omega.
 
@@ -148,23 +167,17 @@ Module ThanksFiatCrypto.
     clearbody q r.
 
   Ltac div_mod_to_quot_rem_step :=
-    match goal with
-    | [ |- context[?x / ?y] ] => generalize_div_eucl x y
-    | [ |- context[?x mod ?y] ] => generalize_div_eucl x y
+    so fun hyporgoal => match hyporgoal with
+    | context[?x / ?y] => generalize_div_eucl x y
+    | context[?x mod ?y] => generalize_div_eucl x y
     end.
 
   Ltac div_mod_to_quot_rem := repeat div_mod_to_quot_rem_step; intros.
 
 End ThanksFiatCrypto.
 
-Tactic Notation "so" tactic(f) :=
-  match goal with
-  | _: ?A |- _  => f A
-  |       |- ?A => f A
-  end.
-
 Ltac somega_pre :=
-  rewrite? bitSlice_alt in *; unfold bitSlice' in *;
+  rewrite? bitSlice_alt in * by omega; unfold bitSlice' in *;
   rewrite? signExtend_alt in * by omega; unfold signExtend';
   rewrite? Z.shiftl_mul_pow2 in * by omega;
   repeat (so fun hyporgoal => match hyporgoal with
@@ -283,8 +296,19 @@ Lemma invert_encode_S: forall {opcode rs1 rs2 funct3 simm12},
 Proof.
   intros. unfold encode_S, verify_S in *.
   assert (Z.land (Z.shiftl (bitSlice inst 25 32) 5) (bitSlice inst 7 12) = 0) as L. {
-    Search Z.land Z.shiftl.
-    admit.
+    apply Z.bits_inj.
+    unfold Z.eqf.
+    intro i.
+    rewrite Z.bits_0.
+    rewrite Z.land_spec.
+    rewrite Bool.andb_false_iff.
+    assert (i < 0 \/ 0 <= i < 5 \/ 5 <= i) as C by omega. destruct C as [C | [C | C]].
+    - rewrite Z.testbit_neg_r; auto.
+    - rewrite Z.shiftl_spec by omega.
+      rewrite Z.testbit_neg_r by omega. auto.
+    - right. rewrite bitSlice_alt by omega. unfold bitSlice'.
+      apply Z.mod_pow2_bits_high.
+      omega.
   }
   rewrite <- Z.lxor_lor by assumption.
   rewrite <- Z.add_nocarry_lxor by assumption.
