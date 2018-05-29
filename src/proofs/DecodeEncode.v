@@ -284,6 +284,8 @@ Proof.
   intros. unfold encode_I_system, verify_I_system in *. somega.
 Qed.
 
+Definition marker(P: Prop): Prop := P.
+
 Lemma invert_encode_S: forall {opcode rs1 rs2 funct3 simm12},
   verify_S opcode rs1 rs2 funct3 simm12 ->
   forall inst,
@@ -312,8 +314,106 @@ Proof.
   }
   rewrite <- Z.lxor_lor by assumption.
   rewrite <- Z.add_nocarry_lxor by assumption.
+  clear L.
+  
   somega_pre.
-  (* TODO there are still some mod and div left! *)
+
+
+  
+
+  repeat match goal with
+         | H: ?T |- _ => match T with
+                         | Z => fail 1
+                         | _ => revert H
+                         end
+         end.
+  match goal with
+  | |- ?P => change (marker P)
+  end.
+  repeat match goal with
+         | H: _ |- _ => revert H
+         end.
+  match goal with
+  | |- ?P => assert (~P)
+  end.
+  {
+    assert (forall A (P: A -> Prop), (exists a: A, ~ P a) <-> ~ forall (a: A), P a) as E. {
+      intros. split.
+      - intros. destruct H as [a H]. intro. apply H. auto.
+      - intro. admit. (* classical logic *)
+    }
+    rewrite <- E.
+    do 10 setoid_rewrite <- E.
+    do 10 setoid_rewrite <- E.
+    do 10 setoid_rewrite <- E.
+    do 10 setoid_rewrite <- E.
+    do 1 setoid_rewrite <- E.
+
+    assert (forall (P Q: Prop), (~ (P -> Q)) <-> (P /\ ~ Q)) as F by admit.
+    assert (forall (P Q: Prop), (~ marker (P -> Q)) <-> marker (P /\ ~ Q)) as F'. {
+      cbv [marker]. exact F.
+    }
+    do 10 setoid_rewrite F.
+    do 10 setoid_rewrite F.
+    do 10 setoid_rewrite F.
+    do 5 setoid_rewrite F.
+    do 3 setoid_rewrite F.
+    
+    Set Printing Depth 100.
+
+    assert (forall (P Q: Prop), ~ (P /\ Q) <-> (~ P) \/ (~ Q)) as G by admit.
+    do 4 setoid_rewrite G.
+
+    assert (forall (P Q: Z -> Prop), ex (fun (z: Z) => P z /\ Q z)
+                                     <-> ex (fun (z: Z) => marker (P z /\ Q z))) as K. {
+      intros. cbv [marker]. reflexivity.
+    }
+    setoid_rewrite K.
+    
+    Notation "'and' A B" := (Logic.and A B) (at level 10, A at level 0, B at level 0).
+    Notation "'or' A B" := (Logic.or A B) (at level 10, A at level 0, B at level 0).
+    Notation "+ A B" := (Z.add A B) (at level 10, A at level 0, B at level 0).
+    Notation "< A B" := (Z.lt A B) (at level 10, A at level 0, B at level 0).
+    Notation "<= A B" := (Z.le A B) (at level 10, A at level 0, B at level 0).
+    Notation "- A B" := (Z.sub A B) (at level 10, A at level 0, B at level 0).
+    Notation "* A B" := (Z.mul A B) (at level 10, A at level 0, B at level 0,
+                                    format " *  A  B").
+    Notation "= A B" := (@eq Z A B) (at level 10, A at level 0, B at level 0).
+    Notation "'not' A" := (not A) (at level 10, A at level 0).
+
+    Notation "'(declare-const' a 'Int)' body" := (ex (fun (a: Z) => body))
+               (at level 10, body at level 10,
+                format "(declare-const  a  Int) '//' body").
+    Notation "'(assert' P ')'" := (marker P)
+               (at level 10, P at level 0,
+                format "(assert  P )").
+    Notation "- 0 a" := (Z.opp a) (at level 10, a at level 10).
+    idtac.
+    (* If we append "(check-sat)" to this goal and feed it into z3, so there's no 
+       counterexample, so the statement should be true, but omega can't solve it, what to do? *)
+
+  
+(*
+  rewrite? Z.mul_add_distr_l in *.
+  rewrite? Z.mul_assoc in *.
+  repeat match goal with
+         | _: context [?a * ?b * ?c] |- _ => let r := eval cbv in (a * b) in
+                                                 change (a * b) with r in *
+         end.
+*)
+
+  (*
+Require Import Coq.micromega.Lia.
+  lia.
+*)
+
+
+    (*
+    assert (  simm12 = signExtend 12 (Z.shiftl (bitSlice inst 25 32) 5 + bitSlice inst 7 12)) as X
+        by admit.
+  repeat split; try apply X; clear X.
+  all: somega.
+*)
 Admitted.
 
 Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
