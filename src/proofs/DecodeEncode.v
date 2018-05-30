@@ -334,7 +334,6 @@ Proof.
   rewrite <- Z.lxor_lor by assumption.
   rewrite <- Z.add_nocarry_lxor by assumption.
   clear L.
-  somega_pre.
   so fun hyporgoal => match hyporgoal with
   | context [signExtend ?l ?n] => destruct (signExtend_alt' l n) as [[q [E1 E2]] | [q [E1 E2]]];
                                   [ omega | rewrite E2 in * .. ]
