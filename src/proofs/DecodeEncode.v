@@ -58,9 +58,9 @@ Search positive list.
 Lemma invert_lor_eq: forall,
     a <|> Z.shiftl start b = c <|> bitSlice d start eend ->
 *)  
-
-Eval cbv in (Z.modulo (-3) 8).
 (*
+Eval cbv in (Z.modulo (-3) 8).
+
 111  -1
 110  -2
 101  -3
@@ -580,8 +580,6 @@ app
 ] in *;
 cbv [machineIntToShamt id] in *).
 
-Definition TODO{T: Type}: T. Admitted.
-
 Lemma decode_encode (inst: Instruction) (z: Z) (H:respects_bounds 64 inst) :
     decode RV64IMA (encode inst) = inst.
 Proof.
@@ -665,109 +663,5 @@ Proof.
            | _ => progress cbn in *
            end.
   all : exfalso; try match goal with H: _ <> _ |- _ => apply H; clear H end.
-  (* 7 subgoals (ID 91796) *)
-  
-(*   z : Z *)
-(*   H : verify_Fence opcode_MISC_MEM 0 0 funct3_FENCE_I 0 0 0 *)
-(*   encoded : MachineInt *)
-(*   H43 : 15 = bitSlice encoded 0 7 *)
-(*   H44 : 1 = bitSlice encoded 12 15 *)
-(*   H45 : 0 = bitSlice encoded 7 12 *)
-(*   H46 : 0 = bitSlice encoded 15 20 *)
-(*   H47 : 0 = bitSlice encoded 20 24 *)
-(*   H48 : 0 = bitSlice encoded 24 28 *)
-(*   Henc : 0 = bitSlice encoded 28 32 *)
-(*   ============================ *)
-(*   signExtend 12 (bitSlice encoded 20 32) = 0 *)
-
-  apply TODO.
-
-(* 6 subgoals (ID 91789) *)
-  
-(*   z : Z *)
-(*   H : verify_I_system opcode_SYSTEM 0 0 funct3_PRIV funct12_ECALL *)
-(*   encoded : MachineInt *)
-(*   H43 : 115 = bitSlice encoded 0 7 *)
-(*   H44 : 0 = bitSlice encoded 12 15 *)
-(*   H45 : 0 = bitSlice encoded 20 32 *)
-(*   H46 : 0 = bitSlice encoded 7 12 *)
-(*   Henc : 0 = bitSlice encoded 15 20 *)
-(*   H0 : bitSlice encoded 25 32 = 9 *)
-(*   ============================ *)
-(*   False *)
-
-  apply TODO.
-
- (* 5 subgoals (ID 91790) *)
-  
-(*   z : Z *)
-(*   H : verify_I_system opcode_SYSTEM 0 0 funct3_PRIV funct12_EBREAK *)
-(*   encoded : MachineInt *)
-(*   H43 : 115 = bitSlice encoded 0 7 *)
-(*   H44 : 0 = bitSlice encoded 12 15 *)
-(*   H45 : 1 = bitSlice encoded 20 32 *)
-(*   H46 : 0 = bitSlice encoded 7 12 *)
-(*   Henc : 0 = bitSlice encoded 15 20 *)
-(*   H0 : bitSlice encoded 25 32 = 9 *)
-(*   ============================ *)
-(*   False *)
-  
-  apply TODO.
-(* 4 subgoals (ID 91791) *)
-  
-(*   z : Z *)
-(*   H : verify_I_system opcode_SYSTEM 0 0 funct3_PRIV funct12_URET *)
-(*   encoded : MachineInt *)
-(*   H43 : 115 = bitSlice encoded 0 7 *)
-(*   H44 : 0 = bitSlice encoded 12 15 *)
-(*   H45 : 2 = bitSlice encoded 20 32 *)
-(*   H46 : 0 = bitSlice encoded 7 12 *)
-(*   Henc : 0 = bitSlice encoded 15 20 *)
-(*   H0 : bitSlice encoded 25 32 = 9 *)
-(*   ============================ *)
-(*   False *)
-
-  apply TODO.
-  (* 3 subgoals (ID 91792) *)
-  
-(*   z : Z *)
-(*   H : verify_I_system opcode_SYSTEM 0 0 funct3_PRIV funct12_SRET *)
-(*   encoded : MachineInt *)
-(*   H43 : 115 = bitSlice encoded 0 7 *)
-(*   H44 : 0 = bitSlice encoded 12 15 *)
-(*   H45 : 258 = bitSlice encoded 20 32 *)
-(*   H46 : 0 = bitSlice encoded 7 12 *)
-(*   Henc : 0 = bitSlice encoded 15 20 *)
-(*   H0 : bitSlice encoded 25 32 = 9 *)
-(*   ============================ *)
-(*   False *)
-  apply TODO.
-  (* 2 subgoals (ID 91793) *)
-  
-(*   z : Z *)
-(*   H : verify_I_system opcode_SYSTEM 0 0 funct3_PRIV funct12_MRET *)
-(*   encoded : MachineInt *)
-(*   H43 : 115 = bitSlice encoded 0 7 *)
-(*   H44 : 0 = bitSlice encoded 12 15 *)
-(*   H45 : 770 = bitSlice encoded 20 32 *)
-(*   H46 : 0 = bitSlice encoded 7 12 *)
-(*   Henc : 0 = bitSlice encoded 15 20 *)
-(*   H0 : bitSlice encoded 25 32 = 9 *)
-(*   ============================ *)
-(*   False *)
-  apply TODO.
-  (* 1 subgoal (ID 91794) *)
-  
-  (* z : Z *)
-  (* H : verify_I_system opcode_SYSTEM 0 0 funct3_PRIV funct12_WFI *)
-  (* encoded : MachineInt *)
-  (* H43 : 115 = bitSlice encoded 0 7 *)
-  (* H44 : 0 = bitSlice encoded 12 15 *)
-  (* H45 : 261 = bitSlice encoded 20 32 *)
-  (* H46 : 0 = bitSlice encoded 7 12 *)
-  (* Henc : 0 = bitSlice encoded 15 20 *)
-  (* H0 : bitSlice encoded 25 32 = 9 *)
-  (* ============================ *)
-  (* False *)
-  apply TODO.
-Time Qed.
+  all: try somega.
+Qed.
