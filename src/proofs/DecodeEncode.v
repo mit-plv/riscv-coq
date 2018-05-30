@@ -277,6 +277,23 @@ Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
                            Z.shiftl (bitSlice inst 7 8) 11).
 Proof.
   intros. unfold encode_SB, verify_SB in *.
+  repeat split; [try somega .. | ].
+  { somega_pre. subst.
+    rewrite? Z.mul_add_distr_l in *.
+    rewrite? Z.mul_assoc in *.
+    repeat match goal with
+           | _: context [ ?a * ?b * ?c ] |- _ =>
+             let r := eval cbv in (a * b) in change (a * b) with r in *
+           end.
+
+    (*
+    Require Import riscv.util.smt.
+    smt.
+    *)
+    
+    (*
+Proof.
+  intros. unfold encode_SB, verify_SB in *.
   repeat match goal with
          | H: _ /\ _ |- _ => destruct H
          end.
@@ -289,7 +306,9 @@ Proof.
   clear Heqsbimm12' K P H5 sbimm12.
   rewrite? or_to_plus.
   - somega_pre.
-    + (* omega uses excessive amounts of memory *)
+*)
+        
+ (* omega uses excessive amounts of memory *)
 
 Admitted.
 
@@ -301,9 +320,8 @@ Lemma invert_encode_U: forall {opcode rd imm20},
   rd = bitSlice inst 7 12 /\
   imm20 = signExtend 32 (Z.shiftl (bitSlice inst 12 32) 12).
 Proof.
-  intros. unfold encode_U, verify_U in *. somega_pre.
-  (* TODO there are still some mod and div left! *)
-Admitted.
+  intros. unfold encode_U, verify_U in *. somega.
+Qed.
 
 Lemma invert_encode_UJ: forall {opcode rd jimm20},
   verify_UJ opcode rd jimm20 ->
@@ -315,7 +333,9 @@ Lemma invert_encode_UJ: forall {opcode rd jimm20},
                           Z.shiftl (bitSlice inst 21 31) 1  <|>
                           Z.shiftl (bitSlice inst 20 21) 11 <|>
                           Z.shiftl (bitSlice inst 12 20) 12).
-Proof. Admitted.
+Proof.
+  intros. unfold encode_UJ, verify_UJ in *. (* TODO replace or by + *)
+Admitted.
 
 Lemma invert_encode_Fence: forall {opcode rd rs1 funct3 prd scc msb4},
   verify_Fence opcode rd rs1 funct3 prd scc msb4 ->
