@@ -8,90 +8,15 @@ Require Import Coq.omega.Omega.
 Local Open Scope bool_scope.
 Local Open Scope Z_scope.
 
-Lemma invert_encode_InvalidInstruction: forall i,
-  verify_Invalid i ->
-  forall inst,
-  encode_Invalid i = inst ->
-  False.
-Proof. intros. assumption. Qed.
-
-(*
-Lemma bitSlice_split: forall a start mid eend,
-    bitSlice a start eend = bitSlice a start mid <|> bitSlice a mid eend.
-Admitted.
-
-Lemma encode_R_bound: forall {opcode rd rs1 rs2 funct3 funct7},
-    verify_R opcode rd rs1 rs2 funct3 funct7 ->
-    0 <= encode_R opcode rd rs1 rs2 funct3 funct7 < 2 ^ 32.
+Lemma mul_div2_undo_mod: forall a, 2 * (a / 2) = a - a mod 2.
 Proof.
-  (* corresponding lemma for I does not hold if imm is negative, but we will make it
-     positive to make it work *)
-Admitted.
-
-Lemma bitSlice_all: forall w eend,
-    0 <= w < 2 ^ eend ->
-    w = bitSlice w 0 eend.
-Admitted.
-*)
-(*
-Search Z.testbit.
-
-(* give length? *)
-Fixpoint positive_to_bits(p: positive): list bool :=
-  match p with
-  | xI q => true :: positive_to_bits q
-  | xO q => false :: positive_to_bits q
-  | xH => true :: nil
-  end.
-
-Eval cbv in positive_to_bits 6%positive.
-
-Definition Z_to_bits(z: Z): list bool :=
-  match z with
-  | Z0 => nil
-            | 
-
-Search positive list.
- *)
-
-(*
-Lemma invert_lor_eq: forall,
-    a <|> Z.shiftl start b = c <|> bitSlice d start eend ->
-*)  
-(*
-Eval cbv in (Z.modulo (-3) 8).
-
-111  -1
-110  -2
-101  -3
- *)
+  intros.
+  pose proof (Z.div_mod a 2).
+  omega.
+Qed.
 
 Definition bitSlice'(w start eend: Z): Z :=
   (w / 2 ^ start) mod (2 ^ (eend - start)).
-
-Require Import List.
-
-Module bitSliceTest.
-
-  Import ListNotations.
-
-  Definition l1 := [-17; -16; -10; -1; 0; 1; 2; 3; 8].
-  Definition l2 := [0; 1; 2; 3; 4; 5; 6].
-  Definition inputs: list (Z * (Z * Z)) := (list_prod l1 (list_prod l2 l2)).
-
-  Goal (map (fun p => match p with
-                      | (w, (start, eend)) => bitSlice w start eend
-                      end)
-            inputs) =
-       (map (fun p => match p with
-                      | (w, (start, eend)) => bitSlice' w start eend
-                      end)
-            inputs).
-    cbv.
-    reflexivity.
-  Qed.
-
-End bitSliceTest.
 
 Lemma bitSlice_alt: forall w start eend,
     0 <= start <= eend ->
@@ -134,7 +59,27 @@ Proof.
     reflexivity.
 Qed.
 
-(* TODO replace Z.lor by + in my encoder, but what about usages in decoder? *)
+Definition signExtend_alt': forall l n,
+    0 < l ->
+    (exists q, n / 2 ^ (l - 1) = 2 * q /\ signExtend l n = n) \/
+    (exists q, n / 2 ^ (l - 1) = 2 * q + 1 /\ signExtend l n = n - 2 ^ l).
+Proof.
+  intros. rewrite signExtend_alt by assumption. unfold signExtend'.
+  pose proof (Z.mod_pos_bound (n / 2 ^ (l - 1)) 2).
+  assert ((n / 2 ^ (l - 1)) mod 2 = 0 \/ (n / 2 ^ (l - 1)) mod 2 = 1) as C by omega.
+  destruct C as [C | C]; rewrite C.
+  - left. exists (n / 2 ^ (l - 1) / 2). rewrite mul_div2_undo_mod. omega.
+  - right. exists (n / 2 ^ (l - 1) / 2). rewrite mul_div2_undo_mod. omega.
+Qed.
+
+Lemma or_to_plus: forall a b,
+    Z.land a b = 0 ->
+    a <|> b = a + b.
+Proof.
+  intros.
+  rewrite <- Z.lxor_lor by assumption.
+  symmetry. apply Z.add_nocarry_lxor. assumption.
+Qed.  
 
 Tactic Notation "so" tactic(f) :=
   match goal with
@@ -178,7 +123,12 @@ End ThanksFiatCrypto.
 
 Ltac somega_pre :=
   rewrite? bitSlice_alt in * by omega; unfold bitSlice' in *;
-  rewrite? signExtend_alt in * by omega; unfold signExtend';
+  repeat (so fun hyporgoal => match hyporgoal with
+  | context [signExtend ?l ?n] =>
+      let E := fresh "E" in
+      destruct (signExtend_alt' l n) as [[? [? E]] | [? [? E]]];
+      [ omega | rewrite E in *; clear E .. ]
+  end);
   rewrite? Z.shiftl_mul_pow2 in * by omega;
   repeat (so fun hyporgoal => match hyporgoal with
      | context [2 ^ ?x] => let r := eval cbv in (2 ^ x) in change (2 ^ x) with r in *
@@ -191,6 +141,13 @@ Ltac somega_pre :=
 (* omega which understands bitSlice and shift *)
 Ltac somega := somega_pre; omega.
 
+Lemma invert_encode_InvalidInstruction: forall i,
+  verify_Invalid i ->
+  forall inst,
+  encode_Invalid i = inst ->
+  False.
+Proof. intros. assumption. Qed.
+
 Lemma invert_encode_R: forall {opcode rd rs1 rs2 funct3 funct7},
   verify_R opcode rd rs1 rs2 funct3 funct7 ->
   forall inst,
@@ -202,9 +159,7 @@ Lemma invert_encode_R: forall {opcode rd rs1 rs2 funct3 funct7},
   rs1 = bitSlice inst 15 20 /\
   rs2 = bitSlice inst 20 25.
 Proof.
-  intros.
-  unfold encode_R, verify_R in *.
-  somega.
+  intros. unfold encode_R, verify_R in *. somega.
 Qed.
 
 Lemma invert_encode_R_atomic: forall {opcode rd rs1 rs2 funct3 aqrl funct5},
@@ -219,9 +174,7 @@ Lemma invert_encode_R_atomic: forall {opcode rd rs1 rs2 funct3 aqrl funct5},
   rs1 = bitSlice inst 15 20 /\
   rs2 = bitSlice inst 20 25.
 Proof.
-  intros.
-  unfold encode_R_atomic, verify_R_atomic in *.
-  somega.
+  intros. unfold encode_R_atomic, verify_R_atomic in *. somega.
 Qed.
 
 Lemma invert_encode_I: forall {opcode rd rs1 funct3 oimm12},
@@ -266,10 +219,8 @@ Proof.
   intros. unfold encode_I_shift_66, verify_I_shift_66 in *.
   rewrite Bool.orb_true_iff.
   rewrite? Z.eqb_eq.
-  assert (bitwidth = 32 \/ bitwidth = 64) by admit.
-  (* TODO put additional hyp into verify *)
   somega.
-Admitted.
+Qed.
 
 Lemma invert_encode_I_system: forall {opcode rd rs1 funct3 funct12},
   verify_I_system opcode rd rs1 funct3 funct12 ->
@@ -284,27 +235,6 @@ Proof.
   intros. unfold encode_I_system, verify_I_system in *. somega.
 Qed.
 
-
-Lemma mul_div2_undo_mod: forall a, 2 * (a / 2) = a - a mod 2.
-Proof.
-  intros.
-  pose proof (Z.div_mod a 2).
-  omega.
-Qed.
-
-Definition signExtend_alt': forall l n,
-    0 < l ->
-    (exists q, n / 2 ^ (l - 1) = 2 * q /\ signExtend l n = n) \/
-    (exists q, n / 2 ^ (l - 1) = 2 * q + 1 /\ signExtend l n = n - 2 ^ l).
-Proof.
-  intros. rewrite signExtend_alt by assumption. unfold signExtend'.
-  pose proof (Z.mod_pos_bound (n / 2 ^ (l - 1)) 2).
-  assert ((n / 2 ^ (l - 1)) mod 2 = 0 \/ (n / 2 ^ (l - 1)) mod 2 = 1) as C by omega.
-  destruct C as [C | C]; rewrite C.
-  - left. exists (n / 2 ^ (l - 1) / 2). rewrite mul_div2_undo_mod. omega.
-  - right. exists (n / 2 ^ (l - 1) / 2). rewrite mul_div2_undo_mod. omega.
-Qed.
-
 Lemma invert_encode_S: forall {opcode rs1 rs2 funct3 simm12},
   verify_S opcode rs1 rs2 funct3 simm12 ->
   forall inst,
@@ -316,8 +246,9 @@ Lemma invert_encode_S: forall {opcode rs1 rs2 funct3 simm12},
   simm12 = signExtend 12 (Z.shiftl (bitSlice inst 25 32) 5 <|> bitSlice inst 7 12).
 Proof.
   intros. unfold encode_S, verify_S in *.
-  assert (Z.land (Z.shiftl (bitSlice inst 25 32) 5) (bitSlice inst 7 12) = 0) as L. {
-    apply Z.bits_inj.
+  rewrite or_to_plus.
+  + somega.    
+  + apply Z.bits_inj.
     unfold Z.eqf.
     intro i.
     rewrite Z.bits_0.
@@ -330,16 +261,6 @@ Proof.
     - right. rewrite bitSlice_alt by omega. unfold bitSlice'.
       apply Z.mod_pow2_bits_high.
       omega.
-  }
-  rewrite <- Z.lxor_lor by assumption.
-  rewrite <- Z.add_nocarry_lxor by assumption.
-  clear L.
-  so fun hyporgoal => match hyporgoal with
-  | context [signExtend ?l ?n] => destruct (signExtend_alt' l n) as [[q [E1 E2]] | [q [E1 E2]]];
-                                  [ omega | rewrite E2 in * .. ]
-  end.
-  - somega_pre. omega.
-  - somega_pre. omega.  
 Qed.
 
 Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
@@ -354,7 +275,23 @@ Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
                            Z.shiftl (bitSlice inst 25 31) 5 <|>
                            Z.shiftl (bitSlice inst 8 12) 1  <|>
                            Z.shiftl (bitSlice inst 7 8) 11).
-Proof. Admitted.
+Proof.
+  intros. unfold encode_SB, verify_SB in *.
+  repeat match goal with
+         | H: _ /\ _ |- _ => destruct H
+         end.
+  assert (2 <> 0) as K by omega.
+  pose proof (Z.div_mod sbimm12 2 K) as P.
+  rewrite H5 in P.
+  rewrite Z.add_0_r in P.
+  rewrite P in *.
+  remember (sbimm12 / 2) as sbimm12'.
+  clear Heqsbimm12' K P H5 sbimm12.
+  rewrite? or_to_plus.
+  - somega_pre.
+    + (* omega uses excessive amounts of memory *)
+
+Admitted.
 
 Lemma invert_encode_U: forall {opcode rd imm20},
   verify_U opcode rd imm20 ->

@@ -302,7 +302,7 @@ Definition verify_I_shift_66(bitwidth: Z)(opcode: MachineInt)(rd rs1: Register)(
     0 <= opcode < 128 /\
     0 <= rd < 32 /\
     0 <= rs1 < 32 /\
-    0 <= shamt6 < bitwidth /\
+    0 <= shamt6 < bitwidth /\ (bitwidth = 32 \/ bitwidth = 64) /\
     0 <= funct3 < 8 /\
     0 <= funct6 < 64.
 
