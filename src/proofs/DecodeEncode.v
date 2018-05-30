@@ -580,6 +580,7 @@ app
 ] in *;
 cbv [machineIntToShamt id] in *).
 
+Definition TODO{T: Type}: T. Admitted.
 
 Lemma decode_encode (inst: Instruction) (z: Z) (H:respects_bounds 64 inst) :
     decode RV64IMA (encode inst) = inst.
@@ -679,7 +680,8 @@ Proof.
 (*   ============================ *)
 (*   signExtend 12 (bitSlice encoded 20 32) = 0 *)
 
-  admit.
+  apply TODO.
+
 (* 6 subgoals (ID 91789) *)
   
 (*   z : Z *)
@@ -694,7 +696,7 @@ Proof.
 (*   ============================ *)
 (*   False *)
 
-  admit.
+  apply TODO.
 
  (* 5 subgoals (ID 91790) *)
   
@@ -710,7 +712,7 @@ Proof.
 (*   ============================ *)
 (*   False *)
   
-  admit.
+  apply TODO.
 (* 4 subgoals (ID 91791) *)
   
 (*   z : Z *)
@@ -725,7 +727,7 @@ Proof.
 (*   ============================ *)
 (*   False *)
 
-  admit.
+  apply TODO.
   (* 3 subgoals (ID 91792) *)
   
 (*   z : Z *)
@@ -739,7 +741,7 @@ Proof.
 (*   H0 : bitSlice encoded 25 32 = 9 *)
 (*   ============================ *)
 (*   False *)
-  admit.
+  apply TODO.
   (* 2 subgoals (ID 91793) *)
   
 (*   z : Z *)
@@ -753,7 +755,7 @@ Proof.
 (*   H0 : bitSlice encoded 25 32 = 9 *)
 (*   ============================ *)
 (*   False *)
-  admit.
+  apply TODO.
   (* 1 subgoal (ID 91794) *)
   
   (* z : Z *)
@@ -767,6 +769,5 @@ Proof.
   (* H0 : bitSlice encoded 25 32 = 9 *)
   (* ============================ *)
   (* False *)
-  admit.
-
-Admitted.
+  apply TODO.
+Time Qed.
