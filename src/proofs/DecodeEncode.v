@@ -517,7 +517,7 @@ app
 ] in *;
 cbv [machineIntToShamt id] in *).
 
-Lemma decode_encode (inst: Instruction) (z: Z) (H:respects_bounds 64 inst) :
+Lemma decode_encode (inst: Instruction) (H:respects_bounds 64 inst) :
     decode RV64IMA (encode inst) = inst.
 Proof.
   cbv beta delta [decode].
@@ -546,8 +546,7 @@ Proof.
     ] in Henc.
 
   destruct inst as [i|i|i|i|i|i|i|i].
-  (* TODO: use par:abstract here once all of the proof is automated into the next sentence *)
-  all: destruct i; try (
+  par: abstract (destruct i; try (
     (lazymatch type of Henc with
      | encode_I _ _ _ _ _ = _ =>
        apply invert_encode_I in Henc
@@ -586,19 +585,18 @@ Proof.
       | |- _ => rewrite !Bool.orb_true_r in *
       | |- _ => rewrite !Bool.andb_false_r in *
       | |- _ => progress subst
-      end).
-
-  (* cases where bitSlice in goal and hyps do not match (but the encoded value is fully specified) *)
-  all : cbv [funct7_SFENCE_VMA opcode_SYSTEM funct3_PRIV funct12_WFI funct12_MRET funct12_SRET funct12_URET funct12_EBREAK funct12_ECALL funct3_FENCE_I opcode_MISC_MEM isValidI] in *.
-  all:
-    repeat match goal with
-           | |- ?x = ?x => exact_no_check (eq_refl x)
-           | |- context [?x =? ?y] =>
-             let H := fresh "H" in
-             destruct (x =? y) eqn:H;
-               apply Z.eqb_eq in H || apply Z.eqb_neq in H
-           | _ => progress cbn in *
-           end.
-  all : exfalso; try match goal with H: _ <> _ |- _ => apply H; clear H end.
-  all: try somega.
+      end);
+     (* cases where bitSlice in goal and hyps do not match (but the encoded value is fully specified) *)
+     cbv [funct7_SFENCE_VMA opcode_SYSTEM funct3_PRIV funct12_WFI funct12_MRET funct12_SRET funct12_URET funct12_EBREAK funct12_ECALL funct3_FENCE_I opcode_MISC_MEM isValidI] in *;
+     repeat match goal with
+            | |- ?x = ?x => exact_no_check (eq_refl x)
+            | |- context [?x =? ?y] =>
+              let H := fresh "H" in
+              destruct (x =? y) eqn:H;
+                apply Z.eqb_eq in H || apply Z.eqb_neq in H
+            | _ => progress cbn in *
+            end;
+     exfalso;
+     try match goal with H: _ <> _ |- _ => apply H; clear H end;
+     somega).
 Qed.
