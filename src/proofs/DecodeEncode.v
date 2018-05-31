@@ -172,6 +172,11 @@ Ltac write_as_pow2_opportunities f :=
                    end;
                    let e := eval cbv in (Z.log2 (Z.pos p)) in
                    f (Z.pos p) (2 ^ e)
+               end);
+    (* we might have been a bit too eager -- undo undesired chained powers: *)
+    repeat (so fun hyporgoal => match hyporgoal with
+               | context [2 ^ 2 ^ ?p] => let r := eval cbv in (2 ^ p) in
+                                         change (2 ^ 2 ^ p) with (2 ^ r) in *
                end).
 
 Tactic Notation "write_as_pow2" "in" "*|-" :=
@@ -192,6 +197,12 @@ Hint Rewrite
   : bool_rewriting.
 
 Ltac prove_Zeq_bitwise :=
+    repeat match goal with
+         | H: (_ <= _ < _) /\ _ |- _ => destruct H
+         end;
+    subst;
+    unfold bitSlice;
+    repeat split;
     write_as_pow2 in *|-;
     apply Z.bits_inj;
     unfold Z.eqf;
@@ -238,18 +249,7 @@ Lemma invert_encode_R: forall {opcode rd rs1 rs2 funct3 funct7},
   rd = bitSlice inst 7 12 /\
   rs1 = bitSlice inst 15 20 /\
   rs2 = bitSlice inst 20 25.
-Proof.
-  intros. unfold encode_R, verify_R in *.
-  repeat match goal with
-         | H: (_ <= _ < _) /\ _ |- _ => destruct H
-         end.
-  subst.
-  unfold bitSlice.
-  rewrite <-? or_to_plus. {
-    repeat split;
-      prove_Zeq_bitwise.
-  }
-Admitted.
+Proof. intros. unfold encode_R, verify_R in *. prove_Zeq_bitwise. Qed.
 
 Lemma invert_encode_R_atomic: forall {opcode rd rs1 rs2 funct3 aqrl funct5},
   verify_R_atomic opcode rd rs1 rs2 funct3 aqrl funct5 ->
@@ -262,9 +262,7 @@ Lemma invert_encode_R_atomic: forall {opcode rd rs1 rs2 funct3 aqrl funct5},
   rd = bitSlice inst 7 12 /\
   rs1 = bitSlice inst 15 20 /\
   rs2 = bitSlice inst 20 25.
-Proof.
-  intros. unfold encode_R_atomic, verify_R_atomic in *. somega.
-Qed.
+Proof. intros. unfold encode_R_atomic, verify_R_atomic in *. prove_Zeq_bitwise. Qed.
 
 Lemma invert_encode_I: forall {opcode rd rs1 funct3 oimm12},
   verify_I opcode rd rs1 funct3 oimm12 ->
@@ -275,9 +273,7 @@ Lemma invert_encode_I: forall {opcode rd rs1 funct3 oimm12},
   rd = bitSlice inst 7 12 /\
   rs1 = bitSlice inst 15 20 /\
   oimm12 = signExtend 12 (bitSlice inst 20 32).
-Proof.
-  intros. unfold encode_I, verify_I in *. somega.
-Qed.
+Proof. intros. unfold encode_I, verify_I in *. Fail prove_Zeq_bitwise. Admitted.
 
 Lemma invert_encode_I_shift_57: forall {opcode rd rs1 shamt5 funct3 funct7},
   verify_I_shift_57 opcode rd rs1 shamt5 funct3 funct7 ->
@@ -289,9 +285,7 @@ Lemma invert_encode_I_shift_57: forall {opcode rd rs1 shamt5 funct3 funct7},
   rd = bitSlice inst 7 12 /\
   rs1 = bitSlice inst 15 20 /\
   shamt5 = bitSlice inst 20 25.
-Proof.
-  intros. unfold encode_I_shift_57, verify_I_shift_57 in *. somega.
-Qed.
+Proof. intros. unfold encode_I_shift_57, verify_I_shift_57 in *. prove_Zeq_bitwise. Qed.
 
 Lemma invert_encode_I_shift_66: forall {bitwidth opcode rd rs1 shamt6 funct3 funct6},
   verify_I_shift_66 bitwidth opcode rd rs1 shamt6 funct3 funct6 ->
@@ -308,8 +302,8 @@ Proof.
   intros. unfold encode_I_shift_66, verify_I_shift_66 in *.
   rewrite Bool.orb_true_iff.
   rewrite? Z.eqb_eq.
-  somega.
-Qed.
+  Fail prove_Zeq_bitwise.
+Admitted.
 
 Lemma invert_encode_I_system: forall {opcode rd rs1 funct3 funct12},
   verify_I_system opcode rd rs1 funct3 funct12 ->
@@ -320,9 +314,7 @@ Lemma invert_encode_I_system: forall {opcode rd rs1 funct3 funct12},
   funct12 = bitSlice inst 20 32 /\
   rd = bitSlice inst 7 12 /\
   rs1 = bitSlice inst 15 20.
-Proof.
-  intros. unfold encode_I_system, verify_I_system in *. somega.
-Qed.
+Proof. intros. unfold encode_I_system, verify_I_system in *. prove_Zeq_bitwise. Qed.
 
 Lemma invert_encode_S: forall {opcode rs1 rs2 funct3 simm12},
   verify_S opcode rs1 rs2 funct3 simm12 ->
@@ -335,6 +327,7 @@ Lemma invert_encode_S: forall {opcode rs1 rs2 funct3 simm12},
   simm12 = signExtend 12 (Z.shiftl (bitSlice inst 25 32) 5 <|> bitSlice inst 7 12).
 Proof.
   intros. unfold encode_S, verify_S in *.
+Admitted. (*
   rewrite or_to_plus.
   + somega.    
   + apply Z.bits_inj.
@@ -351,6 +344,7 @@ Proof.
       apply Z.mod_pow2_bits_high.
       omega.
 Qed.
+*)
 
 Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
   verify_SB opcode rs1 rs2 funct3 sbimm12 ->
@@ -366,13 +360,7 @@ Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
                            Z.shiftl (bitSlice inst 7 8) 11).
 Proof.
   intros. unfold encode_SB, verify_SB in *.
-  repeat split; [try somega .. | ].
-  - subst.
-    destruct H as [? [? [? [? [? ?]]]]].
-    rewrite <-? or_to_plus. {
-      unfold bitSlice.
-      prove_Zeq_bitwise.
-    }
+  repeat split; try prove_Zeq_bitwise.
 Admitted.
 
 Lemma invert_encode_U: forall {opcode rd imm20},
@@ -383,8 +371,8 @@ Lemma invert_encode_U: forall {opcode rd imm20},
   rd = bitSlice inst 7 12 /\
   imm20 = signExtend 32 (Z.shiftl (bitSlice inst 12 32) 12).
 Proof.
-  intros. unfold encode_U, verify_U in *. somega.
-Qed.
+  intros. unfold encode_U, verify_U in *.
+Admitted.
 
 Lemma invert_encode_UJ: forall {opcode rd jimm20},
   verify_UJ opcode rd jimm20 ->
@@ -397,7 +385,7 @@ Lemma invert_encode_UJ: forall {opcode rd jimm20},
                           Z.shiftl (bitSlice inst 20 21) 11 <|>
                           Z.shiftl (bitSlice inst 12 20) 12).
 Proof.
-  intros. unfold encode_UJ, verify_UJ in *. (* TODO replace or by + *)
+  intros. unfold encode_UJ, verify_UJ in *.
 Admitted.
 
 Lemma invert_encode_Fence: forall {opcode rd rs1 funct3 prd scc msb4},
@@ -411,9 +399,7 @@ Lemma invert_encode_Fence: forall {opcode rd rs1 funct3 prd scc msb4},
   scc = bitSlice inst 20 24 /\
   prd = bitSlice inst 24 28 /\
   msb4 = bitSlice inst 28 32.
-Proof.
-  intros. unfold encode_Fence, verify_Fence in *. somega.
-Qed.
+Proof. intros. unfold encode_Fence, verify_Fence in *. prove_Zeq_bitwise. Qed.
 
 Ltac cbn_encode := repeat (
     cbn [
