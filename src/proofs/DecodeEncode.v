@@ -195,27 +195,35 @@ Hint Rewrite
      Bool.orb_false_l
      Bool.orb_true_l
   : bool_rewriting.
+    
+Ltac discard_contradictory_or t :=
+  match goal with
+  | |- ?P \/ ?Q => (assert (~P) as _ by t; right) || (assert (~Q) as _ by t; left)
+  end.
 
 Ltac prove_Zeq_bitwise :=
-    repeat match goal with
-         | H: (_ <= _ < _) /\ _ |- _ => destruct H
-         end;
+    intuition idtac;
     subst;
-    unfold bitSlice;
-    repeat split;
     write_as_pow2 in *|-;
+    repeat (discard_contradictory_or omega);
     apply Z.bits_inj;
     unfold Z.eqf;
     intro i;
     match goal with
-    | _: 0 <= ?f < 2 ^ ?p |- Z.testbit ?f ?i = _ =>
+    | _: 0 <= ?f, _: ?f < 2 ^ ?p |- Z.testbit ?f ?i = _ =>
         let C := fresh "C" in
-        assert (i < 0 \/ 0 <= i < p \/ p <= i) as C by omega;
-        destruct C as [C | [C | C]]
+        assert (i < 0 \/ 0 <= i < p \/ p = i \/ p < i) as C by omega;
+        destruct C as [C | [C | [C | C]]]
+    | |- Z.testbit (bitSlice _ ?start ?eend) ?i = _ =>
+        let C := fresh "C" in
+        assert (i < 0 \/ i = 0 \/  0 < i < start \/ start <= i < eend \/ eend <= i) as C by omega;
+        destruct C as [C | [C | [C | [C | C]]]]
     end;
+    unfold bitSlice in *;
     repeat match goal with
              | |- context [ Z.testbit _ ?i ] =>
                      (rewrite (Z.testbit_neg_r _ i) by omega) ||
+                     (rewrite Z.testbit_0_l) ||
                      (rewrite Z.land_spec) ||
                      (rewrite Z.lor_spec) ||
                      (rewrite (Z.shiftr_spec _ _ i) by omega) ||
@@ -224,7 +232,10 @@ Ltac prove_Zeq_bitwise :=
                      (rewrite (Z.testbit_neg_r _ i) by omega) ||
                      (rewrite testbit_minus1 by omega) ||
                      (match goal with
-                      | H: 0 <= _ < 2 ^ _ |- _ => rewrite (testbit_above H) by omega
+                      | H: 0 <= _ < 2 ^ _ |- _ =>
+                          rewrite (testbit_above H) by omega
+                      | H1: 0 <= ?a, H2: ?a < 2 ^ _ |- _ =>
+                          rewrite (testbit_above (conj H1 H2)) by omega
                       end)
            end;
     autorewrite with bool_rewriting;
@@ -302,8 +313,8 @@ Proof.
   intros. unfold encode_I_shift_66, verify_I_shift_66 in *.
   rewrite Bool.orb_true_iff.
   rewrite? Z.eqb_eq.
-  Fail prove_Zeq_bitwise.
-Admitted.
+  prove_Zeq_bitwise.
+Qed.
 
 Lemma invert_encode_I_system: forall {opcode rd rs1 funct3 funct12},
   verify_I_system opcode rd rs1 funct3 funct12 ->
