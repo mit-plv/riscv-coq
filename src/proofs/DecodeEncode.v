@@ -263,6 +263,27 @@ Proof.
       omega.
 Qed.
 
+Lemma testbit_minus1: forall i,
+    0 <= i ->
+    Z.testbit (-1) i = true.
+Proof.
+  intros. rewrite (Z.bits_opp 1) by assumption.
+  simpl. rewrite Z.bits_0. reflexivity. 
+Qed.
+
+Lemma testbit_above: forall {p n},
+    0 <= n < 2 ^ p ->
+    0 <= p ->
+    forall i,
+    p <= i ->
+    Z.testbit n i = false.
+Proof.
+  intros.
+  rewrite <- (Z.mod_small n (2 ^ p)) by assumption.
+  apply Z.mod_pow2_bits_high.
+  auto.
+Qed.
+
 Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
   verify_SB opcode rs1 rs2 funct3 sbimm12 ->
   forall inst,
@@ -278,38 +299,51 @@ Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
 Proof.
   intros. unfold encode_SB, verify_SB in *.
   repeat split; [try somega .. | ].
-  { somega_pre. subst.
-    rewrite? Z.mul_add_distr_l in *.
-    rewrite? Z.mul_assoc in *.
+  - subst.
+    destruct H as [? [? [? [? [? ?]]]]].
+    rewrite <-? or_to_plus. {
+    unfold bitSlice.
     repeat match goal with
-           | _: context [ ?a * ?b * ?c ] |- _ =>
-             let r := eval cbv in (a * b) in change (a * b) with r in *
+           | |- context [?a - ?b] => let r := eval cbv in (a - b) in change (a - b) with r
            end.
-
-    (*
-    Require Import riscv.util.smt.
-    smt.
-    *)
-    
-    (*
-Proof.
-  intros. unfold encode_SB, verify_SB in *.
-  repeat match goal with
-         | H: _ /\ _ |- _ => destruct H
-         end.
-  assert (2 <> 0) as K by omega.
-  pose proof (Z.div_mod sbimm12 2 K) as P.
-  rewrite H5 in P.
-  rewrite Z.add_0_r in P.
-  rewrite P in *.
-  remember (sbimm12 / 2) as sbimm12'.
-  clear Heqsbimm12' K P H5 sbimm12.
-  rewrite? or_to_plus.
-  - somega_pre.
-*)
-        
- (* omega uses excessive amounts of memory *)
-
+    apply Z.bits_inj.
+    unfold Z.eqf.
+    intro i.
+    assert (i < 0 \/ 0 <= i < 3 \/ 3 <= i) as C by omega. destruct C as [C | [C | C]].
+    + rewrite? Z.testbit_neg_r; auto.
+    + repeat match goal with
+             | |- context [ Z.testbit _ ?i ] =>
+                     (rewrite Z.land_spec) ||
+                     (rewrite Z.lor_spec) ||
+                     (rewrite (Z.shiftr_spec _ _ i) by omega) ||
+                     (rewrite (Z.lnot_spec _ i) by omega) ||
+                     (rewrite (Z.shiftl_spec _ _ i) by omega) ||
+                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
+                     (rewrite testbit_minus1 by omega)
+             end.
+      change 128 with (2 ^ 7) in *.
+      rewrite (testbit_above H) by omega.
+      unfold negb. rewrite Bool.andb_true_r.
+      rewrite? Bool.andb_false_r.
+      rewrite? Bool.orb_false_r.
+      rewrite? Bool.orb_false_l.
+      f_equal.
+      omega.
+    + change 8 with (2 ^ 3) in H2.
+      rewrite (testbit_above H2) by omega.
+      repeat match goal with
+             | |- context [ Z.testbit _ ?i ] =>
+                     (rewrite Z.land_spec) ||
+                     (rewrite Z.lor_spec) ||
+                     (rewrite (Z.shiftr_spec _ _ i) by omega) ||
+                     (rewrite (Z.lnot_spec _ i) by omega) ||
+                     (rewrite (Z.shiftl_spec _ _ i) by omega) ||
+                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
+                     (rewrite testbit_minus1 by omega)
+             end.
+      unfold negb. rewrite Bool.andb_false_r.
+      reflexivity.
+    }
 Admitted.
 
 Lemma invert_encode_U: forall {opcode rd imm20},
