@@ -141,6 +141,86 @@ Ltac somega_pre :=
 (* omega which understands bitSlice and shift *)
 Ltac somega := somega_pre; omega.
 
+Lemma testbit_minus1: forall i,
+    0 <= i ->
+    Z.testbit (-1) i = true.
+Proof.
+  intros. rewrite (Z.bits_opp 1) by assumption.
+  simpl. rewrite Z.bits_0. reflexivity. 
+Qed.
+
+Lemma testbit_above: forall {p n},
+    0 <= n < 2 ^ p ->
+    0 <= p ->
+    forall i,
+    p <= i ->
+    Z.testbit n i = false.
+Proof.
+  intros.
+  rewrite <- (Z.mod_small n (2 ^ p)) by assumption.
+  apply Z.mod_pow2_bits_high.
+  auto.
+Qed.
+
+Ltac write_as_pow2_opportunities f :=
+    repeat (so fun hyporgoal => match hyporgoal with
+               | context [ Z.pos ?p ] =>
+                   match p with
+                   | 1%positive => fail 1
+                   | 2%positive => fail 1
+                   | _ => idtac
+                   end;
+                   let e := eval cbv in (Z.log2 (Z.pos p)) in
+                   f (Z.pos p) (2 ^ e)
+               end).
+
+Tactic Notation "write_as_pow2" "in" "*|-" :=
+  write_as_pow2_opportunities ltac:(fun old new => change old with new in *|-).
+
+Tactic Notation "write_as_pow2" "in" "*" :=
+  write_as_pow2_opportunities ltac:(fun old new => change old with new in *).
+
+Hint Rewrite
+     Bool.andb_false_r
+     Bool.andb_true_r
+     Bool.andb_false_l
+     Bool.andb_true_l
+     Bool.orb_false_r
+     Bool.orb_true_r
+     Bool.orb_false_l
+     Bool.orb_true_l
+  : bool_rewriting.
+
+Ltac prove_Zeq_bitwise :=
+    write_as_pow2 in *|-;
+    apply Z.bits_inj;
+    unfold Z.eqf;
+    intro i;
+    match goal with
+    | _: 0 <= ?f < 2 ^ ?p |- Z.testbit ?f ?i = _ =>
+        let C := fresh "C" in
+        assert (i < 0 \/ 0 <= i < p \/ p <= i) as C by omega;
+        destruct C as [C | [C | C]]
+    end;
+    repeat match goal with
+             | |- context [ Z.testbit _ ?i ] =>
+                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
+                     (rewrite Z.land_spec) ||
+                     (rewrite Z.lor_spec) ||
+                     (rewrite (Z.shiftr_spec _ _ i) by omega) ||
+                     (rewrite (Z.lnot_spec _ i) by omega) ||
+                     (rewrite (Z.shiftl_spec _ _ i) by omega) ||
+                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
+                     (rewrite testbit_minus1 by omega) ||
+                     (match goal with
+                      | H: 0 <= _ < 2 ^ _ |- _ => rewrite (testbit_above H) by omega
+                      end)
+           end;
+    autorewrite with bool_rewriting;
+    f_equal;
+    try reflexivity;
+    try omega.
+
 Lemma invert_encode_InvalidInstruction: forall i,
   verify_Invalid i ->
   forall inst,
@@ -159,8 +239,17 @@ Lemma invert_encode_R: forall {opcode rd rs1 rs2 funct3 funct7},
   rs1 = bitSlice inst 15 20 /\
   rs2 = bitSlice inst 20 25.
 Proof.
-  intros. unfold encode_R, verify_R in *. somega.
-Qed.
+  intros. unfold encode_R, verify_R in *.
+  repeat match goal with
+         | H: (_ <= _ < _) /\ _ |- _ => destruct H
+         end.
+  subst.
+  unfold bitSlice.
+  rewrite <-? or_to_plus. {
+    repeat split;
+      prove_Zeq_bitwise.
+  }
+Admitted.
 
 Lemma invert_encode_R_atomic: forall {opcode rd rs1 rs2 funct3 aqrl funct5},
   verify_R_atomic opcode rd rs1 rs2 funct3 aqrl funct5 ->
@@ -263,27 +352,6 @@ Proof.
       omega.
 Qed.
 
-Lemma testbit_minus1: forall i,
-    0 <= i ->
-    Z.testbit (-1) i = true.
-Proof.
-  intros. rewrite (Z.bits_opp 1) by assumption.
-  simpl. rewrite Z.bits_0. reflexivity. 
-Qed.
-
-Lemma testbit_above: forall {p n},
-    0 <= n < 2 ^ p ->
-    0 <= p ->
-    forall i,
-    p <= i ->
-    Z.testbit n i = false.
-Proof.
-  intros.
-  rewrite <- (Z.mod_small n (2 ^ p)) by assumption.
-  apply Z.mod_pow2_bits_high.
-  auto.
-Qed.
-
 Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
   verify_SB opcode rs1 rs2 funct3 sbimm12 ->
   forall inst,
@@ -302,47 +370,8 @@ Proof.
   - subst.
     destruct H as [? [? [? [? [? ?]]]]].
     rewrite <-? or_to_plus. {
-    unfold bitSlice.
-    repeat match goal with
-           | |- context [?a - ?b] => let r := eval cbv in (a - b) in change (a - b) with r
-           end.
-    apply Z.bits_inj.
-    unfold Z.eqf.
-    intro i.
-    assert (i < 0 \/ 0 <= i < 3 \/ 3 <= i) as C by omega. destruct C as [C | [C | C]].
-    + rewrite? Z.testbit_neg_r; auto.
-    + repeat match goal with
-             | |- context [ Z.testbit _ ?i ] =>
-                     (rewrite Z.land_spec) ||
-                     (rewrite Z.lor_spec) ||
-                     (rewrite (Z.shiftr_spec _ _ i) by omega) ||
-                     (rewrite (Z.lnot_spec _ i) by omega) ||
-                     (rewrite (Z.shiftl_spec _ _ i) by omega) ||
-                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
-                     (rewrite testbit_minus1 by omega)
-             end.
-      change 128 with (2 ^ 7) in *.
-      rewrite (testbit_above H) by omega.
-      unfold negb. rewrite Bool.andb_true_r.
-      rewrite? Bool.andb_false_r.
-      rewrite? Bool.orb_false_r.
-      rewrite? Bool.orb_false_l.
-      f_equal.
-      omega.
-    + change 8 with (2 ^ 3) in H2.
-      rewrite (testbit_above H2) by omega.
-      repeat match goal with
-             | |- context [ Z.testbit _ ?i ] =>
-                     (rewrite Z.land_spec) ||
-                     (rewrite Z.lor_spec) ||
-                     (rewrite (Z.shiftr_spec _ _ i) by omega) ||
-                     (rewrite (Z.lnot_spec _ i) by omega) ||
-                     (rewrite (Z.shiftl_spec _ _ i) by omega) ||
-                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
-                     (rewrite testbit_minus1 by omega)
-             end.
-      unfold negb. rewrite Bool.andb_false_r.
-      reflexivity.
+      unfold bitSlice.
+      prove_Zeq_bitwise.
     }
 Admitted.
 
@@ -384,31 +413,6 @@ Lemma invert_encode_Fence: forall {opcode rd rs1 funct3 prd scc msb4},
   msb4 = bitSlice inst 28 32.
 Proof.
   intros. unfold encode_Fence, verify_Fence in *. somega.
-Qed.
-
-Ltac prove_andb_false :=
-  reflexivity ||
-  assumption ||
-  (symmetry; assumption) ||
-  (apply Bool.andb_false_intro1; prove_andb_false) ||
-  (apply Bool.andb_false_intro2; prove_andb_false).
-  
-Goal forall b1 b3 b4 b5, b1 && false && b3 && b4 && b5 = false. intros. prove_andb_false. Qed.
-Goal forall b1 b2 b4 b5, b1 && (b2 && false) && b4 && b5 = false. intros. prove_andb_false. Qed.
-Goal forall b1 b3 b4 b5, (b1 && (false && b3) && b4) && b5 = false. intros. prove_andb_false. Qed.
-
-Lemma andb_true: forall b1 b2,
-    b1 = true -> b2 = true -> b1 && b2 = true.
-Proof. intros. subst. reflexivity. Qed.
-
-Ltac prove_andb_true :=
-  reflexivity ||
-  assumption ||
-  (symmetry; assumption) ||
-  (apply andb_true; prove_andb_true).
-
-Goal forall b1 b2, b1 = true -> b2 = true -> true && b1 && (b2 && true) = true.
-  intros. prove_andb_true.
 Qed.
 
 Ltac cbn_encode := repeat (
