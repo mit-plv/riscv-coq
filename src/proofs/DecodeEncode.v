@@ -377,6 +377,151 @@ Lemma invert_encode_I_system: forall {opcode rd rs1 funct3 funct12},
   rs1 = bitSlice inst 15 20.
 Proof. intros. unfold encode_I_system, verify_I_system in *. prove_Zeq_bitwise. Qed.
 
+Lemma testbit_if: forall (b: bool) n m i,
+    Z.testbit (if b then n else m) i = if b then (Z.testbit n i) else (Z.testbit m i).
+Proof.
+  intros. destruct b; reflexivity.
+Qed.
+
+Definition signExtend'''(l n: Z): Z :=
+  if Z.testbit n (l - 1) then Z.lxor n (Z.shiftl (-1) l) else n.
+
+Definition signExtend''(l n: Z): Z :=
+  if Z.testbit n (l - 1) then Z.ldiff n (Z.setbit 0 l) else n.
+
+Lemma signExtend_alt'': forall l n,
+    signExtend l n = signExtend'' l n.
+Proof.
+  intros. unfold signExtend, signExtend''.
+  destruct (Z.testbit n (l - 1)) eqn: E; [|reflexivity].
+  destruct (Z.testbit n l) eqn: F.
+  - apply Z.sub_nocarry_ldiff. admit. (* ok *)
+  - (* rhs in n, lhs is not n -> does not hold! *)
+Abort.
+
+Definition signExtend1(l n: Z): Z :=
+  if Z.testbit n (l - 1) then
+    if Z.testbit n l then
+      Z.ldiff n (Z.setbit 0 l)
+    else
+      333
+  else n.
+
+Lemma signExtend_alt1: forall l n,
+    signExtend l n = signExtend1 l n.
+Proof.
+  intros. unfold signExtend, signExtend1.
+  destruct (Z.testbit n (l - 1)) eqn: E; [|reflexivity].
+  destruct (Z.testbit n l) eqn: F.
+  - apply Z.sub_nocarry_ldiff. admit. (* ok *)
+  - (* rhs in n, lhs is not n -> does not hold! *)
+Abort.
+
+Definition fakemask(a l: Z): Z :=
+    Z.land (Z.shiftl (-1) l) a <|> Z.land (Z.ones l) a.
+
+Lemma fakemask_id: forall a l,
+    0 < l ->
+    fakemask a l = a.
+Proof.
+  intros. unfold fakemask.
+  pose proof (Z.lnot_lor 0 (Z.lnot a)) as P.
+  rewrite Z.lor_0_l in P.
+  rewrite Z.lnot_involutive in P.
+  rewrite P at 3.
+  replace (Z.lnot 0) with (Z.lor (Z.shiftl (-1) l) (Z.ones l)).
+  - symmetry. apply Z.land_lor_distr_l.
+  - apply Z.bits_inj;
+    unfold Z.eqf;
+    intro i.
+    assert (i < 0 \/ 0 <= i < l \/ i = l \/ l < i) as C by omega.
+    destruct C as [C | [C | [C | C]]];    
+    repeat match goal with
+           | |- context [ Z.testbit _ ?i ] =>
+                     (rewrite Z.lxor_spec) ||
+                     (rewrite Z.ldiff_spec) ||
+                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
+                     (rewrite (Z.setbit_eq _ i) by omega) ||
+                     (rewrite (Z.setbit_neq _ _ i) by omega) ||
+                     (rewrite Z.testbit_0_l) ||
+                     (rewrite Z.land_spec) ||
+                     (rewrite Z.lor_spec) ||
+                     (rewrite (Z.shiftr_spec _ _ i) by omega) ||
+                     (rewrite (Z.lnot_spec _ i) by omega) ||
+                     (rewrite (Z.shiftl_spec _ _ i) by omega) ||
+                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
+                     (rewrite testbit_minus1 by omega) ||
+                     (rewrite (Z.ones_spec_high _ i) by omega) ||
+                     (rewrite (Z.ones_spec_low _ i) by omega) ||
+                     (match goal with
+                      | H: 0 <= _ < 2 ^ _ |- _ =>
+                          rewrite (testbit_above H) by omega
+                      | H1: 0 <= ?a, H2: ?a < 2 ^ _ |- _ =>
+                          rewrite (testbit_above (conj H1 H2)) by omega
+                      end)
+           end;
+    autorewrite with bool_rewriting;
+    f_equal;
+    try reflexivity;
+    try omega.
+Qed.
+
+Definition signExtend7(l n: Z): Z :=
+  if Z.testbit n (l - 1) then
+    Z.land (Z.shiftl (-1) l) (n - Z.setbit 0 l) <|> Z.land (Z.ones l) (Z.ldiff n (Z.setbit 0 l))
+  else n.
+(* not what we want: Z.land with Z.ones makes negative number positive *)
+
+Definition signExtend2(l n: Z): Z :=
+  if Z.testbit n (l - 1) then
+    (Z.land (Z.shiftl (-1) l) (n - Z.setbit 0 l)) <|>
+    (* ^-- only bits higher than l will be set, and we will never read these -- Not true!! *)
+    (Z.land (Z.ones l) n)
+    (* (n <|> (Z.shiftl (-1) l)) *)                                              
+    (*    (Z.ldiff (Z.land (Z.ones l) n) (Z.setbit 0 l)) *)
+  else n.
+
+Lemma signExtend_alt2: forall l n,
+    signExtend l n = signExtend2 l n.
+Proof.
+  intros. unfold signExtend, signExtend2.
+  destruct (Z.testbit n (l - 1)) eqn: E; [|reflexivity].
+  (* might hold, but probably not useful *)
+Abort.
+
+(*
+Lemma signExtend_alt2: forall l n,
+    signExtend l n = signExtend2 l n.
+Proof.
+  intros. unfold signExtend, signExtend2.
+  destruct (Z.testbit n (l - 1)) eqn: E; [|reflexivity].
+  rewrite Z.lor_land_distr_l.
+  rewrite Z.lor_assoc.
+  rewrite Z.lor_comm.
+  rewrite Z.lor_assoc.
+  rewrite Z.lor_diag.
+  rewrite Z.lor_comm.
+
+Abort.
+*)
+
+
+Lemma testbit_signExtend: forall l n i,
+    exists b, Z.testbit (signExtend l n) i = b.
+Proof.
+  intros.
+  unfold signExtend.
+  destruct (Z.testbit n (l - 1)) eqn: E.
+  - destruct (Z.testbit n l) eqn: F.
+    + setoid_rewrite Z.sub_nocarry_ldiff.
+      * exists (Z.testbit n i).
+        f_equal.
+        admit. (*ok*)
+      * (* ok *)
+        admit.
+    + 
+Abort.
+  
 Lemma invert_encode_S: forall {opcode rs1 rs2 funct3 simm12},
   verify_S opcode rs1 rs2 funct3 simm12 ->
   forall inst,
@@ -390,6 +535,7 @@ Proof.
   intros. unfold encode_S, verify_S in *.
   repeat split; try solve [prove_Zeq_bitwise].
   
+(*
     (intuition idtac);
     subst;
     write_as_pow2 in *|-;
@@ -423,6 +569,7 @@ Proof.
                      (rewrite (Z.shiftl_spec _ _ i) by omega) ||
                      (rewrite (Z.testbit_neg_r _ i) by omega) ||
                      (rewrite testbit_minus1 by omega) ||
+                     (rewrite testbit_if) ||
                      (match goal with
                       | H: 0 <= _ < 2 ^ _ |- _ =>
                           rewrite (testbit_above H) by omega
@@ -432,6 +579,9 @@ Proof.
            end;
     autorewrite with bool_rewriting;
     try solve [f_equal; (reflexivity || omega)].
+*)
+  (* Problem: need to get rid of subtraction because that's hard to relate to testbit *)
+
   
 Admitted. (*
   rewrite or_to_plus.
