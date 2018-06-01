@@ -36,7 +36,7 @@ Qed.
 
 Definition signExtend'(l n: Z): Z := n - ((n / 2 ^ (l - 1)) mod 2) * 2 ^ l.
 
-Definition signExtend_alt: forall l n,
+Lemma signExtend_alt: forall l n,
     0 < l ->
     signExtend l n = signExtend' l n.
 Proof.
@@ -80,6 +80,29 @@ Proof.
   rewrite <- Z.lxor_lor by assumption.
   symmetry. apply Z.add_nocarry_lxor. assumption.
 Qed.  
+
+Definition signExtend2(l n: Z): Z :=
+  if Z.testbit n (l - 1) then n <|> Z.shiftl (-1) l else n.
+
+Lemma signExtend_alt2: forall l n,
+    0 < l ->
+    Z.land (Z.shiftl (-1) l) n = 0 ->
+    signExtend l n = signExtend2 l n.
+Proof.
+  intros.
+  unfold signExtend, signExtend2.
+  destruct (Z.testbit n (l - 1)) eqn: E; [|reflexivity].
+  rewrite <- Z.add_opp_r.
+  pose proof (Z.add_lnot_diag (Z.setbit 0 l)).
+  replace (- (Z.setbit 0 l)) with (Z.lnot (Z.setbit 0 l) + 1) by omega.
+  replace (Z.lnot (Z.setbit 0 l) + 1) with (Z.shiftl (-1) l).
+  - symmetry. apply or_to_plus. rewrite Z.land_comm. assumption.
+  - replace (Z.lnot (Z.setbit 0 l)) with (- Z.setbit 0 l - 1) by omega.
+    rewrite Z.shiftl_mul_pow2 by omega.
+    rewrite Z.setbit_spec'.
+    rewrite Z.lor_0_l.
+    omega.
+Qed.
 
 Tactic Notation "so" tactic(f) :=
   match goal with
@@ -247,6 +270,38 @@ Ltac discard_contradictory_or t :=
   | |- ?P \/ ?Q => (assert (~P) as _ by t; right) || (assert (~Q) as _ by t; left)
   end.
 
+Lemma testbit_if: forall (b: bool) n m i,
+    Z.testbit (if b then n else m) i = if b then (Z.testbit n i) else (Z.testbit m i).
+Proof.
+  intros. destruct b; reflexivity.
+Qed.
+
+Ltac rewrite_testbit :=
+    repeat match goal with
+           | |- context [ Z.testbit _ ?i ] =>
+                     (rewrite Z.lxor_spec) ||
+                     (rewrite Z.ldiff_spec) ||
+                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
+                     (rewrite (Z.setbit_eq _ i) by omega) ||
+                     (rewrite (Z.setbit_neq _ _ i) by omega) ||
+                     (rewrite Z.testbit_0_l) ||
+                     (rewrite Z.land_spec) ||
+                     (rewrite Z.lor_spec) ||
+                     (rewrite (Z.shiftr_spec _ _ i) by omega) ||
+                     (rewrite (Z.lnot_spec _ i) by omega) ||
+                     (rewrite (Z.shiftl_spec _ _ i) by omega) ||
+                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
+                     (rewrite testbit_minus1 by omega) ||
+                     (rewrite (Z.ones_spec_high _ i) by omega) ||
+                     (rewrite (Z.ones_spec_low _ i) by omega) ||
+                     (match goal with
+                      | H: 0 <= _ < 2 ^ _ |- _ =>
+                          rewrite (testbit_above H) by omega
+                      | H1: 0 <= ?a, H2: ?a < 2 ^ _ |- _ =>
+                          rewrite (testbit_above (conj H1 H2)) by omega
+                      end)
+           end.
+
 Ltac prove_Zeq_bitwise :=
     intuition idtac;
     subst;
@@ -266,28 +321,7 @@ Ltac prove_Zeq_bitwise :=
         destruct C as [C | [C | [C | [C | C]]]]
     end;
     unfold bitSlice in *;
-    repeat match goal with
-           | |- context [ Z.testbit _ ?i ] =>
-                     (rewrite Z.lxor_spec) ||
-                     (rewrite Z.ldiff_spec) ||
-                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
-                     (rewrite (Z.setbit_eq _ i) by omega) ||
-                     (rewrite (Z.setbit_neq _ _ i) by omega) ||
-                     (rewrite Z.testbit_0_l) ||
-                     (rewrite Z.land_spec) ||
-                     (rewrite Z.lor_spec) ||
-                     (rewrite (Z.shiftr_spec _ _ i) by omega) ||
-                     (rewrite (Z.lnot_spec _ i) by omega) ||
-                     (rewrite (Z.shiftl_spec _ _ i) by omega) ||
-                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
-                     (rewrite testbit_minus1 by omega) ||
-                     (match goal with
-                      | H: 0 <= _ < 2 ^ _ |- _ =>
-                          rewrite (testbit_above H) by omega
-                      | H1: 0 <= ?a, H2: ?a < 2 ^ _ |- _ =>
-                          rewrite (testbit_above (conj H1 H2)) by omega
-                      end)
-           end;
+    rewrite_testbit;
     autorewrite with bool_rewriting;
     f_equal;
     try reflexivity;
@@ -377,12 +411,7 @@ Lemma invert_encode_I_system: forall {opcode rd rs1 funct3 funct12},
   rs1 = bitSlice inst 15 20.
 Proof. intros. unfold encode_I_system, verify_I_system in *. prove_Zeq_bitwise. Qed.
 
-Lemma testbit_if: forall (b: bool) n m i,
-    Z.testbit (if b then n else m) i = if b then (Z.testbit n i) else (Z.testbit m i).
-Proof.
-  intros. destruct b; reflexivity.
-Qed.
-
+(*
 Definition signExtend'''(l n: Z): Z :=
   if Z.testbit n (l - 1) then Z.lxor n (Z.shiftl (-1) l) else n.
 
@@ -521,7 +550,118 @@ Proof.
         admit.
     + 
 Abort.
-  
+ *)
+
+Lemma if_same: forall (A: Type) (b: bool) (a: A),
+    (if b then a else a) = a.
+Proof.
+  intros. destruct b; reflexivity.
+Qed.
+
+Lemma then_true_else_false: forall (b: bool),
+    (if b then true else false) = b.
+Proof.
+  intros. destruct b; reflexivity.
+Qed.
+
+Lemma then_false_else_true: forall (b: bool),
+    (if b then false else true) = negb b.
+Proof.
+  intros. destruct b; reflexivity.
+Qed.
+
+Hint Rewrite if_same then_true_else_false then_false_else_true : bool_rewriting.
+
+Require Import Coq.micromega.Lia.
+
+Lemma Zdiv_small_neg: forall a b,
+    - b <= a < 0 ->
+    a / b = -1.
+Proof.
+  intros. ThanksFiatCrypto.div_mod_to_quot_rem. nia.
+Qed.
+
+Lemma testbit_above_signed: forall l a i,
+    - 2 ^ l <= a < 2 ^ l ->
+    0 < l ->
+    l < i ->
+    Z.testbit a i = Z.testbit a l.
+Proof.
+  intros. destruct (Z.testbit a l) eqn: E.
+  - rewrite Z.testbit_true in E by omega.
+    assert (a < -1 \/ a = -1 \/ 0 <= a) as C by omega. destruct C as [C | [C | C]].
+    + apply Z.bits_above_log2_neg; [omega|].
+      rewrite (Z.pow_lt_mono_r_iff 2) by omega.
+      pose proof (Z.log2_spec (Z.pred (- a))) as P.
+      pose proof (Z.pow_lt_mono_r 2 l i).
+      omega.
+    + subst. apply testbit_minus1. omega.
+    + rewrite Z.div_small in E by omega.
+      cbv in E. discriminate.
+  - assert (a < 0 \/ 0 <= a) as C by omega. destruct C as [C | C].
+    + exfalso.
+      pose proof (Z.testbit_true a l) as P.
+      destruct P as [_ P]; [omega|].
+      rewrite P in E; [discriminate|clear P E].
+      rewrite Zdiv_small_neg by omega.
+      reflexivity.
+    + assert (a / 2 ^ i = 0) as F. {
+        pose proof (Z.pow_lt_mono_r 2 l i).
+        apply Z.div_small. omega.
+      }
+      rewrite Z.testbit_false by omega.
+      rewrite F.
+      reflexivity.
+Qed.
+
+Ltac simpl_pow2 :=
+  repeat (so fun hyporgoal => match hyporgoal with
+     | context [2 ^ ?x] => let r := eval cbv in (2 ^ x) in change (2 ^ x) with r in *
+  end).
+
+Lemma testbit_above': forall n b i,
+    0 <= n < b ->
+    0 <= Z.log2_up b ->
+    Z.log2_up b <= i ->
+    Z.testbit n i = false.
+Proof.
+  intros.
+  pose proof (Z.log2_log2_up_spec b).
+  apply (@testbit_above (Z.log2_up b) n); omega.
+Qed.
+
+Ltac simpl_log2up :=
+  repeat match goal with
+         | |- context [Z.log2_up ?a] =>
+           let r := eval cbv in (Z.log2_up a) in change (Z.log2_up a) with r
+         end.
+
+Ltac rewrite_testbit ::=
+    repeat ((autorewrite with bool_rewriting) ||
+            (match goal with
+             | |- context [ Z.testbit _ ?i ] =>
+                     (rewrite Z.lxor_spec) ||
+                     (rewrite Z.ldiff_spec) ||
+                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
+                     (rewrite (Z.setbit_eq _ i) by omega) ||
+                     (rewrite (Z.setbit_neq _ _ i) by omega) ||
+                     (rewrite Z.testbit_0_l) ||
+                     (rewrite Z.land_spec) ||
+                     (rewrite Z.lor_spec) ||
+                     (rewrite (Z.shiftr_spec _ _ i) by omega) ||
+                     (rewrite (Z.lnot_spec _ i) by omega) ||
+                     (rewrite (Z.shiftl_spec _ _ i) by omega) ||
+                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
+                     (rewrite testbit_minus1 by omega) ||
+                     (rewrite (Z.ones_spec_high _ i) by omega) ||
+                     (rewrite (Z.ones_spec_low _ i) by omega) ||
+                     (rewrite testbit_if) ||
+                     (match goal with
+                      | H1: 0 <= ?a, H2: ?a < ?b |- _ =>
+                        rewrite (testbit_above' a b) by (simpl_log2up; omega)
+                      end)
+             end)).
+
 Lemma invert_encode_S: forall {opcode rs1 rs2 funct3 simm12},
   verify_S opcode rs1 rs2 funct3 simm12 ->
   forall inst,
@@ -533,74 +673,52 @@ Lemma invert_encode_S: forall {opcode rs1 rs2 funct3 simm12},
   simm12 = signExtend 12 (Z.shiftl (bitSlice inst 25 32) 5 <|> bitSlice inst 7 12).
 Proof.
   intros. unfold encode_S, verify_S in *.
-  repeat split; try solve [prove_Zeq_bitwise].
-  
-(*
+
     (intuition idtac);
     subst;
-    write_as_pow2 in *|-;
+    simpl_pow2;
     repeat (discard_contradictory_or omega);
+    repeat (rewrite signExtend_alt2; [|omega|]);
+    unfold bitSlice, signExtend2 in *;
     apply Z.bits_inj;
     unfold Z.eqf;
     intro i;
-    match goal with
-    | _: 0 <= ?f, _: ?f < 2 ^ ?p |- Z.testbit ?f ?i = _ =>
-        let C := fresh "C" in
-        assert (i < 0 \/ 0 <= i < p \/ p = i \/ p < i) as C by omega;
-        destruct C as [C | [C | [C | C]]]
-    | _: - 2 ^ ?p <= ?f, _: ?f < 2 ^ ?p |- Z.testbit ?f ?i = _ =>
-        let C := fresh "C" in
-        assert (i < 0 \/ 0 <= i < p \/ p = i \/ p < i) as C by omega;
-        destruct C as [C | [C | [C | C]]]
-    | |- Z.testbit (bitSlice _ ?start ?eend) ?i = _ =>
-        let C := fresh "C" in
-        assert (i < 0 \/ i = 0 \/  0 < i < start \/ start <= i < eend \/ eend <= i) as C by omega;
-        destruct C as [C | [C | [C | [C | C]]]]
-    end;
-    unfold bitSlice, signExtend in *;
-    repeat match goal with
-             | |- context [ Z.testbit _ ?i ] =>
-                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
-                     (rewrite Z.testbit_0_l) ||
-                     (rewrite Z.land_spec) ||
-                     (rewrite Z.lor_spec) ||
-                     (rewrite (Z.shiftr_spec _ _ i) by omega) ||
-                     (rewrite (Z.lnot_spec _ i) by omega) ||
-                     (rewrite (Z.shiftl_spec _ _ i) by omega) ||
-                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
-                     (rewrite testbit_minus1 by omega) ||
-                     (rewrite testbit_if) ||
-                     (match goal with
-                      | H: 0 <= _ < 2 ^ _ |- _ =>
-                          rewrite (testbit_above H) by omega
-                      | H1: 0 <= ?a, H2: ?a < 2 ^ _ |- _ =>
-                          rewrite (testbit_above (conj H1 H2)) by omega
-                      end)
-           end;
-    autorewrite with bool_rewriting;
-    try solve [f_equal; (reflexivity || omega)].
-*)
-  (* Problem: need to get rid of subtraction because that's hard to relate to testbit *)
+    repeat (rewrite_testbit;
+            try solve [f_equal; (reflexivity || omega)];
+            match goal with
+            | |- context [Z.testbit _ ?i] =>
+              tryif (first [assert (0 <= i) by omega | assert (i < 0) by omega])
+              then fail
+              else (let C := fresh "C" in
+                    assert (i < 0 \/ 0 <= i) as C by omega;
+                    let r := type of C in idtac r;
+                    destruct C as [C | C])
+            end).
+    {
 
-  
-Admitted. (*
-  rewrite or_to_plus.
-  + somega.    
-  + apply Z.bits_inj.
-    unfold Z.eqf.
-    intro i.
-    rewrite Z.bits_0.
-    rewrite Z.land_spec.
-    rewrite Bool.andb_false_iff.
-    assert (i < 0 \/ 0 <= i < 5 \/ 5 <= i) as C by omega. destruct C as [C | [C | C]].
-    - rewrite Z.testbit_neg_r; auto.
-    - rewrite Z.shiftl_spec by omega.
-      rewrite Z.testbit_neg_r by omega. auto.
-    - right. rewrite bitSlice_alt by omega. unfold bitSlice'.
-      apply Z.mod_pow2_bits_high.
-      omega.
-Qed.
-*)
+      rewrite_testbit.
+Lemma testbit_above_signed': forall a b i,
+    - b <= a < b ->
+    0 < Z.log2_up b ->
+    Z.log2_up b < i ->
+    Z.testbit a i = Z.testbit a (Z.log2_up b).
+Proof.
+  intros.
+  pose proof (Z.log2_log2_up_spec b).
+  apply testbit_above_signed; omega.
+Qed.      
+
+
+                      (match goal with
+                      | H1: - ?b <= ?a, H2: ?a < ?b |- _ =>
+                        rewrite (testbit_above_signed' a b) by (simpl_log2up; omega);
+                        simpl_log2up
+                      end).
+                      reflexivity.
+    }
+Qed.      
+
+Print Assumptions invert_encode_S.
 
 Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
   verify_SB opcode rs1 rs2 funct3 sbimm12 ->
