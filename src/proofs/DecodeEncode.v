@@ -801,7 +801,7 @@ Definition verify(inst: Instruction)(iset: InstructionSet): Prop :=
 
 Lemma decode_encode: forall (inst: Instruction) (iset: InstructionSet),
     verify inst iset ->
-    decode RV64IMA (encode inst) = inst.
+    decode iset (encode inst) = inst.
 Proof.
   intros. unfold verify in H. destruct H as [H H0].
   unfold verify_iset in *.
@@ -831,7 +831,7 @@ Proof.
     ] in Henc.
 
   destruct inst as [i|i|i|i|i|i|i|i].
-  par: abstract (destruct i; try (
+  all: (destruct i; try (
     (lazymatch type of Henc with
      | encode_I _ _ _ _ _ = _ =>
        apply invert_encode_I in Henc
@@ -863,6 +863,7 @@ Proof.
              end; rewrite <-?Henc in *;
       subst results; subst resultI; subst decodeI; subst opcode; subst funct3;
       subst funct5; subst funct6; subst funct7; subst funct10; subst funct12;
+      destruct iset;
       repeat match goal with
       | H: False |- _ => destruct H
       | |- ?x = ?x => exact_no_check (eq_refl x)
@@ -871,8 +872,10 @@ Proof.
       | |- _ => rewrite !Bool.andb_false_r in *
       | |- _ => progress subst
       end);
-     (* cases where bitSlice in goal and hyps do not match (but the encoded value is fully specified) *)
-     cbv [funct7_SFENCE_VMA opcode_SYSTEM funct3_PRIV funct12_WFI funct12_MRET funct12_SRET funct12_URET funct12_EBREAK funct12_ECALL funct3_FENCE_I opcode_MISC_MEM isValidI] in *;
+     (* cases where bitSlice in goal and hyps do not match *)
+     cbv [funct7_SFENCE_VMA opcode_SYSTEM funct3_PRIV funct12_WFI funct12_MRET
+          funct12_SRET funct12_URET funct12_EBREAK funct12_ECALL
+          funct3_FENCE_I opcode_MISC_MEM isValidI] in *;
      repeat match goal with
             | |- ?x = ?x => exact_no_check (eq_refl x)
             | |- context [?x =? ?y] =>
@@ -881,9 +884,11 @@ Proof.
                 apply Z.eqb_eq in H || apply Z.eqb_neq in H
             | _ => progress cbn in *
             end;
-     exfalso;
-     try match goal with H: _ <> _ |- _ => apply H; clear H end;
-     try somega).
+     try solve [ exfalso;
+                 match goal with H: _ <> _ |- _ => apply H; clear H end;
+                 somega ]).
+  all: try (intuition discriminate).
+  all: try (exfalso; somega).
 Qed.
 
 Print Assumptions decode_encode.
