@@ -26,7 +26,7 @@ spec: bbv_version_check $(patsubst %.v,%.vo,$(wildcard src/*.v))
 
 encode: spec $(patsubst %.v,%.vo,$(wildcard src/encode/*.v))
 
-# beware: the "encode(decode inst) = inst" proof takes about half an hour
+# beware: the "encode(decode inst) = inst" proof takes about 25min (June 1st, 2018)
 proofs: encode $(patsubst %.v,%.vo,$(wildcard src/proofs/*.v))
 
 all: spec encode proofs
