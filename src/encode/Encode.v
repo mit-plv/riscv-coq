@@ -366,6 +366,21 @@ Definition Verifier(bitwidth: Z): InstructionMapper Prop := {|
 Definition respects_bounds(bitwidth: Z): Instruction -> Prop :=
   apply_InstructionMapper (Verifier bitwidth).
 
+Definition verify_iset(inst: Instruction)(iset: InstructionSet): Prop :=
+  match inst with
+  | IInstruction i => True
+  | MInstruction i => iset = RV32IM \/ iset = RV32IMA \/ iset = RV64IM \/ iset = RV64IMA 
+  | AInstruction i => iset = RV32IA \/ iset = RV32IMA \/ iset = RV64IA \/ iset = RV64IMA
+  | I64Instruction i => iset = RV64I \/ iset = RV64IM \/ iset = RV64IA \/ iset = RV64IMA
+  | M64Instruction i =>                 iset = RV64IM \/                  iset = RV64IMA
+  | A64Instruction i =>                                  iset = RV64IA \/ iset = RV64IMA
+  | CSRInstruction i   => True
+  | InvalidInstruction z => False
+  end.
+
+Definition verify(inst: Instruction)(iset: InstructionSet): Prop :=
+  respects_bounds (bitwidth iset) inst /\ verify_iset inst iset.
+
 Hint Unfold
   map_Invalid
   map_R

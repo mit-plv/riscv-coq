@@ -328,6 +328,46 @@ Proof.
   apply testbit_above_signed; omega.
 Qed.      
 
+Lemma mod0_testbit: forall a i p,
+    a mod 2 ^ p = 0 ->
+    0 <= i < p ->
+    Z.testbit a i = false.
+Proof.
+  intros.
+  rewrite Z.testbit_false by omega.
+  pose proof (Zdiv.Zmod_divides a (2 ^ p)) as P.
+  destruct P as [P _].
+  - apply Z.pow_nonzero; omega.
+  - specialize (P H). destruct P as [c P]. subst a. clear H.
+    rewrite Z.mul_comm.
+    rewrite Z.divide_div_mul_exact.
+    + replace p with ((1 + (p - i - 1)) + i) by omega.
+      rewrite Z.pow_add_r by omega.
+      rewrite Z.div_mul by (apply Z.pow_nonzero; omega).
+      rewrite Zdiv.Zmult_mod.
+      rewrite Z.pow_add_r by omega.
+      rewrite (Zdiv.Zmult_mod (2 ^ 1)).
+      change (2 ^ 1 mod 2) with 0.
+      rewrite Z.mul_0_l.
+      change (0 mod 2) with 0.
+      rewrite Z.mul_0_r.
+      reflexivity.
+    + apply Z.pow_nonzero; omega.
+    + replace p with ((p - i) + i) by omega.
+      rewrite Z.pow_add_r by omega.
+      apply Z.divide_factor_r.
+Qed.
+  
+Lemma mod0_testbit': forall a i m,
+    a mod m = 0 ->
+    m = 2 ^ Z.log2_up m ->
+    0 <= i < Z.log2_up m ->
+    Z.testbit a i = false.
+Proof.
+  intros. rewrite H0 in H.
+  apply (mod0_testbit a i (Z.log2_up m)); assumption.
+Qed.
+
 Ltac rewrite_testbit :=
     repeat ((autorewrite with bool_rewriting) ||
             (match goal with
@@ -350,12 +390,12 @@ Ltac rewrite_testbit :=
                      (rewrite testbit_if) ||
                      (match goal with
                       | H1: 0 <= ?a, H2: ?a < ?b |- _ =>
-                        rewrite (testbit_above' a b) by (simpl_log2up; omega)
-                      end) ||
-                     (match goal with
+                          rewrite (testbit_above' a b) by (simpl_log2up; omega)
                       | H1: - ?b <= ?a, H2: ?a < ?b |- _ =>
-                        rewrite (testbit_above_signed' a b) by (simpl_log2up; omega);
-                        simpl_log2up
+                          rewrite (testbit_above_signed' a b) by (simpl_log2up; omega);
+                          simpl_log2up
+                      | H1: ?a mod ?m = 0 |- _ =>
+                          rewrite (mod0_testbit' a i m) by (simpl_log2up; simpl_pow2; omega)
                       end)
              end)).
 
@@ -487,24 +527,7 @@ Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
                            Z.shiftl (bitSlice inst 25 31) 5 <|>
                            Z.shiftl (bitSlice inst 8 12) 1  <|>
                            Z.shiftl (bitSlice inst 7 8) 11).
-Proof. intros. unfold encode_SB, verify_SB in *. prove_Zeq_bitwise.
-  idtac.
-  rewrite_testbit.
-
-Lemma mod2_testbit0: forall a i,
-    a mod 2 = 0 ->
-    i = 0 ->
-    Z.testbit a i = false.
-Proof.
-  intros. subst.
-  destruct (Z.testbit a 0) eqn: E; [exfalso | reflexivity].
-  pose proof (Z.bit0_mod a) as P. rewrite E in P. rewrite H in P.
-  cbv in P. discriminate.
-Qed.
-
-  rewrite (mod2_testbit0 _ i) by omega.
-  reflexivity.
-Qed.
+Proof. intros. unfold encode_SB, verify_SB in *. prove_Zeq_bitwise. Qed.
 
 Lemma invert_encode_U: forall {opcode rd imm20},
   verify_U opcode rd imm20 ->
@@ -513,78 +536,7 @@ Lemma invert_encode_U: forall {opcode rd imm20},
   opcode = bitSlice inst 0 7 /\
   rd = bitSlice inst 7 12 /\
   imm20 = signExtend 32 (Z.shiftl (bitSlice inst 12 32) 12).
-Proof. intros. unfold encode_U, verify_U in *. prove_Zeq_bitwise.
-  idtac.
-  {
-
-Lemma mod0_testbit: forall a i p,
-    a mod 2 ^ p = 0 ->
-    0 <= i < p ->
-    Z.testbit a i = false.
-Proof.
-  intros.
-  rewrite Z.testbit_false by omega.
-  pose proof (Zdiv.Zmod_divides a (2 ^ p)) as P.
-  destruct P as [P _].
-  - apply Z.pow_nonzero; omega.
-  - specialize (P H). destruct P as [c P]. subst a. clear H.
-    rewrite Z.mul_comm.
-    rewrite Z.divide_div_mul_exact.
-    + replace p with ((1 + (p - i - 1)) + i) by omega.
-      rewrite Z.pow_add_r by omega.
-      rewrite Z.div_mul by (apply Z.pow_nonzero; omega).
-      rewrite Zdiv.Zmult_mod.
-      rewrite Z.pow_add_r by omega.
-      rewrite (Zdiv.Zmult_mod (2 ^ 1)).
-      change (2 ^ 1 mod 2) with 0.
-      rewrite Z.mul_0_l.
-      change (0 mod 2) with 0.
-      rewrite Z.mul_0_r.
-      reflexivity.
-    + apply Z.pow_nonzero; omega.
-    + replace p with ((p - i) + i) by omega.
-      rewrite Z.pow_add_r by omega.
-      apply Z.divide_factor_r.
-Qed.
-  
-Lemma mod0_testbit': forall a i m,
-    a mod m = 0 ->
-    m = 2 ^ Z.log2_up m ->
-    0 <= i < Z.log2_up m ->
-    Z.testbit a i = false.
-Proof.
-  intros. rewrite H0 in H.
-  apply (mod0_testbit a i (Z.log2_up m)); assumption.
-Qed.
-
-  idtac.
-                     (match goal with
-                      | H1: ?a mod ?m = 0 |- _ =>
-                        rewrite (mod0_testbit' a (i + 0) m) by
-                          (simpl_log2up; simpl_pow2; omega)
-                      end).
-  rewrite_testbit.
-  f_equal. omega.
-  }
-  {
-                     (lazymatch goal with
-                      | H1: ?a mod ?m = 0 |- _ =>
-                        rewrite (mod0_testbit' a (i + 7) m) by
-                          (simpl_log2up; simpl_pow2; omega)
-                      end).
-  rewrite_testbit.
-  f_equal. omega.
-  }    
-  {
-                     (match goal with
-                      | H1: ?a mod ?m = 0 |- _ =>
-                        rewrite (mod0_testbit' a i m) by
-                          (simpl_log2up; simpl_pow2; omega)
-                      end).
-  rewrite_testbit.
-  reflexivity.
-  }
-Qed.
+Proof. intros. unfold encode_U, verify_U in *. prove_Zeq_bitwise. Qed.
 
 Lemma invert_encode_UJ: forall {opcode rd jimm20},
   verify_UJ opcode rd jimm20 ->
@@ -596,18 +548,7 @@ Lemma invert_encode_UJ: forall {opcode rd jimm20},
                           Z.shiftl (bitSlice inst 21 31) 1  <|>
                           Z.shiftl (bitSlice inst 20 21) 11 <|>
                           Z.shiftl (bitSlice inst 12 20) 12).
-Proof. intros. unfold encode_UJ, verify_UJ in *. prove_Zeq_bitwise.
-  idtac.
-
-  rewrite_testbit.
-
-                     (match goal with
-                      | H1: ?a mod ?m = 0 |- _ =>
-                        rewrite (mod0_testbit' a i m) by
-                          (simpl_log2up; simpl_pow2; omega)
-                      end).
-  reflexivity.
-Qed.
+Proof. intros. unfold encode_UJ, verify_UJ in *. prove_Zeq_bitwise. Qed.
 
 Lemma invert_encode_Fence: forall {opcode rd rs1 funct3 prd scc msb4},
   verify_Fence opcode rd rs1 funct3 prd scc msb4 ->
@@ -783,21 +724,6 @@ Ltac cbn_encode := repeat (
   ] in *;
   cbv [machineIntToShamt id] in *
 ).
-
-Definition verify_iset(inst: Instruction)(iset: InstructionSet): Prop :=
-  match inst with
-  | IInstruction i => True
-  | MInstruction i => iset = RV32IM \/ iset = RV32IMA \/ iset = RV64IM \/ iset = RV64IMA 
-  | AInstruction i => iset = RV32IA \/ iset = RV32IMA \/ iset = RV64IA \/ iset = RV64IMA
-  | I64Instruction i => iset = RV64I \/ iset = RV64IM \/ iset = RV64IA \/ iset = RV64IMA
-  | M64Instruction i =>                 iset = RV64IM \/                  iset = RV64IMA
-  | A64Instruction i =>                                  iset = RV64IA \/ iset = RV64IMA
-  | CSRInstruction i   => True
-  | InvalidInstruction z => False
-  end.
-
-Definition verify(inst: Instruction)(iset: InstructionSet): Prop :=
-  respects_bounds (bitwidth iset) inst /\ verify_iset inst iset.
 
 Lemma decode_encode: forall (inst: Instruction) (iset: InstructionSet),
     verify inst iset ->

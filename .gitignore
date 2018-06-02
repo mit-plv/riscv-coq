@@ -4,6 +4,7 @@
 *.aux
 .depend
 .lia.cache
+.nia.cache
 \#*\#
 
 # hs-to-coq
