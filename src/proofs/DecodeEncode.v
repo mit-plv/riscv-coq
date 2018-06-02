@@ -623,168 +623,188 @@ Lemma invert_encode_Fence: forall {opcode rd rs1 funct3 prd scc msb4},
 Proof. intros. unfold encode_Fence, verify_Fence in *. prove_Zeq_bitwise. Qed.
 
 Ltac cbn_encode := repeat (
-    cbn [
-      Z.eqb Pos.eqb andb
-opcode_SYSTEM
-opcode_STORE_FP
-opcode_STORE
-opcode_OP_IMM_32
-opcode_OP_IMM
-opcode_OP_FP
-opcode_OP_32
-opcode_OP
-opcode_NMSUB
-opcode_NMADD
-opcode_MSUB
-opcode_MISC_MEM
-opcode_MADD
-opcode_LUI
-opcode_LOAD_FP
-opcode_LOAD
-opcode_JALR
-opcode_JAL
-opcode_BRANCH
-opcode_AUIPC
-opcode_AMO
-funct3_JALR
-funct7_XOR
-funct7_SUBW
-funct7_SRLIW
-funct7_SRL
-funct7_SUB
-funct7_SRLW
-funct7_SRA
-funct7_SLTU
-funct7_SLT
-funct7_SLLW
-funct7_SLLIW
-funct7_SLL
-funct7_SRAW
-funct7_SRAIW
-funct7_MUL
-funct7_DIVW
-funct7_DIVUW
-funct7_DIVU
-funct7_DIV
-funct7_AND
-funct7_SFENCE_VMA
-funct7_REMW
-funct7_REMUW
-funct7_REMU
-funct7_REM
-funct7_OR
-funct7_MULW
-funct7_MULHU
-funct7_MULHSU
-funct7_MULH
-funct3_SRAIW
-funct3_SRAI
-funct3_SRA
-funct3_SLTU
-funct3_SLTIU
-funct3_SLTI
-funct7_ADDW
-funct7_ADD
-funct6_SRLI
-funct6_SRAI
-funct6_SLLI
-funct5_SC
-funct5_LR
-funct5_AMOXOR
-funct5_AMOSWAP
-funct5_AMOOR
-funct5_AMOMINU
-funct5_AMOMIN
-funct5_AMOMAXU
-funct5_AMOMAX
-funct5_AMOAND
-funct5_AMOADD
-funct3_XORI
-funct3_XOR
-funct3_SW
-funct3_SUBW
-funct3_SUB
-funct3_SRLW
-funct3_SRLIW
-funct3_SRLI
-funct3_SRL
-funct3_SRAW
-funct12_EBREAK
-funct3_DIVUW
-funct3_SLT
-funct3_SLLW
-funct3_SLLIW
-funct3_SLLI
-funct3_SLL
-funct3_SH
-funct3_SD
-funct3_SB
-funct3_REMW
-funct3_REMUW
-funct3_REMU
-funct3_REM
-funct3_PRIV
-funct3_ORI
-funct3_OR
-funct3_MULW
-funct3_MULHU
-funct3_MULHSU
-funct3_MULH
-funct3_MUL
-funct3_LWU
-funct3_LW
-funct3_LHU
-funct3_LH
-funct3_LD
-funct3_LBU
-funct3_LB
-funct3_FENCE_I
-funct3_FENCE
-funct3_DIVW
-funct3_AND
-funct3_DIVU
-funct3_DIV
-funct3_CSRRWI
-funct3_CSRRW
-funct3_CSRRSI
-funct3_CSRRS
-funct3_CSRRCI
-funct3_CSRRC
-funct3_BNE
-funct3_BLTU
-funct3_BLT
-funct3_BGEU
-funct3_BGE
-funct3_BEQ
-funct3_ANDI
-funct12_URET
-funct3_AMOW
-funct3_AMOD
-funct3_ADDW
-funct3_ADDIW
-funct3_ADDI
-funct3_ADD
-funct12_WFI
-funct12_MRET
-funct12_SRET
-funct12_ECALL
-isValidM64
-isValidM
-isValidI64
-isValidI
-isValidCSR
-isValidA64
-isValidA
-supportsM
-supportsA
-bitwidth
-app
-] in *;
-cbv [machineIntToShamt id] in *).
+  cbn [
+    Z.eqb
+    Pos.eqb andb
+    opcode_SYSTEM
+    opcode_STORE_FP
+    opcode_STORE
+    opcode_OP_IMM_32
+    opcode_OP_IMM
+    opcode_OP_FP
+    opcode_OP_32
+    opcode_OP
+    opcode_NMSUB
+    opcode_NMADD
+    opcode_MSUB
+    opcode_MISC_MEM
+    opcode_MADD
+    opcode_LUI
+    opcode_LOAD_FP
+    opcode_LOAD
+    opcode_JALR
+    opcode_JAL
+    opcode_BRANCH
+    opcode_AUIPC
+    opcode_AMO
+    funct3_JALR
+    funct7_XOR
+    funct7_SUBW
+    funct7_SRLIW
+    funct7_SRL
+    funct7_SUB
+    funct7_SRLW
+    funct7_SRA
+    funct7_SLTU
+    funct7_SLT
+    funct7_SLLW
+    funct7_SLLIW
+    funct7_SLL
+    funct7_SRAW
+    funct7_SRAIW
+    funct7_MUL
+    funct7_DIVW
+    funct7_DIVUW
+    funct7_DIVU
+    funct7_DIV
+    funct7_AND
+    funct7_SFENCE_VMA
+    funct7_REMW
+    funct7_REMUW
+    funct7_REMU
+    funct7_REM
+    funct7_OR
+    funct7_MULW
+    funct7_MULHU
+    funct7_MULHSU
+    funct7_MULH
+    funct3_SRAIW
+    funct3_SRAI
+    funct3_SRA
+    funct3_SLTU
+    funct3_SLTIU
+    funct3_SLTI
+    funct7_ADDW
+    funct7_ADD
+    funct6_SRLI
+    funct6_SRAI
+    funct6_SLLI
+    funct5_SC
+    funct5_LR
+    funct5_AMOXOR
+    funct5_AMOSWAP
+    funct5_AMOOR
+    funct5_AMOMINU
+    funct5_AMOMIN
+    funct5_AMOMAXU
+    funct5_AMOMAX
+    funct5_AMOAND
+    funct5_AMOADD
+    funct3_XORI
+    funct3_XOR
+    funct3_SW
+    funct3_SUBW
+    funct3_SUB
+    funct3_SRLW
+    funct3_SRLIW
+    funct3_SRLI
+    funct3_SRL
+    funct3_SRAW
+    funct12_EBREAK
+    funct3_DIVUW
+    funct3_SLT
+    funct3_SLLW
+    funct3_SLLIW
+    funct3_SLLI
+    funct3_SLL
+    funct3_SH
+    funct3_SD
+    funct3_SB
+    funct3_REMW
+    funct3_REMUW
+    funct3_REMU
+    funct3_REM
+    funct3_PRIV
+    funct3_ORI
+    funct3_OR
+    funct3_MULW
+    funct3_MULHU
+    funct3_MULHSU
+    funct3_MULH
+    funct3_MUL
+    funct3_LWU
+    funct3_LW
+    funct3_LHU
+    funct3_LH
+    funct3_LD
+    funct3_LBU
+    funct3_LB
+    funct3_FENCE_I
+    funct3_FENCE
+    funct3_DIVW
+    funct3_AND
+    funct3_DIVU
+    funct3_DIV
+    funct3_CSRRWI
+    funct3_CSRRW
+    funct3_CSRRSI
+    funct3_CSRRS
+    funct3_CSRRCI
+    funct3_CSRRC
+    funct3_BNE
+    funct3_BLTU
+    funct3_BLT
+    funct3_BGEU
+    funct3_BGE
+    funct3_BEQ
+    funct3_ANDI
+    funct12_URET
+    funct3_AMOW
+    funct3_AMOD
+    funct3_ADDW
+    funct3_ADDIW
+    funct3_ADDI
+    funct3_ADD
+    funct12_WFI
+    funct12_MRET
+    funct12_SRET
+    funct12_ECALL
+    isValidM64
+    isValidM
+    isValidI64
+    isValidI
+    isValidCSR
+    isValidA64
+    isValidA
+    supportsM
+    supportsA
+    bitwidth
+    app
+  ] in *;
+  cbv [machineIntToShamt id] in *
+).
 
-Lemma decode_encode (inst: Instruction) (H:respects_bounds 64 inst) :
+Definition verify_iset(inst: Instruction)(iset: InstructionSet): Prop :=
+  match inst with
+  | IInstruction i => True
+  | MInstruction i => iset = RV32IM \/ iset = RV32IMA \/ iset = RV64IM \/ iset = RV64IMA 
+  | AInstruction i => iset = RV32IA \/ iset = RV32IMA \/ iset = RV64IA \/ iset = RV64IMA
+  | I64Instruction i => iset = RV64I \/ iset = RV64IM \/ iset = RV64IA \/ iset = RV64IMA
+  | M64Instruction i =>                 iset = RV64IM \/                  iset = RV64IMA
+  | A64Instruction i =>                                  iset = RV64IA \/ iset = RV64IMA
+  | CSRInstruction i   => True
+  | InvalidInstruction z => False
+  end.
+
+Definition verify(inst: Instruction)(iset: InstructionSet): Prop :=
+  respects_bounds (bitwidth iset) inst /\ verify_iset inst iset.
+
+Lemma decode_encode: forall (inst: Instruction) (iset: InstructionSet),
+    verify inst iset ->
     decode RV64IMA (encode inst) = inst.
 Proof.
+  intros. unfold verify in H. destruct H as [H H0].
+  unfold verify_iset in *.
   cbv beta delta [decode].
   repeat match goal with
   | |- (let x := ?a in ?b) = ?c => change (let x := a in b = c); intro
@@ -818,7 +838,7 @@ Proof.
      | encode_Fence _ _ _ _ _ _ _ = _ =>
        apply invert_encode_Fence in Henc
      | encode_I_shift_66 _ _ _ _ _ _ = _ =>
-       apply (invert_encode_I_shift_66(bitwidth:=64)) in Henc
+       apply (@invert_encode_I_shift_66 (bitwidth iset)) in Henc
      | encode_I_shift_57 _ _ _ _ _ _ = _ =>
        apply invert_encode_I_shift_57 in Henc
      | encode_R _ _ _ _ _ _ = _ =>
@@ -863,7 +883,7 @@ Proof.
             end;
      exfalso;
      try match goal with H: _ <> _ |- _ => apply H; clear H end;
-     somega).
+     try somega).
 Qed.
 
 Print Assumptions decode_encode.
