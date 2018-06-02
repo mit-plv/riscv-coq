@@ -831,7 +831,7 @@ Proof.
     ] in Henc.
 
   destruct inst as [i|i|i|i|i|i|i|i].
-  all: (destruct i; try (
+  par: abstract (destruct i; try (
     (lazymatch type of Henc with
      | encode_I _ _ _ _ _ = _ =>
        apply invert_encode_I in Henc
@@ -884,11 +884,10 @@ Proof.
                 apply Z.eqb_eq in H || apply Z.eqb_neq in H
             | _ => progress cbn in *
             end;
+     try (intuition discriminate);
      try solve [ exfalso;
-                 match goal with H: _ <> _ |- _ => apply H; clear H end;
+                 try (match goal with H: _ <> _ |- _ => apply H; clear H end);
                  somega ]).
-  all: try (intuition discriminate).
-  all: try (exfalso; somega).
 Qed.
 
 Print Assumptions decode_encode.
