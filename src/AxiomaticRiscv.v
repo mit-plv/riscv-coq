@@ -37,82 +37,82 @@ Section AxiomaticRiscv.
       Bind_getRegister: forall {A: Type} x (f: word wXLEN -> OState RiscvMachine A)
                           (initialL: RiscvMachine),
           valid_register x ->
-          execState (Bind (getRegister x) f) initialL =
-          execState (f (getReg initialL.(core).(registers) x)) initialL;
+          (Bind (getRegister x) f) initialL =
+          (f (getReg initialL.(core).(registers) x)) initialL;
 
       Bind_setRegister: forall {A: Type} x (v: word wXLEN)
                           (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
           valid_register x ->
-          execState (Bind (setRegister x v) f) initialL =
-          execState (f tt) (with_registers (setReg initialL.(core).(registers) x v) initialL);
+          (Bind (setRegister x v) f) initialL =
+          (f tt) (with_registers (setReg initialL.(core).(registers) x v) initialL);
 
       Bind_setRegister0: forall {A: Type} (v: word wXLEN)
                            (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
-          execState (Bind (setRegister Register0 v) f) initialL =
-          execState (f tt) initialL;
+          (Bind (setRegister Register0 v) f) initialL =
+          (f tt) initialL;
 
       Bind_loadByte: forall {A: Type} (addr: word wXLEN) (f: word 8 -> OState RiscvMachine A)
                        (initialL: RiscvMachine),
-          execState (Bind (loadByte addr) f) initialL =
-          execState (f (Memory.loadByte initialL.(machineMem) addr)) initialL;
+          (Bind (loadByte addr) f) initialL =
+          (f (Memory.loadByte initialL.(machineMem) addr)) initialL;
 
       Bind_loadHalf: forall {A: Type} (addr: word wXLEN) (f: word 16 -> OState RiscvMachine A)
                        (initialL: RiscvMachine),
-          execState (Bind (loadHalf addr) f) initialL =
-          execState (f (Memory.loadHalf initialL.(machineMem) addr)) initialL;
+          (Bind (loadHalf addr) f) initialL =
+          (f (Memory.loadHalf initialL.(machineMem) addr)) initialL;
 
       Bind_loadWord: forall {A: Type} (addr: word wXLEN) (f: word 32 -> OState RiscvMachine A)
                        (initialL: RiscvMachine),
-          execState (Bind (loadWord addr) f) initialL =
-          execState (f (Memory.loadWord initialL.(machineMem) addr)) initialL;
+          (Bind (loadWord addr) f) initialL =
+          (f (Memory.loadWord initialL.(machineMem) addr)) initialL;
       
       Bind_loadDouble: forall {A: Type} (addr: word wXLEN) (f: word 64 -> OState RiscvMachine A)
                        (initialL: RiscvMachine),
-          execState (Bind (loadDouble addr) f) initialL =
-          execState (f (Memory.loadDouble initialL.(machineMem) addr)) initialL;
+          (Bind (loadDouble addr) f) initialL =
+          (f (Memory.loadDouble initialL.(machineMem) addr)) initialL;
 
       Bind_storeByte: forall {A: Type} (addr: word wXLEN) (v: word 8)
                         (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
-          execState (Bind (storeByte addr v) f) initialL =
-          execState (f tt) (with_machineMem (Memory.storeByte initialL.(machineMem) addr v)
+          (Bind (storeByte addr v) f) initialL =
+          (f tt) (with_machineMem (Memory.storeByte initialL.(machineMem) addr v)
                                             initialL);
 
       Bind_storeHalf: forall {A: Type} (addr: word wXLEN) (v: word 16)
                         (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
-          execState (Bind (storeHalf addr v) f) initialL =
-          execState (f tt) (with_machineMem (Memory.storeHalf initialL.(machineMem) addr v)
+          (Bind (storeHalf addr v) f) initialL =
+          (f tt) (with_machineMem (Memory.storeHalf initialL.(machineMem) addr v)
                                             initialL);
 
       Bind_storeWord: forall {A: Type} (addr: word wXLEN) (v: word 32)
                         (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
-          execState (Bind (storeWord addr v) f) initialL =
-          execState (f tt) (with_machineMem (Memory.storeWord initialL.(machineMem) addr v)
+          (Bind (storeWord addr v) f) initialL =
+          (f tt) (with_machineMem (Memory.storeWord initialL.(machineMem) addr v)
                                             initialL);
 
       Bind_storeDouble: forall {A: Type} (addr: word wXLEN) (v: word 64)
                         (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
-          execState (Bind (storeDouble addr v) f) initialL =
-          execState (f tt) (with_machineMem (Memory.storeDouble initialL.(machineMem) addr v)
+          (Bind (storeDouble addr v) f) initialL =
+          (f tt) (with_machineMem (Memory.storeDouble initialL.(machineMem) addr v)
                                             initialL);
 
       Bind_getPC: forall {A: Type} (f: word wXLEN -> OState RiscvMachine A) (initialL: RiscvMachine),
-          execState (Bind getPC f) initialL =
-          execState (f initialL.(core).(pc)) initialL;
+          (Bind getPC f) initialL =
+          (f initialL.(core).(pc)) initialL;
 
       Bind_setPC: forall {A: Type} (v: word wXLEN)
                     (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
-          execState (Bind (setPC v) f) initialL =
-          execState (f tt) (with_nextPC v initialL);
+          (Bind (setPC v) f) initialL =
+          (f tt) (with_nextPC v initialL);
       
       Bind_step: forall {A: Type} (f: unit -> OState RiscvMachine A) m,
-          execState (Bind step f) m =
-          execState (f tt) (with_nextPC (m.(core).(nextPC) ^+ $4) (with_pc m.(core).(nextPC) m));
+          (Bind step f) m =
+          (f tt) (with_nextPC (m.(core).(nextPC) ^+ $4) (with_pc m.(core).(nextPC) m));
 
       execState_step: forall m,
-          execState step m = with_nextPC (m.(core).(nextPC) ^+ $4) (with_pc m.(core).(nextPC) m);
+          step m = (Some tt, with_nextPC (m.(core).(nextPC) ^+ $4) (with_pc m.(core).(nextPC) m));
       
       execState_Return: forall {S A} (s: S) (a: A),
-          execState (Return a) s = s;
+          (Return a) s = (Some a, s);
 
   }.
 
