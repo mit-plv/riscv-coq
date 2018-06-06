@@ -32,3 +32,27 @@ Definition Bleu(rs: Register)(rt: Register)(offset: Z) := Bgeu rt rs offset.
 Definition J(offset: Z) := Jal x0 offset.
 Definition Jr(rs: Register) := Jalr x0 rs 0.
 
+Hint Unfold
+    Nop
+    Mov
+    Not
+    Neg
+    Negw
+    Sextw
+    Seqz
+    Snez
+    Sltz
+    Sgtz
+    Beqz
+    Bnez
+    Blez
+    Bgez
+    Bltz
+    Bgtz
+    Bgt
+    Ble
+    Bgtu
+    Bleu
+    J
+    Jr
+  : unf_pseudo.

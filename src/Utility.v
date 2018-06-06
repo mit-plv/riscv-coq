@@ -3,17 +3,11 @@ Require Import bbv.Word.
 Require Import bbv.DepEqNat.
 Require Import riscv.util.Monads.
 Require Import riscv.RiscvBitWidths.
+Require Export riscv.util.ZBitOps.
 
 (* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
    no matter whether it's a 32-bit or 64-bit machine. *)
 Definition MachineInt := Z.
-
-Definition bitSlice(x: Z)(start eend: Z): Z :=
-  Z.land (Z.shiftr x start) (Z.lnot (Z.shiftl (-1) (eend - start))).
-
-Definition signExtend(l: Z)(n: Z): Z :=
-  if Z.testbit n (l-1) then (n - (Z.setbit 0 l)) else n.
-
 
 Class MachineWidth(t: Set) := mkMachineWidth {
   (* constants *)
@@ -117,31 +111,15 @@ End Constants.
 
 Definition machineIntToShamt: MachineInt -> Z := id.
 
-(* If you think that wlt_dec and wslt_dec are too expensive to reduce with
-   cbv, you can use these definitions instead, but it turned out that this
+(* Note: If you think that wlt_dec and wslt_dec are too expensive to reduce with
+   cbv, you can use wltb and wsltb instead, but it turned out that this
    was not the problem. *)
-Definition wltb{sz: nat}(l r: word sz): bool := BinNat.N.ltb (wordToN l) (wordToN r).
-Definition wsltb{sz: nat}(l r: word sz): bool := Z.ltb (wordToZ l) (wordToZ r).
 
-(* Redefine wlshift so that it does not use eq_rect, which matches on add_comm,
+(* Redefine shifts so that they do not use eq_rect, which matches on add_comm,
    which is an opaque proof, which makes cbv blow up *)
-Definition wlshift {sz : nat} (w : word sz) (n : nat) : word sz.
-  refine (split1 sz n (nat_cast _ _ _)).
-  apply PeanoNat.Nat.add_comm.
-  exact (combine (wzero n) w).
-Defined.
-
-Definition wrshift {sz : nat} (w : word sz) (n : nat) : word sz.
-  refine (split2 n sz (nat_cast _ _ _)).
-  apply PeanoNat.Nat.add_comm.
-  exact (combine w (wzero n)).
-Defined.
-
-Definition wrshifta {sz : nat} (w : word sz) (n : nat) : word sz.
-  refine (split2 n sz (nat_cast _ _ _)).
-  apply PeanoNat.Nat.add_comm.
-  exact (sext w _).
-Defined.
+Notation wlshift  := (@wlshift'  _).
+Notation wrshift  := (@wrshift'  _).
+Notation wrshifta := (@wrshifta' _).
 
 Instance MachineWidth32: MachineWidth (word 32) := {|
   zero := $0;
@@ -325,3 +303,110 @@ Instance MachineWidthInst{B: RiscvBitWidths}: MachineWidth (word wXLEN).
   unfold wXLEN.
   destruct bitwidth; [exact MachineWidth32 | exact MachineWidth64].
 Defined.
+
+Section Alu_Defs.
+  Context {Bw: RiscvBitWidths}.
+  
+  Local Ltac prove_alu_def :=
+    intros; clear; unfold wXLEN in *; unfold MachineWidthInst;
+    destruct bitwidth; [unfold MachineWidth32 | unfold MachineWidth64]; reflexivity.
+
+  Lemma fromImm_def: forall (a: Z),
+      fromImm a = ZToWord wXLEN a.
+  Proof. unfold fromImm. prove_alu_def. Qed.
+
+  Lemma zero_def:
+      zero = $0.
+  Proof. unfold zero. prove_alu_def. Qed.
+  
+  Lemma one_def:
+      one = $1.
+  Proof. unfold one. prove_alu_def. Qed.
+  
+  Lemma add_def: forall (a b: word wXLEN),
+      add a b = wplus a b.
+  Proof. unfold add. prove_alu_def. Qed.
+  
+  Lemma sub_def: forall (a b: word wXLEN),
+      sub a b = wminus a b.
+  Proof. unfold sub. prove_alu_def. Qed.
+  
+  Lemma mul_def: forall (a b: word wXLEN),
+      mul a b = wmult a b.
+  Proof. unfold mul. prove_alu_def. Qed.
+  
+  Lemma div_def: forall (a b: word wXLEN),
+      div a b = ZToWord wXLEN (wordToZ a / wordToZ b).
+  Proof. unfold div. prove_alu_def. Qed.
+
+  Lemma rem_def: forall (a b: word wXLEN),
+      rem a b = ZToWord wXLEN (wordToZ a mod wordToZ b).
+  Proof. unfold rem. prove_alu_def. Qed.
+
+  Lemma signed_less_than_def: forall (a b: word wXLEN),
+      signed_less_than a b = if wslt_dec a b then true else false.
+  Proof. unfold signed_less_than. prove_alu_def. Qed.
+  
+  Lemma signed_eqb_def: forall (a b: word wXLEN),
+      signed_eqb a b = weqb a b.
+  Proof. unfold signed_eqb. prove_alu_def. Qed.
+  
+  Lemma xor_def: forall (a b: word wXLEN),
+      xor a b = wxor a b.
+  Proof. unfold xor. prove_alu_def. Qed.
+  
+  Lemma or_def: forall (a b: word wXLEN),
+      or a b = wor a b.
+  Proof. unfold or. prove_alu_def. Qed.
+  
+  Lemma and_def: forall (a b: word wXLEN),
+      and a b = wand a b.
+  Proof. unfold and. prove_alu_def. Qed.
+  
+  Lemma sll_def: forall (a: word wXLEN) (b: Z),
+      sll a b = wlshift a (Z.to_nat b).
+  Proof. unfold sll. prove_alu_def. Qed.
+  
+  Lemma srl_def: forall (a: word wXLEN) (b: Z),
+      srl a b = wrshift a (Z.to_nat b).
+  Proof. unfold srl. prove_alu_def. Qed.
+  
+  Lemma sra_def: forall (a: word wXLEN) (b: Z),
+      sra a b = wrshift a (Z.to_nat b).
+  Proof. unfold sra. prove_alu_def. Qed.
+  
+  Lemma ltu_def: forall (a b: word wXLEN),
+      ltu a b = if wlt_dec a b then true else false.
+  Proof. unfold ltu. prove_alu_def. Qed.
+  
+  Lemma divu_def: forall (a b: word wXLEN),
+      divu a b = wdiv a b.
+  Proof. unfold divu. prove_alu_def. Qed.
+
+  Lemma remu_def: forall (a b: word wXLEN),
+      remu a b = wmod a b.
+  Proof. unfold remu. prove_alu_def. Qed.
+
+End Alu_Defs.
+
+Hint Rewrite
+  @fromImm_def
+  @zero_def
+  @one_def
+  @add_def
+  @sub_def
+  @mul_def
+  @div_def
+  @rem_def
+  @signed_less_than_def
+  @signed_eqb_def
+  @xor_def
+  @or_def
+  @and_def
+  @sll_def
+  @srl_def
+  @sra_def
+  @ltu_def
+  @divu_def
+  @remu_def
+: alu_defs.

@@ -3,147 +3,14 @@ Require Import bbv.Word.
 Require Import riscv.Decode.
 Require Import riscv.encode.Encode.
 Require Import riscv.Utility.
+Require Import riscv.util.Tactics.
+Require Import riscv.util.div_mod_to_quot_rem.
 Require Import Coq.omega.Omega.
 Require Import Coq.micromega.Lia.
 
 Local Open Scope bool_scope.
 Local Open Scope Z_scope.
 
-Lemma mul_div2_undo_mod: forall a, 2 * (a / 2) = a - a mod 2.
-Proof.
-  intros.
-  pose proof (Z.div_mod a 2).
-  omega.
-Qed.
-
-Definition bitSlice'(w start eend: Z): Z :=
-  (w / 2 ^ start) mod (2 ^ (eend - start)).
-
-Lemma bitSlice_alt: forall w start eend,
-    0 <= start <= eend ->
-    bitSlice w start eend = bitSlice' w start eend.
-Proof.
-  intros. unfold bitSlice, bitSlice'.
-  rewrite <- Z.land_ones by omega.
-  rewrite <- Z.shiftr_div_pow2 by omega.
-  f_equal.
-  rewrite Z.shiftl_mul_pow2 by omega.
-  rewrite Z.mul_comm.
-  rewrite <- Z.opp_eq_mul_m1.
-  replace (Z.lnot (- 2 ^ (eend - start))) with (2 ^ (eend - start) - 1).
-  - rewrite Z.ones_equiv. reflexivity.
-  - pose proof (Z.add_lnot_diag (- 2 ^ (eend - start))). omega.
-Qed.
-
-Definition signExtend'(l n: Z): Z := n - ((n / 2 ^ (l - 1)) mod 2) * 2 ^ l.
-
-Lemma signExtend_alt: forall l n,
-    0 < l ->
-    signExtend l n = signExtend' l n.
-Proof.
-  intros. unfold signExtend, signExtend'.
-  destruct (Z.testbit n (l - 1)) eqn: E.
-  - apply (f_equal Z.b2z) in E.
-    rewrite Z.testbit_spec' in E by omega.
-    rewrite E.
-    rewrite Z.setbit_spec'.
-    rewrite Z.lor_0_l.
-    change (Z.b2z true) with 1.
-    rewrite Z.mul_1_l.
-    reflexivity.
-  - apply (f_equal Z.b2z) in E.
-    rewrite Z.testbit_spec' in E by omega.
-    rewrite E.
-    change (Z.b2z false) with 0.
-    rewrite Z.mul_0_l.
-    rewrite Z.sub_0_r.
-    reflexivity.
-Qed.
-
-Definition signExtend_alt': forall l n,
-    0 < l ->
-    (exists q, n / 2 ^ (l - 1) = 2 * q /\ signExtend l n = n) \/
-    (exists q, n / 2 ^ (l - 1) = 2 * q + 1 /\ signExtend l n = n - 2 ^ l).
-Proof.
-  intros. rewrite signExtend_alt by assumption. unfold signExtend'.
-  pose proof (Z.mod_pos_bound (n / 2 ^ (l - 1)) 2).
-  assert ((n / 2 ^ (l - 1)) mod 2 = 0 \/ (n / 2 ^ (l - 1)) mod 2 = 1) as C by omega.
-  destruct C as [C | C]; rewrite C.
-  - left. exists (n / 2 ^ (l - 1) / 2). rewrite mul_div2_undo_mod. omega.
-  - right. exists (n / 2 ^ (l - 1) / 2). rewrite mul_div2_undo_mod. omega.
-Qed.
-
-Lemma or_to_plus: forall a b,
-    Z.land a b = 0 ->
-    a <|> b = a + b.
-Proof.
-  intros.
-  rewrite <- Z.lxor_lor by assumption.
-  symmetry. apply Z.add_nocarry_lxor. assumption.
-Qed.  
-
-Definition signExtend2(l n: Z): Z :=
-  if Z.testbit n (l - 1) then n <|> Z.shiftl (-1) l else n.
-
-Lemma signExtend_alt2: forall l n,
-    0 < l ->
-    Z.land (Z.shiftl (-1) l) n = 0 ->
-    signExtend l n = signExtend2 l n.
-Proof.
-  intros.
-  unfold signExtend, signExtend2.
-  destruct (Z.testbit n (l - 1)) eqn: E; [|reflexivity].
-  rewrite <- Z.add_opp_r.
-  pose proof (Z.add_lnot_diag (Z.setbit 0 l)).
-  replace (- (Z.setbit 0 l)) with (Z.lnot (Z.setbit 0 l) + 1) by omega.
-  replace (Z.lnot (Z.setbit 0 l) + 1) with (Z.shiftl (-1) l).
-  - symmetry. apply or_to_plus. rewrite Z.land_comm. assumption.
-  - replace (Z.lnot (Z.setbit 0 l)) with (- Z.setbit 0 l - 1) by omega.
-    rewrite Z.shiftl_mul_pow2 by omega.
-    rewrite Z.setbit_spec'.
-    rewrite Z.lor_0_l.
-    omega.
-Qed.
-
-Tactic Notation "so" tactic(f) :=
-  match goal with
-  | _: ?A |- _  => f A
-  |       |- ?A => f A
-  end.
-
-Module ThanksFiatCrypto.
-  Ltac div_mod_to_quot_rem_inequality_solver := omega.
-
-  Ltac generalize_div_eucl x y :=
-    let H := fresh in
-    let H' := fresh in
-    assert (H' : y <> 0) by div_mod_to_quot_rem_inequality_solver;
-    generalize (Z.div_mod x y H'); clear H';
-    first [ assert (H' : 0 < y) by div_mod_to_quot_rem_inequality_solver;
-            generalize (Z.mod_pos_bound x y H'); clear H'
-          | assert (H' : y < 0) by div_mod_to_quot_rem_inequality_solver;
-            generalize (Z.mod_neg_bound x y H'); clear H'
-          | assert (H' : y < 0 \/ 0 < y) by (apply Z.neg_pos_cases; div_mod_to_quot_rem_inequality_solver);
-            let H'' := fresh in
-            assert (H'' : y < x mod y <= 0 \/ 0 <= x mod y < y)
-              by (destruct H'; [ left; apply Z.mod_neg_bound; assumption
-                               | right; apply Z.mod_pos_bound; assumption ]);
-            clear H'; revert H'' ];
-    let q := fresh "q" in
-    let r := fresh "r" in
-    set (q := x / y) in *;
-    set (r := x mod y) in *;
-    clearbody q r.
-
-  Ltac div_mod_to_quot_rem_step :=
-    so fun hyporgoal => match hyporgoal with
-    | context[?x / ?y] => generalize_div_eucl x y
-    | context[?x mod ?y] => generalize_div_eucl x y
-    end.
-
-  Ltac div_mod_to_quot_rem := repeat div_mod_to_quot_rem_step; intros.
-
-End ThanksFiatCrypto.
 
 Ltac somega_pre :=
   rewrite? bitSlice_alt in * by omega; unfold bitSlice' in *;
@@ -157,7 +24,7 @@ Ltac somega_pre :=
   repeat (so fun hyporgoal => match hyporgoal with
      | context [2 ^ ?x] => let r := eval cbv in (2 ^ x) in change (2 ^ x) with r in *
   end);
-  ThanksFiatCrypto.div_mod_to_quot_rem;
+  div_mod_to_quot_rem;
   repeat match goal with
          | z: ?T |- _ => progress change T with Z in *
          end.
@@ -259,7 +126,7 @@ Lemma Zdiv_small_neg: forall a b,
     - b <= a < 0 ->
     a / b = -1.
 Proof.
-  intros. ThanksFiatCrypto.div_mod_to_quot_rem. nia.
+  intros. div_mod_to_quot_rem. nia.
 Qed.
 
 Lemma testbit_above_signed: forall l a i,

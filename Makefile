@@ -22,7 +22,9 @@ riscv-semantics_version_check:
 hs-to-coq_version_check:
 	./check_dep.sh hs-to-coq
 
-spec: bbv_version_check $(patsubst %.v,%.vo,$(wildcard src/*.v))
+util: $(patsubst %.v,%.vo,$(wildcard src/util/*.v))
+
+spec: bbv_version_check util $(patsubst %.v,%.vo,$(wildcard src/*.v))
 
 encode: spec $(patsubst %.v,%.vo,$(wildcard src/encode/*.v))
 

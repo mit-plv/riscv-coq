@@ -17,3 +17,9 @@ Ltac momega :=
          |  |- context[max ?a ?b]     => unique pose proof (Max.max_spec a b)
   end;
   omega.
+
+Tactic Notation "so" tactic(f) :=
+  match goal with
+  | _: ?A |- _  => f A
+  |       |- ?A => f A
+  end.
