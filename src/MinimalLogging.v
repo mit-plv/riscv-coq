@@ -73,8 +73,8 @@ Section Riscv.
       endCycle A := Return None;
   |}.
 
-  Definition putProgram(prog: list (word 32))(ma: RiscvMachineL): RiscvMachineL :=
-    with_machine (putProgram prog ma.(machine)) ma.
+  Definition putProgram(prog: list (word 32))(addr: word wXLEN)(ma: RiscvMachineL): RiscvMachineL :=
+    with_machine (putProgram prog addr ma.(machine)) ma.
 
 End Riscv.
 

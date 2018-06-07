@@ -80,8 +80,10 @@ Section Riscv.
      which might contain any undefined garbage values, so the compiler correctness proof
      will show that the program is correct even then, i.e. no initialisation of the registers
      is needed. *)
-  Definition putProgram(prog: list (word 32))(ma: RiscvMachine): RiscvMachine :=
-    with_pc $0 (with_nextPC $4 (with_machineMem (store_word_list prog $0 ma.(machineMem)) ma)).
+  Definition putProgram(prog: list (word 32))(addr: word wXLEN)(ma: RiscvMachine): RiscvMachine :=
+    (with_pc addr
+    (with_nextPC (addr ^+ $4)
+    (with_machineMem (store_word_list prog addr ma.(machineMem)) ma))).
 
   Ltac destruct_if :=
     match goal with

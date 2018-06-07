@@ -74,7 +74,7 @@ Definition zeroedRiscvMachineL: RiscvMachineL := {|
 |}.
 
 Definition initialRiscvMachineL(imem: list MachineInt): RiscvMachineL :=
-  putProgram (map (@ZToWord 32) imem) zeroedRiscvMachineL.
+  putProgram (map (@ZToWord 32) imem) $0 zeroedRiscvMachineL.
 
 Definition run: nat -> RiscvMachineL -> (option unit) * RiscvMachineL := run.
  (* @run RiscvBitWidths32 MachineWidth32 (OState RiscvMachineL) (OState_Monad _) _ _ _ *)
