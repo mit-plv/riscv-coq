@@ -1,8 +1,30 @@
+Require Import Coq.Lists.List.
 Require Import bbv.Word.
 Require Import Coq.omega.Omega.
 
+
 Definition valid_addr{w: nat}(addr: word w)(alignment size: nat): Prop :=
   wordToNat addr + alignment <= size /\ (wordToNat addr) mod alignment = 0.
+
+(* Note: alignment refers to addr, not to the range *)
+Definition in_range{w: nat}(addr: word w)(alignment start size: nat): Prop :=
+  start <= wordToNat addr /\
+  wordToNat addr + alignment <= start + size /\
+  wordToNat addr mod alignment = 0.
+
+Definition not_in_range{w: nat}(addr: word w)(alignment start size: nat): Prop :=
+  wordToNat addr + alignment <= start \/ start + size <= wordToNat addr.
+
+Definition valid_addr'{w: nat}(addr: word w)(alignment size: nat): Prop :=
+  in_range addr alignment 0 size.
+
+Lemma valid_addr_alt: forall w (addr: word w) alignment size,
+    valid_addr addr alignment size <-> valid_addr' addr alignment size.
+Proof.
+  intros. unfold valid_addr, valid_addr', in_range.
+  intuition omega.
+Qed.
+
 
 Class Memory(m: Set)(w: nat) := mkMemory {
   memSize: m -> nat;
@@ -157,6 +179,26 @@ Proof.
   reflexivity.
 Qed.  
 
+Lemma list_elementwise_same: forall A (l1 l2: list A),
+    (forall i, nth_error l1 i = nth_error l2 i) ->
+    l1 = l2.
+Proof.
+  induction l1; intros.
+  - specialize (H 0). simpl in H. destruct l2; congruence.
+  - pose proof H as G.
+    specialize (H 0). simpl in H. destruct l2; inversion H. subst. f_equal.
+    apply IHl1. intro i. apply (G (S i)).
+Qed.
+
+Lemma map_nth_error': forall (A B : Type) (f : A -> B) (n : nat) (l : list A) (b : B),
+     nth_error (map f l) n = Some b ->
+     exists a, nth_error l n = Some a /\ f a = b.
+Proof.
+  induction n; intros.
+  - destruct l; simpl in *; try discriminate. inversion H; subst. eauto.
+  - destruct l; simpl in *; try discriminate. apply IHn. assumption.
+Qed.
+
 Ltac demod :=  
   repeat match goal with
          | H: _ mod _ = 0 |- _ => apply Nat.mod_divides in H; [destruct H | congruence]
@@ -258,6 +300,23 @@ Section MemoryHelpers.
           rewrite wordToNat_natToWord_idempotent'; omega.
   Qed.
 
+  Lemma loadWord_storeDouble_ne': forall (m : Mem) (a1 a2 : word sz) (v : word 64),
+      in_range a1 8 0 (memSize m) ->
+      in_range a2 4 0 (memSize m) ->
+      not_in_range a2 4 #a1 8 -> (* a2 (4 bytes big) is not in the 8-byte range starting at a1 *)
+      loadWord (storeDouble m a1 v) a2 = loadWord m a2.
+  Proof.
+    intros.
+    pose proof (memSize_bound m).
+    apply loadWord_storeDouble_ne;
+    unfold in_range, not_in_range, valid_addr in *;
+    simpl in *;
+    intuition (subst; try omega);
+    rewrite (wordToNat_wplus' a1 $4) in H6;
+    rewrite wordToNat_natToWord_idempotent' in *;
+    try omega. 
+  Qed.
+
   Fixpoint store_byte_list(l: list (word 8))(a: word sz)(m: Mem): Mem :=
     match l with
     | nil => m
@@ -306,4 +365,31 @@ Section MemoryHelpers.
     | O => nil
     end.
 
+  Local Arguments mult: simpl never.
+
+  Lemma nth_error_load_word_list: forall m (l: nat) i offset,
+      i < l ->
+      nth_error (load_word_list m offset l) i =
+      Some (loadWord m (offset ^+ $ (4 * i))).
+  Proof.
+    induction l; intros; simpl.
+    - exfalso. omega.
+    - destruct i; simpl.
+      + change (4 * 0) with 0. rewrite wplus_comm. rewrite wplus_unit.
+        reflexivity.
+      + replace (offset ^+ $(4 * S i)) with ((offset ^+ $4) ^+ $(4 * i)).
+        * apply IHl. omega.
+        * rewrite <- wplus_assoc. f_equal. rewrite <- natToWord_plus.
+          f_equal. omega.
+  Qed.
+
+  Lemma length_load_word_list: forall m l offset,
+      length (load_word_list m offset l) = l.
+  Proof.
+    induction l; intros.
+    - reflexivity.
+    - simpl. f_equal. apply IHl.
+  Qed.
+
 End MemoryHelpers.
+
