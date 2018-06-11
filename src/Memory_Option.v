@@ -76,8 +76,6 @@ Definition write_double(m: mem 8)(a: Z)(v: word 64): option (mem 8) :=
   m <- write_word m a (lobits 32 v); write_word m (a + 4) (hibits 32 v).
 
 
-Definition uwordToZ{sz: nat}(w: word sz): Z := Z.of_N (wordToN w).
-
 Definition wrapLoad{aw sz: nat}(f: mem 8 -> Z -> option (word sz))
   (m: mem 8)(a: word aw): option (word sz) := f m (uwordToZ a).
 

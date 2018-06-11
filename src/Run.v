@@ -34,7 +34,7 @@ Section Riscv.
     M unit :=
     pc <- getPC;
     inst <- loadWord pc;
-    execute (decode RV_wXLEN_IM (wordToZ inst));;
+    execute (decode RV_wXLEN_IM (uwordToZ inst));;
     step.
 
   Definition run: nat -> M unit :=
