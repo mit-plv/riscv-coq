@@ -31,6 +31,20 @@ Proof.
   - pose proof (Z.add_lnot_diag (- 2 ^ (eend - start))). omega.
 Qed.
 
+Lemma bitSlice_range: forall sz z,
+    0 <= sz ->
+    0 <= bitSlice z 0 sz < 2 ^ sz.
+Proof.
+  intros.
+  rewrite bitSlice_alt by omega.
+  unfold bitSlice'.
+  change (2 ^ 0) with 1.
+  rewrite Z.div_1_r.
+  rewrite Z.sub_0_r.
+  apply Z.mod_pos_bound.
+  apply Z.pow_pos_nonneg; omega.
+Qed.
+
 Definition signExtend'(l n: Z): Z := n - ((n / 2 ^ (l - 1)) mod 2) * 2 ^ l.
 
 Lemma signExtend_alt: forall l n,

@@ -154,96 +154,96 @@ Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)(inst: I
   | A64Instruction (Amomaxu_d rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOMAXU
   end.
                                                                                                
-Definition encode_Invalid: Z -> Z := id.
-
 Notation "a <|> b" := (Z.lor a b) (at level 50, left associativity).
 
+Definition encode_Invalid(z: Z) := bitSlice z 0 32.
+
 Definition encode_R(opcode: MachineInt)(rd rs1 rs2: Register)(funct3 funct7: MachineInt) :=
-    opcode <|>
-    Z.shiftl rd 7 <|>
-    Z.shiftl funct3 12 <|>
-    Z.shiftl rs1 15 <|>
-    Z.shiftl rs2 20 <|>
-    Z.shiftl funct7 25.
+             (bitSlice opcode 0 7)    <|>
+    Z.shiftl (bitSlice rd     0 5)  7 <|>
+    Z.shiftl (bitSlice funct3 0 3) 12 <|>
+    Z.shiftl (bitSlice rs1    0 5) 15 <|>
+    Z.shiftl (bitSlice rs2    0 5) 20 <|>
+    Z.shiftl (bitSlice funct7 0 7) 25.
 
 Definition encode_R_atomic(opcode: MachineInt)(rd rs1 rs2: Register)(funct3 aqrl funct5: MachineInt) :=
-    opcode <|>
-    Z.shiftl rd 7 <|>
-    Z.shiftl funct3 12 <|>
-    Z.shiftl rs1 15 <|>
-    Z.shiftl rs2 20 <|>
-    Z.shiftl aqrl 25 <|>
-    Z.shiftl funct5 27.
+             (bitSlice opcode 0 7)    <|>
+    Z.shiftl (bitSlice rd     0 5)  7 <|>
+    Z.shiftl (bitSlice funct3 0 3) 12 <|>
+    Z.shiftl (bitSlice rs1    0 5) 15 <|>
+    Z.shiftl (bitSlice rs2    0 5) 20 <|>
+    Z.shiftl (bitSlice aqrl   0 2) 25 <|>
+    Z.shiftl (bitSlice funct5 0 5) 27.
 
 Definition encode_I(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(oimm12: Z) :=
-    opcode <|>
-    Z.shiftl rd 7 <|>
-    Z.shiftl funct3 12 <|>
-    Z.shiftl rs1 15 <|>
-    Z.shiftl oimm12 20.
+             (bitSlice opcode 0  7)    <|>
+    Z.shiftl (bitSlice rd     0  5)  7 <|>
+    Z.shiftl (bitSlice funct3 0  3) 12 <|>
+    Z.shiftl (bitSlice rs1    0  5) 15 <|>
+    Z.shiftl (bitSlice oimm12 0 12) 20.
 
 Definition encode_I_shift_57(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt) := 
-    opcode <|>
-    Z.shiftl rd 7 <|>
-    Z.shiftl funct3 12 <|>
-    Z.shiftl rs1 15 <|>
-    Z.shiftl shamt5 20 <|>
-    Z.shiftl funct7 25.
+             (bitSlice opcode 0 7)    <|>
+    Z.shiftl (bitSlice rd     0 5)  7 <|>
+    Z.shiftl (bitSlice funct3 0 3) 12 <|>
+    Z.shiftl (bitSlice rs1    0 5) 15 <|>
+    Z.shiftl (bitSlice shamt5 0 5) 20 <|>
+    Z.shiftl (bitSlice funct7 0 7) 25.
 
 Definition encode_I_shift_66(opcode: MachineInt)(rd rs1: Register)(shamt6 funct3 funct6: MachineInt) := 
-    opcode <|>
-    Z.shiftl rd 7 <|>
-    Z.shiftl funct3 12 <|>
-    Z.shiftl rs1 15 <|>
-    Z.shiftl shamt6 20 <|>
-    Z.shiftl funct6 26.
+             (bitSlice opcode 0 7)    <|>
+    Z.shiftl (bitSlice rd     0 5)  7 <|>
+    Z.shiftl (bitSlice funct3 0 3) 12 <|>
+    Z.shiftl (bitSlice rs1    0 5) 15 <|>
+    Z.shiftl (bitSlice shamt6 0 6) 20 <|>
+    Z.shiftl (bitSlice funct6 0 6) 26.
 
 Definition encode_I_system(opcode: MachineInt)(rd rs1: Register)(funct3 funct12: MachineInt) :=
-    opcode <|>
-    Z.shiftl rd 7 <|>
-    Z.shiftl funct3 12 <|>
-    Z.shiftl rs1 15 <|>
-    Z.shiftl funct12 20.
+             (bitSlice opcode  0  7)    <|>
+    Z.shiftl (bitSlice rd      0  5)  7 <|>
+    Z.shiftl (bitSlice funct3  0  3) 12 <|>
+    Z.shiftl (bitSlice rs1     0  5) 15 <|>
+    Z.shiftl (bitSlice funct12 0 12) 20.
 
 Definition encode_S(opcode: MachineInt)(rs1 rs2: Register)(funct3: MachineInt)(simm12: Z) :=
-    opcode <|>
-    Z.shiftl (bitSlice simm12 0 5) 7 <|>
-    Z.shiftl funct3 12 <|>
-    Z.shiftl rs1 15 <|>
-    Z.shiftl rs2 20 <|>
+             (bitSlice opcode 0  7)    <|>
+    Z.shiftl (bitSlice simm12 0  5)  7 <|>
+    Z.shiftl (bitSlice funct3 0  3) 12 <|>
+    Z.shiftl (bitSlice rs1    0  5) 15 <|>
+    Z.shiftl (bitSlice rs2    0  5) 20 <|>
     Z.shiftl (bitSlice simm12 5 12) 25.
 
 Definition encode_SB(opcode: MachineInt)(rs1 rs2: Register)(funct3: MachineInt)(sbimm12: Z) :=
-    opcode <|>                                      (*  0..7  (7 bit) *)
-    Z.shiftl (bitSlice sbimm12 11 12) 7 <|>         (*  7..8  (1 bit) *)
-    Z.shiftl (bitSlice sbimm12 1 5) 8 <|>           (*  8..12 (4 bit) *)
-    Z.shiftl funct3 12 <|>                          (* 12..15 (3 bit) *)
-    Z.shiftl rs1 15 <|>                             (* 15..20 (5 bit) *)
-    Z.shiftl rs2 20 <|>                             (* 20..25 (5 bit) *)
-    Z.shiftl (bitSlice sbimm12 5 11) 25 <|>         (* 25..31 (6 bit) *)
+             (bitSlice opcode   0  7)    <|>        (*  0..7  (7 bit) *)
+    Z.shiftl (bitSlice sbimm12 11 12)  7 <|>        (*  7..8  (1 bit) *)
+    Z.shiftl (bitSlice sbimm12  1  5)  8 <|>        (*  8..12 (4 bit) *)
+    Z.shiftl (bitSlice funct3   0  3) 12 <|>        (* 12..15 (3 bit) *)
+    Z.shiftl (bitSlice rs1      0  5) 15 <|>        (* 15..20 (5 bit) *)
+    Z.shiftl (bitSlice rs2      0  5) 20 <|>        (* 20..25 (5 bit) *)
+    Z.shiftl (bitSlice sbimm12  5 11) 25 <|>        (* 25..31 (6 bit) *)
     Z.shiftl (bitSlice sbimm12 12 13) 31.           (* 31..32 (1 bit) *)
 
 Definition encode_U(opcode: MachineInt)(rd: Register)(imm20: Z) :=
-    opcode <|>
-    Z.shiftl rd 7 <|>
-    imm20.
+             (bitSlice opcode 0  7)    <|>
+    Z.shiftl (bitSlice rd     0  5)  7 <|>
+    Z.shiftl (bitSlice imm20 12 32) 12.
 
 Definition encode_UJ(opcode: MachineInt)(rd: Register)(jimm20: Z) :=
-    opcode <|>
-    Z.shiftl rd 7 <|>
+             (bitSlice opcode  0  7)    <|>
+    Z.shiftl (bitSlice rd      0  5) 7 <|>
     Z.shiftl (bitSlice jimm20 12 20) 12 <|>
     Z.shiftl (bitSlice jimm20 11 12) 20 <|>
-    Z.shiftl (bitSlice jimm20 1 11) 21 <|>
+    Z.shiftl (bitSlice jimm20  1 11) 21 <|>
     Z.shiftl (bitSlice jimm20 20 21) 31.
 
 Definition encode_Fence(opcode: MachineInt)(rd rs1: Register)(funct3 prd scc msb4: MachineInt) :=
-    opcode <|>                                   (*  0..7  (7 bit) *)
-    Z.shiftl rd 7 <|>                            (*  7..12 (5 bit) *)
-    Z.shiftl funct3 12 <|>                       (* 12..15 (3 bit) *)
-    Z.shiftl rs1 15 <|>                          (* 15..20 (5 bit) *)
-    Z.shiftl scc 20 <|>                          (* 20..24 (4 bit) *)
-    Z.shiftl prd 24 <|>                          (* 24..28 (4 bit) *)
-    Z.shiftl msb4 28.                            (* 28..32 (4 bit) *)
+             (bitSlice opcode 0 7)    <|>             (*  0..7  (7 bit) *)
+    Z.shiftl (bitSlice rd     0 5)  7 <|>             (*  7..12 (5 bit) *)
+    Z.shiftl (bitSlice funct3 0 3) 12 <|>             (* 12..15 (3 bit) *)
+    Z.shiftl (bitSlice rs1    0 5) 15 <|>             (* 15..20 (5 bit) *)
+    Z.shiftl (bitSlice scc    0 4) 20 <|>             (* 20..24 (4 bit) *)
+    Z.shiftl (bitSlice prd    0 4) 24 <|>             (* 24..28 (4 bit) *)
+    Z.shiftl (bitSlice msb4   0 4) 28.                (* 28..32 (4 bit) *)
 
 Definition Encoder: InstructionMapper MachineInt := {|
   map_Invalid := encode_Invalid;
@@ -261,6 +261,22 @@ Definition Encoder: InstructionMapper MachineInt := {|
 |}.
 
 Definition encode: Instruction -> MachineInt := apply_InstructionMapper Encoder.
+
+Hint Unfold
+  encode
+  encode_Fence
+  encode_I
+  encode_Invalid
+  encode_I_shift_57
+  encode_I_shift_66
+  encode_I_system
+  encode_R
+  encode_R_atomic
+  encode_S
+  encode_SB
+  encode_U
+  encode_UJ
+: encoders.
 
 
 Definition verify_Invalid(i: Z) :=
