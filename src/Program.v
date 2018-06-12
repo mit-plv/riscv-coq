@@ -70,7 +70,7 @@ Section Riscv.
      case, we only verify the alignment *)
   Definition default_translate{MP: RiscvProgram}
     (accessType: AccessType)(alignment: t)(addr: t): M t :=
-    if rem addr alignment /= zero
+    if remu addr alignment /= zero
     then default_raiseException zero four
     else Return addr.
 
