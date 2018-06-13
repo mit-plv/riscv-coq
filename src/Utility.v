@@ -387,6 +387,26 @@ Section Alu_Defs.
       remu a b = wmod a b.
   Proof. unfold remu. prove_alu_def. Qed.
 
+  (* derived defs: *)
+  
+  Lemma two_def: two = $2.
+  Proof.
+    unfold two. rewrite! add_def. rewrite! one_def.
+    rewrite <- natToWord_plus. reflexivity.
+  Qed.
+
+  Lemma four_def: four = $4.
+  Proof.
+    unfold four. rewrite! add_def. rewrite! two_def.
+    rewrite <- natToWord_plus. reflexivity.
+  Qed.
+
+  Lemma eight_def: eight = $8.
+  Proof.
+    unfold eight. rewrite! add_def. rewrite! four_def.
+    rewrite <- natToWord_plus. reflexivity.
+  Qed.
+
 End Alu_Defs.
 
 Hint Rewrite
@@ -409,4 +429,7 @@ Hint Rewrite
   @ltu_def
   @divu_def
   @remu_def
+  @two_def
+  @four_def
+  @eight_def
 : alu_defs.

@@ -120,65 +120,6 @@ Class Memory(m: Set)(w: nat) := mkMemory {
      which the store was done. *)
 }.
 
-Lemma mod2_cases: forall (n: nat), n mod 2 = 0 \/ n mod 2 = 1.
-Proof.
-  intros.
-  assert (n mod 2 < 2). {
-    apply Nat.mod_upper_bound. congruence.
-  }
-  omega.
-Qed.
-
-Lemma div_mul_undo: forall a b,
-    b <> 0 ->
-    a mod b = 0 ->
-    a / b * b = a.
-Proof.
-  intros.
-  pose proof Nat.div_mul_cancel_l as A. specialize (A a 1 b).
-  replace (b * 1) with b in A by omega.
-  rewrite Nat.div_1_r in A.
-  rewrite mult_comm.
-  rewrite <- Nat.divide_div_mul_exact; try assumption.
-  - apply A; congruence.
-  - apply Nat.mod_divide; assumption.
-Qed.
-
-Lemma mul_div_undo: forall i c,
-    c <> 0 ->
-    c * i / c = i.
-Proof.
-  intros.
-  pose proof (Nat.div_mul_cancel_l i 1 c) as P.
-  rewrite Nat.div_1_r in P.
-  rewrite Nat.mul_1_r in P.
-  apply P; auto.
-Qed.
-
-Lemma Smod2_1: forall k, S k mod 2 = 1 -> k mod 2 = 0.
-Proof.
-  intros k C.
-  change (S k) with (1 + k) in C.
-  rewrite Nat.add_mod in C by congruence.
-  pose proof (Nat.mod_upper_bound k 2).
-  assert (k mod 2 = 0 \/ k mod 2 = 1) as E by omega.
-  destruct E as [E | E]; [assumption|].
-  rewrite E in C. simpl in C. discriminate.
-Qed.
-
-Lemma wminus_wplus_undo: forall sz (a b: word sz),
-    a ^- b ^+ b = a.
-Proof.
-  intros.
-  rewrite wminus_def.
-  rewrite <- wplus_assoc.
-  rewrite (wplus_comm (^~ b)).
-  rewrite wminus_inv.
-  rewrite wplus_comm.
-  rewrite wplus_unit.
-  reflexivity.
-Qed.  
-
 Lemma list_elementwise_same: forall A (l1 l2: list A),
     (forall i, nth_error l1 i = nth_error l2 i) ->
     l1 = l2.
@@ -188,6 +129,19 @@ Proof.
   - pose proof H as G.
     specialize (H 0). simpl in H. destruct l2; inversion H. subst. f_equal.
     apply IHl1. intro i. apply (G (S i)).
+Qed.
+
+Lemma list_elementwise_same': forall (A : Type) (l1 l2 : list A),
+    (forall i e, nth_error l1 i = Some e <-> nth_error l2 i = Some e) ->
+    l1 = l2.
+Proof.
+  intros.
+  apply list_elementwise_same.
+  intro i.
+  destruct (nth_error l1 i) as [e1|] eqn: E1.
+  - edestruct H as [A1 A2]. specialize (A1 E1). congruence.
+  - destruct (nth_error l2 i) as [e2|] eqn: E2; [|reflexivity].
+    edestruct H as [A1 A2]. specialize (A2 E2). congruence.
 Qed.
 
 Lemma map_nth_error': forall (A B : Type) (f : A -> B) (n : nat) (l : list A) (b : B),
@@ -209,6 +163,7 @@ Section MemoryHelpers.
   Context {sz: nat}.
   Context {Mem: Set}.
   Context {MM: Memory Mem sz}.
+  Hypothesis pow2_sz_4: 4 < pow2 sz.
 
   Lemma loadWord_storeDouble_ne: forall m (a1 a2: word sz) v,
       valid_addr a1 8 (memSize m) ->
@@ -391,5 +346,107 @@ Section MemoryHelpers.
     - simpl. f_equal. apply IHl.
   Qed.
 
-End MemoryHelpers.
+  Local Arguments mult: simpl never.
 
+  Lemma store_word_list_preserves_memSize_aux: forall ll (m: Mem) a l,
+      length l = ll ->
+      memSize (store_word_list l a m) = memSize m.
+  Proof.
+    induction ll; intros; subst; destruct l; simpl in *; try congruence.
+    inversion H; subst.
+    rewrite IHll by reflexivity.
+    apply storeWord_preserves_memSize.
+  Qed.
+
+  Lemma store_word_list_preserves_memSize: forall (m: Mem) l a,
+      memSize (store_word_list l a m) = memSize m.
+  Proof.
+    intros. eapply store_word_list_preserves_memSize_aux. reflexivity.
+  Qed.
+
+  Lemma loadWord_before_store_word_list: forall ll (m: Mem) l (a1 a2: word sz),
+      length l = ll ->
+      #a1 + 4 <= #a2 ->
+      #a2 + 4 * ll <= (memSize m) ->
+      valid_addr a1 4 (memSize m) ->
+      valid_addr a2 4 (memSize m) ->
+      loadWord (store_word_list l a2 m) a1  = loadWord m a1.
+  Proof.
+    induction ll; intros; subst; destruct l; simpl in *; try congruence.
+    inversion H; subst.
+    pose proof (memSize_bound m).
+    destruct l.
+    - simpl. apply loadStoreWord_ne; try assumption.
+      intro C. subst. omega.
+    - simpl in H1. rewrite IHll.
+      + apply loadStoreWord_ne; try assumption.
+        intro C. subst. omega.
+      + reflexivity.
+      + unfold valid_addr in *. intuition idtac.
+        rewrite wordToNat_wplus'; rewrite wordToNat_natToWord_idempotent'; try omega.
+      + simpl. rewrite storeWord_preserves_memSize. 
+        rewrite wordToNat_wplus';
+          rewrite wordToNat_natToWord_idempotent' by assumption;
+          intuition (try omega).
+      + rewrite storeWord_preserves_memSize. assumption.
+      + rewrite storeWord_preserves_memSize.
+        unfold valid_addr in *.
+        rewrite wordToNat_wplus';
+          rewrite wordToNat_natToWord_idempotent' by assumption;
+          rewrite? mod_add_r by omega;  
+          intuition (try omega).
+  Qed.
+
+  Local Arguments Nat.modulo: simpl never.
+
+  Lemma load_store_word_list_eq: forall l (m: Mem) ll a1 a2,
+      a2 = a1 ->
+      ll = length l ->
+      #a1 mod 4 = 0 ->
+      #a1 + 4 * (length l) <= memSize m ->
+      load_word_list (store_word_list l a1 m) a2 ll = l.
+  Proof.
+    induction l; intros; subst; simpl in *.
+    - reflexivity.
+    - pose proof (memSize_bound m).
+      destruct l.
+      + simpl. f_equal. apply loadStoreWord_eq; try reflexivity.
+        unfold valid_addr. omega.
+      + f_equal.
+        * erewrite loadWord_before_store_word_list; try reflexivity.
+          { apply loadStoreWord_eq; try reflexivity.
+            unfold valid_addr. omega. }
+          { simpl in H2. rewrite wordToNat_wplus';
+            rewrite wordToNat_natToWord_idempotent' by assumption;
+            omega. }
+          { simpl in *.
+            rewrite storeWord_preserves_memSize.
+            rewrite wordToNat_wplus';
+            rewrite wordToNat_natToWord_idempotent' by assumption;
+            omega. }
+          { rewrite storeWord_preserves_memSize.
+            unfold valid_addr. omega. }
+          { rewrite storeWord_preserves_memSize.
+            simpl in H2.
+            unfold valid_addr.
+            rewrite wordToNat_wplus';
+              rewrite wordToNat_natToWord_idempotent' by assumption;
+              rewrite? mod_add_r by omega;  
+              intuition (try omega).
+          }
+        * rewrite IHl; try reflexivity.
+          { simpl in H2.
+            rewrite wordToNat_wplus';
+              rewrite wordToNat_natToWord_idempotent' by assumption;
+              rewrite? mod_add_r by omega;  
+              intuition (try omega). }
+          { simpl in H2.
+            rewrite storeWord_preserves_memSize.
+            simpl.
+            rewrite wordToNat_wplus';
+              rewrite wordToNat_natToWord_idempotent' by assumption;
+              rewrite? mod_add_r by omega;  
+              intuition (try omega). }
+  Qed.
+
+End MemoryHelpers.
