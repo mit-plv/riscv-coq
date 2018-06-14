@@ -1,7 +1,7 @@
 Require Import Coq.Lists.List.
 Require Import bbv.Word.
 Require Import Coq.omega.Omega.
-
+Require Import riscv.util.Tactics.
 
 Definition valid_addr{w: nat}(addr: word w)(alignment size: nat): Prop :=
   wordToNat addr + alignment <= size /\ (wordToNat addr) mod alignment = 0.
@@ -364,6 +364,94 @@ Section MemoryHelpers.
     intros. eapply store_word_list_preserves_memSize_aux. reflexivity.
   Qed.
 
+  (* destruct list length without destructing the cons to avoid unwanted simpls *)
+  Lemma destruct_list_length: forall A (l: list A),
+      l = nil /\ length l = 0 \/ length l = S (pred (length l)).
+  Proof.
+    intros. destruct l; simpl; auto.
+  Qed.
+
+  Ltac destruct_list_length :=
+    match goal with
+    | _: context [length ?L] |- _ =>
+         is_var L;
+         destruct (destruct_list_length _ L) as [ [ ? ? ] | ? ]; [ subst L | ]
+    end.
+
+  Local Arguments Nat.modulo: simpl never.
+
+  Lemma loadStoreWord_ne': forall (m: Mem) (a1 a2 : word sz) (v : word 32),
+      valid_addr a1 4 (memSize m) ->
+      valid_addr a2 4 (memSize m) ->
+      #a2 <> #a1 -> (* side condition which omega might solve, as opposed to a2 <> a1 *)
+      loadWord (storeWord m a1 v) a2 = loadWord m a2.
+  Proof.
+    intros. Search (# _ <> # _).
+(*    apply loadStoreWord_ne; try assum*) Abort.
+
+  Ltac womega :=
+    match goal with
+    | |- ~ (@eq (word _) _ _) => apply wordToNat_neq2
+    | |-   (@eq (word _) _ _) => apply wordToNat_eq2
+    end;
+    omega.
+
+  Hint Rewrite
+       Nat.succ_inj_wd
+       mod_add_r
+  using omega
+  : nats.
+
+  Hint Rewrite
+      loadStoreWord_ne using (auto || womega)
+  : mem_rew.
+
+  Hint Rewrite
+       storeWord_preserves_memSize
+    : mem_rew.
+  
+  Ltac pose_mem_proofs :=
+    repeat match goal with
+           | m: Mem |- _ => unique pose proof (memSize_bound m)
+           | m: Mem |- _ => unique pose proof (memSize_mod8 m)
+           end.
+
+  Ltac ensure_is_nat_rel R :=
+    match R with
+    | ?P /\ ?Q => ensure_is_nat_rel P; ensure_is_nat_rel Q
+    | ?P \/ ?Q => ensure_is_nat_rel P; ensure_is_nat_rel Q
+    | @eq nat _ _  => idtac (* can't use %nat here because = is polymorphic *)
+    | (_ <  _)%nat => idtac
+    | (_ <= _)%nat => idtac
+    | (_ >  _)%nat => idtac
+    | (_ >= _)%nat => idtac
+    end.
+
+  Ltac word_nat_rewrites :=
+    rewrite? wordToNat_wplus';
+    rewrite? wordToNat_natToWord_idempotent' by omega.
+  
+  Ltac mem_omega_pre :=
+    match goal with
+    | |- ?P => ensure_is_nat_rel P
+    | |- valid_addr _ _ _ => split
+    end;
+    repeat match goal with
+    | H: valid_addr _ _ _ |- _ => destruct H
+    end;
+    word_nat_rewrites;
+    autorewrite with nats in *.
+
+  Ltac mem_omega :=
+    mem_omega_pre; omega.
+
+  Ltac mem_simpl :=
+    pose_mem_proofs;
+    repeat (autorewrite with nats mem_rew in *; subst);
+    auto;
+    try mem_omega_pre;
+    try omega.
+ 
   Lemma loadWord_before_store_word_list: forall ll (m: Mem) l (a1 a2: word sz),
       length l = ll ->
       #a1 + 4 <= #a2 ->
@@ -373,28 +461,10 @@ Section MemoryHelpers.
       loadWord (store_word_list l a2 m) a1  = loadWord m a1.
   Proof.
     induction ll; intros; subst; destruct l; simpl in *; try congruence.
-    inversion H; subst.
-    pose proof (memSize_bound m).
-    destruct l.
-    - simpl. apply loadStoreWord_ne; try assumption.
-      intro C. subst. omega.
-    - simpl in H1. rewrite IHll.
-      + apply loadStoreWord_ne; try assumption.
-        intro C. subst. omega.
-      + reflexivity.
-      + unfold valid_addr in *. intuition idtac.
-        rewrite wordToNat_wplus'; rewrite wordToNat_natToWord_idempotent'; try omega.
-      + simpl. rewrite storeWord_preserves_memSize. 
-        rewrite wordToNat_wplus';
-          rewrite wordToNat_natToWord_idempotent' by assumption;
-          intuition (try omega).
-      + rewrite storeWord_preserves_memSize. assumption.
-      + rewrite storeWord_preserves_memSize.
-        unfold valid_addr in *.
-        rewrite wordToNat_wplus';
-          rewrite wordToNat_natToWord_idempotent' by assumption;
-          rewrite? mod_add_r by omega;  
-          intuition (try omega).
+    mem_simpl.
+    destruct_list_length; simpl in *.
+    - mem_simpl.
+    - rewrite IHll; mem_simpl.
   Qed.
 
   Local Arguments Nat.modulo: simpl never.
