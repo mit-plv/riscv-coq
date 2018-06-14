@@ -1,6 +1,8 @@
 Require Import Coq.Lists.List.
 Require Import bbv.Word.
 Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
+Require Import riscv.util.nat_div_mod_to_quot_rem.
 Require Import riscv.util.Tactics.
 
 Definition valid_addr{w: nat}(addr: word w)(alignment size: nat): Prop :=
@@ -120,6 +122,16 @@ Class Memory(m: Set)(w: nat) := mkMemory {
      which the store was done. *)
 }.
 
+Lemma valid_addr_8_4: forall {w: nat} (addr: word w) size,
+    valid_addr addr 8 size ->
+    valid_addr addr 4 size.
+Proof.
+  intros. unfold valid_addr in *.
+  intuition (try omega).
+  nat_div_mod_to_quot_rem.
+  nia.
+Qed.
+
 Lemma list_elementwise_same: forall A (l1 l2: list A),
     (forall i, nth_error l1 i = nth_error l2 i) ->
     l1 = l2.
@@ -174,12 +186,13 @@ Ltac destruct_list_length :=
 
 Local Arguments Nat.modulo: simpl never.
 
-Ltac womega :=
+Ltac womega_pre :=
   match goal with
   | |- ~ (@eq (word _) _ _) => apply wordToNat_neq2
   | |-   (@eq (word _) _ _) => apply wordToNat_eq2
-  end;
-  omega.
+  end.
+
+Ltac womega := womega_pre; omega.
 
 Hint Rewrite
      Nat.succ_inj_wd
@@ -187,17 +200,11 @@ Hint Rewrite
 using omega
 : nats.
 
-Hint Rewrite
-     @storeWord_preserves_memSize
-     @loadStoreWord_ne
-     @loadStoreWord_eq
-  using (unfold valid_addr in *; (auto || womega || omega))
-: mem_rew.
-
 Ltac pose_mem_proofs :=
   repeat match goal with
          | m: _ |- _ => unique pose proof (memSize_bound m)
          | m: _ |- _ => unique pose proof (memSize_mod8 m)
+         | H: valid_addr _ 8 _ |- _ => unique pose proof (valid_addr_8_4 _ _ H)
          end.
 
 Ltac word_nat_rewrites :=
@@ -207,8 +214,13 @@ Ltac word_nat_rewrites :=
 Ltac mem_simpl :=
   pose_mem_proofs;
   unfold valid_addr in *;
+  try womega_pre;
   repeat (
-      autorewrite with nats mem_rew in *;
+      autorewrite with nats in *;
+      rewrite? storeWord_preserves_memSize in *;
+      rewrite? loadDouble_spec by mem_simpl;
+      rewrite? loadStoreWord_ne by mem_simpl;
+      rewrite? loadStoreWord_eq by mem_simpl;
       subst;
       auto;
       word_nat_rewrites
@@ -433,6 +445,70 @@ Section MemoryHelpers.
     destruct_list_length; simpl in *.
     - mem_simpl.
     - rewrite IHl; mem_simpl.
+  Qed.
+
+  Lemma loadWord_after_store_word_list: forall l (m: Mem) (a1 a2: word sz),
+      #a2 + 4 * (length l) <= #a1 ->
+      valid_addr a1 4 (memSize m) ->
+      valid_addr a2 4 (memSize m) ->
+      loadWord (store_word_list l a2 m) a1 = loadWord m a1.
+  Proof.
+    induction l; intros; simpl in *; try congruence.
+    mem_simpl.
+    destruct_list_length; simpl in *.
+    - mem_simpl.
+    - rewrite IHl; mem_simpl.
+  Qed.
+
+  Lemma loadWord_outside_store_word_list: forall l (m: Mem) a1 a2,
+      not_in_range a1 4 #a2 (4 * length l) ->
+      #a2 + 4 * length l <= memSize m ->
+      valid_addr a1 4 (memSize m) ->
+      valid_addr a2 4 (memSize m) ->
+      loadWord (store_word_list l a2 m) a1 = loadWord m a1.
+  Proof.
+    intros. unfold not_in_range in *. destruct H.
+    - apply loadWord_before_store_word_list; mem_simpl.
+    - apply loadWord_after_store_word_list; mem_simpl.
+  Qed.
+  
+  Lemma loadDouble_before_store_word_list: forall l (m: Mem) (a1 a2: word sz),
+      #a1 + 8 <= #a2 ->
+      #a2 + 4 * (length l) <= (memSize m) ->
+      valid_addr a1 8 (memSize m) ->
+      valid_addr a2 4 (memSize m) ->
+      loadDouble (store_word_list l a2 m) a1  = loadDouble m a1.
+  Proof.
+    induction l; intros; simpl in *; try congruence.
+    mem_simpl.
+    destruct_list_length; simpl in *.
+    - mem_simpl.
+    - rewrite IHl; mem_simpl.
+  Qed.
+
+  Lemma loadDouble_after_store_word_list: forall l (m: Mem) (a1 a2: word sz),
+      #a2 + 4 * (length l) <= #a1 ->
+      valid_addr a1 8 (memSize m) ->
+      valid_addr a2 4 (memSize m) ->
+      loadDouble (store_word_list l a2 m) a1  = loadDouble m a1.
+  Proof.
+    induction l; intros; simpl in *; try congruence.
+    mem_simpl.
+    destruct_list_length; simpl in *.
+    - mem_simpl.
+    - rewrite IHl; mem_simpl.
+  Qed.
+
+  Lemma loadDouble_outside_store_word_list: forall l (m: Mem) a1 a2,
+      not_in_range a1 8 #a2 (4 * length l) ->
+      #a2 + 4 * length l <= memSize m ->
+      valid_addr a1 8 (memSize m) ->
+      valid_addr a2 4 (memSize m) ->
+      loadDouble (store_word_list l a2 m) a1 = loadDouble m a1.
+  Proof.
+    intros. unfold not_in_range in *. destruct H.
+    - apply loadDouble_before_store_word_list; mem_simpl.
+    - apply loadDouble_after_store_word_list; mem_simpl.
   Qed.
 
   Local Arguments Nat.modulo: simpl never.
