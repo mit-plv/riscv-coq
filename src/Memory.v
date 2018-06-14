@@ -158,6 +158,63 @@ Ltac demod :=
          | H: _ mod _ = 0 |- _ => apply Nat.mod_divides in H; [destruct H | congruence]
          end.
 
+(* destruct list length without destructing the cons to avoid unwanted simpls *)
+Lemma destruct_list_length: forall A (l: list A),
+    l = nil /\ length l = 0 \/ length l = S (pred (length l)).
+Proof.
+  intros. destruct l; simpl; auto.
+Qed.
+
+Ltac destruct_list_length :=
+  match goal with
+  | _: context [length ?L] |- _ =>
+       is_var L;
+       destruct (destruct_list_length _ L) as [ [ ? ? ] | ? ]; [ subst L | ]
+  end.
+
+Local Arguments Nat.modulo: simpl never.
+
+Ltac womega :=
+  match goal with
+  | |- ~ (@eq (word _) _ _) => apply wordToNat_neq2
+  | |-   (@eq (word _) _ _) => apply wordToNat_eq2
+  end;
+  omega.
+
+Hint Rewrite
+     Nat.succ_inj_wd
+     mod_add_r
+using omega
+: nats.
+
+Hint Rewrite
+     @storeWord_preserves_memSize
+     @loadStoreWord_ne
+     @loadStoreWord_eq
+  using (unfold valid_addr in *; (auto || womega || omega))
+: mem_rew.
+
+Ltac pose_mem_proofs :=
+  repeat match goal with
+         | m: _ |- _ => unique pose proof (memSize_bound m)
+         | m: _ |- _ => unique pose proof (memSize_mod8 m)
+         end.
+
+Ltac word_nat_rewrites :=
+  rewrite? wordToNat_wplus';
+  rewrite? wordToNat_natToWord_idempotent' by omega.
+
+Ltac mem_simpl :=
+  pose_mem_proofs;
+  unfold valid_addr in *;
+  repeat (
+      autorewrite with nats mem_rew in *;
+      subst;
+      auto;
+      word_nat_rewrites
+    );
+  try omega.
+
 Section MemoryHelpers.
 
   Context {sz: nat}.
@@ -363,92 +420,6 @@ Section MemoryHelpers.
   Proof.
     intros. eapply store_word_list_preserves_memSize_aux. reflexivity.
   Qed.
-
-  (* destruct list length without destructing the cons to avoid unwanted simpls *)
-  Lemma destruct_list_length: forall A (l: list A),
-      l = nil /\ length l = 0 \/ length l = S (pred (length l)).
-  Proof.
-    intros. destruct l; simpl; auto.
-  Qed.
-
-  Ltac destruct_list_length :=
-    match goal with
-    | _: context [length ?L] |- _ =>
-         is_var L;
-         destruct (destruct_list_length _ L) as [ [ ? ? ] | ? ]; [ subst L | ]
-    end.
-
-  Local Arguments Nat.modulo: simpl never.
-
-  Ltac womega :=
-    match goal with
-    | |- ~ (@eq (word _) _ _) => apply wordToNat_neq2
-    | |-   (@eq (word _) _ _) => apply wordToNat_eq2
-    end;
-    omega.
-
-  Hint Rewrite
-       Nat.succ_inj_wd
-       mod_add_r
-  using omega
-  : nats.
-
-  Hint Rewrite
-       storeWord_preserves_memSize
-       loadStoreWord_ne
-       loadStoreWord_eq
-    using (unfold valid_addr in *; (auto || womega || omega))
-  : mem_rew.
-  
-  Ltac pose_mem_proofs :=
-    repeat match goal with
-           | m: Mem |- _ => unique pose proof (memSize_bound m)
-           | m: Mem |- _ => unique pose proof (memSize_mod8 m)
-           end.
-
-  (*
-  Ltac ensure_is_nat_rel R :=
-    match R with
-    | ?P /\ ?Q => ensure_is_nat_rel P; ensure_is_nat_rel Q
-    | ?P \/ ?Q => ensure_is_nat_rel P; ensure_is_nat_rel Q
-    | @eq nat _ _  => idtac (* can't use %nat here because = is polymorphic *)
-    | (_ <  _)%nat => idtac
-    | (_ <= _)%nat => idtac
-    | (_ >  _)%nat => idtac
-    | (_ >= _)%nat => idtac
-    end.
-  *)
-
-  Ltac word_nat_rewrites :=
-    rewrite? wordToNat_wplus';
-    rewrite? wordToNat_natToWord_idempotent' by omega.
-
-  (*
-  Ltac mem_omega_pre :=
-    match goal with
-    | |- ?P => ensure_is_nat_rel P
-    | |- valid_addr _ _ _ => split
-    end;
-    repeat match goal with
-    | H: valid_addr _ _ _ |- _ => destruct H
-    end;
-    word_nat_rewrites;
-    autorewrite with nats in *.
-
-  Ltac mem_omega :=
-    mem_omega_pre; omega.
-  *)
-
-  Ltac mem_simpl :=
-    pose_mem_proofs;
-    unfold valid_addr in *;
-    repeat (
-        autorewrite with nats mem_rew in *;
-        subst;
-        auto;
-        word_nat_rewrites
-      );
-    try omega.
  
   Lemma loadWord_before_store_word_list: forall l (m: Mem) (a1 a2: word sz),
       #a1 + 4 <= #a2 ->
