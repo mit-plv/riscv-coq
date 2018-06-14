@@ -186,6 +186,42 @@ Ltac destruct_list_length :=
 
 Local Arguments Nat.modulo: simpl never.
 
+Lemma mod_0_r: forall (m: nat),
+    m mod 0 = 0.
+Proof.
+  intros. reflexivity.
+Qed.
+
+Lemma sub_mod_0: forall (a b m: nat),
+    a mod m = 0 ->
+    b mod m = 0 ->
+    (a - b) mod m = 0.
+Proof.
+  intros. assert (m = 0 \/ m <> 0) as C by omega. destruct C as [C | C].
+  - subst. apply mod_0_r.
+  - assert (a - b = 0 \/ b < a) as D by omega. destruct D as [D | D].
+    + rewrite D. apply Nat.mod_0_l. assumption.
+    + apply Nat2Z.inj. simpl.
+      rewrite Zdiv.mod_Zmod by assumption.
+      rewrite Nat2Z.inj_sub by omega.
+      rewrite Zdiv.Zminus_mod.
+      rewrite <-! Zdiv.mod_Zmod by assumption.
+      rewrite H. rewrite H0.
+      apply Z.mod_0_l.
+      omega.
+Qed.      
+
+Lemma wminus_minus': forall (sz : nat) (a b : word sz),
+    #b <= #a ->
+    #(a ^- b) = #a - #b.
+Proof.
+  intros. apply wminus_minus.
+  unfold wlt. intro C.
+  apply Nlt_out in C.
+  rewrite! wordToN_to_nat in *.
+  omega.
+Qed.
+
 Ltac womega_pre :=
   match goal with
   | |- ~ (@eq (word _) _ _) => apply wordToNat_neq2
@@ -194,9 +230,21 @@ Ltac womega_pre :=
 
 Ltac womega := womega_pre; omega.
 
+Lemma mul_div_exact: forall (a b: nat),
+    b <> 0 ->
+    a mod b = 0 ->
+    b * (a / b) = a.
+Proof.
+  intros. edestruct Nat.div_exact as [_ P]; [eassumption|].
+  specialize (P H0). symmetry. exact P.
+Qed.
+
 Hint Rewrite
      Nat.succ_inj_wd
+     Nat.mul_0_r
+     Nat.add_0_r 
      mod_add_r
+     mul_div_exact
 using omega
 : nats.
 
@@ -225,7 +273,8 @@ Ltac mem_simpl :=
       auto;
       word_nat_rewrites
     );
-  try omega.
+  try solve [repeat ((try omega); f_equal)].
+
 
 Section MemoryHelpers.
 
@@ -470,6 +519,51 @@ Section MemoryHelpers.
     intros. unfold not_in_range in *. destruct H.
     - apply loadWord_before_store_word_list; mem_simpl.
     - apply loadWord_after_store_word_list; mem_simpl.
+  Qed.
+
+  Local Arguments Nat.div: simpl never.
+  Local Arguments nth: simpl never.
+
+  Lemma wminus_diag: forall sz (w: word sz),
+      w ^- w = $0.
+  Proof.
+    intros. unfold wminus. apply wminus_inv.
+  Qed.
+
+  Lemma loadWord_inside_store_word_list_aux: forall l (m: Mem) i offset,
+      i < length l ->
+      #offset + 4 * length l <= memSize m ->
+      valid_addr offset 4 (memSize m) ->
+      loadWord (store_word_list l offset m) $(#offset + 4 * i) = nth i l $0.
+  Proof.
+    induction l; intros; unfold in_range in *; simpl in *; mem_simpl.
+    destruct_list_length; simpl in *.
+    - assert (i = 0) by omega. mem_simpl.
+    - destruct i.
+      + rewrite loadWord_before_store_word_list; mem_simpl.
+      + change (nth (S i) (a :: l) $ (0)) with (nth i l $ (0)).
+        specialize (IHl (storeWord m offset a) i (offset ^+ $4)).
+        rewrite <- IHl; mem_simpl.
+  Qed.
+  
+  Lemma loadWord_inside_store_word_list: forall l (m: Mem) addr offset,
+      in_range addr 4 #offset (4 * length l) ->
+      #offset + 4 * length l <= memSize m ->
+      valid_addr offset 4 (memSize m) ->
+      loadWord (store_word_list l offset m) addr = nth (# (addr ^- offset) / 4) l $0.
+  Proof.
+    intros. unfold in_range in *.
+    rewrite <- (loadWord_inside_store_word_list_aux l m (# (addr ^- offset) / 4) offset);
+      try assumption.
+    (* TODO this should be in mem_simpl too *)
+    - repeat f_equal. rewrite wminus_minus' by omega.
+      rewrite mul_div_exact; mem_simpl.
+      rewrite sub_mod_0; omega.
+    - rewrite wminus_minus' by omega.
+      pose proof (Nat.mul_lt_mono_pos_l 4) as P.
+      apply P; try omega. clear P.
+      rewrite mul_div_exact; mem_simpl.
+      rewrite sub_mod_0; omega.
   Qed.
   
   Lemma loadDouble_before_store_word_list: forall l (m: Mem) (a1 a2: word sz),
