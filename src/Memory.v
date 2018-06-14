@@ -380,15 +380,6 @@ Section MemoryHelpers.
 
   Local Arguments Nat.modulo: simpl never.
 
-  Lemma loadStoreWord_ne': forall (m: Mem) (a1 a2 : word sz) (v : word 32),
-      valid_addr a1 4 (memSize m) ->
-      valid_addr a2 4 (memSize m) ->
-      #a2 <> #a1 -> (* side condition which omega might solve, as opposed to a2 <> a1 *)
-      loadWord (storeWord m a1 v) a2 = loadWord m a2.
-  Proof.
-    intros. Search (# _ <> # _).
-(*    apply loadStoreWord_ne; try assum*) Abort.
-
   Ltac womega :=
     match goal with
     | |- ~ (@eq (word _) _ _) => apply wordToNat_neq2
@@ -403,12 +394,11 @@ Section MemoryHelpers.
   : nats.
 
   Hint Rewrite
-      loadStoreWord_ne using (auto || womega)
-  : mem_rew.
-
-  Hint Rewrite
        storeWord_preserves_memSize
-    : mem_rew.
+       loadStoreWord_ne
+       loadStoreWord_eq
+    using (unfold valid_addr in *; (auto || womega || omega))
+  : mem_rew.
   
   Ltac pose_mem_proofs :=
     repeat match goal with
@@ -416,6 +406,7 @@ Section MemoryHelpers.
            | m: Mem |- _ => unique pose proof (memSize_mod8 m)
            end.
 
+  (*
   Ltac ensure_is_nat_rel R :=
     match R with
     | ?P /\ ?Q => ensure_is_nat_rel P; ensure_is_nat_rel Q
@@ -426,11 +417,13 @@ Section MemoryHelpers.
     | (_ >  _)%nat => idtac
     | (_ >= _)%nat => idtac
     end.
+  *)
 
   Ltac word_nat_rewrites :=
     rewrite? wordToNat_wplus';
     rewrite? wordToNat_natToWord_idempotent' by omega.
-  
+
+  (*
   Ltac mem_omega_pre :=
     match goal with
     | |- ?P => ensure_is_nat_rel P
@@ -444,27 +437,31 @@ Section MemoryHelpers.
 
   Ltac mem_omega :=
     mem_omega_pre; omega.
+  *)
 
   Ltac mem_simpl :=
     pose_mem_proofs;
-    repeat (autorewrite with nats mem_rew in *; subst);
-    auto;
-    try mem_omega_pre;
+    unfold valid_addr in *;
+    repeat (
+        autorewrite with nats mem_rew in *;
+        subst;
+        auto;
+        word_nat_rewrites
+      );
     try omega.
  
-  Lemma loadWord_before_store_word_list: forall ll (m: Mem) l (a1 a2: word sz),
-      length l = ll ->
+  Lemma loadWord_before_store_word_list: forall l (m: Mem) (a1 a2: word sz),
       #a1 + 4 <= #a2 ->
-      #a2 + 4 * ll <= (memSize m) ->
+      #a2 + 4 * (length l) <= (memSize m) ->
       valid_addr a1 4 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
       loadWord (store_word_list l a2 m) a1  = loadWord m a1.
   Proof.
-    induction ll; intros; subst; destruct l; simpl in *; try congruence.
+    induction l; intros; simpl in *; try congruence.
     mem_simpl.
     destruct_list_length; simpl in *.
     - mem_simpl.
-    - rewrite IHll; mem_simpl.
+    - rewrite IHl; mem_simpl.
   Qed.
 
   Local Arguments Nat.modulo: simpl never.
@@ -476,47 +473,12 @@ Section MemoryHelpers.
       #a1 + 4 * (length l) <= memSize m ->
       load_word_list (store_word_list l a1 m) a2 ll = l.
   Proof.
-    induction l; intros; subst; simpl in *.
-    - reflexivity.
-    - pose proof (memSize_bound m).
-      destruct l.
-      + simpl. f_equal. apply loadStoreWord_eq; try reflexivity.
-        unfold valid_addr. omega.
-      + f_equal.
-        * erewrite loadWord_before_store_word_list; try reflexivity.
-          { apply loadStoreWord_eq; try reflexivity.
-            unfold valid_addr. omega. }
-          { simpl in H2. rewrite wordToNat_wplus';
-            rewrite wordToNat_natToWord_idempotent' by assumption;
-            omega. }
-          { simpl in *.
-            rewrite storeWord_preserves_memSize.
-            rewrite wordToNat_wplus';
-            rewrite wordToNat_natToWord_idempotent' by assumption;
-            omega. }
-          { rewrite storeWord_preserves_memSize.
-            unfold valid_addr. omega. }
-          { rewrite storeWord_preserves_memSize.
-            simpl in H2.
-            unfold valid_addr.
-            rewrite wordToNat_wplus';
-              rewrite wordToNat_natToWord_idempotent' by assumption;
-              rewrite? mod_add_r by omega;  
-              intuition (try omega).
-          }
-        * rewrite IHl; try reflexivity.
-          { simpl in H2.
-            rewrite wordToNat_wplus';
-              rewrite wordToNat_natToWord_idempotent' by assumption;
-              rewrite? mod_add_r by omega;  
-              intuition (try omega). }
-          { simpl in H2.
-            rewrite storeWord_preserves_memSize.
-            simpl.
-            rewrite wordToNat_wplus';
-              rewrite wordToNat_natToWord_idempotent' by assumption;
-              rewrite? mod_add_r by omega;  
-              intuition (try omega). }
+    induction l; intros; subst; simpl in *; try congruence.
+    mem_simpl.
+    destruct_list_length; simpl in *.
+    - mem_simpl.
+    - rewrite loadWord_before_store_word_list; mem_simpl.
+      rewrite IHl; mem_simpl.
   Qed.
 
 End MemoryHelpers.
