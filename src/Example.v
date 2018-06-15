@@ -77,7 +77,7 @@ Definition initialRiscvMachineL(imem: list MachineInt): RiscvMachineL :=
   putProgram (map (@ZToWord 32) imem) $0 zeroedRiscvMachineL.
 
 Definition run: nat -> RiscvMachineL -> (option unit) * RiscvMachineL := run.
- (* @run RiscvBitWidths32 MachineWidth32 (OState RiscvMachineL) (OState_Monad _) _ _ _ *)
+ (* @run BitWidths32 MachineWidth32 (OState RiscvMachineL) (OState_Monad _) _ _ _ *)
 
 Definition fib6_L_final(fuel: nat): RiscvMachineL :=
   match run fuel (initialRiscvMachineL fib6_riscv) with

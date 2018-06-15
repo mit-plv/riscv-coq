@@ -299,13 +299,13 @@ Eval cbv in regToShamt5 $12.
 Eval cbv in regToShamt $12.
 Eval cbv in highBits (-9).
 
-Instance MachineWidthInst{B: RiscvBitWidths}: MachineWidth (word wXLEN).
+Instance MachineWidthInst{B: BitWidths}: MachineWidth (word wXLEN).
   unfold wXLEN.
   destruct bitwidth; [exact MachineWidth32 | exact MachineWidth64].
 Defined.
 
 Section Alu_Defs.
-  Context {Bw: RiscvBitWidths}.
+  Context {Bw: BitWidths}.
   
   Local Ltac prove_alu_def :=
     intros; clear; unfold wXLEN in *; unfold MachineWidthInst;

@@ -12,7 +12,7 @@ Require Import riscv.Utility.
 
 Section Riscv.
 
-  Context {B: RiscvBitWidths}.
+  Context {B: BitWidths}.
 
   Context {MW: MachineWidth (word wXLEN)}.
 
@@ -26,8 +26,8 @@ Section Riscv.
 
   Definition RV_wXLEN_IM: InstructionSet :=
     match bitwidth with
-    | Bitwidth32 => RV32IM
-    | Bitwidth64 => RV64IM
+    | BW32 => RV32IM
+    | BW64 => RV64IM
     end.
   
   Definition run1:

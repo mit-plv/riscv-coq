@@ -12,7 +12,7 @@ Require Export riscv.RiscvMachine.
 
 Section Riscv.
 
-  Context {B: RiscvBitWidths}.
+  Context {B: BitWidths}.
 
   Context {Mem: Set}.
 

@@ -13,7 +13,7 @@ Require Import riscv.Minimal.
 
 Section Riscv.
 
-  Context {B: RiscvBitWidths}.
+  Context {B: BitWidths}.
 
   Context {MW: MachineWidth (word wXLEN)}.
 

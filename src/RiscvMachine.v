@@ -16,7 +16,7 @@ Arguments RegisterFile: clear implicits.
 
 Section Riscv.
 
-  Context {B: RiscvBitWidths}.
+  Context {B: BitWidths}.
   Context {Mem: Set}.
   Context {MemIsMem: Memory Mem wXLEN}.
   Context {RF: Type}.
