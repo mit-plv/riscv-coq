@@ -5,7 +5,7 @@ Require Import riscv.Decode.
 Require Import riscv.Memory.
 Require Import riscv.Program.
 Require Import riscv.RiscvMachine.
-Require Import riscv.RiscvBitWidths.
+Require Import riscv.util.BitWidths.
 
 Set Implicit Arguments.
 

@@ -2,7 +2,7 @@
 Require Import Coq.omega.Omega.
 Require Import bbv.WordScope.
 Require Import bbv.BinNotationZ.
-Require Import riscv.RiscvBitWidths.
+Require Import riscv.util.BitWidths.
 Require Import riscv.Decode.
 Require Import riscv.Utility.
 

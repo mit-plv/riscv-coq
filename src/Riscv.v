@@ -1,5 +1,5 @@
 Require Export bbv.Word.
-Require Export riscv.RiscvBitWidths.
+Require Export riscv.util.BitWidths.
 Require Export riscv.util.Monads.
 Require Export riscv.Decode.
 Require Export riscv.Program.

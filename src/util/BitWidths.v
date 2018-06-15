@@ -1,30 +1,30 @@
 Require Import Coq.omega.Omega.
 Require Import bbv.NatLib.
 
-Inductive RiscvBitWidth := Bitwidth32 | Bitwidth64.
+Inductive BitWidth := BW32 | BW64.
 
-Class RiscvBitWidths := bitwidth: RiscvBitWidth.
+Class BitWidths := bitwidth: BitWidth.
 
 Section Widths.
 
-  Context {B: RiscvBitWidths}.
+  Context {B: BitWidths}.
 
   Definition wXLEN: nat :=
     match bitwidth with
-    | Bitwidth32 => 32
-    | Bitwidth64 => 64
+    | BW32 => 32
+    | BW64 => 64
     end.
 
   Definition log2wXLEN: nat :=
     match bitwidth with
-    | Bitwidth32 => 5
-    | Bitwidth64 => 6
+    | BW32 => 5
+    | BW64 => 6
     end.
 
   Definition wXLEN_in_bytes: nat :=
     match bitwidth with
-    | Bitwidth32 => 4
-    | Bitwidth64 => 8
+    | BW32 => 4
+    | BW64 => 8
     end.
 
   Lemma pow2_wXLEN_4: 4 < pow2 wXLEN.

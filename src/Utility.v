@@ -2,7 +2,7 @@ Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
 Require Import bbv.DepEqNat.
 Require Import riscv.util.Monads.
-Require Import riscv.RiscvBitWidths.
+Require Import riscv.util.BitWidths.
 Require Export riscv.util.ZBitOps.
 
 (* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,

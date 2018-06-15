@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.BinInt.
 Require Import Coq.omega.Omega.
 Require Import bbv.WordScope.
-Require Import riscv.RiscvBitWidths.
+Require Import riscv.util.BitWidths.
 Require Import riscv.util.Monads.
 Require Import riscv.Decode.
 Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)

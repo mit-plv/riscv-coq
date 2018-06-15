@@ -1,7 +1,7 @@
 Require Import Coq.Lists.List.
 Import ListNotations.
 Require Import riscv.Riscv.
-Require Import riscv.RiscvBitWidths32.
+Require Import riscv.util.BitWidth32.
 Require Import bbv.HexNotationZ.
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.WordScope.
