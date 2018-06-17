@@ -34,7 +34,7 @@ proofs: encode $(patsubst %.v,%.vo,$(wildcard src/proofs/*.v))
 all: spec encode proofs
 
 .depend depend:
-	$(COQDEP) >.depend `find src -name "*.v"`
+	$(COQDEP) >.depend `find src -name "*.v"` export/extract.v
 
 
 # Old Python-based conversion:
@@ -53,6 +53,17 @@ convert_decode: riscv-semantics_version_check
 convert: riscv-semantics_version_check hs-to-coq_version_check
 	cd convert-hs-to-coq && ./convert.sh
 
+
+# coq-to-other languages conversion:
+
+json: export/extract.vo
+	find . -maxdepth 1 -name '*.json' -type f -exec mv -t export/json -- {} +
+
+export/c/%.c: json
+	python export/main.py export/json/$*.json export/c/$*.c
+
+export/py/%.py: json
+	python export/main.py export/json/$*.json export/py/$*.py
 
 clean:
 	find . -type f \( -name '*.glob' -o -name '*.vo' -o -name '*.aux' \) -delete
