@@ -56,14 +56,28 @@ convert: riscv-semantics_version_check hs-to-coq_version_check
 
 # coq-to-other languages conversion:
 
-json: export/extract.vo
+# do not rm these intermediate files in a chain
+#.PRECIOUS: export/c/%.c export/py/%.py
+
+# do not remove any intermediate files
+.SECONDARY:
+
+export/json/%.json: export/extract.vo src/%.vo
 	find . -maxdepth 1 -name '*.json' -type f -exec mv -t export/json -- {} +
 
-export/c/%.c: json
+export/c/%.c: export/json/%.json
 	python export/main.py export/json/$*.json export/c/$*.c
 
-export/py/%.py: json
+export/py/%.py: export/json/%.json
 	python export/main.py export/json/$*.json export/py/$*.py
+
+export/c/%.o: export/c/%.c
+	gcc -std=c11 -Wall -c export/c/$*.c
+
+# .out files are expected to be empty; this target is just a quick way to check if the
+# python file parses
+export/py/%.out: export/py/%.py
+	python export/py/$*.py > export/py/$*.out
 
 clean:
 	find . -type f \( -name '*.glob' -o -name '*.vo' -o -name '*.aux' \) -delete

@@ -11,7 +11,7 @@ def getName(j):
 def type_glob_to_str(j):
     assert j['what'] == 'type:glob'
     assert j['args'] == []
-    return j['name']
+    return getName(j)
 
     
 def translate_type_decl(j, p):
@@ -33,18 +33,46 @@ def is_enum(j):
 
 
 def translate_ind_decl(j, p):
+    assert j['what'] == 'decl:ind'
+    name = getName(j)
     if is_enum(j):
-        name = getName(j)
         constructorNames = [c['name'] for c in j['constructors']]
         p.enum(name, constructorNames)
     else:
-        print('not an enum:')
-        print(json.dumps(j, indent=3))
+        branches = [(
+            b['name'],
+            [type_glob_to_str(t) for t in b['argtypes']]
+        ) for b in j['constructors']]
+        p.variant(name, branches)
+
+
+def is_fun_decl(j):
+    if j['what'] != 'decl:term': return False
+    if j['type'] != 'type:arrow': return False
+    return True
+
+
+def get_signature(j, acc=[]):
+    '''returns a tuple of (argTypesList, retType)'''
+    if j['what'] == "type:arrow":
+        t = type_glob_to_str(j['left']) # higher-order functions are not supported
+        return get_signature(j['right'], [t] + acc)
+    elif j['what'] == "type:glob":
+        t = type_glob_to_str(j)
+        return (acc, t)
+    else:
+        raise ValueError("unexpected 'what':" + j['what'])
+
+
+def translate_term_decl(j, p):
+    assert j['what'] == 'decl:term'
+    print(get_signature(j['type']))
 
 
 handlers = {
     'decl:type': translate_type_decl,
-    'decl:ind':  translate_ind_decl
+    'decl:ind' : translate_ind_decl,
+    'decl:term': translate_term_decl
 }
 
 

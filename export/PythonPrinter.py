@@ -18,3 +18,27 @@ class PythonPrinter(LanguagePrinter):
         for i, n in enumerate(valueNames, 1):
             self.writeln('    ' + n + ' = ' + str(i))
         self.end_decl()
+
+    def variant(self, name, branches):
+        '''
+        name: str
+        branches: list of (branchName, typesList) tuples
+        '''
+        self.writeln('class {}(object): pass'.format(name))
+        self.end_decl()
+
+        for branchName, argTypes in branches:
+            self.writeln('class {}({}):'.format(branchName, name))
+            self.increaseIndent()
+            constructorArgs = ''.join([', f' + str(i) for i in range(len(argTypes))])
+            self.writeln('def __init__(self{}):'.format(constructorArgs))
+            self.increaseIndent()
+            for i in range(len(argTypes)):
+                self.writeln('self.f{} = f{}'.format(i, i))
+            if len(argTypes) == 0:
+                self.writeln('pass')
+            self.decreaseIndent()
+            self.decreaseIndent()
+            self.end_decl()
+
+        
