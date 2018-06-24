@@ -3,9 +3,9 @@ from LanguagePrinter import LanguagePrinter
 
 def getName(j):
     name = j['name']
-    if name.startswith('coq_'):
+    if name.startswith('coq_') or name.startswith('Coq_'):
         name = name[4:]
-    return name
+    return name.replace('.coq_', '.').replace('.Coq_', '.')
 
 
 def type_glob_to_str(j):
@@ -46,12 +46,6 @@ def translate_ind_decl(j, p):
         p.variant(name, branches)
 
 
-def is_fun_decl(j):
-    if j['what'] != 'decl:term': return False
-    if j['type'] != 'type:arrow': return False
-    return True
-
-
 def get_signature(j, acc=[]):
     '''returns a tuple of (argTypesList, retType)'''
     if j['what'] == "type:arrow":
@@ -64,9 +58,76 @@ def get_signature(j, acc=[]):
         raise ValueError("unexpected 'what':" + j['what'])
 
 
+def positive_to_bitstring(j):
+    assert j['what'] == 'expr:constructor'
+    constr = getName(j)
+    if constr == 'BinNums.xH':
+        return '1'
+    elif constr == 'BinNums.xO':
+        return positive_to_bitstring(j['args'][0]) + '0'
+    elif constr == 'BinNums.xI':
+        return positive_to_bitstring(j['args'][0]) + '1'
+    else:
+        raise ValueError('unexpected ' + constr)
+
+
+def translate_expr(j, p):
+    [s1, s2] = j['what'].split(':')
+    assert s1 == 'expr'
+    if s2 == 'constructor':
+        if j['name'] == 'BinNums.Zpos':
+            p.bit_literal(positive_to_bitstring(j['args'][0]))
+        elif j['name'] == 'BinNums.Z0':
+            p.bit_literal('0')
+        else:
+            print('TODO: ' + j['name'])
+    elif s2 == 'lambda':
+        ValueError('lambdas arbitrarily nested inside expressions are not supported')
+    else:
+        ValueError('unsupported ' + j['what'])
+
+
+def strip_0arg_lambdas(j):
+    if j['what'] == 'expr:lambda' and j['argnames'] == []:
+        return strip_0arg_lambdas(j['body'])
+    else:
+        return j
+
+
+
+# for debug printing
+def ellipsis(j, fieldName):
+    if isinstance(j, dict):
+        if fieldName in j:
+            if len(str(j[fieldName])) > 20:
+                j[fieldName] = '...'
+        for key in j:
+            ellipsis(j[key], fieldName)
+    elif isinstance(j, list):
+        for child in j:
+            ellipsis(child, fieldName)
+    else:
+        pass # primitive value, nothing to be done
+
+
+didPrint = False
+
 def translate_term_decl(j, p):
+    global didPrint
     assert j['what'] == 'decl:term'
-    print(get_signature(j['type']))
+    sig = get_signature(j['type'])
+    name = getName(j)
+    if len(sig[0]) == 0:
+        typ = sig[1]
+        p.begin_constant_decl(name, typ)
+        translate_expr(strip_0arg_lambdas(j['value']), p)
+        p.end_constant_decl()
+    else:
+        if not didPrint:
+            ellipsis(j, 'args')
+            print(json.dumps(j, indent=3))
+            didPrint = True
+
 
 
 handlers = {

@@ -41,4 +41,12 @@ class PythonPrinter(LanguagePrinter):
             self.decreaseIndent()
             self.end_decl()
 
-        
+    def begin_constant_decl(self, name, typ):
+        self.write(name + ' = ')
+
+    def end_constant_decl(self):
+        self.write('\n')
+        self.end_decl()
+
+    def bit_literal(self, s):
+        self.write('0b' + s)

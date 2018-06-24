@@ -1,7 +1,7 @@
 from LanguagePrinter import LanguagePrinter
 
 type_mappings = {
-    'BinNums.coq_Z': 'int'
+    'BinNums.Z': 'int'
 }
 
 
@@ -56,5 +56,16 @@ class CPrinter(LanguagePrinter):
         self.writeln('} ' + name + ';')
         self.end_decl()
 
+    def begin_constant_decl(self, name, typ):
+        self.write('#define ' + name + ' ')
+
+    def end_constant_decl(self):
+        self.write('\n')
+        self.end_decl()
+
+    def bit_literal(self, s):
+        self.write('0b' + s) # gcc extension
+
 # in Coq pattern match, the pattern contains constructor, so we know the type to cast to
 # fields of "case" class
+

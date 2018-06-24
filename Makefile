@@ -72,7 +72,7 @@ export/py/%.py: export/json/%.json
 	python export/main.py export/json/$*.json export/py/$*.py
 
 export/c/%.o: export/c/%.c
-	gcc -std=c11 -Wall -c export/c/$*.c
+	gcc -std=c11 -Wall -c export/c/$*.c -o export/c/$*.o
 
 # .out files are expected to be empty; this target is just a quick way to check if the
 # python file parses
