@@ -233,14 +233,7 @@ Ltac rewrite_testbit :=
                       end)
              end)).
 
-Inductive indent: Set :=
-| IndentZero: indent
-| IndentMore: indent -> indent.
-
-Notation ">>>>" := IndentZero (only printing).
-Notation ".... i" := (IndentMore i) (at level 8, i at level 100, only printing).
-
-Ltac solve_or_split_step ind :=
+Ltac solve_or_split_step :=
     rewrite_testbit;
     try solve [f_equal; (reflexivity || omega)];
     match goal with
@@ -250,14 +243,10 @@ Ltac solve_or_split_step ind :=
       else (let C := fresh "C" in
             assert (i < 0 \/ 0 <= i) as C by omega;
             safe_ring_simplify i in C;
-            destruct C as [C | C];
-            let t := type of C in idtac ind "case" t)
+            destruct C as [C | C])
     end.
 
-Ltac solve_or_split ind :=
-  solve_or_split_step ind;
-  let ind' := constr:(IndentMore ind) in
-  solve_or_split ind'.
+Ltac solve_or_split := repeat solve_or_split_step.
 
 Ltac prove_Zeq_bitwise_pre :=
     (intuition idtac);
@@ -270,4 +259,4 @@ Ltac prove_Zeq_bitwise_pre :=
     unfold Z.eqf;
     intro i.
 
-Ltac prove_Zeq_bitwise := prove_Zeq_bitwise_pre; solve_or_split IndentZero.
+Ltac prove_Zeq_bitwise := prove_Zeq_bitwise_pre; solve_or_split.
