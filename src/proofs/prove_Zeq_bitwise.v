@@ -190,34 +190,101 @@ Proof.
   apply (mod0_testbit a i (Z.log2_up m)); assumption.
 Qed.
 
+Ltac rew_Z_lxor_spec :=
+  rewrite Z.lxor_spec;
+  idtac "rew_Z_lxor_spec".
+
+Ltac rew_Z_ldiff_spec :=
+  rewrite Z.ldiff_spec;
+  idtac "rew_Z_ldiff_spec".
+
+Ltac rew_Z_testbit_neg_r i :=
+  rewrite (Z.testbit_neg_r _ i) by omega;
+  idtac "rew_Z_testbit_neg_r".
+
+Ltac rew_Z_setbit_eq i :=
+  rewrite (Z.setbit_eq _ i) by omega;
+  idtac "rew_Z_setbit_eq".
+
+Ltac rew_Z_setbit_neq i :=
+  rewrite (Z.setbit_neq _ _ i) by omega;
+  idtac "rew_Z_setbit_neq".
+
+Ltac rew_Z_testbit_0_l :=
+  rewrite Z.testbit_0_l;
+  idtac "rew_Z_testbit_0_l".
+
+Ltac rew_Z_land_spec :=
+  rewrite Z.land_spec;
+  idtac "rew_Z_land_spec".
+
+Ltac rew_Z_lor_spec :=
+  rewrite Z.lor_spec;
+  idtac "rew_Z_lor_spec".
+
+Ltac rew_Z_shiftr_spec i :=
+  rewrite (Z.shiftr_spec _ _ i) by omega;
+  idtac "rew_Z_shiftr_spec".
+
+Ltac rew_Z_lnot_spec i :=
+  rewrite (Z.lnot_spec _ i) by omega;
+  idtac "rew_Z_lnot_spec".
+
+Ltac rew_Z_shiftl_spec i :=
+  rewrite (Z.shiftl_spec _ _ i) by omega;
+  idtac "rew_Z_shiftl_spec".
+
+Ltac rew_testbit_minus1 :=
+  rewrite testbit_minus1 by omega;
+  idtac "rew_testbit_minus1".
+
+Ltac rew_Z_ones_spec_high i :=
+  rewrite (Z.ones_spec_high _ i) by omega;
+  idtac "rew_Z_ones_spec_high".
+
+Ltac rew_Z_ones_spec_low i :=
+  rewrite (Z.ones_spec_low _ i) by omega;
+  idtac "rew_Z_ones_spec_low".
+
+Ltac rew_testbit_if :=
+  rewrite testbit_if;
+  idtac "rew_testbit_if".
+
+Ltac rew_testbit_above' a b :=
+  rewrite (testbit_above' a b) by (simpl_log2up; omega);
+  idtac "rew_testbit_above'".
+
+Ltac rew_testbit_above_signed' a b :=
+  rewrite (testbit_above_signed' a b) by (simpl_log2up; omega); simpl_log2up;
+  idtac "rew_testbit_above_signed'".
+
+Ltac rew_mod0_testbit' a i m :=
+  rewrite (mod0_testbit' a i m) by (simpl_log2up; simpl_pow2; omega);
+  idtac "rew_mod0_testbit'".
+
 Ltac rewrite_testbit :=
     repeat ((autorewrite with bool_rewriting) ||
             (match goal with
              | |- context [ Z.testbit _ ?i ] =>
-                     (rewrite Z.lxor_spec) ||
-                     (rewrite Z.ldiff_spec) ||
-                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
-                     (rewrite (Z.setbit_eq _ i) by omega) ||
-                     (rewrite (Z.setbit_neq _ _ i) by omega) ||
-                     (rewrite Z.testbit_0_l) ||
-                     (rewrite Z.land_spec) ||
-                     (rewrite Z.lor_spec) ||
-                     (rewrite (Z.shiftr_spec _ _ i) by omega) ||
-                     (rewrite (Z.lnot_spec _ i) by omega) ||
-                     (rewrite (Z.shiftl_spec _ _ i) by omega) ||
-                     (rewrite (Z.testbit_neg_r _ i) by omega) ||
-                     (rewrite testbit_minus1 by omega) ||
-                     (rewrite (Z.ones_spec_high _ i) by omega) ||
-                     (rewrite (Z.ones_spec_low _ i) by omega) ||
-                     (rewrite testbit_if) ||
+                     rew_Z_lxor_spec ||
+                     rew_Z_ldiff_spec ||
+                     rew_Z_testbit_neg_r i ||
+                     rew_Z_setbit_eq i ||
+                     rew_Z_setbit_neq i ||
+                     rew_Z_testbit_0_l ||
+                     rew_Z_land_spec ||
+                     rew_Z_lor_spec ||
+                     rew_Z_shiftr_spec i ||
+                     rew_Z_lnot_spec i ||
+                     rew_Z_shiftl_spec i ||
+                     rew_testbit_minus1 ||
+                     rew_Z_ones_spec_high i ||
+                     rew_Z_ones_spec_low i ||
+                     rew_testbit_if ||
                      (match goal with
-                      | H1: 0 <= ?a, H2: ?a < ?b |- _ =>
-                          rewrite (testbit_above' a b) by (simpl_log2up; omega)
-                      | H1: - ?b <= ?a, H2: ?a < ?b |- _ =>
-                          rewrite (testbit_above_signed' a b) by (simpl_log2up; omega);
-                          simpl_log2up
-                      | H1: ?a mod ?m = 0 |- _ =>
-                          rewrite (mod0_testbit' a i m) by (simpl_log2up; simpl_pow2; omega)
+                      | H1: 0 <= ?a, H2: ?a < ?b    |- _ => rew_testbit_above' a b
+                      | H1: - ?b <= ?a, H2: ?a < ?b |- _ => rew_testbit_above_signed' a b
+                      | H1: ?a mod ?m = 0          |- _ => rew_mod0_testbit' a i m
                       end)
              end)).
 
