@@ -47,15 +47,9 @@ Proof.
   intros. destruct b; reflexivity.
 Qed.
 
-Lemma then_false_else_true: forall (b: bool),
-    (if b then false else true) = negb b.
-Proof.
-  intros. destruct b; reflexivity.
-Qed.
-
-Hint Rewrite if_same then_true_else_false then_false_else_true : bool_rewriting.
-
 Hint Rewrite
+     if_same
+     then_true_else_false
      Bool.andb_false_r
      Bool.andb_true_r
      Bool.andb_false_l
@@ -133,7 +127,8 @@ Ltac simpl_log2up :=
          end.
 
 Lemma testbit_above': forall n b i,
-    0 <= n < b ->
+    0 <= n ->
+    n < b ->
     0 <= Z.log2_up b ->
     Z.log2_up b <= i ->
     Z.testbit n i = false.
@@ -144,7 +139,8 @@ Proof.
 Qed.
 
 Lemma testbit_above_signed': forall a b i,
-    - b <= a < b ->
+    - b <= a ->
+    a < b ->
     0 < Z.log2_up b ->
     Z.log2_up b < i ->
     Z.testbit a i = Z.testbit a (Z.log2_up b).
@@ -212,26 +208,16 @@ Hint Rewrite
     testbit_if
     using omega: rew_testbit.
 
-Ltac rew_testbit_above' a b :=
-  rewrite (testbit_above' a b) by (simpl_log2up; omega).
-
-Ltac rew_testbit_above_signed' a b :=
-  rewrite (testbit_above_signed' a b) by (simpl_log2up; omega); simpl_log2up.
-
-Ltac rew_mod0_testbit' a i m :=
-  rewrite (mod0_testbit' a i m) by (simpl_log2up; simpl_pow2; omega).
+Hint Rewrite
+     testbit_above'
+     testbit_above_signed'
+     mod0_testbit'
+     using (try eassumption; simpl_log2up; simpl_pow2; try reflexivity; omega): rew_testbit.
 
 Ltac rewrite_testbit :=
-    repeat ((autorewrite with bool_rewriting) ||
-            (match goal with
-             | |- context [ Z.testbit _ ?i ] =>
-                     rewrite_strat (repeat (topdown (hints rew_testbit))) ||
-                     (match goal with
-                      | H1: 0 <= ?a, H2: ?a < ?b    |- _ => rew_testbit_above' a b
-                      | H1: - ?b <= ?a, H2: ?a < ?b |- _ => rew_testbit_above_signed' a b
-                      | H1: ?a mod ?m = 0          |- _ => rew_mod0_testbit' a i m
-                      end)
-             end)).
+  repeat
+    ((rewrite_strat (repeat (topdown (choice (hints bool_rewriting) (hints rew_testbit)))))
+     || unfold negb; simpl_log2up).
 
 Ltac solve_or_split_step :=
     rewrite_testbit;
