@@ -206,18 +206,21 @@ Hint Rewrite
     Z.ones_spec_high
     Z.ones_spec_low
     testbit_if
-    using omega: rew_testbit.
+    using omega
+: rew_testbit.
 
 Hint Rewrite
      testbit_above'
      testbit_above_signed'
      mod0_testbit'
-     using (try eassumption; simpl_log2up; simpl_pow2; try reflexivity; omega): rew_testbit.
+     using (try eassumption; simpl_log2up; simpl_pow2; try reflexivity; omega)
+: rew_testbit_expensive.
 
 Ltac rewrite_testbit :=
   repeat
-    ((rewrite_strat (repeat (topdown (choice (hints bool_rewriting) (hints rew_testbit)))))
-     || unfold negb; simpl_log2up).
+    ((autorewrite with bool_rewriting) ||
+     (rewrite_strat (repeat (topdown (hints rew_testbit)))) ||
+     ((rewrite_strat (repeat (topdown (hints rew_testbit_expensive)))); simpl_log2up)).
 
 Ltac solve_or_split_step :=
     rewrite_testbit;
