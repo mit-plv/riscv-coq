@@ -4,11 +4,15 @@ Require Import Coq.micromega.Lia.
 Require Import riscv.util.Tactics.
 Require Import riscv.util.div_mod_to_quot_rem.
 Require Import riscv.util.ZBitOps.
-
+Require Export Coq.setoid_ring.ZArithRing.
 
 Local Open Scope bool_scope.
 Local Open Scope Z_scope.
 
+
+Tactic Notation "safe_ring_simplify" constr(i) "in" ident(C) :=
+  first [ring_simplify i in C |
+         let t := type of i in fail 1000 "No ring structure found for" t ].
 
 Lemma testbit_minus1: forall i,
     0 <= i ->
@@ -288,6 +292,7 @@ Ltac prove_Zeq_bitwise :=
               then fail
               else (let C := fresh "C" in
                     assert (i < 0 \/ 0 <= i) as C by omega;
+                    safe_ring_simplify i in C;
                     let t := type of C in idtac "splitting on" t;
                     destruct C as [C | C])
             end).
