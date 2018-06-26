@@ -194,50 +194,23 @@ Proof.
   apply (mod0_testbit a i (Z.log2_up m)); assumption.
 Qed.
 
-Ltac rew_Z_lxor_spec :=
-  rewrite Z.lxor_spec.
-
-Ltac rew_Z_ldiff_spec :=
-  rewrite Z.ldiff_spec.
-
-Ltac rew_Z_testbit_neg_r i :=
-  rewrite (Z.testbit_neg_r _ i) by omega.
-
-Ltac rew_Z_setbit_eq i :=
-  rewrite (Z.setbit_eq _ i) by omega.
-
-Ltac rew_Z_setbit_neq i :=
-  rewrite (Z.setbit_neq _ _ i) by omega.
-
-Ltac rew_Z_testbit_0_l :=
-  rewrite Z.testbit_0_l.
-
-Ltac rew_Z_land_spec :=
-  rewrite Z.land_spec.
-
-Ltac rew_Z_lor_spec :=
-  rewrite Z.lor_spec.
-
-Ltac rew_Z_shiftr_spec i :=
-  rewrite (Z.shiftr_spec _ _ i) by omega.
-
-Ltac rew_Z_lnot_spec i :=
-  rewrite (Z.lnot_spec _ i) by omega.
-
-Ltac rew_Z_shiftl_spec i :=
-  rewrite (Z.shiftl_spec _ _ i) by omega.
-
-Ltac rew_testbit_minus1 :=
-  rewrite testbit_minus1 by omega.
-
-Ltac rew_Z_ones_spec_high i :=
-  rewrite (Z.ones_spec_high _ i) by omega.
-
-Ltac rew_Z_ones_spec_low i :=
-  rewrite (Z.ones_spec_low _ i) by omega.
-
-Ltac rew_testbit_if :=
-  rewrite testbit_if.
+Hint Rewrite
+    Z.lxor_spec
+    Z.ldiff_spec
+    Z.testbit_neg_r
+    Z.setbit_eq
+    Z.setbit_neq
+    Z.testbit_0_l
+    Z.land_spec
+    Z.lor_spec
+    Z.shiftr_spec
+    Z.lnot_spec
+    Z.shiftl_spec
+    testbit_minus1
+    Z.ones_spec_high
+    Z.ones_spec_low
+    testbit_if
+    using omega: rew_testbit.
 
 Ltac rew_testbit_above' a b :=
   rewrite (testbit_above' a b) by (simpl_log2up; omega).
@@ -252,21 +225,7 @@ Ltac rewrite_testbit :=
     repeat ((autorewrite with bool_rewriting) ||
             (match goal with
              | |- context [ Z.testbit _ ?i ] =>
-                     rew_Z_lxor_spec ||
-                     rew_Z_ldiff_spec ||
-                     rew_Z_testbit_neg_r i ||
-                     rew_Z_setbit_eq i ||
-                     rew_Z_setbit_neq i ||
-                     rew_Z_testbit_0_l ||
-                     rew_Z_land_spec ||
-                     rew_Z_lor_spec ||
-                     rew_Z_shiftr_spec i ||
-                     rew_Z_lnot_spec i ||
-                     rew_Z_shiftl_spec i ||
-                     rew_testbit_minus1 ||
-                     rew_Z_ones_spec_high i ||
-                     rew_Z_ones_spec_low i ||
-                     rew_testbit_if ||
+                     rewrite_strat (repeat (topdown (hints rew_testbit))) ||
                      (match goal with
                       | H1: 0 <= ?a, H2: ?a < ?b    |- _ => rew_testbit_above' a b
                       | H1: - ?b <= ?a, H2: ?a < ?b |- _ => rew_testbit_above_signed' a b
@@ -281,7 +240,7 @@ Inductive indent: Set :=
 Notation ">>>>" := IndentZero (only printing).
 Notation ".... i" := (IndentMore i) (at level 8, i at level 100, only printing).
 
-Local Ltac solve_or_split ind :=
+Ltac solve_or_split_step ind :=
     rewrite_testbit;
     try solve [f_equal; (reflexivity || omega)];
     match goal with
@@ -292,12 +251,15 @@ Local Ltac solve_or_split ind :=
             assert (i < 0 \/ 0 <= i) as C by omega;
             safe_ring_simplify i in C;
             destruct C as [C | C];
-            let t := type of C in idtac ind "case" t;
-            let ind' := constr:(IndentMore ind) in
-            solve_or_split ind')
+            let t := type of C in idtac ind "case" t)
     end.
 
-Ltac prove_Zeq_bitwise :=
+Ltac solve_or_split ind :=
+  solve_or_split_step ind;
+  let ind' := constr:(IndentMore ind) in
+  solve_or_split ind'.
+
+Ltac prove_Zeq_bitwise_pre :=
     (intuition idtac);
     subst;
     simpl_pow2;
@@ -306,5 +268,6 @@ Ltac prove_Zeq_bitwise :=
     unfold bitSlice, signExtend2 in *;
     apply Z.bits_inj;
     unfold Z.eqf;
-    intro i;
-    solve_or_split IndentZero.
+    intro i.
+
+Ltac prove_Zeq_bitwise := prove_Zeq_bitwise_pre; solve_or_split IndentZero.
