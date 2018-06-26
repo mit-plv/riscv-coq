@@ -274,6 +274,29 @@ Ltac rewrite_testbit :=
                       end)
              end)).
 
+Inductive indent: Set :=
+| IndentZero: indent
+| IndentMore: indent -> indent.
+
+Notation ">>>>" := IndentZero (only printing).
+Notation ".... i" := (IndentMore i) (at level 8, i at level 100, only printing).
+
+Local Ltac solve_or_split ind :=
+    rewrite_testbit;
+    try solve [f_equal; (reflexivity || omega)];
+    match goal with
+    | |- context [Z.testbit _ ?i] =>
+      tryif (first [assert (0 <= i) by omega | assert (i < 0) by omega])
+      then fail
+      else (let C := fresh "C" in
+            assert (i < 0 \/ 0 <= i) as C by omega;
+            safe_ring_simplify i in C;
+            destruct C as [C | C];
+            let t := type of C in idtac ind "case" t;
+            let ind' := constr:(IndentMore ind) in
+            solve_or_split ind')
+    end.
+
 Ltac prove_Zeq_bitwise :=
     (intuition idtac);
     subst;
@@ -284,15 +307,4 @@ Ltac prove_Zeq_bitwise :=
     apply Z.bits_inj;
     unfold Z.eqf;
     intro i;
-    repeat (rewrite_testbit;
-            try solve [f_equal; (reflexivity || omega)];
-            match goal with
-            | |- context [Z.testbit _ ?i] =>
-              tryif (first [assert (0 <= i) by omega | assert (i < 0) by omega])
-              then fail
-              else (let C := fresh "C" in
-                    assert (i < 0 \/ 0 <= i) as C by omega;
-                    safe_ring_simplify i in C;
-                    let t := type of C in idtac "splitting on" t;
-                    destruct C as [C | C])
-            end).
+    solve_or_split IndentZero.
