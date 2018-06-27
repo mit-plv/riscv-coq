@@ -13,8 +13,7 @@ COQDOC=$(COQBIN)coqdoc
 %.vo: %.v
 	$(COQC) $(COQFLAGS) $*.v 
 
-bbv_version_check:
-	./check_dep.sh bbv
+# Note: Also depends on ../bbv, but bbv's version is checked by bedrock2's CI
 
 riscv-semantics_version_check:
 	./check_dep.sh riscv-semantics
@@ -24,7 +23,7 @@ hs-to-coq_version_check:
 
 util: $(patsubst %.v,%.vo,$(wildcard src/util/*.v))
 
-spec: bbv_version_check util $(patsubst %.v,%.vo,$(wildcard src/*.v))
+spec: util $(patsubst %.v,%.vo,$(wildcard src/*.v))
 
 encode: spec $(patsubst %.v,%.vo,$(wildcard src/encode/*.v))
 
