@@ -16,8 +16,6 @@ Section Riscv.
 
   Context {MW: MachineWidth (word wXLEN)}.
 
-  Definition Register0: Register := 0%Z.
-
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
   Context {MP: MonadPlus M}.

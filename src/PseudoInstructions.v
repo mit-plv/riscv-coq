@@ -1,10 +1,10 @@
 Require Import riscv.Decode.
-Require Import riscv.Run.
+Require Import riscv.Program.
 Require Import Coq.ZArith.BinInt.
 
 (* Table 20.2 in the standard *)
 
-Local Definition x0 := Register0.
+Local Notation x0 := Register0.
 
 Definition Nop := Addi x0 x0 0.
 Definition Mov(rd: Register)(rs: Register) := Addi rd rs 0.
