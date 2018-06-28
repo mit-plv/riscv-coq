@@ -10,6 +10,9 @@ class LanguagePrinter(object):
     def writeln(self, line):
         self.outfile.write(self.indent + line + '\n')
 
+    def startln(self):
+        self.outfile.write(self.indent)
+
     def increaseIndent(self):
         self.indent = self.indent + '    '
 
