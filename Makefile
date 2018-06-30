@@ -1,7 +1,7 @@
 
 default_target: spec
 
-COQFLAGS= -Q ../bbv bbv  -R ./src riscv  
+COQFLAGS= -Q ../bbv/theories bbv  -R ./src riscv  
 
 DEPFLAGS:=$(COQFLAGS)
 
