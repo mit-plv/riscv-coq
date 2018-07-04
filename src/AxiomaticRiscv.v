@@ -6,6 +6,8 @@ Require Import riscv.Memory.
 Require Import riscv.Program.
 Require Import riscv.RiscvMachine.
 Require Import riscv.util.BitWidths.
+Require Import riscv.MachineWidth_wXLEN.
+
 
 Set Implicit Arguments.
 

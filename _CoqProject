@@ -1,2 +1,2 @@
--Q ../bbv bbv
+-Q ../bbv/theories bbv
 -R ./src riscv
