@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.BinInt.
+Require Import Coq.setoid_ring.Ring_theory.
 Require Import bbv.Word.
 Require Import bbv.DepEqNat.
 Require Import riscv.util.Monads.
@@ -30,6 +31,9 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   or: t -> t -> t;
   and: t -> t -> t;
 
+  (* bitwidth of type t: *)
+  XLEN: nat;
+  
   (* operations also defined in MachineWidth in Haskell: *)
 
   fromImm: MachineInt -> t;
@@ -71,8 +75,22 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   regToShamt: t -> Z;
 
   highBits: Z -> t;
-}.
 
+  (* additional conversions: *)
+  regToNat: t -> nat;
+  natToReg: nat -> t;
+  ZToReg: Z -> t;
+
+  (* properties of operations: *)
+  regRing: @ring_theory t zero one add mul sub (fun x => sub zero x) (@eq t);
+  (* not sure if needed or useful:
+  natToReg_semimorph: @semi_morph t zero one add mul (@eq t)
+                               nat O (S O) Nat.add Nat.mul Nat.eqb natToReg;
+  ZToReg_morphism: @ring_morph t zero one add mul sub (fun x => sub zero x) (@eq t)
+                               Z Z0 Z.one Z.add Z.mul Z.sub Z.opp Z.eqb ZToReg;
+  *)
+  regToNat_natToReg_idemp: forall n : nat, n < pow2 XLEN -> regToNat (natToReg n) = n;
+}.
 
 Notation "a <|> b" := (or a b)  (at level 50, left associativity) : alu_scope.
 Notation "a <&> b" := (and a b) (at level 40, left associativity) : alu_scope.

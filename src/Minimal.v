@@ -18,19 +18,22 @@ Section Riscv.
 
   Context {MemIsMem: Memory Mem wXLEN}.
 
+  Context {mword: Set}.
+  Context {MW: MachineWidth mword}.
+
   Context {RF: Type}.
-  Context {RFI: RegisterFile RF Register (word wXLEN)}.
+  Context {RFI: RegisterFile RF Register mword}.
 
   Local Notation RiscvMachine := (@RiscvMachine B Mem RF).
 
-  Definition liftLoad{R}(f: Mem -> word wXLEN -> R): word wXLEN -> OState RiscvMachine R :=
+  Definition liftLoad{R}(f: Mem -> mword -> R): mword -> OState RiscvMachine R :=
     fun a => m <- gets machineMem; Return (f m a).
 
-  Definition liftStore{R}(f: Mem -> word wXLEN -> R -> Mem):
-    word wXLEN -> R -> OState RiscvMachine unit :=
+  Definition liftStore{R}(f: Mem -> mword -> R -> Mem):
+    mword -> R -> OState RiscvMachine unit :=
     fun a v => m <- get; put (with_machineMem (f m.(machineMem) a v) m).
   
-  Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) (word wXLEN) :=
+  Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) mword :=
   {|
       getRegister reg :=
         if Z.eq_dec reg Register0 then
@@ -80,7 +83,7 @@ Section Riscv.
      which might contain any undefined garbage values, so the compiler correctness proof
      will show that the program is correct even then, i.e. no initialisation of the registers
      is needed. *)
-  Definition putProgram(prog: list (word 32))(addr: word wXLEN)(ma: RiscvMachine): RiscvMachine :=
+  Definition putProgram(prog: list (word 32))(addr: mword)(ma: RiscvMachine): RiscvMachine :=
     (with_pc addr
     (with_nextPC (addr ^+ $4)
     (with_machineMem (store_word_list prog addr ma.(machineMem)) ma))).

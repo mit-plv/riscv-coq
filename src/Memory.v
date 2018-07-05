@@ -4,115 +4,122 @@ Require Import Coq.omega.Omega.
 Require Import Coq.micromega.Lia.
 Require Import riscv.util.nat_div_mod_to_quot_rem.
 Require Import riscv.util.Tactics.
+Require Import riscv.Utility.
 
-Definition valid_addr{w: nat}(addr: word w)(alignment size: nat): Prop :=
-  wordToNat addr + alignment <= size /\ (wordToNat addr) mod alignment = 0.
+Section ValidAddr.
+
+Context {t: Set}.
+Context {MW: MachineWidth t}.
+
+Definition valid_addr(addr: t)(alignment size: nat): Prop :=
+  regToNat addr + alignment <= size /\ (regToNat addr) mod alignment = 0.
 
 (* Note: alignment refers to addr, not to the range *)
-Definition in_range{w: nat}(addr: word w)(alignment start size: nat): Prop :=
-  start <= wordToNat addr /\
-  wordToNat addr + alignment <= start + size /\
-  wordToNat addr mod alignment = 0.
+Definition in_range(addr: t)(alignment start size: nat): Prop :=
+  start <= regToNat addr /\
+  regToNat addr + alignment <= start + size /\
+  regToNat addr mod alignment = 0.
 
-Definition not_in_range{w: nat}(addr: word w)(alignment start size: nat): Prop :=
-  wordToNat addr + alignment <= start \/ start + size <= wordToNat addr.
+Definition not_in_range(addr: t)(alignment start size: nat): Prop :=
+  regToNat addr + alignment <= start \/ start + size <= regToNat addr.
 
-Definition valid_addr'{w: nat}(addr: word w)(alignment size: nat): Prop :=
+Definition valid_addr'(addr: t)(alignment size: nat): Prop :=
   in_range addr alignment 0 size.
 
-Lemma valid_addr_alt: forall w (addr: word w) alignment size,
+Lemma valid_addr_alt: forall (addr: t) alignment size,
     valid_addr addr alignment size <-> valid_addr' addr alignment size.
 Proof.
   intros. unfold valid_addr, valid_addr', in_range.
   intuition omega.
 Qed.
 
+End ValidAddr.
 
-Class Memory(m: Set)(w: nat) := mkMemory {
+Class Memory(m t: Set)`{MachineWidth t} := mkMemory {
   memSize: m -> nat;
 
-  loadByte   : m -> (word w) -> word  8;
-  loadHalf   : m -> (word w) -> word 16;
-  loadWord   : m -> (word w) -> word 32;
-  loadDouble : m -> (word w) -> word 64;
-  storeByte  : m -> (word w) -> word  8 -> m;
-  storeHalf  : m -> (word w) -> word 16 -> m;
-  storeWord  : m -> (word w) -> word 32 -> m;
-  storeDouble: m -> (word w) -> word 64 -> m;
+  loadByte   : m -> t -> word  8;
+  loadHalf   : m -> t -> word 16;
+  loadWord   : m -> t -> word 32;
+  loadDouble : m -> t -> word 64;
+  storeByte  : m -> t -> word  8 -> m;
+  storeHalf  : m -> t -> word 16 -> m;
+  storeWord  : m -> t -> word 32 -> m;
+  storeDouble: m -> t -> word 64 -> m;
 
   memSize_bound: forall m,
-    memSize m <= 2^w;
+    memSize m <= 2^XLEN;
 
   memSize_mod8: forall m,
     memSize m mod 8 = 0;
   
-  loadStoreByte_eq: forall m (a1 a2: word w) v,
+  loadStoreByte_eq: forall m (a1 a2: t) v,
     valid_addr a1 1 (memSize m) ->
     a2 = a1 ->
     loadByte (storeByte m a1 v) a2 = v;
 
-  loadStoreByte_ne: forall m (a1 a2: word w) v,
+  loadStoreByte_ne: forall m (a1 a2: t) v,
     valid_addr a1 1 (memSize m) ->
     valid_addr a2 1 (memSize m) ->
     a2 <> a1 ->
     loadByte (storeByte m a1 v) a2 = loadByte m a2;
 
-  storeByte_preserves_memSize: forall m (a: word w) v,
+  storeByte_preserves_memSize: forall m (a: t) v,
     memSize (storeByte m a v) = memSize m;
 
-  loadStoreHalf_eq: forall m (a1 a2: word w) v,
+  loadStoreHalf_eq: forall m (a1 a2: t) v,
     valid_addr a1 2 (memSize m) ->
     a2 = a1 ->
     loadHalf (storeHalf m a1 v) a2 = v;
 
-  loadStoreHalf_ne: forall m (a1 a2: word w) v,
+  loadStoreHalf_ne: forall m (a1 a2: t) v,
     valid_addr a1 2 (memSize m) ->
     valid_addr a2 2 (memSize m) ->
     a2 <> a1 ->
     loadHalf (storeHalf m a1 v) a2 = loadHalf m a2;
 
-  storeHalf_preserves_memSize: forall m (a: word w) v,
+  storeHalf_preserves_memSize: forall m (a: t) v,
     memSize (storeHalf m a v) = memSize m;
 
-  loadStoreWord_eq: forall m (a1 a2: word w) v,
+  loadStoreWord_eq: forall m (a1 a2: t) v,
     valid_addr a1 4 (memSize m) ->
     a2 = a1 ->
     loadWord (storeWord m a1 v) a2 = v;
 
-  loadStoreWord_ne: forall m (a1 a2: word w) v,
+  loadStoreWord_ne: forall m (a1 a2: t) v,
     valid_addr a1 4 (memSize m) ->
     valid_addr a2 4 (memSize m) ->
     a2 <> a1 ->
     loadWord (storeWord m a1 v) a2 = loadWord m a2;
 
-  storeWord_preserves_memSize: forall m (a: word w) v,
+  storeWord_preserves_memSize: forall m (a: t) v,
     memSize (storeWord m a v) = memSize m;
 
-  loadStoreDouble_eq: forall m (a1 a2: word w) v,
+  loadStoreDouble_eq: forall m (a1 a2: t) v,
     valid_addr a1 8 (memSize m) ->
     a2 = a1 ->
     loadDouble (storeDouble m a1 v) a2 = v;
 
-  loadStoreDouble_ne: forall m (a1 a2: word w) v,
+  loadStoreDouble_ne: forall m (a1 a2: t) v,
     valid_addr a1 8 (memSize m) ->
     valid_addr a2 8 (memSize m) ->
     a2 <> a1 ->
     loadDouble (storeDouble m a1 v) a2 = loadDouble m a2;
 
-  storeDouble_preserves_memSize: forall m (a: word w) v,
+  storeDouble_preserves_memSize: forall m (a: t) v,
     memSize (storeDouble m a v) = memSize m;
 
   loadHalf_spec: forall m a,
     valid_addr a 2 (memSize m) ->
-    loadHalf m a = combine (loadByte m a) (loadByte m (a ^+ $1));
+    loadHalf m a = combine (loadByte m a) (loadByte m (add a one));
 
   loadWord_spec: forall m a,
     valid_addr a 4 (memSize m) ->
-    loadWord m a = combine (loadHalf m a) (loadHalf m (a ^+ $2));
+    loadWord m a = combine (loadHalf m a) (loadHalf m (add a two));
 
   loadDouble_spec: forall m a,
     valid_addr a 8 (memSize m) ->
-    loadDouble m a = combine (loadWord m a) (loadWord m (a ^+ $4));
+    loadDouble m a = combine (loadWord m a) (loadWord m (add a four));
 
   (* Note: No storeHalf_spec, storeWord_spec, storeDouble_spec, because we don't
      want to compare memories with = (too restrictive for implementors), nor start
@@ -122,7 +129,7 @@ Class Memory(m: Set)(w: nat) := mkMemory {
      which the store was done. *)
 }.
 
-Lemma valid_addr_8_4: forall {w: nat} (addr: word w) size,
+Lemma valid_addr_8_4: forall {t: Set} {MW: MachineWidth t} (addr: t) size,
     valid_addr addr 8 size ->
     valid_addr addr 4 size.
 Proof.
@@ -278,31 +285,34 @@ Ltac mem_simpl :=
 
 Section MemoryHelpers.
 
-  Context {sz: nat}.
   Context {Mem: Set}.
-  Context {MM: Memory Mem sz}.
-  Hypothesis pow2_sz_4: 4 < pow2 sz.
+  Context {t: Set}.
+  Context {MW: MachineWidth t}.
+  Context {MM: Memory Mem t}.
+  Hypothesis pow2_sz_4: 4 < pow2 XLEN.
 
-  Lemma loadWord_storeDouble_ne: forall m (a1 a2: word sz) v,
+  Add Ring tring: (@regRing t MW).
+
+  Lemma loadWord_storeDouble_ne: forall m (a1 a2: t) v,
       valid_addr a1 8 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
       a2 <> a1 ->
-      a2 <> a1 ^+ $4 ->
+      a2 <> add a1 four ->
       loadWord (storeDouble m a1 v) a2 = loadWord m a2.
   Proof.
     intros.
     pose proof (memSize_bound m) as B.
     pose proof loadStoreDouble_ne as P.
     specialize P with (1 := H).
-    destruct (mod2_cases (#a2 / 4)) as [C | C].
+    destruct (mod2_cases (regToNat a2 / 4)) as [C | C].
     - specialize (P a2 v).
       assert (valid_addr a2 8 (memSize m)) as V. {
         unfold valid_addr in *.
         destruct H, H0.
-        assert (#a2 mod 8 = 0). {
+        assert (regToNat a2 mod 8 = 0). {
           apply Nat.mod_divide; try congruence.
           change 8 with (2 * 4).
-          replace #a2 with (#a2 / 4 * 4).
+          replace (regToNat a2) with (regToNat a2 / 4 * 4).
           - apply Nat.mul_divide_mono_r.
             apply Nat.mod_divide; try congruence.
           - apply div_mul_undo; congruence.
@@ -319,21 +329,21 @@ Section MemoryHelpers.
       pose proof combine_inj as Q.
       specialize (Q 32 32 _ _ _ _ P).
       destruct Q as [Q _]. assumption.
-    - specialize (P (a2 ^- $4) v).
-      assert (#a2 = 0 \/ #a2 = 1 \/ #a2 = 2 \/ #a2 = 3 \/ 4 <= #a2) as D by omega.
+    - specialize (P (sub a2 four) v).
+      assert (regToNat a2 = 0 \/ regToNat a2 = 1 \/ regToNat a2 = 2 \/ regToNat a2 = 3 \/ 4 <= regToNat a2) as D by omega.
       destruct D as [D | [D | [D | [D | D]]]];
         [ (rewrite D in C; simpl in C; discriminate) .. | ].
-      pose proof (loadDouble_spec              m       (a2 ^- $ (4))) as Sp1.
-      pose proof (loadDouble_spec (storeDouble m a1 v) (a2 ^- $ (4))) as Sp2.
+      pose proof (loadDouble_spec              m       (sub a2 four)) as Sp1.
+      pose proof (loadDouble_spec (storeDouble m a1 v) (sub a2 four)) as Sp2.
       unfold valid_addr in *.
       destruct H, H0.
       rewrite storeDouble_preserves_memSize in Sp2.
-      replace (# (a2 ^- $4)) with (#a2 - 4) in *.
-      + assert ((#a2 - 4) mod 8 = 0) as X. {
+      replace (regToNat  (sub a2 four)) with (regToNat a2 - 4) in *.
+      + assert ((regToNat a2 - 4) mod 8 = 0) as X. {
           clear Sp1 Sp2.
           apply Nat.mod_divide; try congruence.
           change 8 with (2 * 4).
-          assert (((#a2 - 4) / 4) mod 2 = 0) as F. {
+          assert (((regToNat a2 - 4) / 4) mod 2 = 0) as F. {
             apply Nat.mod_divides in H4; [ | congruence].
             destruct H4 as [k Y]. rewrite Y in C|-*.
             destruct k; [omega|].
@@ -341,7 +351,7 @@ Section MemoryHelpers.
             rewrite mul_div_undo in * by congruence.
             apply Smod2_1. assumption.
           }
-          replace (#a2 - 4) with ((#a2 - 4) / 4 * 4).
+          replace (regToNat a2 - 4) with ((regToNat a2 - 4) / 4 * 4).
           - apply Nat.mul_divide_mono_r.
             apply Nat.mod_divide; congruence.
           - apply div_mul_undo; try congruence.
@@ -352,31 +362,31 @@ Section MemoryHelpers.
             rewrite mul_div_undo in * by congruence.
             omega.
         }
-        assert (#a2 - 4 + 8 <= memSize m) as A by omega.
+        assert (regToNat a2 - 4 + 8 <= memSize m) as A by omega.
         specialize (P (conj A X)).
         rewrite Sp1 in P by (split; assumption). clear Sp1.
         rewrite Sp2 in P by (split; assumption). clear Sp2.
-        assert (a2 ^- $4 <> a1) as Ne. {
+        assert (sub a2 four <> a1) as Ne. {
           clear -H2.
           intro. subst. apply H2.
-          symmetry. apply wminus_wplus_undo.
+          ring.
         }
         specialize (P Ne).
         pose proof combine_inj as Q.
         specialize (Q 32 32 _ _ _ _ P).
         destruct Q as [_ Q].
-        rewrite wminus_wplus_undo in Q.
+        ring_simplify (add (sub a2 four) four) in Q.
         assumption.
-      + rewrite wminus_minus.
+      + Check natToReg_semimorph.  rewrite wminus_minus.
         * rewrite wordToNat_natToWord_idempotent'; [reflexivity|omega].
         * apply wordToNat_le2.
           rewrite wordToNat_natToWord_idempotent'; omega.
   Qed.
 
-  Lemma loadWord_storeDouble_ne': forall (m : Mem) (a1 a2 : word sz) (v : word 64),
+  Lemma loadWord_storeDouble_ne': forall (m : Mem) (a1 a2 : t) (v : word 64),
       in_range a1 8 0 (memSize m) ->
       in_range a2 4 0 (memSize m) ->
-      not_in_range a2 4 #a1 8 -> (* a2 (4 bytes big) is not in the 8-byte range starting at a1 *)
+      not_in_range a2 4 regToNat a1 8 -> (* a2 (4 bytes big) is not in the 8-byte range starting at a1 *)
       loadWord (storeDouble m a1 v) a2 = loadWord m a2.
   Proof.
     intros.
@@ -390,49 +400,49 @@ Section MemoryHelpers.
     try omega. 
   Qed.
 
-  Fixpoint store_byte_list(l: list (word 8))(a: word sz)(m: Mem): Mem :=
+  Fixpoint store_byte_list(l: list (word 8))(a: t)(m: Mem): Mem :=
     match l with
     | nil => m
     | cons w l' => let m' := storeByte m a w in store_byte_list l' (a ^+ $1) m'
     end.
 
-  Fixpoint load_byte_list(m: Mem)(start: word sz)(count: nat): list (word 8) :=
+  Fixpoint load_byte_list(m: Mem)(start: t)(count: nat): list (word 8) :=
     match count with
     | S c => loadByte m start :: load_byte_list m (start ^+ $1) c
     | O => nil
     end.
 
-  Fixpoint store_half_list(l: list (word 16))(a: word sz)(m: Mem): Mem :=
+  Fixpoint store_half_list(l: list (word 16))(a: t)(m: Mem): Mem :=
     match l with
     | nil => m
     | cons w l' => let m' := storeHalf m a w in store_half_list l' (a ^+ $2) m'
     end.
 
-  Fixpoint load_half_list(m: Mem)(start: word sz)(count: nat): list (word 16) :=
+  Fixpoint load_half_list(m: Mem)(start: t)(count: nat): list (word 16) :=
     match count with
     | S c => loadHalf m start :: load_half_list m (start ^+ $2) c
     | O => nil
     end.
 
-  Fixpoint store_word_list(l: list (word 32))(a: word sz)(m: Mem): Mem :=
+  Fixpoint store_word_list(l: list (word 32))(a: t)(m: Mem): Mem :=
     match l with
     | nil => m
     | cons w l' => let m' := storeWord m a w in store_word_list l' (a ^+ $4) m'
     end.
 
-  Fixpoint load_word_list(m: Mem)(start: word sz)(count: nat): list (word 32) :=
+  Fixpoint load_word_list(m: Mem)(start: t)(count: nat): list (word 32) :=
     match count with
     | S c => loadWord m start :: load_word_list m (start ^+ $4) c
     | O => nil
     end.
 
-  Fixpoint store_double_list(l: list (word 64))(a: word sz)(m: Mem): Mem :=
+  Fixpoint store_double_list(l: list (word 64))(a: t)(m: Mem): Mem :=
     match l with
     | nil => m
     | cons w l' => let m' := storeDouble m a w in store_double_list l' (a ^+ $8) m'
     end.
 
-  Fixpoint load_double_list(m: Mem)(start: word sz)(count: nat): list (word 64) :=
+  Fixpoint load_double_list(m: Mem)(start: t)(count: nat): list (word 64) :=
     match count with
     | S c => loadDouble m start :: load_double_list m (start ^+ $8) c
     | O => nil
@@ -482,9 +492,9 @@ Section MemoryHelpers.
     intros. eapply store_word_list_preserves_memSize_aux. reflexivity.
   Qed.
  
-  Lemma loadWord_before_store_word_list: forall l (m: Mem) (a1 a2: word sz),
-      #a1 + 4 <= #a2 ->
-      #a2 + 4 * (length l) <= (memSize m) ->
+  Lemma loadWord_before_store_word_list: forall l (m: Mem) (a1 a2: t),
+      regToNat a1 + 4 <= regToNat a2 ->
+      regToNat a2 + 4 * (length l) <= (memSize m) ->
       valid_addr a1 4 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
       loadWord (store_word_list l a2 m) a1  = loadWord m a1.
@@ -496,8 +506,8 @@ Section MemoryHelpers.
     - rewrite IHl; mem_simpl.
   Qed.
 
-  Lemma loadWord_after_store_word_list: forall l (m: Mem) (a1 a2: word sz),
-      #a2 + 4 * (length l) <= #a1 ->
+  Lemma loadWord_after_store_word_list: forall l (m: Mem) (a1 a2: t),
+      regToNat a2 + 4 * (length l) <= regToNat a1 ->
       valid_addr a1 4 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
       loadWord (store_word_list l a2 m) a1 = loadWord m a1.
@@ -510,8 +520,8 @@ Section MemoryHelpers.
   Qed.
 
   Lemma loadWord_outside_store_word_list: forall l (m: Mem) a1 a2,
-      not_in_range a1 4 #a2 (4 * length l) ->
-      #a2 + 4 * length l <= memSize m ->
+      not_in_range a1 4 regToNat a2 (4 * length l) ->
+      regToNat a2 + 4 * length l <= memSize m ->
       valid_addr a1 4 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
       loadWord (store_word_list l a2 m) a1 = loadWord m a1.
@@ -524,7 +534,7 @@ Section MemoryHelpers.
   Local Arguments Nat.div: simpl never.
   Local Arguments nth: simpl never.
 
-  Lemma wminus_diag: forall sz (w: word sz),
+  Lemma wminus_diag: forall sz (w: t),
       w ^- w = $0.
   Proof.
     intros. unfold wminus. apply wminus_inv.
@@ -532,9 +542,9 @@ Section MemoryHelpers.
 
   Lemma loadWord_inside_store_word_list_aux: forall l (m: Mem) i offset,
       i < length l ->
-      #offset + 4 * length l <= memSize m ->
+      regToNat offset + 4 * length l <= memSize m ->
       valid_addr offset 4 (memSize m) ->
-      loadWord (store_word_list l offset m) $(#offset + 4 * i) = nth i l $0.
+      loadWord (store_word_list l offset m) $(regToNat offset + 4 * i) = nth i l $0.
   Proof.
     induction l; intros; unfold in_range in *; simpl in *; mem_simpl.
     destruct_list_length; simpl in *.
@@ -547,13 +557,13 @@ Section MemoryHelpers.
   Qed.
   
   Lemma loadWord_inside_store_word_list: forall l (m: Mem) addr offset,
-      in_range addr 4 #offset (4 * length l) ->
-      #offset + 4 * length l <= memSize m ->
+      in_range addr 4 regToNat offset (4 * length l) ->
+      regToNat offset + 4 * length l <= memSize m ->
       valid_addr offset 4 (memSize m) ->
-      loadWord (store_word_list l offset m) addr = nth (# (addr ^- offset) / 4) l $0.
+      loadWord (store_word_list l offset m) addr = nth (regToNat  (addr ^- offset) / 4) l $0.
   Proof.
     intros. unfold in_range in *.
-    rewrite <- (loadWord_inside_store_word_list_aux l m (# (addr ^- offset) / 4) offset);
+    rewrite <- (loadWord_inside_store_word_list_aux l m (regToNat  (addr ^- offset) / 4) offset);
       try assumption.
     (* TODO this should be in mem_simpl too *)
     - repeat f_equal. rewrite wminus_minus' by omega.
@@ -566,9 +576,9 @@ Section MemoryHelpers.
       rewrite sub_mod_0; omega.
   Qed.
   
-  Lemma loadDouble_before_store_word_list: forall l (m: Mem) (a1 a2: word sz),
-      #a1 + 8 <= #a2 ->
-      #a2 + 4 * (length l) <= (memSize m) ->
+  Lemma loadDouble_before_store_word_list: forall l (m: Mem) (a1 a2: t),
+      regToNat a1 + 8 <= regToNat a2 ->
+      regToNat a2 + 4 * (length l) <= (memSize m) ->
       valid_addr a1 8 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
       loadDouble (store_word_list l a2 m) a1  = loadDouble m a1.
@@ -580,8 +590,8 @@ Section MemoryHelpers.
     - rewrite IHl; mem_simpl.
   Qed.
 
-  Lemma loadDouble_after_store_word_list: forall l (m: Mem) (a1 a2: word sz),
-      #a2 + 4 * (length l) <= #a1 ->
+  Lemma loadDouble_after_store_word_list: forall l (m: Mem) (a1 a2: t),
+      regToNat a2 + 4 * (length l) <= regToNat a1 ->
       valid_addr a1 8 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
       loadDouble (store_word_list l a2 m) a1  = loadDouble m a1.
@@ -594,8 +604,8 @@ Section MemoryHelpers.
   Qed.
 
   Lemma loadDouble_outside_store_word_list: forall l (m: Mem) a1 a2,
-      not_in_range a1 8 #a2 (4 * length l) ->
-      #a2 + 4 * length l <= memSize m ->
+      not_in_range a1 8 regToNat a2 (4 * length l) ->
+      regToNat a2 + 4 * length l <= memSize m ->
       valid_addr a1 8 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
       loadDouble (store_word_list l a2 m) a1 = loadDouble m a1.
@@ -610,8 +620,8 @@ Section MemoryHelpers.
   Lemma load_store_word_list_eq: forall l (m: Mem) ll a1 a2,
       a2 = a1 ->
       ll = length l ->
-      #a1 mod 4 = 0 ->
-      #a1 + 4 * (length l) <= memSize m ->
+      regToNat a1 mod 4 = 0 ->
+      regToNat a1 + 4 * (length l) <= memSize m ->
       load_word_list (store_word_list l a1 m) a2 ll = l.
   Proof.
     induction l; intros; subst; simpl in *; try congruence.
