@@ -6,6 +6,9 @@ Require Import riscv.util.Monads.
 Require Import riscv.util.BitWidths.
 Require Export riscv.util.ZBitOps.
 
+
+Local Open Scope Z_scope.
+
 (* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
    no matter whether it's a 32-bit or 64-bit machine. *)
 Definition MachineInt := Z.
@@ -32,7 +35,7 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   and: t -> t -> t;
 
   (* bitwidth of type t: *)
-  XLEN: nat;
+  XLEN: Z;
   
   (* operations also defined in MachineWidth in Haskell: *)
 
@@ -77,20 +80,62 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   highBits: Z -> t;
 
   (* additional conversions: *)
-  regToNat: t -> nat;
-  natToReg: nat -> t;
   ZToReg: Z -> t;
 
   (* properties of operations: *)
+  (* TODO list separately to make them more discoverable by "Search" *)
   regRing: @ring_theory t zero one add mul sub (fun x => sub zero x) (@eq t);
-  (* not sure if needed or useful:
-  natToReg_semimorph: @semi_morph t zero one add mul (@eq t)
-                               nat O (S O) Nat.add Nat.mul Nat.eqb natToReg;
   ZToReg_morphism: @ring_morph t zero one add mul sub (fun x => sub zero x) (@eq t)
                                Z Z0 Z.one Z.add Z.mul Z.sub Z.opp Z.eqb ZToReg;
-  *)
+  (* not sure if needed or useful:
+  regToNat: t -> nat;
+  natToReg: nat -> t;
+  natToReg_semimorph: @semi_morph t zero one add mul (@eq t)
+                               nat O (S O) Nat.add Nat.mul Nat.eqb natToReg;
   regToNat_natToReg_idemp: forall n : nat, n < pow2 XLEN -> regToNat (natToReg n) = n;
+  *)
+
+  regToZ_signed_bounds: forall a, - 2 ^ (XLEN - 1) <= regToZ_signed a < 2 ^ (XLEN - 1);
+  regToZ_unsigned_bounds: forall a, 0 <= regToZ_unsigned a < 2 ^ XLEN;
+
+  add_def_signed: forall a b, add a b = ZToReg (regToZ_signed a + regToZ_signed b);
+  sub_def_signed: forall a b, sub a b = ZToReg (regToZ_signed a - regToZ_signed b);
+  mul_def_signed: forall a b, mul a b = ZToReg (regToZ_signed a * regToZ_signed b);
+  (* TODO check corner cases of div and mod
+  div_def: forall a b, div a b = ZToReg (regToZ_signed a / regToZ_signed b);
+  rem_def: forall a b, rem a b = ZToReg (regToZ_signed a mod regToZ_signed b);
+  *)
+
+  regToZ_ZToReg_signed: forall n : Z,
+      - 2 ^ (XLEN - 1) <= n < 2 ^ (XLEN - 1) ->
+      regToZ_signed (ZToReg n) = n;
+
+  ZToReg_regToZ_unsigned: forall a: t, ZToReg (regToZ_unsigned a) = a;
+  ZToReg_regToZ_signed: forall a: t, ZToReg (regToZ_signed a) = a;
 }.
+
+
+Section DerivedProperties.
+
+  Context {t: Set}.
+  Context {MW: MachineWidth t}.
+
+  Lemma add_def_unsigned: forall a b, add a b = ZToReg (regToZ_unsigned a + regToZ_unsigned b).
+  Admitted.
+  
+  Lemma sub_def_unsigned: forall a b, sub a b = ZToReg (regToZ_unsigned a - regToZ_unsigned b).
+  Admitted.
+  
+  Lemma mul_def_unsigned: forall a b, mul a b = ZToReg (regToZ_unsigned a * regToZ_unsigned b).
+  Admitted.
+
+  Lemma regToZ_ZToReg_unsigned: forall n : Z,
+      (0 <= n < 2 ^ XLEN)%Z ->
+      regToZ_unsigned (ZToReg n) = n.
+  Admitted.
+  
+  
+End DerivedProperties.  
 
 Notation "a <|> b" := (or a b)  (at level 50, left associativity) : alu_scope.
 Notation "a <&> b" := (and a b) (at level 40, left associativity) : alu_scope.
