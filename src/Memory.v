@@ -1,5 +1,6 @@
 Require Import Coq.Lists.List.
 Require Import bbv.Word.
+Require Import bbv.ZLib.
 Require Import Coq.omega.Omega.
 Require Import Coq.micromega.Lia.
 Require Import riscv.util.div_mod_to_quot_rem.
@@ -259,25 +260,89 @@ Ltac demod :=
 
 (* destruct list length without destructing the cons to avoid unwanted simpls *)
 Lemma destruct_list_length: forall A (l: list A),
-    l = nil /\ length l = O \/ length l = S (pred (length l)).
+    l = nil \/ 0 < Zlength l.
 Proof.
-  intros. destruct l; simpl; auto.
+  intros. destruct l; cbv; auto.
 Qed.
+
+Lemma Zlength_cons: forall {A: Type} (a: A) (l: list A),
+    Zlength (a :: l) = Zlength l + 1.
+Proof.
+  intros.
+  simpl.
+  unfold Zlength.
+  change (length (a :: l)) with (S (length l)).
+  rewrite Nat2Z.inj_succ.
+  reflexivity.
+Qed.
+
+Lemma Zlength_nil: forall {A: Type}, Zlength (@nil A) = 0.
+Proof.
+  intros. reflexivity.
+Qed.
+
+Hint Rewrite @Zlength_nil @Zlength_cons : rew_Zlist.
 
 Ltac destruct_list_length :=
   match goal with
-  | _: context [length ?L] |- _ =>
+  | _: context [Zlength ?L] |- _ =>
        is_var L;
-       destruct (destruct_list_length _ L) as [ [ ? ? ] | ? ]; [ subst L | ]
+       destruct (destruct_list_length _ L) as [ ? | ? ]; [ subst L | ]
   end.
 
-Ltac womega_pre :=
-  match goal with
-  | |- ~ (@eq (word _) _ _) => apply wordToNat_neq2
-  | |-   (@eq (word _) _ _) => apply wordToNat_eq2
-  end.
+Section MachineWidthHelpers.
+  Context {t: Set}.
+  Context {MW: MachineWidth t}.
 
-Ltac womega := womega_pre; omega.
+  Lemma pow2_sz_4: 4 < 2 ^ XLEN.
+  Proof.
+    pose proof XLEN_lbound.
+    change 4 with (2 ^ 2).
+    apply Z.pow_lt_mono_r; omega.
+  Qed.
+
+  Lemma regToZ_unsigned_eq: forall (a b: t), regToZ_unsigned a = regToZ_unsigned b -> a = b.
+  Proof.
+    intros.
+    rewrite <- (ZToReg_regToZ_unsigned a).
+    rewrite <- (ZToReg_regToZ_unsigned b).
+    congruence.
+  Qed.
+
+  Lemma regToZ_unsigned_neq: forall (a b: t), regToZ_unsigned a <> regToZ_unsigned b -> a <> b.
+  Proof.
+    intros.
+    intro C.
+    subst b.
+    apply H.
+    reflexivity.
+  Qed.
+
+  Lemma regToZ_unsigned_one: regToZ_unsigned one = 1.
+  Proof.
+    intros. rewrite <- ZToReg_morphism.(morph1).
+    apply regToZ_ZToReg_unsigned. pose proof pow2_sz_4. omega.
+  Qed.
+
+  Lemma regToZ_unsigned_two: regToZ_unsigned two = 2.
+  Proof.
+    intros. unfold two. rewrite add_def_unsigned.
+    rewrite regToZ_unsigned_one.
+    apply regToZ_ZToReg_unsigned. pose proof pow2_sz_4. omega.
+  Qed.
+  
+  Lemma regToZ_unsigned_four: regToZ_unsigned four = 4.
+  Proof.
+    intros. unfold four. rewrite add_def_unsigned.
+    rewrite regToZ_unsigned_two.
+    apply regToZ_ZToReg_unsigned. pose proof pow2_sz_4. omega.
+  Qed.
+
+End MachineWidthHelpers.
+
+Ltac regOmega_pre := apply regToZ_unsigned_eq || apply regToZ_unsigned_neq.
+
+Ltac regOmega := regOmega_pre; omega.
 
 (*
 Hint Rewrite
@@ -297,14 +362,39 @@ Ltac pose_mem_proofs :=
          | H: valid_addr _ 8 _ |- _ => unique pose proof (valid_addr_8_4 _ _ H)
          end.
 
+Ltac pose_regToZ_unsigned_bounds :=
+  repeat so fun hyporgoal => match hyporgoal with
+  | context [regToZ_unsigned ?a] => unique pose proof (regToZ_unsigned_bounds a)
+  end.
+
 Ltac word_nat_rewrites :=
   rewrite? wordToNat_wplus';
   rewrite? wordToNat_natToWord_idempotent' by omega.
 
+Hint Rewrite
+     @regToZ_ZToReg_unsigned
+     using omega
+  : rew_MachineWidth.
+Hint Rewrite
+     @add_def_unsigned
+     @regToZ_unsigned_four
+  : rew_MachineWidth.
+
+Hint Rewrite mod_add_r using omega : rew_Z.
+Hint Rewrite @storeWord_preserves_memSize : rew_mem.
+
+Ltac mem_sideconditions :=
+  unfold valid_addr in *;
+  pose_mem_proofs;
+  pose_regToZ_unsigned_bounds;
+  try regOmega_pre;
+  repeat autorewrite with rew_Zlist rew_MachineWidth rew_Z rew_mem in *;
+  try omega.
+
 Ltac mem_simpl :=
   pose_mem_proofs;
   unfold valid_addr in *;
-  try womega_pre;
+  try regOmega_pre;
   repeat (
       autorewrite with nats in *;
       rewrite? storeWord_preserves_memSize in *;
@@ -324,30 +414,19 @@ Section MemoryHelpers.
   Context {t: Set}.
   Context {MW: MachineWidth t}.
   Context {MM: Memory Mem t}.
-  Hypothesis pow2_sz_4: 4 < 2 ^ XLEN.
 
   Add Ring tring: (@regRing t MW).
 
-  Lemma regToZ_unsigned_one: regToZ_unsigned one = 1.
+  Lemma regToZ_unsigned_add_so_simple_not_worth_using: forall a b,
+      0 <= regToZ_unsigned a + regToZ_unsigned b < 2 ^ XLEN ->
+      regToZ_unsigned (add a b) = regToZ_unsigned a + regToZ_unsigned b.
   Proof.
-    intros. rewrite <- ZToReg_morphism.(morph1).
-    apply regToZ_ZToReg_unsigned. omega.
-  Qed.
-
-  Lemma regToZ_unsigned_two: regToZ_unsigned two = 2.
-  Proof.
-    intros. unfold two. rewrite add_def_unsigned.
-    rewrite regToZ_unsigned_one.
-    apply regToZ_ZToReg_unsigned. omega.
+    intros.
+    rewrite add_def_unsigned.
+    apply regToZ_ZToReg_unsigned in H.
+    exact H.
   Qed.
   
-  Lemma regToZ_unsigned_four: regToZ_unsigned four = 4.
-  Proof.
-    intros. unfold four. rewrite add_def_unsigned.
-    rewrite regToZ_unsigned_two.
-    apply regToZ_ZToReg_unsigned. omega.
-  Qed.
-
   Lemma loadWord_storeDouble_ne: forall m (a1 a2: t) v,
       valid_addr a1 8 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
@@ -359,7 +438,6 @@ Section MemoryHelpers.
     pose proof (memSize_bound m) as B.
     pose proof loadStoreDouble_ne as P.
     specialize P with (1 := H).
-    Search (_ mod 2)%Z.
     destruct (ZLib.mod2_cases (regToZ_unsigned a2 / 4)) as [C | C].
     - specialize (P a2 v).
       assert (valid_addr a2 8 (memSize m)) as V. {
@@ -540,6 +618,10 @@ Section MemoryHelpers.
     ring.
   Qed.
 
+  Lemma store_word_list_nil: forall a m,
+      store_word_list nil a m = m.
+  Proof. intros. reflexivity. Qed.
+
   Lemma store_word_list_preserves_memSize_aux: forall ll (m: Mem) a l,
       length l = ll ->
       memSize (store_word_list l a m) = memSize m.
@@ -556,7 +638,7 @@ Section MemoryHelpers.
   Proof.
     intros. eapply store_word_list_preserves_memSize_aux. reflexivity.
   Qed.
- 
+
   Lemma loadWord_before_store_word_list: forall l (m: Mem) (a1 a2: t),
       regToZ_unsigned a1 + 4 <= regToZ_unsigned a2 ->
       regToZ_unsigned a2 + 4 * (Zlength l) <= (memSize m) ->
@@ -564,33 +646,33 @@ Section MemoryHelpers.
       valid_addr a2 4 (memSize m) ->
       loadWord (store_word_list l a2 m) a1 = loadWord m a1.
   Proof.
-    induction l; intros; unfold store_word_list in *; simpl in *; try reflexivity.
-    mem_simpl.
-    destruct_list_length; simpl in *.
-    - mem_simpl.
-    - rewrite IHl; mem_simpl.
-  Qed.
-
-  Proof.
-    induction l; intros; simpl in *; try congruence.
-    mem_simpl.
-    destruct_list_length; simpl in *.
-    - mem_simpl.
-    - rewrite IHl; mem_simpl.
-  Qed.
+    induction l; intros; simpl in *; try reflexivity.
+    rewrite store_word_list_cons.
+    destruct_list_length.
+    - rewrite store_word_list_nil.
+      rewrite loadStoreWord_ne; mem_sideconditions.
+      reflexivity.
+    - rewrite IHl by mem_sideconditions.
+      rewrite loadStoreWord_ne; mem_sideconditions.
+      reflexivity.
+  Qed.      
 
   Lemma loadWord_after_store_word_list: forall l (m: Mem) (a1 a2: t),
-      regToZ_unsigned a2 + 4 * (length l) <= regToZ_unsigned a1 ->
+      regToZ_unsigned a2 + 4 * (Zlength l) <= regToZ_unsigned a1 ->
       valid_addr a1 4 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
       loadWord (store_word_list l a2 m) a1 = loadWord m a1.
   Proof.
-    induction l; intros; simpl in *; try congruence.
-    mem_simpl.
-    destruct_list_length; simpl in *.
-    - mem_simpl.
-    - rewrite IHl; mem_simpl.
-  Qed.
+    induction l; intros; simpl in *; try reflexivity.
+    rewrite store_word_list_cons.
+    destruct_list_length.
+    - rewrite store_word_list_nil.
+      rewrite loadStoreWord_ne; mem_sideconditions.
+      reflexivity.
+    - rewrite IHl by mem_sideconditions.
+      rewrite loadStoreWord_ne; mem_sideconditions.
+      reflexivity.
+  Qed.      
 
   Lemma loadWord_outside_store_word_list: forall l (m: Mem) a1 a2,
       not_in_range a1 4 (regToZ_unsigned a2) (4 * Zlength l) ->

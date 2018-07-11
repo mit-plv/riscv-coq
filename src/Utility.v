@@ -112,6 +112,8 @@ Class MachineWidth(t: Set) := mkMachineWidth {
 
   ZToReg_regToZ_unsigned: forall a: t, ZToReg (regToZ_unsigned a) = a;
   ZToReg_regToZ_signed: forall a: t, ZToReg (regToZ_signed a) = a;
+
+  XLEN_lbound: 8 <= XLEN;
 }.
 
 
