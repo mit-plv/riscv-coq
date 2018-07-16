@@ -2,6 +2,7 @@ Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
 Require Import riscv.Utility.
 
+Definition TODO{T: Type}: T. Admitted.
 
 Instance MachineWidth32: MachineWidth (word 32) := {|
   zero := $0;
@@ -46,6 +47,8 @@ Instance MachineWidth32: MachineWidth (word 32) := {|
   regToShamt  x := Z.of_N (wordToN (split1 5 27 x));
   highBits x := ZToWord 32 (bitSlice x 32 64);
 |}.
+all: apply TODO.
+Defined.
 
 (* Tests that all operations reduce under cbv.
    If something prints a huge term with unreduced matches in it, running small examples

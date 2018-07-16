@@ -10,35 +10,37 @@ Require Import riscv.Memory.
 Require Import riscv.util.Tactics.
 Require riscv.ListMemoryNatAddr.
 
-Definition align(alignment: nat)(n: nat): nat := alignment * (n / alignment).
+Local Open Scope Z_scope.
+
+Definition align(alignment: Z)(n: Z): Z := alignment * (n / alignment).
 
 Lemma align_lt: forall a n,
-    a <> 0 ->
+    0 < a ->
     align a n <= n.
 Proof.
   intros. unfold align.
-  apply Nat.mul_div_le.
+  apply Z.mul_div_le.
   assumption.
 Qed.
 
 Lemma align8_lt: forall n, align 8 n <= n.
 Proof.
-  intros. apply align_lt. congruence.
+  intros. apply align_lt. omega.
 Qed.
 
 Lemma align_eq: forall a n,
-    a <> 0 ->
+    0 < a  ->
     n mod a = 0 ->
     align a n = n.
 Proof.
-  intros. unfold align. symmetry. apply Nat.div_exact; assumption.
+  intros. unfold align. symmetry. apply Z.div_exact; omega.
 Qed.
 
 Lemma align8_eq: forall n,
     n mod 8 = 0 ->
     align 8 n = n.
 Proof.
-  intros. apply align_eq; congruence.
+  intros. apply align_eq; omega.
 Qed.
   
 
@@ -49,7 +51,8 @@ Section Memory.
 
   Context {w: nat}. (* bit width of memory addresses *)
 
-  Definition mem_size(m: mem w): nat := align 8 (min (pow2 w) (ListMemoryNatAddr.mem_size m)).
+  Definition mem_size(m: mem w): Z :=
+    align 8 (Z.of_nat (min (pow2 w) (ListMemoryNatAddr.mem_size m))).
 
   Definition read_byte(m: mem w)(a: word w): word 8 :=
     ListMemoryNatAddr.read_byte m (wordToNat a).
@@ -75,32 +78,32 @@ Section Memory.
   Definition write_double(m: mem w)(a: word w)(v: word 64): mem w :=
     ListMemoryNatAddr.write_double m (wordToNat a) v.
 
-  Definition const_mem(default: word 8)(size: nat): mem w :=
-    ListMemoryNatAddr.const_mem default size.
+  Definition const_mem(default: word 8)(size: Z): mem w :=
+    ListMemoryNatAddr.const_mem default (Z.to_nat size).
 
-  Definition zero_mem: nat -> mem w := const_mem $0.
+  Definition zero_mem: Z -> mem w := const_mem $0.
 
   (* Since mem_size is a bit fancy, we better prove that it's possible to create memory of any
      desired size (as long as it's a multiple of 8 and not bigger than the biggest address) *)
   Lemma const_mem_mem_size: forall size default,
       size mod 8 = 0 ->
-      size <= pow2 w ->
+      0 <= size <= 2 ^ Z.of_nat w ->
       mem_size (const_mem default size) = size.
   Proof.
-    intros. unfold mem_size. rewrite ListMemoryNatAddr.const_mem_mem_size.
-    replace (Init.Nat.min (pow2 w) size) with size by momega.
-    apply align8_eq.
-    assumption.
-  Qed.
+    intros. unfold mem_size, const_mem. rewrite ListMemoryNatAddr.const_mem_mem_size.
+    replace (Init.Nat.min (pow2 w) (Z.to_nat size)) with (Z.to_nat size).
+    - rewrite Z2Nat.id by omega.
+      apply align8_eq.
+      assumption.
+    - repeat match goal with
+         | _: context[min ?a ?b] |- _ => unique pose proof (Min.min_spec a b)
+         |  |- context[min ?a ?b]     => unique pose proof (Min.min_spec a b)
+         | _: context[max ?a ?b] |- _ => unique pose proof (Max.max_spec a b)
+         |  |- context[max ?a ?b]     => unique pose proof (Max.max_spec a b)
+      end.
+  Admitted.
             
 End Memory.
-
-Lemma wordToNat_wplus'': forall sz (a: word sz) (b: nat),
-    #a + b < pow2 sz -> #(a ^+ $b) = #a + b.
-Proof.
-  intros. rewrite wordToNat_wplus';
-  rewrite wordToNat_natToWord_2; omega.
-Qed.
 
 Ltac pose_align8_lt :=
   repeat match goal with
@@ -120,8 +123,9 @@ Local Ltac wrap L :=
   try apply wordToNat_neq1;
   (congruence || momega || idtac).    
 
+Definition TODO{T: Type}: T. Admitted.
 
-Instance mem_is_Memory(w: nat): Memory (mem w) w := {|
+Instance mem_is_Memory(w: nat){MW: MachineWidth (word w)}: Memory (mem w) (word w) := {|
   memSize     := mem_size;
   loadByte    := read_byte;
   loadHalf    := read_half;
@@ -132,6 +136,7 @@ Instance mem_is_Memory(w: nat): Memory (mem w) w := {|
   storeWord   := write_word;
   storeDouble := write_double;
 |}.
+all: apply TODO. (*
 - intros. unfold mem_size. pose_align8_lt. momega.
 - intros. unfold mem_size, align. rewrite Nat.mul_comm. apply Nat.mod_mul. congruence.
 - wrap ListMemoryNatAddr.write_read_byte_eq.
@@ -152,4 +157,5 @@ Instance mem_is_Memory(w: nat): Memory (mem w) w := {|
   intros. unfold valid_addr, mem_size in *. pose_align8_lt. rewrite wordToNat_wplus'' by momega. reflexivity.
 - unfold read_word.
   intros. unfold valid_addr, mem_size in *. pose_align8_lt. rewrite wordToNat_wplus'' by momega. reflexivity.
+*)
 Defined.

@@ -12,19 +12,14 @@ Require Export riscv.RiscvMachine.
 
 Section Riscv.
 
-  Context {B: BitWidths}.
-
   Context {Mem: Set}.
-
-  Context {MemIsMem: Memory Mem wXLEN}.
-
   Context {mword: Set}.
   Context {MW: MachineWidth mword}.
-
+  Context {MemIsMem: Memory Mem mword}.
   Context {RF: Type}.
   Context {RFI: RegisterFile RF Register mword}.
 
-  Local Notation RiscvMachine := (@RiscvMachine B Mem RF).
+  Local Notation RiscvMachine := (@RiscvMachine mword Mem RF).
 
   Definition liftLoad{R}(f: Mem -> mword -> R): mword -> OState RiscvMachine R :=
     fun a => m <- gets machineMem; Return (f m a).
@@ -37,7 +32,7 @@ Section Riscv.
   {|
       getRegister reg :=
         if Z.eq_dec reg Register0 then
-          Return $0
+          Return zero
         else
           machine <- get;
           Return (getReg machine.(core).(registers) reg);
@@ -68,7 +63,7 @@ Section Riscv.
 
       step :=
         m <- get;
-        put (with_nextPC (m.(core).(nextPC) ^+ $4) (with_pc m.(core).(nextPC) m));
+        put (with_nextPC (add m.(core).(nextPC) four) (with_pc m.(core).(nextPC) m));
 
       getCSRField_MTVecBase :=
         machine <- get;
@@ -85,7 +80,7 @@ Section Riscv.
      is needed. *)
   Definition putProgram(prog: list (word 32))(addr: mword)(ma: RiscvMachine): RiscvMachine :=
     (with_pc addr
-    (with_nextPC (addr ^+ $4)
+    (with_nextPC (add addr four)
     (with_machineMem (store_word_list prog addr ma.(machineMem)) ma))).
 
   Ltac destruct_if :=
@@ -93,7 +88,8 @@ Section Riscv.
     | |- context [if ?x then _ else _] => destruct x
     end.
 
-  Instance MinimalRiscvSatisfiesAxioms: @AxiomaticRiscv B RF RFI Mem MemIsMem IsRiscvMachine.
+  Instance MinimalRiscvSatisfiesAxioms:
+    @AxiomaticRiscv mword MW RF RFI Mem MemIsMem IsRiscvMachine.
   Proof.
     constructor; intros; simpl; try reflexivity; destruct_if; try reflexivity;
       subst; unfold valid_register, Register0 in *; omega.
