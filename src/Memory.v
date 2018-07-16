@@ -144,6 +144,18 @@ Proof.
   nia.
 Qed.
 
+Definition Znth_error{A: Type}(l: list A)(i: Z): option A :=
+  match i with
+  | Zneg _ => None
+  | _ => nth_error l (Z.to_nat i)
+  end.
+
+(* not needed at the moment, let's see if we can do everything with Znth_error
+Definition Znth{T: Type}(l: list T): Z := Z.of_nat (length l).
+ *)
+
+Definition Zlength{T: Type}(l: list T): Z := Z.of_nat (length l).
+
 Lemma list_elementwise_same: forall A (l1 l2: list A),
     (forall i, nth_error l1 i = nth_error l2 i) ->
     l1 = l2.
@@ -153,6 +165,21 @@ Proof.
   - pose proof H as G.
     specialize (H O). simpl in H. destruct l2; inversion H. subst. f_equal.
     apply IHl1. intro i. apply (G (S i)).
+Qed.
+
+Lemma list_elementwise_same_Z: forall A (l1 l2: list A),
+    (forall i, Znth_error l1 i = Znth_error l2 i) ->
+    l1 = l2.
+Proof.
+  intros. apply list_elementwise_same.
+  intro i. specialize (H (Z.of_nat i)).
+  unfold Znth_error in *.
+  destruct (Z.of_nat i) eqn: E;
+    try lia;
+    apply Z2Nat.inj_iff in E; try omega;
+      rewrite Nat2Z.id in E;
+      subst i;
+      assumption.
 Qed.
 
 Lemma list_elementwise_same': forall (A : Type) (l1 l2 : list A),
@@ -165,6 +192,19 @@ Proof.
   destruct (nth_error l1 i) as [e1|] eqn: E1.
   - edestruct H as [A1 A2]. specialize (A1 E1). congruence.
   - destruct (nth_error l2 i) as [e2|] eqn: E2; [|reflexivity].
+    edestruct H as [A1 A2]. specialize (A2 E2). congruence.
+Qed.
+
+Lemma list_elementwise_same_Z': forall (A : Type) (l1 l2 : list A),
+    (forall i e, Znth_error l1 i = Some e <-> Znth_error l2 i = Some e) ->
+    l1 = l2.
+Proof.
+  intros.
+  apply list_elementwise_same_Z.
+  intro i.
+  destruct (Znth_error l1 i) as [e1|] eqn: E1.
+  - edestruct H as [A1 A2]. specialize (A1 E1). congruence.
+  - destruct (Znth_error l2 i) as [e2|] eqn: E2; [|reflexivity].
     edestruct H as [A1 A2]. specialize (A2 E2). congruence.
 Qed.
 
@@ -189,18 +229,6 @@ Definition map_range{R: Type}(f: Z -> R)(count: Z): list R :=
 
 Definition fold_left_index{A B: Type}(f: Z -> A -> B -> A)(l: list B)(i0: Z)(a0: A): A :=
   snd (fold_left (fun p b => (fst p + 1, f (fst p) (snd p) b)) l (i0, a0)).
-
-Definition Znth_error{A: Type}(l: list A)(i: Z): option A :=
-  match i with
-  | Zneg _ => None
-  | _ => nth_error l (Z.to_nat i)
-  end.
-
-(* not needed at the moment, let's see if we can do everything with Znth_error
-Definition Znth{T: Type}(l: list T): Z := Z.of_nat (length l).
- *)
-
-Definition Zlength{T: Type}(l: list T): Z := Z.of_nat (length l).
 
 Lemma map_nat_range_cons: forall {R: Type} (f: nat -> R) (count start: nat),
     map_nat_range f start (S count) = f start :: map_nat_range f (S start) count.

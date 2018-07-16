@@ -13,14 +13,14 @@ Require Import riscv.Utility.
 Section Riscv.
 
   Context {B: BitWidths}.
-
-  Context {MW: MachineWidth (word wXLEN)}.
+  Context {mword: Set}.
+  Context {MW: MachineWidth mword}.
 
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
   Context {MP: MonadPlus M}.
-  Context {RVP: RiscvProgram M (word wXLEN)}.
-  Context {RVS: RiscvState M (word wXLEN)}.
+  Context {RVP: RiscvProgram M mword}.
+  Context {RVS: RiscvState M mword}.
 
   Definition RV_wXLEN_IM: InstructionSet :=
     match bitwidth with
