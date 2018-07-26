@@ -1,4 +1,4 @@
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia Coq.ZArith.ZArith.
 Require Import bbv.NatLib.
 
 Inductive BitWidth := BW32 | BW64.

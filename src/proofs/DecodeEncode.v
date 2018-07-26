@@ -1,6 +1,4 @@
-Require Import Coq.ZArith.BinInt.
-Require Import Coq.omega.Omega.
-Require Import Coq.micromega.Lia.
+Require Import Coq.ZArith.ZArith.
 Require Import bbv.Word.
 Require Import riscv.Decode.
 Require Import riscv.encode.Encode.
