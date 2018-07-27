@@ -17,6 +17,7 @@ Instance MachineWidth32: MachineWidth (word 32) := {|
   xor := @wxor 32;
   or := @wor 32;
   and := @wand 32;
+  XLEN := 32;
   fromImm := ZToWord 32;
   regToInt8 := split1 8 24;
   regToInt16 := split1 16 16;
@@ -46,6 +47,7 @@ Instance MachineWidth32: MachineWidth (word 32) := {|
   regToShamt5 x := Z.of_N (wordToN (split1 5 27 x));
   regToShamt  x := Z.of_N (wordToN (split1 5 27 x));
   highBits x := ZToWord 32 (bitSlice x 32 64);
+  ZToReg := ZToWord 32;
 |}.
 all: apply TODO.
 Defined.

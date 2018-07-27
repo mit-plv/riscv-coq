@@ -107,5 +107,5 @@ Eval cbv in (fib6_L_res 50).
 
 Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_L_res fuel = $13.
   exists 50%nat.
-  Fail reflexivity. (* TODO *)
-Abort.
+  reflexivity.
+Qed.
