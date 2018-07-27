@@ -217,6 +217,21 @@ Proof.
   - destruct l; simpl in *; try discriminate. apply IHn. assumption.
 Qed.
 
+Lemma map_Znth_error': forall (A B : Type) (f : A -> B) (n : Z) (l : list A) (b : B),
+     Znth_error (map f l) n = Some b ->
+     exists a, Znth_error l n = Some a /\ f a = b.
+Proof.
+  intros.
+  unfold Znth_error in *.
+  destruct n; try discriminate; apply map_nth_error'; assumption.
+Qed.
+
+Lemma map_Zlength: forall (A B : Type) (f : A -> B) (l : list A),
+    Zlength (map f l) = Zlength l.
+Proof.
+  intros. unfold Zlength in *. rewrite map_length. reflexivity.
+Qed.
+
 Definition map_nat_range{R: Type}(f: nat -> R): nat -> nat -> list R :=
   fix rec(start count: nat) :=
     match count with
@@ -930,10 +945,10 @@ Section MemoryHelpers.
   
   Lemma load_store_word_list_eq: forall l (m: Mem) ll a1 a2,
       a2 = a1 ->
-      ll = length l ->
+      ll = Zlength l ->
       regToZ_unsigned a1 mod 4 = 0 ->
       regToZ_unsigned a1 + 4 * (Zlength l) <= memSize m ->
-      load_word_list (store_word_list l a1 m) a2 (Zlength l) = l.
+      load_word_list (store_word_list l a1 m) a2 ll = l.
   Proof.
     induction l; intros; subst.
     - rewrite store_word_list_nil; mem_sideconditions.
@@ -949,7 +964,7 @@ Section MemoryHelpers.
         * rewrite loadWord_before_store_word_list; mem_sideconditions.
           rewrite loadStoreWord_eq by mem_sideconditions.
           replace (Zlength l + 1 - 1) with (Zlength l) by omega.
-          specialize IHl with (ll := length l).
+          specialize IHl with (ll := Zlength l).
           rewrite IHl; mem_sideconditions.
         * rewrite store_word_list_preserves_memSize.
           mem_sideconditions.
