@@ -168,7 +168,7 @@ Proof.
 Qed.
 
 Lemma list_elementwise_same_Z: forall A (l1 l2: list A),
-    (forall i, Znth_error l1 i = Znth_error l2 i) ->
+    (forall i, 0 <= i -> Znth_error l1 i = Znth_error l2 i) ->
     l1 = l2.
 Proof.
   intros. apply list_elementwise_same.
@@ -179,7 +179,8 @@ Proof.
     apply Z2Nat.inj_iff in E; try omega;
       rewrite Nat2Z.id in E;
       subst i;
-      assumption.
+      apply H;
+      lia.
 Qed.
 
 Lemma list_elementwise_same': forall (A : Type) (l1 l2 : list A),
@@ -305,6 +306,41 @@ Proof.
   - exfalso. destruct H as [H _].
     unfold Z.le in H. simpl in H. congruence.
 Qed.    
+
+(* TODO is there a more principled approach for lemmas of this kind? *)
+Lemma Znth_error_Some: forall (A : Type) (l : list A) (n : Z),
+    Znth_error l n <> None <-> 0 <= n < Zlength l.
+Proof using .
+  intros. unfold Znth_error, Zlength.
+  pose proof (nth_error_Some l (Z.to_nat n)) as P.
+  split; intros.
+  - apply proj1 in P.
+    destruct n; try contradiction; (split; [lia|]); (apply Z2Nat.inj_lt; [lia|lia|]);
+      rewrite? Nat2Z.id; apply P; assumption.
+  - apply proj2 in P.
+    destruct n; try lia; apply P; apply Nat2Z.inj_lt; rewrite? Z2Nat.id; lia.
+Qed.
+
+Lemma Znth_error_ge_None: forall {A : Type} (l : list A) (n : Z),
+    Zlength l <= n -> Znth_error l n = None.
+Proof.
+  unfold Zlength, Znth_error. intros.
+  destruct n; try reflexivity; apply nth_error_None;
+    apply Nat2Z.inj_le; rewrite? Z2Nat.id; lia.
+Qed.
+
+Lemma Zlength_nonneg: forall {A: Type} (l: list A), 0 <= Zlength l.
+Proof.
+  intros. unfold Zlength. lia.
+Qed.
+
+Lemma map_Znth_error: forall {A B : Type} (f : A -> B) (n : Z) (l : list A) {d : A},
+    Znth_error l n = Some d -> Znth_error (map f l) n = Some (f d).
+Proof.
+  intros.
+  unfold Znth_error in *.
+  destruct n; try discriminate; erewrite map_nth_error; eauto.
+Qed.
 
 Ltac demod :=  
   repeat match goal with
