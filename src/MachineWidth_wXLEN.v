@@ -97,22 +97,13 @@ Section Alu_Defs.
   (* derived defs: *)
   
   Lemma two_def: two = $2.
-  Proof.
-    unfold two. rewrite! add_def. rewrite! one_def.
-    rewrite <- natToWord_plus. reflexivity.
-  Qed.
+  Proof. unfold two. prove_alu_def. Qed.
 
   Lemma four_def: four = $4.
-  Proof.
-    unfold four. rewrite! add_def. rewrite! two_def.
-    rewrite <- natToWord_plus. reflexivity.
-  Qed.
+  Proof. unfold two. prove_alu_def. Qed.
 
   Lemma eight_def: eight = $8.
-  Proof.
-    unfold eight. rewrite! add_def. rewrite! four_def.
-    rewrite <- natToWord_plus. reflexivity.
-  Qed.
+  Proof. unfold two. prove_alu_def. Qed.
 
 End Alu_Defs.
 

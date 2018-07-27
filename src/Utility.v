@@ -14,10 +14,6 @@ Local Open Scope Z_scope.
 Definition MachineInt := Z.
 
 Class MachineWidth(t: Set) := mkMachineWidth {
-  (* constants *)
-  zero: t;
-  one: t;
-
   (* arithmetic operations (inherited from Integral in Haskell) *)
   add: t -> t -> t;
   sub: t -> t -> t;
@@ -84,9 +80,9 @@ Class MachineWidth(t: Set) := mkMachineWidth {
 
   (* properties of operations: *)
   (* TODO list separately to make them more discoverable by "Search" *)
-  regRing: @ring_theory t zero one add mul sub (fun x => sub zero x) (@eq t);
-  ZToReg_morphism: @ring_morph t zero one add mul sub (fun x => sub zero x) (@eq t)
-                               Z Z0 Z.one Z.add Z.mul Z.sub Z.opp Z.eqb ZToReg;
+  regRing: @ring_theory t (ZToReg 0) (ZToReg 1) add mul sub (fun x => sub (ZToReg 0) x) (@eq t);
+  ZToReg_morphism: @ring_morph t (ZToReg 0) (ZToReg 1) add mul sub (fun x => sub (ZToReg 0) x) (@eq t)
+                               Z 0 1 Z.add Z.mul Z.sub Z.opp Z.eqb ZToReg;
   (* not sure if needed or useful:
   regToNat: t -> nat;
   natToReg: nat -> t;
@@ -180,11 +176,12 @@ Section Constants.
 
   Local Open Scope alu_scope.
 
-  Definition two: t := one + one.
-
-  Definition four: t := two + two.
-
-  Definition eight: t := four + four.
+  (* TODO inline the constants *)
+  Definition zero : t := ZToReg 0.
+  Definition one  : t := ZToReg 1.
+  Definition two  : t := ZToReg 2.
+  Definition four : t := ZToReg 4.
+  Definition eight: t := ZToReg 8.
 
   Definition negate(x: t): t := zero - x.
              

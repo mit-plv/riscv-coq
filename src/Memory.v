@@ -442,21 +442,19 @@ Section MachineWidthHelpers.
 
   Lemma regToZ_unsigned_one: regToZ_unsigned one = 1.
   Proof.
-    intros. rewrite <- ZToReg_morphism.(morph1).
+    intros. unfold one.
     apply regToZ_ZToReg_unsigned. pose proof pow2_sz_4. omega.
   Qed.
 
   Lemma regToZ_unsigned_two: regToZ_unsigned two = 2.
   Proof.
-    intros. unfold two. rewrite add_def_unsigned.
-    rewrite regToZ_unsigned_one.
+    intros. unfold two.
     apply regToZ_ZToReg_unsigned. pose proof pow2_sz_4. omega.
   Qed.
   
   Lemma regToZ_unsigned_four: regToZ_unsigned four = 4.
   Proof.
-    intros. unfold four. rewrite add_def_unsigned.
-    rewrite regToZ_unsigned_two.
+    intros. unfold four.
     apply regToZ_ZToReg_unsigned. pose proof pow2_sz_4. omega.
   Qed.
 
@@ -777,8 +775,7 @@ Section MemoryHelpers.
   Proof.
     intros. unfold store_word_list. rewrite fold_left_index_cons.
     rewrite Z.mul_0_r.
-    rewrite ZToReg_morphism.(morph0).
-    ring_simplify (add a zero).
+    ring_simplify (add a (ZToReg 0)).
     unfold fold_left_index.
     f_equal.
     apply fold_left_ext.
@@ -788,7 +785,6 @@ Section MemoryHelpers.
     rewrite! ZToReg_morphism.(morph_mul).
     rewrite! ZToReg_morphism.(morph_add).
     rewrite! ZToReg_regToZ_unsigned.
-    rewrite! ZToReg_morphism.(morph1).
     ring.
   Qed.
 

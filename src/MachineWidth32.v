@@ -5,8 +5,6 @@ Require Import riscv.Utility.
 Definition TODO{T: Type}: T. Admitted.
 
 Instance MachineWidth32: MachineWidth (word 32) := {|
-  zero := $0;
-  one := $1;
   add := @wplus 32;
   sub := @wminus 32;
   mul := @wmult 32;
