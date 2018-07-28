@@ -8,7 +8,9 @@ Require Import riscv.Utility.
 Require Import riscv.util.Monads.
 Require Import riscv.Memory.
 Import ListNotations.
-
+Import Word.ArithmeticNotations.
+Import Word.ConversionNotations.
+Local Open Scope word_scope.
 
 Section Memory.
 

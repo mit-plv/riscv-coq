@@ -7,6 +7,9 @@ Require Import Coq.ZArith.BinInt.
 Require Import riscv.Utility.
 Require Import riscv.util.Monads.
 Require Import riscv.Memory.
+Import Word.ArithmeticNotations.
+Import Word.ConversionNotations.
+Local Open Scope word_scope.
 
 Local Open Scope Z_scope.
 

@@ -1,5 +1,7 @@
 Require Import bbv.Word.
 Require Import Coq.Lists.List.
+Import Word.ConversionNotations.
+Local Open Scope word_scope.
 
 Section Memory.
 

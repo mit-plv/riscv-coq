@@ -6,6 +6,9 @@ Require Import bbv.Word.
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.Utility.
 Require Import riscv.util.Monads.
+Import Word.ArithmeticNotations.
+Import Word.ConversionNotations.
+Local Open Scope word_scope.
 
 (* TODO remove option here, making it very simple,
    and only use option based memory in compiler *)

@@ -1,6 +1,8 @@
 Require Import Coq.ZArith.BinInt.
 Require Import bbv.Word.
 Require Import riscv.Utility.
+Import Word.ConversionNotations.
+Local Open Scope word_scope.
 
 
 Instance MachineWidth64: MachineWidth (word 64) := {|

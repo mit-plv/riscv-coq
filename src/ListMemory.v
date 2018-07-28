@@ -9,6 +9,9 @@ Require Import riscv.util.Monads.
 Require Import riscv.Memory.
 Require Import riscv.util.Tactics.
 Require riscv.ListMemoryNatAddr.
+Import Word.ArithmeticNotations.
+Import Word.ConversionNotations.
+Local Open Scope word_scope.
 
 Definition align(alignment: nat)(n: nat): nat := alignment * (n / alignment).
 

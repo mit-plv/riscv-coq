@@ -5,6 +5,10 @@ Require Import Coq.micromega.Lia.
 Require Import riscv.util.nat_div_mod_to_quot_rem.
 Require Import riscv.util.Tactics.
 
+Import Word.ArithmeticNotations.
+Import Word.ConversionNotations.
+Local Open Scope word_scope.
+
 Definition valid_addr{w: nat}(addr: word w)(alignment size: nat): Prop :=
   wordToNat addr + alignment <= size /\ (wordToNat addr) mod alignment = 0.
 
