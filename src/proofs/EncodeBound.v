@@ -1,11 +1,9 @@
-Require Import Coq.ZArith.BinInt.
+Require Import Coq.ZArith.ZArith.
 Require Import bbv.Word.
 Require Import riscv.Decode.
 Require Import riscv.encode.Encode.
 Require Import riscv.Utility.
 Require Import riscv.util.Tactics.
-Require Import Coq.omega.Omega.
-Require Import Coq.micromega.Lia.
 Require Import riscv.util.div_mod_to_quot_rem.
 Require Import riscv.proofs.prove_Zeq_bitwise.
 

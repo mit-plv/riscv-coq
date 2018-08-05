@@ -1,5 +1,4 @@
-Require Import Coq.ZArith.BinInt.
-Require Import Coq.omega.Omega.
+Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import riscv.util.Tactics.
 Require Import riscv.util.div_mod_to_quot_rem.
