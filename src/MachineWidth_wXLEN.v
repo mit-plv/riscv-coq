@@ -4,6 +4,8 @@ Require Import riscv.Utility.
 Require Import riscv.MachineWidth32.
 Require Import riscv.MachineWidth64.
 Require Import riscv.util.BitWidths.
+Import Word.ConversionNotations.
+Local Open Scope word_scope.
 
 
 Instance MachineWidthInst{B: BitWidths}: MachineWidth (word wXLEN).

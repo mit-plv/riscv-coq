@@ -1,11 +1,13 @@
 (* import List before bbv.Word, otherwise Word.combine gets shadowed and huge type class
    inference failure messages will appear *)
 Require Import Coq.Lists.List.
-Require Import Coq.omega.Omega.
 Require Import bbv.Word.
-Require Import Coq.ZArith.BinInt.
+Require Import Coq.ZArith.ZArith.
 Require Import riscv.Utility.
 Require Import riscv.util.Monads.
+Import Word.ArithmeticNotations.
+Import Word.ConversionNotations.
+Local Open Scope word_scope.
 
 (* TODO remove option here, making it very simple,
    and only use option based memory in compiler *)

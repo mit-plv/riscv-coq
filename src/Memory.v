@@ -1,10 +1,14 @@
 Require Import Coq.Lists.List.
 Require Import bbv.Word.
-Require Import Coq.omega.Omega.
+Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import riscv.util.nat_div_mod_to_quot_rem.
 Require Import riscv.util.Tactics.
 Require Import riscv.Utility.
+
+Import Word.ArithmeticNotations.
+Import Word.ConversionNotations.
+Local Open Scope word_scope.
 
 Section ValidAddr.
 

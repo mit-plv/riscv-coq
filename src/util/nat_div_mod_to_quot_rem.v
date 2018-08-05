@@ -1,5 +1,5 @@
 Require Import Coq.Arith.PeanoNat.
-Require Import Coq.omega.Omega.
+Require Import Coq.ZArith.ZArith.
 Require Import riscv.util.Tactics.
 
 Local Open Scope nat_scope.

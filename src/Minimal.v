@@ -1,5 +1,4 @@
-Require Import Coq.ZArith.BinInt.
-Require Import Coq.omega.Omega.
+Require Import Coq.ZArith.ZArith.
 Require Import bbv.WordScope.
 Require Import riscv.util.BitWidths.
 Require Import riscv.util.Monads.

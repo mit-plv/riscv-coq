@@ -1,5 +1,4 @@
-Require Import Coq.omega.Omega.
-Require Import Coq.ZArith.BinInt.
+Require Import Coq.ZArith.ZArith.
 Require Import riscv.util.Tactics.
 
 Local Open Scope Z_scope.
