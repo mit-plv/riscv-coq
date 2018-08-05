@@ -4,10 +4,9 @@ Require Import riscv.Utility.
 Import Word.ConversionNotations.
 Local Open Scope word_scope.
 
+Definition TODO{T: Type}: T. Admitted.
 
 Instance MachineWidth64: MachineWidth (word 64) := {|
-  zero := $0;
-  one := $1;
   add := @wplus 64;
   sub := @wminus 64;
   mul := @wmult 64;
@@ -18,6 +17,7 @@ Instance MachineWidth64: MachineWidth (word 64) := {|
   xor := @wxor 64;
   or := @wor 64;
   and := @wand 64;
+  XLEN := 64;
   fromImm := ZToWord 64;
   regToInt8 := split1 8 56;
   regToInt16 := split1 16 48;
@@ -47,7 +47,10 @@ Instance MachineWidth64: MachineWidth (word 64) := {|
   regToShamt5 x := Z.of_N (wordToN (split1 5 59 x));
   regToShamt  x := Z.of_N (wordToN (split1 6 58 x));
   highBits x := ZToWord 64 (bitSlice x 64 128);
+  ZToReg := ZToWord 64;
 |}.
+all: apply TODO.
+Defined.
 
 (* Tests that all operations reduce under cbv.
    If something prints a huge term with unreduced matches in it, running small examples

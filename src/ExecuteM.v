@@ -50,34 +50,33 @@ Definition execute {p} {t} `{(RiscvState p t)}
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
                         let q :=
-                          if andb (signed_eqb x minSigned) (signed_eqb y (negate one)) : bool then x else
-                          if signed_eqb y zero : bool then negate one else
+                          if andb (reg_eqb x minSigned) (reg_eqb y (negate one)) : bool then x else
+                          if reg_eqb y zero : bool then negate one else
                           div x y in
                         setRegister rd q))
     | Decode.Divu rd rs1 rs2 =>
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
-                        let q := if signed_eqb y zero : bool then maxUnsigned else divu x y in
+                        let q := if reg_eqb y zero : bool then maxUnsigned else divu x y in
                         setRegister rd q))
     | Decode.Rem rd rs1 rs2 =>
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
                         let r :=
-                          if andb (signed_eqb x minSigned) (signed_eqb y (negate one)) : bool
-                          then zero else
-                          if signed_eqb y zero : bool then x else
+                          if andb (reg_eqb x minSigned) (reg_eqb y (negate one)) : bool then zero else
+                          if reg_eqb y zero : bool then x else
                           rem x y in
                         setRegister rd r))
     | Decode.Remu rd rs1 rs2 =>
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
-                        let r := if signed_eqb y zero : bool then x else remu x y in setRegister rd r))
+                        let r := if reg_eqb y zero : bool then x else remu x y in setRegister rd r))
     | inst => Return tt
     end.
 
 (* External variables:
      Bind Return RiscvState andb bool div divu getRegister highBits maxUnsigned
-     minSigned negate one op_zt__ regToZ_signed regToZ_unsigned rem remu setRegister
-     signed_eqb tt unit zero Decode.Div Decode.Divu Decode.InstructionM Decode.Mul
+     minSigned negate one op_zt__ regToZ_signed regToZ_unsigned reg_eqb rem remu
+     setRegister tt unit zero Decode.Div Decode.Divu Decode.InstructionM Decode.Mul
      Decode.Mulh Decode.Mulhsu Decode.Mulhu Decode.Rem Decode.Remu
 *)

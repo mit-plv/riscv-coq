@@ -4,6 +4,8 @@ Require Import bbv.Word.
 Require Import riscv.Memory.
 Require Import riscv.MonadicMemory.
 Require Import riscv.util.Monads.
+Require Import riscv.Utility.
+
 
 Inductive TraceEvent{a: Set}: Set :=
 | Trace_loadByte   : a -> word  8 -> TraceEvent
@@ -26,8 +28,8 @@ Definition myInst M A: Monad (State (LoggingMemory M A)) := State_Monad _.
 
 Existing Instance myInst.
 
-Instance StateLoggingMemory_is_MonadicMemory(M: Set)(w: nat){MM: Memory M w}:
-  MonadicMemory (State (LoggingMemory M (word w))) (word w) :=
+Instance StateLoggingMemory_is_MonadicMemory(M: Set)(t: Set){MW: MachineWidth t}{MM: Memory M t}:
+  MonadicMemory (State (LoggingMemory M t)) t :=
 {|
   loadByte a :=
      m <- StateM.get;

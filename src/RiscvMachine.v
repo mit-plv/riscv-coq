@@ -16,16 +16,17 @@ Arguments RegisterFile: clear implicits.
 
 Section Riscv.
 
-  Context {B: BitWidths}.
+  Context {mword: Set}.
+  Context {MW: MachineWidth mword}.
   Context {Mem: Set}.
-  Context {MemIsMem: Memory Mem wXLEN}.
+  Context {MemIsMem: Memory Mem mword}.
   Context {RF: Type}.
-  Context {RFI: RegisterFile RF Register (word wXLEN)}.
+  Context {RFI: RegisterFile RF Register mword}.
   
   Record RiscvMachineCore := mkRiscvMachineCore {
     registers: RF;
-    pc: word wXLEN;
-    nextPC: word wXLEN;
+    pc: mword;
+    nextPC: mword;
     exceptionHandlerAddr: MachineInt;
   }.
 

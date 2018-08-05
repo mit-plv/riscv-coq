@@ -51,10 +51,10 @@ Definition execute {p} {t} `{(RiscvState p t)}
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
                         Bind getPC (fun pc =>
-                                when (signed_eqb x y) (let newPC := (pc + fromImm sbimm12) in
-                                                       if (remu newPC four /= zero) : bool
-                                                       then raiseException zero zero
-                                                       else setPC newPC))))
+                                when (reg_eqb x y) (let newPC := (pc + fromImm sbimm12) in
+                                                    if (remu newPC four /= zero) : bool
+                                                    then raiseException zero zero
+                                                    else setPC newPC))))
     | Decode.Bne rs1 rs2 sbimm12 =>
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
@@ -188,7 +188,7 @@ Definition execute {p} {t} `{(RiscvState p t)}
      Bind Load Return RiscvState Store and bool four fromImm getPC getRegister
      int16ToReg int32ToReg int8ToReg lnot loadByte loadHalf loadWord ltu negb one
      op_zgze__ op_zl__ op_zm__ op_zp__ op_zsze__ or raiseException regToInt16
-     regToInt32 regToInt8 regToShamt remu setPC setRegister signed_eqb sll sra srl
+     regToInt32 regToInt8 regToShamt reg_eqb remu setPC setRegister sll sra srl
      storeByte storeHalf storeWord translate tt two uInt16ToReg uInt8ToReg unit when
      xor zero Decode.Add Decode.Addi Decode.And Decode.Andi Decode.Auipc Decode.Beq
      Decode.Bge Decode.Bgeu Decode.Blt Decode.Bltu Decode.Bne Decode.Fence
