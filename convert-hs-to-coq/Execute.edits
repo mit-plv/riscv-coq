@@ -1,4 +1,4 @@
-rewrite forall x y, x GHC.Base.== y = Utility.signed_eqb x y
+rewrite forall x y, x GHC.Base.== y = Utility.reg_eqb x y
 rewrite forall x y, x GHC.Base./= y = x /= y
 rewrite forall, GHC.Base.return_ = Return 
 rewrite forall, GHC.Num.fromInteger 0 = zero

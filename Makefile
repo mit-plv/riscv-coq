@@ -13,13 +13,7 @@ COQDOC=$(COQBIN)coqdoc
 %.vo: %.v
 	$(COQC) $(COQFLAGS) $*.v 
 
-# Note: Also depends on ../bbv, but bbv's version is checked by bedrock2's CI
-
-riscv-semantics_version_check:
-	./check_dep.sh riscv-semantics
-
-hs-to-coq_version_check:
-	./check_dep.sh hs-to-coq
+# Note: riscv-coq depends on ../bbv, but bbv's version is checked by bedrock2's CI
 
 util: $(patsubst %.v,%.vo,$(wildcard src/util/*.v))
 
@@ -36,21 +30,31 @@ all: spec encode proofs
 	$(COQDEP) >.depend `find src -name "*.v"`
 
 
-# Old Python-based conversion:
+# converting from Haskell using hs-to-coq:
 
-# beware: will overwrite src/Execute.v
-convert_execute: riscv-semantics_version_check
-	cd convert && python execute.py
+HS_TO_COQ_DIR ?= ../../hs-to-coq
+RISCV_SEMANTICS_DIR ?= ../../riscv-semantics
 
-# beware: will overwrite src/Decode.v
-convert_decode: riscv-semantics_version_check
-	cd convert && python decode.py
+riscv-semantics_version_check:
+	./check_dep.sh $(RISCV_SEMANTICS_DIR) `cat deps/riscv-semantics`
 
+hs-to-coq_version_check:
+	./check_dep.sh $(HS_TO_COQ_DIR) `cat deps/hs-to-coq`
 
-# New hs-to-coq-based conversion:
+# export because stack will use this environment var
+export STACK_YAML=$(HS_TO_COQ_DIR)/stack.yaml
 
-convert: riscv-semantics_version_check hs-to-coq_version_check
-	cd convert-hs-to-coq && ./convert.sh
+HS_SOURCES = $(RISCV_SEMANTICS_DIR)/src/Decode.hs $(RISCV_SEMANTICS_DIR)/src/ExecuteI.hs $(RISCV_SEMANTICS_DIR)/src/ExecuteI64.hs $(RISCV_SEMANTICS_DIR)/src/ExecuteM.hs $(RISCV_SEMANTICS_DIR)/src/ExecuteM64.hs
+PREAMBLES = convert-hs-to-coq/Decode_preamble.v convert-hs-to-coq/Execute_preamble.v 
+EDIT_FILES = convert-hs-to-coq/Decode.edits convert-hs-to-coq/General.edits convert-hs-to-coq/Base.edits  convert-hs-to-coq/Execute.edits 
+
+convert: riscv-semantics_version_check hs-to-coq_version_check $(HS_SOURCES) $(PREAMBLES) $(EDIT_FILES)
+	stack exec hs-to-coq -- -e convert-hs-to-coq/Decode.edits  -p convert-hs-to-coq/Decode_preamble.v  -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits -N -i $(RISCV_SEMANTICS_DIR)/src -o ./src $(RISCV_SEMANTICS_DIR)/src/Decode.hs
+	stack exec hs-to-coq -- -e convert-hs-to-coq/Execute.edits -p convert-hs-to-coq/Execute_preamble.v -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits -N -i $(RISCV_SEMANTICS_DIR)/src -o ./src $(RISCV_SEMANTICS_DIR)/src/ExecuteI.hs
+	stack exec hs-to-coq -- -e convert-hs-to-coq/Execute.edits -p convert-hs-to-coq/Execute_preamble.v -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits -N -i $(RISCV_SEMANTICS_DIR)/src -o ./src $(RISCV_SEMANTICS_DIR)/src/ExecuteI64.hs
+	stack exec hs-to-coq -- -e convert-hs-to-coq/Execute.edits -p convert-hs-to-coq/Execute_preamble.v -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits -N -i $(RISCV_SEMANTICS_DIR)/src -o ./src $(RISCV_SEMANTICS_DIR)/src/ExecuteM.hs
+	stack exec hs-to-coq -- -e convert-hs-to-coq/Execute.edits -p convert-hs-to-coq/Execute_preamble.v -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits -N -i $(RISCV_SEMANTICS_DIR)/src -o ./src $(RISCV_SEMANTICS_DIR)/src/ExecuteM64.hs
+
 
 
 clean:

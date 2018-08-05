@@ -38,34 +38,33 @@ Definition execute {p} {t} `{(RiscvState p t)}
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
                         let q :=
-                          if andb (signed_eqb x minSigned) (signed_eqb y (negate one)) : bool then x else
-                          if signed_eqb y zero : bool then negate one else
+                          if andb (reg_eqb x minSigned) (reg_eqb y (negate one)) : bool then x else
+                          if reg_eqb y zero : bool then negate one else
                           div x y in
                         setRegister rd (s32 q)))
     | Decode.Divuw rd rs1 rs2 =>
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
-                        let q := if signed_eqb y zero : bool then maxUnsigned else divu x y in
+                        let q := if reg_eqb y zero : bool then maxUnsigned else divu x y in
                         setRegister rd (s32 q)))
     | Decode.Remw rd rs1 rs2 =>
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
                         let r :=
-                          if andb (signed_eqb x minSigned) (signed_eqb y (negate one)) : bool
-                          then zero else
-                          if signed_eqb y zero : bool then x else
+                          if andb (reg_eqb x minSigned) (reg_eqb y (negate one)) : bool then zero else
+                          if reg_eqb y zero : bool then x else
                           rem x y in
                         setRegister rd (s32 r)))
     | Decode.Remuw rd rs1 rs2 =>
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
-                        let r := if signed_eqb y zero : bool then x else remu x y in
+                        let r := if reg_eqb y zero : bool then x else remu x y in
                         setRegister rd (s32 r)))
     | inst => Return tt
     end.
 
 (* External variables:
      Bind Return RiscvState andb bool div divu getRegister maxUnsigned minSigned
-     negate one op_zt__ rem remu s32 setRegister signed_eqb tt unit zero Decode.Divuw
+     negate one op_zt__ reg_eqb rem remu s32 setRegister tt unit zero Decode.Divuw
      Decode.Divw Decode.InstructionM64 Decode.Mulw Decode.Remuw Decode.Remw
 *)

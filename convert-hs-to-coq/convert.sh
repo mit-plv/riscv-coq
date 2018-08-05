@@ -1,5 +1,12 @@
 #!/bin/sh
 
+
+
+if [ ! -f /tmp/foo.txt ]; then
+    echo "File not found!"
+fi
+
+
 export STACK_YAML=../../hs-to-coq/stack.yaml
 
 stack exec hs-to-coq -- -e ./Decode.edits  -p ./Decode_preamble.v  -e ./General.edits -e ./Base.edits -N -i ../../riscv-semantics/src -o ../src ../../riscv-semantics/src/Decode.hs
