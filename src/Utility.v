@@ -21,9 +21,10 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   div: t -> t -> t;
   rem: t -> t -> t;
 
-  (* comparison operators (inherited from Eq and Ord in Haskell) *)
+  (* comparison operators *)
+  reg_eqb: t -> t -> bool;
   signed_less_than: t -> t -> bool;
-  signed_eqb: t -> t -> bool;
+  ltu: t -> t -> bool;
 
   (* logical operations (inherited from Bits in Haskell) *)
   xor: t -> t -> t;
@@ -62,7 +63,6 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   srl: t -> Z -> t;
   sra: t -> Z -> t;
 
-  ltu: t -> t -> bool;
   divu: t -> t -> t;
   remu: t -> t -> t;
 
@@ -91,8 +91,8 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   regToNat_natToReg_idemp: forall n : nat, n < pow2 XLEN -> regToNat (natToReg n) = n;
   *)
 
-  signed_eqb_spec: forall a b, signed_eqb a b = true <-> a = b;
-  
+  reg_eqb_spec: forall a b, reg_eqb a b = true <-> a = b;
+
   regToZ_signed_bounds: forall a, - 2 ^ (XLEN - 1) <= regToZ_signed a < 2 ^ (XLEN - 1);
   regToZ_unsigned_bounds: forall a, 0 <= regToZ_unsigned a < 2 ^ XLEN;
 
@@ -120,24 +120,25 @@ Section DerivedProperties.
   Context {t: Set}.
   Context {MW: MachineWidth t}.
 
-  (* TODO rename signed_eqb to reg_eqb in Haskell *)
-  Definition reg_eqb := signed_eqb.
-
   Definition XLEN_in_bytes: Z := XLEN / 8.
 
-  Lemma reg_eqb_true: forall a b, reg_eqb a b = true <-> a = b.
+  Lemma reg_eqb_true: forall a b, reg_eqb a b = true -> a = b.
+  Proof. apply reg_eqb_spec. Qed.
+
+  Lemma reg_eqb_eq: forall a b, a = b -> reg_eqb a b = true.
+  Proof. apply reg_eqb_spec. Qed.
+
+  Lemma reg_eqb_false: forall a b, reg_eqb a b = false -> a <> b.
   Proof.
-    unfold reg_eqb. exact signed_eqb_spec.
+    intros. intro. rewrite reg_eqb_eq in H; congruence.
   Qed.
 
-  Lemma reg_eqb_false: forall a b, reg_eqb a b = false <-> a <> b.
+  Lemma reg_eqb_ne: forall a b, a <> b -> reg_eqb a b = false.
   Proof.
-    intros. split; intros.
-    - intro. rewrite <- reg_eqb_true in H0. congruence.
-    - destruct (reg_eqb a b) eqn: E; try congruence.
-      exfalso. apply H. apply reg_eqb_true in E. assumption.
+    intros. destruct (reg_eqb a b) eqn: E; try congruence.
+    exfalso. apply H. apply reg_eqb_true in E. assumption.
   Qed.
-  
+
   Lemma add_def_unsigned: forall a b, add a b = ZToReg (regToZ_unsigned a + regToZ_unsigned b).
   Admitted.
   
@@ -161,8 +162,8 @@ Notation "a + b"   := (add a b) (at level 50, left associativity) : alu_scope.
 Notation "a - b"   := (sub a b) (at level 50, left associativity) : alu_scope.
 Notation "a * b"   := (mul a b) (at level 40, left associativity) : alu_scope.
 
-Notation "a /= b" := (negb (signed_eqb a b))        (at level 38, no associativity) : alu_scope.
-Notation "a == b" := (signed_eqb a b)               (at level 38, no associativity) : alu_scope.
+Notation "a /= b" := (negb (reg_eqb a b))        (at level 38, no associativity) : alu_scope.
+Notation "a == b" := (reg_eqb a b)               (at level 38, no associativity) : alu_scope.
 Notation "a < b"  := (signed_less_than a b)         (at level 70, no associativity) : alu_scope.
 Notation "a >= b" := (negb (signed_less_than a b))  (at level 70, no associativity) : alu_scope.
 Notation "'when' a b" := (if a then b else Return tt)

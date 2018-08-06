@@ -372,6 +372,16 @@ Proof.
   intros. reflexivity.
 Qed.
 
+Lemma Zlength_app: forall {A: Type} (l1 l2: list A),
+    Zlength (l1 ++ l2) = Zlength l1 + Zlength l2.
+Proof.
+  intros.
+  simpl.
+  unfold Zlength.
+  rewrite app_length.
+  lia.
+Qed.
+
 Lemma Znth_error_head: forall {A: Type} (l: list A) (a: A),
     Znth_error (a :: l) 0 = Some a.
 Proof.

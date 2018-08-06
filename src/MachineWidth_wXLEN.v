@@ -56,9 +56,9 @@ Section Alu_Defs.
       signed_less_than a b = if wslt_dec a b then true else false.
   Proof. unfold signed_less_than. prove_alu_def. Qed.
   
-  Lemma signed_eqb_def: forall (a b: word wXLEN),
-      signed_eqb a b = weqb a b.
-  Proof. unfold signed_eqb. prove_alu_def. Qed.
+  Lemma reg_eqb_def: forall (a b: word wXLEN),
+     reg_eqb a b = weqb a b.
+  Proof. unfold reg_eqb. prove_alu_def. Qed.
   
   Lemma xor_def: forall (a b: word wXLEN),
       xor a b = wxor a b.
@@ -119,7 +119,7 @@ Hint Rewrite
   @div_def
   @rem_def
   @signed_less_than_def
-  @signed_eqb_def
+  @reg_eqb_def
   @xor_def
   @or_def
   @and_def
