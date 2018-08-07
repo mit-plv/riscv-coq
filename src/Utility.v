@@ -105,6 +105,9 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   regToZ_ZToReg_signed: forall n : Z,
       - 2 ^ (XLEN - 1) <= n < 2 ^ (XLEN - 1) ->
       regToZ_signed (ZToReg n) = n;
+  regToZ_ZToReg_unsigned: forall n : Z,
+      0 <= n < 2 ^ XLEN ->
+      regToZ_unsigned (ZToReg n) = n;
 
   ZToReg_regToZ_unsigned: forall a: t, ZToReg (regToZ_unsigned a) = a;
   ZToReg_regToZ_signed: forall a: t, ZToReg (regToZ_signed a) = a;
@@ -143,19 +146,35 @@ Section Derived.
   Qed.
 
   Lemma add_def_unsigned: forall a b, add a b = ZToReg (regToZ_unsigned a + regToZ_unsigned b).
-  Admitted.
+  Proof.
+    intros.
+    rewrite ZToReg_morphism.(morph_add). rewrite? ZToReg_regToZ_unsigned.
+    reflexivity.
+  Qed.
   
   Lemma sub_def_unsigned: forall a b, sub a b = ZToReg (regToZ_unsigned a - regToZ_unsigned b).
-  Admitted.
+  Proof.
+    intros.
+    rewrite ZToReg_morphism.(morph_sub). rewrite? ZToReg_regToZ_unsigned.
+    reflexivity.
+  Qed.
   
   Lemma mul_def_unsigned: forall a b, mul a b = ZToReg (regToZ_unsigned a * regToZ_unsigned b).
-  Admitted.
+  Proof.
+    intros.
+    rewrite ZToReg_morphism.(morph_mul). rewrite? ZToReg_regToZ_unsigned.
+    reflexivity.
+  Qed.
 
-  Lemma regToZ_ZToReg_unsigned: forall n : Z,
-      (0 <= n < 2 ^ XLEN)%Z ->
-      regToZ_unsigned (ZToReg n) = n.
-  Admitted.
-  
+  Lemma ZToReg_inj_unsigned: forall a b,
+      0 <= a < 2 ^ XLEN ->
+      0 <= b < 2 ^ XLEN ->
+      ZToReg a = ZToReg b ->
+      a = b.
+  Proof.
+    intros.
+    Check (ZToReg_morphism.(morph_eq)). (* the wrong way *)
+  Abort.
   
 End Derived.
 

@@ -1,10 +1,26 @@
-Require Import Coq.ZArith.BinInt.
+Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia.
 Require Import bbv.Word.
 Require Import riscv.Utility.
 Import Word.ConversionNotations.
+Import Word.ArithmeticNotations.
 Local Open Scope word_scope.
+Local Open Scope Z_scope.
 
-Definition TODO{T: Type}: T. Admitted.
+
+Lemma ZToWord_Npow2_add_k':  forall sz z k,
+    ZToWord sz (z + k * Z.of_N (Npow2 sz)) = ZToWord sz z.
+Proof.
+  intros. assert (0 <= k \/ k < 0) as C by lia. destruct C as [C | C].
+  - pose proof (ZToWord_Npow2_add_k sz z (Z.to_nat k)) as Q.
+    rewrite Znat.Z2Nat.id in Q; assumption.
+  - pose proof (ZToWord_Npow2_sub_k sz z (Z.to_nat (- k))) as Q.
+    rewrite Znat.Z2Nat.id in Q by lia.
+    rewrite <- Q.
+    f_equal.
+    lia.
+Qed.    
+
 
 Instance MachineWidth32: MachineWidth (word 32) := {|
   add := @wplus 32;
@@ -48,22 +64,80 @@ Instance MachineWidth32: MachineWidth (word 32) := {|
   highBits x := ZToWord 32 (bitSlice x 32 64);
   ZToReg := ZToWord 32;
 |}.
-all: apply TODO.
+- constructor; intros.
+  + rewrite ZToWord_0. apply wplus_unit.
+  + apply wplus_comm.
+  + apply wplus_assoc.
+  + rewrite <- natToWord_Z_to_nat by (cbv; discriminate).
+    apply wmult_unit.
+  + apply wmult_comm.
+  + apply wmult_assoc.
+  + apply wmult_plus_distr.
+  + rewrite ZToWord_0.
+    rewrite! wminus_def.
+    rewrite wplus_unit.
+    reflexivity.
+  + rewrite ZToWord_0.
+    rewrite! wminus_def.
+    rewrite wplus_unit.
+    apply wminus_inv.
+- constructor; intros.
+  + reflexivity.
+  + reflexivity.
+  + apply ZToWord_plus.
+  + apply ZToWord_minus.
+  + apply ZToWord_mult.
+  + rewrite ZToWord_0.
+    rewrite wminus_wminusZ.
+    unfold wminusZ, wordBinZ.
+    rewrite wordToZ_wzero.
+    rewrite (Z.sub_0_l (wordToZ (ZToWord 32 x))).
+    destruct (wordToZ_ZToWord' 32 x) as [k E].
+    rewrite E.
+    rewrite Z.opp_sub_distr.
+    rewrite ZToWord_Npow2_add_k'.
+    reflexivity.
+  + apply Z.eqb_eq in H. congruence.
+- exact (@weqb_true_iff 32).
+- intros.
+  pose proof (@wordToZ_size' 31 a) as P.
+  rewrite! pow2_S_z in P.
+  exact P.
+- intros.
+  unfold uwordToZ.
+  split.
+  + apply N2Z.is_nonneg.
+  + pose proof (wordToN_bound a) as P.
+    apply N2Z.inj_lt in P.
+    exact P.
+- intros. rewrite ZToWord_plus. rewrite! ZToWord_wordToZ. reflexivity.
+- intros. rewrite ZToWord_minus. rewrite! ZToWord_wordToZ. reflexivity.
+- intros. rewrite ZToWord_mult. rewrite! ZToWord_wordToZ. reflexivity.
+- intros. apply wordToZ_ZToWord.
+  rewrite! pow2_S_z.
+  assumption.
+- intros. apply uwordToZ_ZToWord. assumption.
+- intros.
+  unfold uwordToZ.
+  rewrite ZToWord_Z_of_N.
+  apply NToWord_wordToN.
+- intros. apply ZToWord_wordToZ.
+- cbv. discriminate.
 Defined.
 
-(* Tests that all operations reduce under cbv.
-   If something prints a huge term with unreduced matches in it, running small examples
-   inside Coq will not work! *)
-(*
-Eval cbv in zero.
-Eval cbv in ZToReg 1.
+Goal False.
+  idtac "Testing that all operations reduce under cbv."
+        "If something prints a huge term with unreduced matches in it,"
+        "running small examples inside Coq will not work!".
+Abort.
+
 Eval cbv in add $7 $9.
 Eval cbv in sub $11 $4.
 Eval cbv in mul $16 $4.
 Eval cbv in div $100 $8.
 Eval cbv in rem $100 $8.
 Eval cbv in signed_less_than $4 $5.
-Eval cbv in signed_eqb $7 $9.
+Eval cbv in reg_eqb $7 $9.
 Eval cbv in xor $8 $11.
 Eval cbv in or $3 $8.
 Eval cbv in and $7 $19.
@@ -96,4 +170,3 @@ Eval cbv in minSigned.
 Eval cbv in regToShamt5 $12.
 Eval cbv in regToShamt $12.
 Eval cbv in highBits (-9).
-*)
