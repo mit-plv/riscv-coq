@@ -36,8 +36,6 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   
   (* operations also defined in MachineWidth in Haskell: *)
 
-  fromImm: MachineInt -> t;
-
   regToInt8: t -> word 8;
   regToInt16: t -> word 16;
   regToInt32: t -> word 32;
@@ -114,6 +112,7 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   XLEN_lbound: 8 <= XLEN;
 }.
 
+Notation fromImm := (@ZToReg _ _) (only parsing).
 
 Section Derived.
 

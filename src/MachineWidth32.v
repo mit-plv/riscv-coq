@@ -18,7 +18,6 @@ Instance MachineWidth32: MachineWidth (word 32) := {|
   or := @wor 32;
   and := @wand 32;
   XLEN := 32;
-  fromImm := ZToWord 32;
   regToInt8 := split1 8 24;
   regToInt16 := split1 16 16;
   regToInt32 := id;
