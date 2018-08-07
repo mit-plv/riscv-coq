@@ -38,7 +38,7 @@ Section AxiomaticRiscv.
   Class AxiomaticRiscv :=  mkAxiomaticRiscv {
       
       Bind_getRegister0: forall {A: Type} (f: t -> OState RiscvMachine A),
-        Bind (getRegister Register0) f = f zero;
+        Bind (getRegister Register0) f = f (ZToReg 0);
       
       Bind_getRegister: forall {A: Type} x (f: t -> OState RiscvMachine A)
                           (initialL: RiscvMachine),
@@ -112,10 +112,10 @@ Section AxiomaticRiscv.
       
       Bind_step: forall {A: Type} (f: unit -> OState RiscvMachine A) m,
           (Bind step f) m =
-          (f tt) (with_nextPC (add m.(core).(nextPC) four) (with_pc m.(core).(nextPC) m));
+          (f tt) (with_nextPC (add m.(core).(nextPC) (ZToReg 4)) (with_pc m.(core).(nextPC) m));
 
       execState_step: forall m,
-          step m = (Some tt, with_nextPC (add m.(core).(nextPC) four) (with_pc m.(core).(nextPC) m));
+          step m = (Some tt, with_nextPC (add m.(core).(nextPC) (ZToReg 4)) (with_pc m.(core).(nextPC) m));
       
       execState_Return: forall {S A} (s: S) (a: A),
           (Return a) s = (Some a, s);

@@ -33,15 +33,15 @@ Definition execute {p} {t} `{(RiscvState p t)}
     match arg_0__ with
     | Decode.Lwu rd rs1 oimm12 =>
         Bind (getRegister rs1) (fun a =>
-                Bind (translate Load four (a + fromImm oimm12)) (fun addr =>
+                Bind (translate Load (ZToReg 4) (a + fromImm oimm12)) (fun addr =>
                         Bind (loadWord addr) (fun x => setRegister rd (uInt32ToReg x))))
     | Decode.Ld rd rs1 oimm12 =>
         Bind (getRegister rs1) (fun a =>
-                Bind (translate Load eight (a + fromImm oimm12)) (fun addr =>
+                Bind (translate Load (ZToReg 8) (a + fromImm oimm12)) (fun addr =>
                         Bind (loadDouble addr) (fun x => setRegister rd (int64ToReg x))))
     | Decode.Sd rs1 rs2 simm12 =>
         Bind (getRegister rs1) (fun a =>
-                Bind (translate Store eight (a + fromImm simm12)) (fun addr =>
+                Bind (translate Store (ZToReg 8) (a + fromImm simm12)) (fun addr =>
                         Bind (getRegister rs2) (fun x => storeDouble addr (regToInt64 x))))
     | Decode.Addiw rd rs1 imm12 =>
         Bind (getRegister rs1) (fun x => setRegister rd (s32 (x + fromImm imm12)))
@@ -72,7 +72,7 @@ Definition execute {p} {t} `{(RiscvState p t)}
     end.
 
 (* External variables:
-     Bind Load Return RiscvState Store eight four fromImm getRegister int64ToReg
+     Bind Load Return RiscvState Store ZToReg fromImm getRegister int64ToReg
      loadDouble loadWord op_zm__ op_zp__ regToInt64 regToShamt5 s32 setRegister sll
      sra srl storeDouble translate tt u32 uInt32ToReg unit Decode.Addiw Decode.Addw
      Decode.InstructionI64 Decode.Ld Decode.Lwu Decode.Sd Decode.Slliw Decode.Sllw

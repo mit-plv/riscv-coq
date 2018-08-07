@@ -57,7 +57,7 @@ Defined.
    inside Coq will not work! *)
 (*
 Eval cbv in zero.
-Eval cbv in one.
+Eval cbv in ZToReg 1.
 Eval cbv in add $7 $9.
 Eval cbv in sub $11 $4.
 Eval cbv in mul $16 $4.

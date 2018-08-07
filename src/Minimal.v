@@ -31,7 +31,7 @@ Section Riscv.
   {|
       getRegister reg :=
         if Z.eq_dec reg Register0 then
-          Return zero
+          Return (ZToReg 0)
         else
           machine <- get;
           Return (getReg machine.(core).(registers) reg);
@@ -62,7 +62,7 @@ Section Riscv.
 
       step :=
         m <- get;
-        put (with_nextPC (add m.(core).(nextPC) four) (with_pc m.(core).(nextPC) m));
+        put (with_nextPC (add m.(core).(nextPC) (ZToReg 4)) (with_pc m.(core).(nextPC) m));
 
       getCSRField_MTVecBase :=
         machine <- get;
@@ -79,7 +79,7 @@ Section Riscv.
      is needed. *)
   Definition putProgram(prog: list (word 32))(addr: mword)(ma: RiscvMachine): RiscvMachine :=
     (with_pc addr
-    (with_nextPC (add addr four)
+    (with_nextPC (add addr (ZToReg 4))
     (with_machineMem (store_word_list prog addr ma.(machineMem)) ma))).
 
   Ltac destruct_if :=

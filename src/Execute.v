@@ -19,5 +19,5 @@ Definition execute {p} {t} `{(RiscvState p t)}(inst: Instruction): p unit :=
   | MInstruction i     => ExecuteM.execute i
   | I64Instruction i   => ExecuteI64.execute i
   | M64Instruction i   => ExecuteM64.execute i
-  | _                  => raiseException zero two
+  | _                  => raiseException (ZToReg 0) (ZToReg 2)
   end.

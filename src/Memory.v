@@ -118,15 +118,15 @@ Class Memory(m t: Set)`{MachineWidth t} := mkMemory {
 
   loadHalf_spec: forall m a,
     valid_addr a 2 (memSize m) ->
-    loadHalf m a = combine (loadByte m a) (loadByte m (add a one));
+    loadHalf m a = combine (loadByte m a) (loadByte m (add a (ZToReg 1)));
 
   loadWord_spec: forall m a,
     valid_addr a 4 (memSize m) ->
-    loadWord m a = combine (loadHalf m a) (loadHalf m (add a two));
+    loadWord m a = combine (loadHalf m a) (loadHalf m (add a (ZToReg 2)));
 
   loadDouble_spec: forall m a,
     valid_addr a 8 (memSize m) ->
-    loadDouble m a = combine (loadWord m a) (loadWord m (add a four));
+    loadDouble m a = combine (loadWord m a) (loadWord m (add a (ZToReg 4)));
 
   (* Note: No storeHalf_spec, storeWord_spec, storeDouble_spec, because we don't
      want to compare memories with = (too restrictive for implementors), nor start
@@ -452,21 +452,21 @@ Section MachineWidthHelpers.
     reflexivity.
   Qed.
 
-  Lemma regToZ_unsigned_one: regToZ_unsigned one = 1.
+  Lemma regToZ_unsigned_one: regToZ_unsigned (ZToReg 1) = 1.
   Proof.
-    intros. unfold one.
+    intros.
     apply regToZ_ZToReg_unsigned. pose proof pow2_sz_4. omega.
   Qed.
 
-  Lemma regToZ_unsigned_two: regToZ_unsigned two = 2.
+  Lemma regToZ_unsigned_two: regToZ_unsigned (ZToReg 2) = 2.
   Proof.
-    intros. unfold two.
+    intros.
     apply regToZ_ZToReg_unsigned. pose proof pow2_sz_4. omega.
   Qed.
   
-  Lemma regToZ_unsigned_four: regToZ_unsigned four = 4.
+  Lemma regToZ_unsigned_four: regToZ_unsigned (ZToReg 4) = 4.
   Proof.
-    intros. unfold four.
+    intros.
     apply regToZ_ZToReg_unsigned. pose proof pow2_sz_4. omega.
   Qed.
 
@@ -592,7 +592,7 @@ Section MemoryHelpers.
       valid_addr a1 8 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
       a2 <> a1 ->
-      a2 <> add a1 four ->
+      a2 <> add a1 (ZToReg 4) ->
       loadWord (storeDouble m a1 v) a2 = loadWord m a2.
   Proof.
     intros.
@@ -624,7 +624,7 @@ Section MemoryHelpers.
       pose proof combine_inj as Q.
       specialize (Q 32%nat 32%nat _ _ _ _ P).
       destruct Q as [Q _]. assumption.
-    - specialize (P (sub a2 four) v).
+    - specialize (P (sub a2 (ZToReg 4)) v).
       pose proof (regToZ_unsigned_bounds a2).
       assert (regToZ_unsigned a2 = 0 \/
               regToZ_unsigned a2 = 1 \/
@@ -633,12 +633,12 @@ Section MemoryHelpers.
               4 <= regToZ_unsigned a2) as D by omega.
       destruct D as [D | [D | [D | [D | D]]]];
         [ (rewrite D in C; simpl in C; discriminate) .. | ].
-      pose proof (loadDouble_spec              m       (sub a2 four)) as Sp1.
-      pose proof (loadDouble_spec (storeDouble m a1 v) (sub a2 four)) as Sp2.
+      pose proof (loadDouble_spec              m       (sub a2 (ZToReg 4))) as Sp1.
+      pose proof (loadDouble_spec (storeDouble m a1 v) (sub a2 (ZToReg 4))) as Sp2.
       unfold valid_addr in *.
       destruct H, H0.
       rewrite storeDouble_preserves_memSize in Sp2.
-      replace (regToZ_unsigned  (sub a2 four)) with (regToZ_unsigned a2 - 4) in *.
+      replace (regToZ_unsigned  (sub a2 (ZToReg 4))) with (regToZ_unsigned a2 - 4) in *.
       + assert ((regToZ_unsigned a2 - 4) mod 8 = 0) as X. {
           clear Sp1 Sp2 P.
           div_mod_to_quot_rem. nia.
@@ -647,7 +647,7 @@ Section MemoryHelpers.
         specialize (P (conj A X)).
         rewrite Sp1 in P by (split; assumption). clear Sp1.
         rewrite Sp2 in P by (split; assumption). clear Sp2.
-        assert (sub a2 four <> a1) as Ne. {
+        assert (sub a2 (ZToReg 4) <> a1) as Ne. {
           clear -H2.
           intro. subst. apply H2.
           ring.
@@ -656,7 +656,7 @@ Section MemoryHelpers.
         pose proof combine_inj as Q.
         specialize (Q 32%nat 32%nat _ _ _ _ P).
         destruct Q as [_ Q].
-        ring_simplify (add (sub a2 four) four) in Q.
+        ring_simplify (add (sub a2 (ZToReg 4)) (ZToReg 4)) in Q.
         assumption.
       + rewrite sub_def_unsigned.
         rewrite regToZ_unsigned_four.
@@ -783,7 +783,7 @@ Section MemoryHelpers.
   Qed.
 
   Lemma store_word_list_cons: forall w l a m,
-      store_word_list (w :: l) a m = store_word_list l (add a four) (storeWord m a w).
+      store_word_list (w :: l) a m = store_word_list l (add a (ZToReg 4)) (storeWord m a w).
   Proof.
     intros. unfold store_word_list. rewrite fold_left_index_cons.
     rewrite Z.mul_0_r.
@@ -887,7 +887,7 @@ Section MemoryHelpers.
         rewrite loadStoreWord_eq by mem_sideconditions.
         reflexivity.
       + mem_sideconditions.
-        specialize (IHl (storeWord m offset a) (i - 1) (add offset four)). 
+        specialize (IHl (storeWord m offset a) (i - 1) (add offset (ZToReg 4))). 
         rewrite <- IHl; mem_sideconditions.
   Qed.
   
@@ -961,7 +961,7 @@ Section MemoryHelpers.
       valid_addr a 4 (memSize m) ->
       0 < l ->
       regToZ_unsigned a + 4 * l <= memSize m ->
-      load_word_list m a l = loadWord m a :: load_word_list m (add a four) (l - 1).
+      load_word_list m a l = loadWord m a :: load_word_list m (add a (ZToReg 4)) (l - 1).
   Proof.
     intros.
     unfold load_word_list at 1.

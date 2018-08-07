@@ -23,14 +23,6 @@ Section Alu_Defs.
   Lemma fromImm_def: forall (a: Z),
       fromImm a = ZToWord wXLEN a.
   Proof. unfold fromImm. prove_alu_def. Qed.
-
-  Lemma zero_def:
-      zero = $0.
-  Proof. unfold zero. prove_alu_def. Qed.
-  
-  Lemma one_def:
-      one = $1.
-  Proof. unfold one. prove_alu_def. Qed.
   
   Lemma add_def: forall (a b: word wXLEN),
       add a b = wplus a b.
@@ -96,23 +88,10 @@ Section Alu_Defs.
       remu a b = wmod a b.
   Proof. unfold remu. prove_alu_def. Qed.
 
-  (* derived defs: *)
-  
-  Lemma two_def: two = $2.
-  Proof. unfold two. prove_alu_def. Qed.
-
-  Lemma four_def: four = $4.
-  Proof. unfold two. prove_alu_def. Qed.
-
-  Lemma eight_def: eight = $8.
-  Proof. unfold two. prove_alu_def. Qed.
-
 End Alu_Defs.
 
 Hint Rewrite
   @fromImm_def
-  @zero_def
-  @one_def
   @add_def
   @sub_def
   @mul_def
@@ -129,7 +108,4 @@ Hint Rewrite
   @ltu_def
   @divu_def
   @remu_def
-  @two_def
-  @four_def
-  @eight_def
 : alu_defs.

@@ -32,8 +32,8 @@ all: spec encode proofs
 
 # converting from Haskell using hs-to-coq:
 
-HS_TO_COQ_DIR ?= ../../hs-to-coq
-RISCV_SEMANTICS_DIR ?= ../../riscv-semantics
+HS_TO_COQ_DIR ?= ../../../hs-to-coq
+RISCV_SEMANTICS_DIR ?= ../../../riscv-semantics
 
 riscv-semantics_version_check:
 	./check_dep.sh $(RISCV_SEMANTICS_DIR) `cat deps/riscv-semantics`

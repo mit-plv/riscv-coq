@@ -78,7 +78,7 @@ Qed.
 
 Local Ltac solve_eq write_read_eq write_read_ne :=
   intros; subst;
-  (* note the order: we only unfold one layer *)
+  (* note the order: we only unfold ZToReg 1 layer *)
   unfold write_half, read_half, write_word, read_word, write_double, read_double in *;
   repeat match goal with
   | |- context [read_byte (write_byte ?m ?a1 ?v) ?a2] =>

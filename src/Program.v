@@ -23,7 +23,7 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   getPC: M t;
   setPC: t -> M unit;
 
-  (* TODO support all get/setCSRField, this one is just for the exception handler address *)
+  (* TODO support all get/setCSRField, this ZToReg 1 is just for the exception handler address *)
   getCSRField_MTVecBase: M MachineInt;
 
   step: M unit; (* updates PC *)
@@ -70,8 +70,8 @@ Section Riscv.
      case, we only verify the alignment *)
   Definition default_translate{MP: RiscvProgram}
     (accessType: AccessType)(alignment: t)(addr: t): M t :=
-    if remu addr alignment /= zero
-    then default_raiseException zero four
+    if remu addr alignment /= ZToReg 0
+    then default_raiseException (ZToReg 0) (ZToReg 4)
     else Return addr.
 
   Instance DefaultRiscvState{MP: RiscvProgram}: RiscvState := {|

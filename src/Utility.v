@@ -86,7 +86,7 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   (* not sure if needed or useful:
   regToNat: t -> nat;
   natToReg: nat -> t;
-  natToReg_semimorph: @semi_morph t zero one add mul (@eq t)
+  natToReg_semimorph: @semi_morph t zero ZToReg 1 add mul (@eq t)
                                nat O (S O) Nat.add Nat.mul Nat.eqb natToReg;
   regToNat_natToReg_idemp: forall n : nat, n < pow2 XLEN -> regToNat (natToReg n) = n;
   *)
@@ -115,12 +115,16 @@ Class MachineWidth(t: Set) := mkMachineWidth {
 }.
 
 
-Section DerivedProperties.
+Section Derived.
 
   Context {t: Set}.
   Context {MW: MachineWidth t}.
 
   Definition XLEN_in_bytes: Z := XLEN / 8.
+
+  Definition negate(x: t): t := sub (ZToReg 0) x.
+             
+  Definition lnot(x: t): t := xor x maxUnsigned.
 
   Lemma reg_eqb_true: forall a b, reg_eqb a b = true -> a = b.
   Proof. apply reg_eqb_spec. Qed.
@@ -154,7 +158,7 @@ Section DerivedProperties.
   Admitted.
   
   
-End DerivedProperties.  
+End Derived.
 
 Notation "a <|> b" := (or a b)  (at level 50, left associativity) : alu_scope.
 Notation "a <&> b" := (and a b) (at level 40, left associativity) : alu_scope.
@@ -169,28 +173,6 @@ Notation "a >= b" := (negb (signed_less_than a b))  (at level 70, no associativi
 Notation "'when' a b" := (if a then b else Return tt)
   (at level 60, a at level 0, b at level 0) : alu_scope.
 
-
-Section Constants.
-
-  Context {t: Set}.
-  Context {MW: MachineWidth t}.
-
-  Local Open Scope alu_scope.
-
-  (* TODO inline the constants *)
-  Definition zero : t := ZToReg 0.
-  Definition one  : t := ZToReg 1.
-  Definition two  : t := ZToReg 2.
-  Definition four : t := ZToReg 4.
-  Definition eight: t := ZToReg 8.
-
-  Definition negate(x: t): t := zero - x.
-             
-  Definition minusone: t := negate one.
-
-  Definition lnot(x: t): t := xor x maxUnsigned.
-
-End Constants.
 
 Definition machineIntToShamt: MachineInt -> Z := id.
 
