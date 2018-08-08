@@ -1,10 +1,12 @@
-Require Import Coq.ZArith.BinInt.
+Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia.
 Require Import bbv.Word.
 Require Import riscv.Utility.
 Import Word.ConversionNotations.
+Import Word.ArithmeticNotations.
 Local Open Scope word_scope.
+Local Open Scope Z_scope.
 
-Definition TODO{T: Type}: T. Admitted.
 
 Instance MachineWidth64: MachineWidth (word 64) := {|
   add := @wplus 64;
@@ -12,6 +14,7 @@ Instance MachineWidth64: MachineWidth (word 64) := {|
   mul := @wmult 64;
   div x y := @ZToWord 64 (Z.div (wordToZ x) (wordToZ y));
   rem x y := @ZToWord 64 (Z.modulo (wordToZ x) (wordToZ y));
+  negate := @wneg 64;
   signed_less_than a b := if wslt_dec a b then true else false;
   reg_eqb := @weqb 64;
   xor := @wxor 64;
@@ -47,23 +50,35 @@ Instance MachineWidth64: MachineWidth (word 64) := {|
   regToShamt  x := Z.of_N (wordToN (split1 6 58 x));
   highBits x := ZToWord 64 (bitSlice x 64 128);
   ZToReg := ZToWord 64;
+  regRing := @word_ring_theory_Z 64;
+  ZToReg_morphism := @word_ring_morph_Z 64;
+  reg_eqb_spec := @weqb_true_iff 64;
+  regToZ_signed_bounds := @wordToZ_size'' 64 ltac:(lia);
+  regToZ_unsigned_bounds := @uwordToZ_bound 64;
+  add_def_signed := @wplus_Z 64;
+  sub_def_signed := @wminus_Z 64;
+  mul_def_signed := @wmult_Z 64;
+  regToZ_ZToReg_signed := @wordToZ_ZToWord'' 64 ltac:(lia);
+  regToZ_ZToReg_unsigned := @uwordToZ_ZToWord 64;
+  ZToReg_regToZ_unsigned := @ZToWord_uwordToZ 64;
+  ZToReg_regToZ_signed := @ZToWord_wordToZ 64;
+  XLEN_lbound := ltac:(lia);
 |}.
-all: apply TODO.
-Defined.
 
-(* Tests that all operations reduce under cbv.
-   If something prints a huge term with unreduced matches in it, running small examples
-   inside Coq will not work! *)
-(*
-Eval cbv in zero.
-Eval cbv in ZToReg 1.
+Goal False.
+  idtac "Testing that all operations reduce under cbv."
+        "If something prints a huge term with unreduced matches in it,"
+        "running small examples inside Coq will not work!".
+Abort.
+
 Eval cbv in add $7 $9.
 Eval cbv in sub $11 $4.
 Eval cbv in mul $16 $4.
 Eval cbv in div $100 $8.
 Eval cbv in rem $100 $8.
+Eval cbv in negate $8.
 Eval cbv in signed_less_than $4 $5.
-Eval cbv in signed_eqb $7 $9.
+Eval cbv in reg_eqb $7 $9.
 Eval cbv in xor $8 $11.
 Eval cbv in or $3 $8.
 Eval cbv in and $7 $19.
@@ -96,4 +111,3 @@ Eval cbv in minSigned.
 Eval cbv in regToShamt5 $12.
 Eval cbv in regToShamt $12.
 Eval cbv in highBits (-9).
-*)
