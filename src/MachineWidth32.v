@@ -21,6 +21,80 @@ Proof.
     lia.
 Qed.    
 
+Lemma wneg_0_wminus: forall {sz: nat} (x: word sz),
+    ^~ x = $0 ^- x.
+Proof.
+  intros.
+  rewrite <- wplus_unit at 1.
+  reflexivity.
+Qed.
+
+Lemma ZToWord_opp_wneg{sz: nat}: forall (x: Z),
+    ZToWord sz (- x) = ^~ (ZToWord sz x).
+Proof.
+  intros.
+  rewrite wneg_0_wminus.
+  rewrite wminus_wminusZ.
+  unfold wminusZ, wordBinZ.
+  rewrite wordToZ_wzero.
+  rewrite (Z.sub_0_l (wordToZ (ZToWord sz x))).
+  destruct (wordToZ_ZToWord' sz x) as [k E].
+  rewrite E.
+  rewrite Z.opp_sub_distr.
+  rewrite ZToWord_Npow2_add_k'.
+  reflexivity.
+Qed.
+
+Lemma ZToWord_1{sz : nat}: ZToWord sz 1 = wone sz.
+Proof.
+  intros.
+  rewrite <- natToWord_Z_to_nat by (cbv; discriminate).  
+  reflexivity.
+Qed.
+
+Lemma Zeqb_true_ZToWord: forall {sz: nat} (x y: Z),
+    (x =? y) = true ->
+    ZToWord sz x = ZToWord sz y.
+Proof.
+  intros. apply Z.eqb_eq in H. congruence.
+Qed.
+
+Lemma wordToZ_size'': forall (sz : nat),
+    (0 < sz)%nat ->
+    forall  (w : word sz), - 2 ^ (Z.of_nat sz - 1) <= wordToZ w < 2 ^ (Z.of_nat sz - 1).
+Proof.
+  intros.
+  destruct sz; [lia|].
+  pose proof (@wordToZ_size' sz w) as P.
+  replace (Z.of_nat (S sz) - 1) with (Z.of_nat sz) by lia.
+  rewrite Nat2Z_inj_pow in P.
+  exact P.
+Qed.
+
+Lemma word_ring_theory_Z: forall (sz: nat),
+    ring_theory (ZToWord sz 0) (ZToWord sz 1)
+                (@wplus sz) (@wmult sz) (@wminus sz) (@wneg sz) eq.
+Proof.
+  intros.
+  rewrite ZToWord_0.
+  rewrite ZToWord_1.
+  apply wring.
+Qed.
+
+Lemma word_ring_morph_Z: forall (sz: nat),
+    ring_morph (ZToWord sz 0) (ZToWord sz 1) (@wplus sz) (@wmult sz) (@wminus sz) (@wneg sz)
+               eq 0 1 Z.add Z.mul Z.sub Z.opp Z.eqb
+               (ZToWord sz).
+Proof.
+  constructor.
+  + reflexivity.
+  + reflexivity.
+  + exact (@ZToWord_plus sz).
+  + exact (@ZToWord_minus sz).
+  + exact (@ZToWord_mult sz).
+  + exact (@ZToWord_opp_wneg sz).
+  + exact (@Zeqb_true_ZToWord sz).
+Qed.
 
 Instance MachineWidth32: MachineWidth (word 32) := {|
   add := @wplus 32;
@@ -28,6 +102,7 @@ Instance MachineWidth32: MachineWidth (word 32) := {|
   mul := @wmult 32;
   div x y := @ZToWord 32 (Z.div (wordToZ x) (wordToZ y));
   rem x y := @ZToWord 32 (Z.modulo (wordToZ x) (wordToZ y));
+  negate := @wneg 32;
   signed_less_than a b := if wslt_dec a b then true else false;
   reg_eqb := @weqb 32;
   xor := @wxor 32;
@@ -64,45 +139,10 @@ Instance MachineWidth32: MachineWidth (word 32) := {|
   highBits x := ZToWord 32 (bitSlice x 32 64);
   ZToReg := ZToWord 32;
 |}.
-- constructor; intros.
-  + rewrite ZToWord_0. apply wplus_unit.
-  + apply wplus_comm.
-  + apply wplus_assoc.
-  + rewrite <- natToWord_Z_to_nat by (cbv; discriminate).
-    apply wmult_unit.
-  + apply wmult_comm.
-  + apply wmult_assoc.
-  + apply wmult_plus_distr.
-  + rewrite ZToWord_0.
-    rewrite! wminus_def.
-    rewrite wplus_unit.
-    reflexivity.
-  + rewrite ZToWord_0.
-    rewrite! wminus_def.
-    rewrite wplus_unit.
-    apply wminus_inv.
-- constructor; intros.
-  + reflexivity.
-  + reflexivity.
-  + apply ZToWord_plus.
-  + apply ZToWord_minus.
-  + apply ZToWord_mult.
-  + rewrite ZToWord_0.
-    rewrite wminus_wminusZ.
-    unfold wminusZ, wordBinZ.
-    rewrite wordToZ_wzero.
-    rewrite (Z.sub_0_l (wordToZ (ZToWord 32 x))).
-    destruct (wordToZ_ZToWord' 32 x) as [k E].
-    rewrite E.
-    rewrite Z.opp_sub_distr.
-    rewrite ZToWord_Npow2_add_k'.
-    reflexivity.
-  + apply Z.eqb_eq in H. congruence.
+- exact (word_ring_theory_Z 32).
+- exact (word_ring_morph_Z 32).
 - exact (@weqb_true_iff 32).
-- intros.
-  pose proof (@wordToZ_size' 31 a) as P.
-  rewrite! pow2_S_z in P.
-  exact P.
+- exact (@wordToZ_size'' 32 ltac:(lia)).
 - intros.
   unfold uwordToZ.
   split.
@@ -136,6 +176,7 @@ Eval cbv in sub $11 $4.
 Eval cbv in mul $16 $4.
 Eval cbv in div $100 $8.
 Eval cbv in rem $100 $8.
+Eval cbv in negate $8.
 Eval cbv in signed_less_than $4 $5.
 Eval cbv in reg_eqb $7 $9.
 Eval cbv in xor $8 $11.

@@ -21,6 +21,8 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   div: t -> t -> t;
   rem: t -> t -> t;
 
+  negate: t -> t;
+
   (* comparison operators *)
   reg_eqb: t -> t -> bool;
   signed_less_than: t -> t -> bool;
@@ -78,16 +80,9 @@ Class MachineWidth(t: Set) := mkMachineWidth {
 
   (* properties of operations: *)
   (* TODO list separately to make them more discoverable by "Search" *)
-  regRing: @ring_theory t (ZToReg 0) (ZToReg 1) add mul sub (fun x => sub (ZToReg 0) x) (@eq t);
-  ZToReg_morphism: @ring_morph t (ZToReg 0) (ZToReg 1) add mul sub (fun x => sub (ZToReg 0) x) (@eq t)
+  regRing: @ring_theory t (ZToReg 0) (ZToReg 1) add mul sub negate (@eq t);
+  ZToReg_morphism: @ring_morph t (ZToReg 0) (ZToReg 1) add mul sub negate (@eq t)
                                Z 0 1 Z.add Z.mul Z.sub Z.opp Z.eqb ZToReg;
-  (* not sure if needed or useful:
-  regToNat: t -> nat;
-  natToReg: nat -> t;
-  natToReg_semimorph: @semi_morph t zero ZToReg 1 add mul (@eq t)
-                               nat O (S O) Nat.add Nat.mul Nat.eqb natToReg;
-  regToNat_natToReg_idemp: forall n : nat, n < pow2 XLEN -> regToNat (natToReg n) = n;
-  *)
 
   reg_eqb_spec: forall a b, reg_eqb a b = true <-> a = b;
 
@@ -124,8 +119,6 @@ Section Derived.
 
   Definition XLEN_in_bytes: Z := XLEN / 8.
 
-  Definition negate(x: t): t := sub (ZToReg 0) x.
-             
   Definition lnot(x: t): t := xor x maxUnsigned.
 
   Lemma reg_eqb_true: forall a b, reg_eqb a b = true -> a = b.
