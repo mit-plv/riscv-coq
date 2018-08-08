@@ -71,6 +71,69 @@ Proof.
   exact P.
 Qed.
 
+Lemma wordToZ_ZToWord': forall (sz: nat),
+    (0 < sz)%nat ->
+    forall n: Z,
+      - 2 ^ (Z.of_nat sz - 1) <= n < 2 ^ (Z.of_nat sz - 1) ->
+      wordToZ (ZToWord sz n) = n.
+Proof.
+  intros.
+  destruct sz; [lia|].
+  apply wordToZ_ZToWord.
+  replace (Z.of_nat (S sz) - 1) with (Z.of_nat sz) in * by lia.
+  rewrite Nat2Z_inj_pow.
+  assumption.
+Qed.
+
+Lemma wplus_Z:  forall sz (a b : word sz),
+    a ^+ b = ZToWord sz (wordToZ a + wordToZ b).
+Proof.
+  intros. rewrite ZToWord_plus. rewrite! ZToWord_wordToZ. reflexivity.
+Qed.
+
+Lemma wminus_Z: forall sz (a b : word sz),
+    a ^- b = ZToWord sz (wordToZ a - wordToZ b).
+Proof.
+  intros. rewrite ZToWord_minus. rewrite! ZToWord_wordToZ. reflexivity.
+Qed.
+
+Lemma wmult_Z:  forall sz (a b : word sz),
+    a ^* b = ZToWord sz (wordToZ a * wordToZ b).
+Proof.
+  intros. rewrite ZToWord_mult. rewrite! ZToWord_wordToZ. reflexivity.
+Qed.
+
+Lemma Z_of_N_Npow2: forall n, Z.of_N (Npow2 n) = 2 ^ Z.of_nat n.
+Proof.
+  intros.
+  rewrite pow2_N.
+  rewrite nat_N_Z.
+  rewrite Nat2Z_inj_pow.
+  reflexivity.
+Qed.
+
+Lemma uwordToZ_bound: forall sz (a: word sz),
+    0 <= uwordToZ a < 2 ^ Z.of_nat sz.
+Proof.
+  intros.
+  unfold uwordToZ.
+  split.
+  + apply N2Z.is_nonneg.
+  + pose proof (wordToN_bound a) as P.
+    apply N2Z.inj_lt in P.
+    rewrite Z_of_N_Npow2 in P.
+    assumption.
+Qed.
+
+Lemma ZToWord_uwordToZ: forall sz (a: word sz),
+    ZToWord sz (uwordToZ a) = a.
+Proof.
+  intros.
+  unfold uwordToZ.
+  rewrite ZToWord_Z_of_N.
+  apply NToWord_wordToN.  
+Qed.
+
 Lemma word_ring_theory_Z: forall (sz: nat),
     ring_theory (ZToWord sz 0) (ZToWord sz 1)
                 (@wplus sz) (@wmult sz) (@wminus sz) (@wneg sz) eq.
@@ -138,32 +201,20 @@ Instance MachineWidth32: MachineWidth (word 32) := {|
   regToShamt  x := Z.of_N (wordToN (split1 5 27 x));
   highBits x := ZToWord 32 (bitSlice x 32 64);
   ZToReg := ZToWord 32;
+  regRing := @word_ring_theory_Z 32;
+  ZToReg_morphism := @word_ring_morph_Z 32;
+  reg_eqb_spec := @weqb_true_iff 32;
+  regToZ_signed_bounds := @wordToZ_size'' 32 ltac:(lia);
+  regToZ_unsigned_bounds := @uwordToZ_bound 32;
+  add_def_signed := @wplus_Z 32;
+  sub_def_signed := @wminus_Z 32;
+  mul_def_signed := @wmult_Z 32;
+  regToZ_ZToReg_signed := @wordToZ_ZToWord' 32 ltac:(lia);
+  regToZ_ZToReg_unsigned := @uwordToZ_ZToWord 32;
+  ZToReg_regToZ_unsigned := @ZToWord_uwordToZ 32;
+  ZToReg_regToZ_signed := @ZToWord_wordToZ 32;
+  XLEN_lbound := ltac:(lia);
 |}.
-- exact (word_ring_theory_Z 32).
-- exact (word_ring_morph_Z 32).
-- exact (@weqb_true_iff 32).
-- exact (@wordToZ_size'' 32 ltac:(lia)).
-- intros.
-  unfold uwordToZ.
-  split.
-  + apply N2Z.is_nonneg.
-  + pose proof (wordToN_bound a) as P.
-    apply N2Z.inj_lt in P.
-    exact P.
-- intros. rewrite ZToWord_plus. rewrite! ZToWord_wordToZ. reflexivity.
-- intros. rewrite ZToWord_minus. rewrite! ZToWord_wordToZ. reflexivity.
-- intros. rewrite ZToWord_mult. rewrite! ZToWord_wordToZ. reflexivity.
-- intros. apply wordToZ_ZToWord.
-  rewrite! pow2_S_z.
-  assumption.
-- intros. apply uwordToZ_ZToWord. assumption.
-- intros.
-  unfold uwordToZ.
-  rewrite ZToWord_Z_of_N.
-  apply NToWord_wordToN.
-- intros. apply ZToWord_wordToZ.
-- cbv. discriminate.
-Defined.
 
 Goal False.
   idtac "Testing that all operations reduce under cbv."
