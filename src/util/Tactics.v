@@ -11,10 +11,14 @@ Tactic Notation "unique" "pose" "proof" constr(defn) :=
 (* Like "omega" but also knows about min and max *)
 Ltac momega :=
   repeat match goal with
-         | _: context[min ?a ?b] |- _ => unique pose proof (Min.min_spec a b)
-         |  |- context[min ?a ?b]     => unique pose proof (Min.min_spec a b)
-         | _: context[max ?a ?b] |- _ => unique pose proof (Max.max_spec a b)
-         |  |- context[max ?a ?b]     => unique pose proof (Max.max_spec a b)
+         | _: context[  min ?a ?b] |- _ => unique pose proof (Min.min_spec a b)
+         |  |- context[  min ?a ?b]     => unique pose proof (Min.min_spec a b)
+         | _: context[  max ?a ?b] |- _ => unique pose proof (Max.max_spec a b)
+         |  |- context[  max ?a ?b]     => unique pose proof (Max.max_spec a b)
+         | _: context[Z.min ?a ?b] |- _ => unique pose proof (  Z.min_spec a b)
+         |  |- context[Z.min ?a ?b]     => unique pose proof (  Z.min_spec a b)
+         | _: context[Z.max ?a ?b] |- _ => unique pose proof (  Z.max_spec a b)
+         |  |- context[Z.max ?a ?b]     => unique pose proof (  Z.max_spec a b)
   end;
   omega.
 

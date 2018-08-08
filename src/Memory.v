@@ -152,11 +152,20 @@ Definition Znth_error{A: Type}(l: list A)(i: Z): option A :=
   | _ => nth_error l (Z.to_nat i)
   end.
 
-(* not needed at the moment, let's see if we can do everything with Znth_error
-Definition Znth{T: Type}(l: list T): Z := Z.of_nat (length l).
- *)
+(*
+Definition Znth{T: Type}(l: list T)(i: Z)(default: T): T :=
+  match Znth_error l i with
+  | Some x => x
+  | None => default
+  end.
+*)
+Definition Znth{T: Type}(l: list T)(i: Z)(default: T): T := nth (Z.to_nat i) l default.
 
 Definition Zlength{T: Type}(l: list T): Z := Z.of_nat (length l).
+
+Definition Zfirstn{T: Type}(n: Z)(l: list T): list T := firstn (Z.to_nat n) l.
+
+Definition Zskipn{T: Type}(n: Z)(l: list T): list T := skipn (Z.to_nat n) l.
 
 Lemma list_elementwise_same: forall A (l1 l2: list A),
     (forall i, nth_error l1 i = nth_error l2 i) ->

@@ -7,7 +7,7 @@ Require Import riscv.Utility.
 Require Import riscv.util.Monads.
 Require Import riscv.Memory.
 Require Import riscv.util.Tactics.
-Require riscv.ListMemoryNatAddr.
+Require riscv.ListMemoryZAddr.
 Import Word.ArithmeticNotations.
 Import Word.ConversionNotations.
 Local Open Scope word_scope.
@@ -44,44 +44,44 @@ Lemma align8_eq: forall n,
 Proof.
   intros. apply align_eq; omega.
 Qed.
-  
+
 
 (* bitwidth w is ignored on RHS, but we still want to carry it in the type *)
-Definition mem(w: nat) := ListMemoryNatAddr.mem.
+Definition mem(w: nat) := ListMemoryZAddr.mem.
 
 Section Memory.
 
   Context {w: nat}. (* bit width of memory addresses *)
 
   Definition mem_size(m: mem w): Z :=
-    align 8 (Z.of_nat (min (pow2 w) (ListMemoryNatAddr.mem_size m))).
+    align 8 (Z.min (2 ^ Z.of_nat w) (ListMemoryZAddr.mem_size m)).
 
   Definition read_byte(m: mem w)(a: word w): word 8 :=
-    ListMemoryNatAddr.read_byte m (wordToNat a).
+    ListMemoryZAddr.read_byte m (uwordToZ a).
 
   Definition read_half(m: mem w)(a: word w): word 16 :=
-    ListMemoryNatAddr.read_half m (wordToNat a).
+    ListMemoryZAddr.read_half m (uwordToZ a).
 
   Definition read_word(m: mem w)(a: word w): word 32 :=
-    ListMemoryNatAddr.read_word m (wordToNat a).
+    ListMemoryZAddr.read_word m (uwordToZ a).
 
   Definition read_double(m: mem w)(a: word w): word 64 :=
-    ListMemoryNatAddr.read_double m (wordToNat a).
+    ListMemoryZAddr.read_double m (uwordToZ a).
 
   Definition write_byte(m: mem w)(a: word w)(v: word 8): mem w :=
-    ListMemoryNatAddr.write_byte m (wordToNat a) v.
+    ListMemoryZAddr.write_byte m (uwordToZ a) v.
 
   Definition write_half(m: mem w)(a: word w)(v: word 16): mem w :=
-    ListMemoryNatAddr.write_half m (wordToNat a) v.
+    ListMemoryZAddr.write_half m (uwordToZ a) v.
 
   Definition write_word(m: mem w)(a: word w)(v: word 32): mem w :=
-    ListMemoryNatAddr.write_word m (wordToNat a) v.
+    ListMemoryZAddr.write_word m (uwordToZ a) v.
 
   Definition write_double(m: mem w)(a: word w)(v: word 64): mem w :=
-    ListMemoryNatAddr.write_double m (wordToNat a) v.
+    ListMemoryZAddr.write_double m (uwordToZ a) v.
 
   Definition const_mem(default: word 8)(size: Z): mem w :=
-    ListMemoryNatAddr.const_mem default (Z.to_nat size).
+    ListMemoryZAddr.const_mem default size.
 
   Definition zero_mem: Z -> mem w := const_mem $0.
 
@@ -92,19 +92,11 @@ Section Memory.
       0 <= size <= 2 ^ Z.of_nat w ->
       mem_size (const_mem default size) = size.
   Proof.
-    intros. unfold mem_size, const_mem. rewrite ListMemoryNatAddr.const_mem_mem_size.
-    replace (Init.Nat.min (pow2 w) (Z.to_nat size)) with (Z.to_nat size).
-    - rewrite Z2Nat.id by omega.
-      apply align8_eq.
-      assumption.
-    - repeat match goal with
-         | _: context[min ?a ?b] |- _ => unique pose proof (Min.min_spec a b)
-         |  |- context[min ?a ?b]     => unique pose proof (Min.min_spec a b)
-         | _: context[max ?a ?b] |- _ => unique pose proof (Max.max_spec a b)
-         |  |- context[max ?a ?b]     => unique pose proof (Max.max_spec a b)
-      end.
-  Admitted.
-            
+    intros. unfold mem_size, const_mem. rewrite ListMemoryZAddr.const_mem_mem_size by omega.
+    replace (Z.min (2 ^ Z.of_nat w) size) with size by momega.
+    apply align8_eq. assumption.
+  Qed.
+
 End Memory.
 
 Ltac pose_align8_lt :=
@@ -113,21 +105,23 @@ Ltac pose_align8_lt :=
          | |- context [align 8 ?x]     => unique pose proof (align8_lt x)
          end.
 
+Definition TODO{T: Type}: T. Admitted.
+
 Local Ltac wrap L :=
   intros;
   repeat match goal with
          | H: valid_addr _ _ _ |- _ => destruct H
          end;
-  unfold mem_size, ListMemoryNatAddr.mem_size in *;
+  unfold mem_size, ListMemoryZAddr.mem_size in *;
   first [do 2 f_equal; apply L | apply L];
-  unfold ListMemoryNatAddr.mem_size;
+  unfold ListMemoryZAddr.mem_size;
   pose_align8_lt;
   try apply wordToNat_neq1;
-  (congruence || momega || idtac).    
+  (congruence || momega || apply TODO).
 
-Definition TODO{T: Type}: T. Admitted.
-
-Instance mem_is_Memory(w: nat){MW: MachineWidth (word w)}: Memory (mem w) (word w) := {|
+Instance mem_is_Memory(w: nat){MW: MachineWidth (word w)}(E: Z.of_nat w = XLEN)
+: Memory (mem w) (word w) := 
+{|
   memSize     := mem_size;
   loadByte    := read_byte;
   loadHalf    := read_half;
@@ -138,26 +132,35 @@ Instance mem_is_Memory(w: nat){MW: MachineWidth (word w)}: Memory (mem w) (word 
   storeWord   := write_word;
   storeDouble := write_double;
 |}.
-all: apply TODO. (*
-- intros. unfold mem_size. pose_align8_lt. momega.
-- intros. unfold mem_size, align. rewrite Nat.mul_comm. apply Nat.mod_mul. congruence.
-- wrap ListMemoryNatAddr.write_read_byte_eq.
-- wrap ListMemoryNatAddr.write_read_byte_ne.
-- wrap ListMemoryNatAddr.write_byte_preserves_mem_size.
-- wrap ListMemoryNatAddr.write_read_half_eq.
-- wrap ListMemoryNatAddr.write_read_half_ne.
-- wrap ListMemoryNatAddr.write_half_preserves_mem_size.
-- wrap ListMemoryNatAddr.write_read_word_eq.
-- wrap ListMemoryNatAddr.write_read_word_ne.
-- wrap ListMemoryNatAddr.write_word_preserves_mem_size.
-- wrap ListMemoryNatAddr.write_read_double_eq.
-- wrap ListMemoryNatAddr.write_read_double_ne.
-- wrap ListMemoryNatAddr.write_double_preserves_mem_size.
+- intros. unfold mem_size. pose_align8_lt.
+  rewrite E in *.
+  momega.
+- intros. unfold mem_size, align. rewrite Z.mul_comm. apply Z.mod_mul. congruence.
+- wrap ListMemoryZAddr.write_read_byte_eq.
+- wrap ListMemoryZAddr.write_read_byte_ne.
+- wrap ListMemoryZAddr.write_byte_preserves_mem_size.
+- wrap ListMemoryZAddr.write_read_half_eq.
+- wrap ListMemoryZAddr.write_read_half_ne.
+- wrap ListMemoryZAddr.write_half_preserves_mem_size.
+- wrap ListMemoryZAddr.write_read_word_eq.
+- wrap ListMemoryZAddr.write_read_word_ne.
+- wrap ListMemoryZAddr.write_word_preserves_mem_size.
+- wrap ListMemoryZAddr.write_read_double_eq.
+- wrap ListMemoryZAddr.write_read_double_ne.
+- wrap ListMemoryZAddr.write_double_preserves_mem_size.
+- apply TODO.
+- apply TODO.
+- apply TODO.
+(*
 - unfold read_byte.
-  intros. unfold valid_addr, mem_size in *. pose_align8_lt. rewrite wordToNat_wplus'' by momega. reflexivity.
+  intros. unfold valid_addr, mem_size in *. pose_align8_lt. rewrite uwordToZ_wplus'' by momega. reflexivity.
 - unfold read_half.
-  intros. unfold valid_addr, mem_size in *. pose_align8_lt. rewrite wordToNat_wplus'' by momega. reflexivity.
+  intros. unfold valid_addr, mem_size in *. pose_align8_lt. rewrite uwordToZ_wplus'' by momega. reflexivity.
 - unfold read_word.
-  intros. unfold valid_addr, mem_size in *. pose_align8_lt. rewrite wordToNat_wplus'' by momega. reflexivity.
+  intros. unfold valid_addr, mem_size in *. pose_align8_lt. rewrite uwordToZ_wplus'' by momega. reflexivity.
 *)
 Defined.
+
+Require Import riscv.MachineWidth32.
+
+Instance mem32_is_Memory: Memory (mem 32) (word 32) := mem_is_Memory _ eq_refl.
