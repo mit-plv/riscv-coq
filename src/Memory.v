@@ -452,13 +452,23 @@ Section MachineWidthHelpers.
     congruence.
   Qed.
 
-  Lemma regToZ_unsigned_neq: forall (a b: t), regToZ_unsigned a <> regToZ_unsigned b -> a <> b.
+  Lemma regToZ_unsigned_ne: forall (a b: t), regToZ_unsigned a <> regToZ_unsigned b -> a <> b.
   Proof.
     intros.
     intro C.
     subst b.
     apply H.
     reflexivity.
+  Qed.
+
+  Lemma ne_regToZ_unsigned: forall (a b: t),
+      a <> b -> regToZ_unsigned a <> regToZ_unsigned b.
+  Proof.
+    intros.
+    intro C.
+    apply H.
+    apply regToZ_unsigned_eq.
+    assumption.
   Qed.
 
   Lemma regToZ_unsigned_one: regToZ_unsigned (ZToReg 1) = 1.
@@ -481,7 +491,7 @@ Section MachineWidthHelpers.
 
 End MachineWidthHelpers.
 
-Ltac regOmega_pre := apply regToZ_unsigned_eq || apply regToZ_unsigned_neq.
+Ltac regOmega_pre := apply regToZ_unsigned_eq || apply regToZ_unsigned_ne.
 
 Ltac regOmega := regOmega_pre; omega.
 
@@ -587,7 +597,7 @@ Section MemoryHelpers.
 
   Add Ring tring: (@regRing t MW).
 
-  Lemma regToZ_unsigned_add_so_simple_not_worth_using: forall a b,
+  Lemma regToZ_unsigned_add: forall a b,
       0 <= regToZ_unsigned a + regToZ_unsigned b < 2 ^ XLEN ->
       regToZ_unsigned (add a b) = regToZ_unsigned a + regToZ_unsigned b.
   Proof.
@@ -595,6 +605,30 @@ Section MemoryHelpers.
     rewrite add_def_unsigned.
     apply regToZ_ZToReg_unsigned in H.
     exact H.
+  Qed.
+
+  Lemma regToZ_unsigned_add_l: forall (a: Z) (b: t),
+      0 <= a ->
+      0 <= a + regToZ_unsigned b < 2 ^ XLEN ->
+      regToZ_unsigned (add (ZToReg a) b) = a + regToZ_unsigned b.
+  Proof.
+    intros.
+    pose proof (regToZ_unsigned_bounds b).
+    rewrite regToZ_unsigned_add.
+    - rewrite regToZ_ZToReg_unsigned by omega. reflexivity.
+    - rewrite regToZ_ZToReg_unsigned; omega.
+  Qed.
+
+  Lemma regToZ_unsigned_add_r: forall (a: t) (b: Z),
+      0 <= b ->
+      0 <= regToZ_unsigned a + b < 2 ^ XLEN ->
+      regToZ_unsigned (add a (ZToReg b)) = regToZ_unsigned a + b.
+  Proof.
+    intros.
+    pose proof (regToZ_unsigned_bounds a).
+    rewrite regToZ_unsigned_add.
+    - rewrite regToZ_ZToReg_unsigned by omega. reflexivity.
+    - rewrite regToZ_ZToReg_unsigned; omega.
   Qed.
   
   Lemma loadWord_storeDouble_ne: forall m (a1 a2: t) v,

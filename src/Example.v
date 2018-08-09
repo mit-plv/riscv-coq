@@ -52,7 +52,7 @@ Goal False.
   (* decoder seems to work :) *)
 Abort.
 
-Definition RiscvMachine := @RiscvMachine (word 32) (mem wXLEN) (Register -> word wXLEN).
+Definition RiscvMachine := @RiscvMachine (word 32) mem (Register -> word wXLEN).
 
 (* This example uses the memory only as instruction memory
    TODO make an example which uses memory to store data *)
