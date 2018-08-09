@@ -108,12 +108,22 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   ZToReg_regToZ_signed: forall a: t, ZToReg (regToZ_signed a) = a;
 
   XLEN_lbound: 8 <= XLEN;
+
+  euclid_unsigned: forall a b,
+      b <> ZToReg 0 ->
+      a = add (mul b (divu a b)) (remu a b) /\ 0 <= regToZ_unsigned (remu a b) < regToZ_unsigned b;
+
+  euclid_unsigned_unique: forall a b q r,
+      b <> ZToReg 0 ->
+      a = add (mul b q) r /\ 0 <= regToZ_unsigned r < regToZ_unsigned b ->
+      q = divu a b /\ r = remu a b;
+
 }.
 
+(* TODO figure out how to do this nicely and incorporate into MachineWidth *)
 Class MachineWidthDivRemSpec(t: Set){MW: MachineWidth t} := mkMachineWidthDivRemSpec {
 
-  euclid_signed  : forall a b, a = add (mul (div  a b) b) (rem  a b);
-  euclid_unsigned: forall a b, a = add (mul (divu a b) b) (remu a b);
+  euclid_signed: forall a b, a = add (mul (div a b) b) (rem a b);
 
   (* signed division rounds towards zero *)
   rem_range_pos: forall a b,
@@ -123,8 +133,6 @@ Class MachineWidthDivRemSpec(t: Set){MW: MachineWidth t} := mkMachineWidthDivRem
       regToZ_signed (mul (div a b) b) < 0 ->
       regToZ_signed b < regToZ_signed (rem a b) <= 0;
 
-  remu_range: forall a b, 0 <= regToZ_unsigned (remu a b) < regToZ_unsigned b;
-  
   (* corner cases of division and remainder: *)
 
   (* division by zero returns all ones *)
