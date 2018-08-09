@@ -110,6 +110,37 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   XLEN_lbound: 8 <= XLEN;
 }.
 
+Class MachineWidthDivRemSpec(t: Set){MW: MachineWidth t} := mkMachineWidthDivRemSpec {
+
+  euclid_signed  : forall a b, a = add (mul (div  a b) b) (rem  a b);
+  euclid_unsigned: forall a b, a = add (mul (divu a b) b) (remu a b);
+
+  (* signed division rounds towards zero *)
+  rem_range_pos: forall a b,
+      0 <= regToZ_signed (mul (div a b) b) ->
+      0 <= regToZ_signed (rem a b) < regToZ_signed b;
+  rem_range_neg: forall a b,
+      regToZ_signed (mul (div a b) b) < 0 ->
+      regToZ_signed b < regToZ_signed (rem a b) <= 0;
+
+  remu_range: forall a b, 0 <= regToZ_unsigned (remu a b) < regToZ_unsigned b;
+  
+  (* corner cases of division and remainder: *)
+
+  (* division by zero returns all ones *)
+  div_zero : forall x, div  x (ZToReg 0) = maxUnsigned;
+  divu_zero: forall x, divu x (ZToReg 0) = maxUnsigned;
+
+  (* remainder of division of x by zero returns x: *)
+  rem_zero : forall x, rem  x (ZToReg 0) = x;
+  remu_zero: forall x, remu x (ZToReg 0) = x;
+
+  (* overflow only occurs when signed-dividing minSigned by -1: *)
+  div_overflow: div minSigned maxUnsigned = minSigned;
+  rem_overflow: rem minSigned maxUnsigned = ZToReg 0;
+
+}.
+
 Notation fromImm := (@ZToReg _ _) (only parsing).
 
 Section Derived.
