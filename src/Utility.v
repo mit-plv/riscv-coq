@@ -100,9 +100,7 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   regToZ_ZToReg_signed: forall n : Z,
       - 2 ^ (XLEN - 1) <= n < 2 ^ (XLEN - 1) ->
       regToZ_signed (ZToReg n) = n;
-  regToZ_ZToReg_unsigned: forall n : Z,
-      0 <= n < 2 ^ XLEN ->
-      regToZ_unsigned (ZToReg n) = n;
+  regToZ_ZToReg_unsigned_mod: forall n : Z, regToZ_unsigned (ZToReg n) = n mod 2 ^ XLEN;
 
   ZToReg_regToZ_unsigned: forall a: t, ZToReg (regToZ_unsigned a) = a;
   ZToReg_regToZ_signed: forall a: t, ZToReg (regToZ_signed a) = a;
@@ -153,6 +151,16 @@ Section Derived.
   Proof.
     intros. destruct (reg_eqb a b) eqn: E; try congruence.
     exfalso. apply H. apply reg_eqb_true in E. assumption.
+  Qed.
+
+  Lemma regToZ_ZToReg_unsigned: forall n : Z,
+      0 <= n < 2 ^ XLEN ->
+      regToZ_unsigned (ZToReg n) = n.
+  Proof.
+    intros.
+    rewrite regToZ_ZToReg_unsigned_mod.
+    apply Z.mod_small.
+    assumption.
   Qed.
 
   Lemma add_def_unsigned: forall a b, add a b = ZToReg (regToZ_unsigned a + regToZ_unsigned b).

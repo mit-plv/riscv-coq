@@ -8,6 +8,8 @@ Local Open Scope word_scope.
 Local Open Scope Z_scope.
 
 
+Definition TODO{T: Type}: T. Admitted.
+
 Instance MachineWidth32: MachineWidth (word 32) := {|
   add := @wplus 32;
   sub := @wminus 32;
@@ -59,7 +61,7 @@ Instance MachineWidth32: MachineWidth (word 32) := {|
   sub_def_signed := @wminus_Z 32;
   mul_def_signed := @wmult_Z 32;
   regToZ_ZToReg_signed := @wordToZ_ZToWord'' 32 ltac:(lia);
-  regToZ_ZToReg_unsigned := @uwordToZ_ZToWord 32;
+  regToZ_ZToReg_unsigned_mod := _;
   ZToReg_regToZ_unsigned := @ZToWord_uwordToZ 32;
   ZToReg_regToZ_signed := @ZToWord_wordToZ 32;
   XLEN_lbound := ltac:(lia);
@@ -68,6 +70,8 @@ Instance MachineWidth32: MachineWidth (word 32) := {|
   divu_def _ _ := eq_refl;
   remu_def _ _ := eq_refl;
 |}.
+- intros. apply uwordToZ_ZToWord_mod. apply TODO.
+Defined.
 
 Goal False.
   idtac "Testing that all operations reduce under cbv."
