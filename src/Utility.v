@@ -109,29 +109,34 @@ Class MachineWidth(t: Set) := mkMachineWidth {
 
   XLEN_lbound: 8 <= XLEN;
 
-  euclid_unsigned: forall a b,
+  (* Note: There are 3 ways to define div and mod:
+     - truncate division (aka round towards zero, aka "T"), define mod as remainder wrt division
+       Defined in Coq in Module ZDivTrunc and available as Z.quot and Z.rem.
+       That's also what RISC-V does, according to
+       https://github.com/riscv/riscv-isa-manual/commit/3de73dedf7822bf35f0fa603e400c4f25c99b6d9
+     - floor division (aka "F"), define mod as remainder wrt division
+       Defined in Coq in Module ZDivFloor and available as Z.div and Z.modulo.
+     - Euclidian division, where the remainder never is negative (aka "E"):
+       forall a b, b<>0 -> exists r q, a = b*q+r /\ 0 < r < |b|
+       Defined in Coq in Module ZDivEucl. *)
+
+  div_def: forall a b,
       b <> ZToReg 0 ->
-      a = add (mul b (divu a b)) (remu a b) /\ 0 <= regToZ_unsigned (remu a b) < regToZ_unsigned b;
-
-  euclid_unsigned_unique: forall a b q r,
+      ~(a = minSigned /\ b = maxUnsigned) ->
+      div a b = ZToReg (Z.quot (regToZ_signed a) (regToZ_signed b));
+  
+  rem_def: forall a b,
       b <> ZToReg 0 ->
-      a = add (mul b q) r /\ 0 <= regToZ_unsigned r < regToZ_unsigned b ->
-      q = divu a b /\ r = remu a b;
+      ~(a = minSigned /\ b = maxUnsigned) ->
+      rem a b = ZToReg (Z.rem (regToZ_signed a) (regToZ_signed b));
 
-}.
-
-(* TODO figure out how to do this nicely and incorporate into MachineWidth *)
-Class MachineWidthDivRemSpec(t: Set){MW: MachineWidth t} := mkMachineWidthDivRemSpec {
-
-  euclid_signed: forall a b, a = add (mul (div a b) b) (rem a b);
-
-  (* signed division rounds towards zero *)
-  rem_range_pos: forall a b,
-      0 <= regToZ_signed (mul (div a b) b) ->
-      0 <= regToZ_signed (rem a b) < regToZ_signed b;
-  rem_range_neg: forall a b,
-      regToZ_signed (mul (div a b) b) < 0 ->
-      regToZ_signed b < regToZ_signed (rem a b) <= 0;
+  divu_def: forall a b,
+      b <> ZToReg 0 ->
+      divu a b = ZToReg (Z.quot (regToZ_unsigned a) (regToZ_unsigned b));
+  
+  remu_def: forall a b,
+      b <> ZToReg 0 ->
+      remu a b = ZToReg (Z.rem (regToZ_unsigned a) (regToZ_unsigned b));
 
   (* corner cases of division and remainder: *)
 

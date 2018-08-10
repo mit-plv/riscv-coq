@@ -2,45 +2,18 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import bbv.Word.
 Require Import riscv.Utility.
+Require Import riscv.word_divmod.
 Import Word.ConversionNotations.
 Import Word.ArithmeticNotations.
 Local Open Scope word_scope.
 Local Open Scope Z_scope.
 
-Lemma NToWord_plus: forall sz (n m : N), NToWord sz (n + m) = NToWord sz n ^+ NToWord sz m.
-Admitted.
-
-Lemma NToWord_inj: forall sz (n m: N),
-    NToWord sz n = NToWord sz m ->
-    (n < Npow2 sz)%N ->
-    (m < Npow2 sz)%N ->
-    n = m.
-Admitted.
-
-Ltac Nify_one n :=
-    rewrite <- (NToWord_wordToN n) in *;
-    let B := fresh "B" in
-    pose proof (wordToN_bound n) as B;
-    rewrite (wordToN_NToWord_2 _ B) in *;
-    let E := fresh "E" in
-    let n' := fresh n in
-    remember (wordToN n) as n' eqn: E;
-    clear E n;
-    rename n' into n.
-
-Ltac Nify :=
-  repeat match goal with
-  | n: word _ |- _ => Nify_one n
-  end.
-
-Definition TODO{T: Type}: T. Admitted.
-
 Instance MachineWidth32: MachineWidth (word 32) := {|
   add := @wplus 32;
   sub := @wminus 32;
   mul := @wmult 32;
-  div x y := @ZToWord 32 (Z.div (wordToZ x) (wordToZ y));
-  rem x y := @ZToWord 32 (Z.modulo (wordToZ x) (wordToZ y));
+  div := @riscv_signed_div 31;
+  rem := @riscv_signed_rem 31;
   negate := @wneg 32;
   signed_less_than a b := if wslt_dec a b then true else false;
   reg_eqb := @weqb 32;
@@ -68,11 +41,11 @@ Instance MachineWidth32: MachineWidth (word 32) := {|
   srl w n := wrshift w (Z.to_nat n);
   sra w n := wrshift w (Z.to_nat n);
   ltu a b := if wlt_dec a b then true else false;
-  divu := @wdiv 32;
-  remu := @wmod 32;
+  divu := @riscv_unsigned_div 32;
+  remu := @riscv_unsigned_rem 32;
   maxSigned := combine (wones 31) (wzero 1);
   maxUnsigned := wones 32;
-  minSigned := wones 32;
+  minSigned := wpow2 31;
   regToShamt5 x := Z.of_N (wordToN (split1 5 27 x));
   regToShamt  x := Z.of_N (wordToN (split1 5 27 x));
   highBits x := ZToWord 32 (bitSlice x 32 64);
@@ -90,62 +63,17 @@ Instance MachineWidth32: MachineWidth (word 32) := {|
   ZToReg_regToZ_unsigned := @ZToWord_uwordToZ 32;
   ZToReg_regToZ_signed := @ZToWord_wordToZ 32;
   XLEN_lbound := ltac:(lia);
+  div_def := @riscv_signed_div_def 31;
+  rem_def := @riscv_signed_rem_def 31;
+  divu_def := @riscv_unsigned_div_def 32;
+  remu_def := @riscv_unsigned_rem_def 32;
+  div_zero _ := eq_refl;
+  divu_zero _ := eq_refl;
+  rem_zero _ := eq_refl;
+  remu_zero _ := eq_refl;
+  div_overflow := eq_refl;
+  rem_overflow := eq_refl;
 |}.
-all: intros.
-- split.
-  + unfold wdiv, wmod, wmult, wordBin.
-    rewrite wordToN_NToWord_2 by apply TODO.
-    rewrite <- NToWord_plus.
-    rewrite <- (N.div_mod' (wordToN a) (wordToN b)).
-    rewrite NToWord_wordToN.
-    reflexivity.
-  + split.
-    * pose proof uwordToZ_bound as P.
-      (* automation_challenge *)
-      specialize (P 32%nat (a ^% b)). intuition idtac.
-    * unfold uwordToZ.
-      apply N2Z.inj_lt.
-      unfold wmod, wordBin.
-      assert (wordToN a mod wordToN b < wordToN b)%N. {
-        apply N.mod_upper_bound. rewrite ZToWord_0 in H. apply wordToN_neq_0. assumption.
-      }
-      rewrite wordToN_NToWord_2; [assumption|].
-      eapply N.lt_trans; [eassumption|].
-      apply wordToN_bound.
-- unfold wdiv, wmod, wmult, wordBin, uwordToZ in *.
-  Nify.
-  destruct H0 as [E [_ R]].
-  apply N2Z.inj_lt in R.
-  rewrite <- NToWord_plus in E.
-  apply NToWord_inj in E.
-  + split; f_equal.
-    * apply N.div_unique in E; assumption.
-    * apply N.mod_unique in E; assumption.
-  + assumption.
-  + apply TODO. (* does not hold!
-
-  uniqueness of div does not hold on word:
-  Example with sz = 4 (i.e. everything is modulo 16).
-
-  Given a=13, b=8, there are several ways to satisfy the equation
-  a  = b * q + r    0 <= r < b
-  13 = 8 * 1 + 5    0 <= 5 < 8
-  13 = 8 * 3 + 5    0 <= 5 < 8
-  13 = 8 * 5 + 5    0 <= 5 < 8
-  etc
-
-  uniqueness of mod does not hold either:
-
-  Given a=13, b=14, there are several ways to satisfy the equation
-  a  =  b * q +  r    0 <=  r <  b
-  13 = 14 * 0 + 13    0 <= 13 < 14
-  13 = 14 * 3 +  3    0 <=  3 < 14
-  
-  a = b * q + r    0 <= r < b
-  
-  3 = 8 * 8 + 3    0 <= 3 < 8
- *)
-Defined.
 
 Goal False.
   idtac "Testing that all operations reduce under cbv."

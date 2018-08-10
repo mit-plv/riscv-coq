@@ -4,6 +4,7 @@ Require Import riscv.Utility.
 Require Import riscv.MachineWidth32.
 Require Import riscv.MachineWidth64.
 Require Import riscv.util.BitWidths.
+Require Import riscv.word_divmod.
 Import Word.ConversionNotations.
 Local Open Scope word_scope.
 
@@ -35,14 +36,6 @@ Section Alu_Defs.
   Lemma mul_def: forall (a b: word wXLEN),
       mul a b = wmult a b.
   Proof. unfold mul. prove_alu_def. Qed.
-  
-  Lemma div_def: forall (a b: word wXLEN),
-      div a b = ZToWord wXLEN (wordToZ a / wordToZ b).
-  Proof. unfold div. prove_alu_def. Qed.
-
-  Lemma rem_def: forall (a b: word wXLEN),
-      rem a b = ZToWord wXLEN (wordToZ a mod wordToZ b).
-  Proof. unfold rem. prove_alu_def. Qed.
 
   Lemma signed_less_than_def: forall (a b: word wXLEN),
       signed_less_than a b = if wslt_dec a b then true else false.
@@ -79,14 +72,6 @@ Section Alu_Defs.
   Lemma ltu_def: forall (a b: word wXLEN),
       ltu a b = if wlt_dec a b then true else false.
   Proof. unfold ltu. prove_alu_def. Qed.
-  
-  Lemma divu_def: forall (a b: word wXLEN),
-      divu a b = wdiv a b.
-  Proof. unfold divu. prove_alu_def. Qed.
-
-  Lemma remu_def: forall (a b: word wXLEN),
-      remu a b = wmod a b.
-  Proof. unfold remu. prove_alu_def. Qed.
 
 End Alu_Defs.
 
@@ -95,8 +80,6 @@ Hint Rewrite
   @add_def
   @sub_def
   @mul_def
-  @div_def
-  @rem_def
   @signed_less_than_def
   @reg_eqb_def
   @xor_def
@@ -106,6 +89,4 @@ Hint Rewrite
   @srl_def
   @sra_def
   @ltu_def
-  @divu_def
-  @remu_def
 : alu_defs.
