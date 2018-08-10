@@ -4,7 +4,6 @@ Require Import riscv.Utility.
 Require Import riscv.MachineWidth32.
 Require Import riscv.MachineWidth64.
 Require Import riscv.util.BitWidths.
-Require Import riscv.word_divmod.
 Import Word.ConversionNotations.
 Local Open Scope word_scope.
 

@@ -118,40 +118,13 @@ Class MachineWidth(t: Set) := mkMachineWidth {
        Defined in Coq in Module ZDivFloor and available as Z.div and Z.modulo.
      - Euclidian division, where the remainder never is negative (aka "E"):
        forall a b, b<>0 -> exists r q, a = b*q+r /\ 0 < r < |b|
-       Defined in Coq in Module ZDivEucl. *)
-
-  div_def: forall a b,
-      b <> ZToReg 0 ->
-      ~(a = minSigned /\ b = maxUnsigned) ->
-      div a b = ZToReg (Z.quot (regToZ_signed a) (regToZ_signed b));
-  
-  rem_def: forall a b,
-      b <> ZToReg 0 ->
-      ~(a = minSigned /\ b = maxUnsigned) ->
-      rem a b = ZToReg (Z.rem (regToZ_signed a) (regToZ_signed b));
-
-  divu_def: forall a b,
-      b <> ZToReg 0 ->
-      divu a b = ZToReg (Z.quot (regToZ_unsigned a) (regToZ_unsigned b));
-  
-  remu_def: forall a b,
-      b <> ZToReg 0 ->
-      remu a b = ZToReg (Z.rem (regToZ_unsigned a) (regToZ_unsigned b));
-
-  (* corner cases of division and remainder: *)
-
-  (* division by zero returns all ones *)
-  div_zero : forall x, div  x (ZToReg 0) = maxUnsigned;
-  divu_zero: forall x, divu x (ZToReg 0) = maxUnsigned;
-
-  (* remainder of division of x by zero returns x: *)
-  rem_zero : forall x, rem  x (ZToReg 0) = x;
-  remu_zero: forall x, remu x (ZToReg 0) = x;
-
-  (* overflow only occurs when signed-dividing minSigned by -1: *)
-  div_overflow: div minSigned maxUnsigned = minSigned;
-  rem_overflow: rem minSigned maxUnsigned = ZToReg 0;
-
+       Defined in Coq in Module ZDivEucl.
+     Note: The corner cases (division by 0, overflow) are handled in ExecuteM.
+  *)
+  div_def : forall a b, div  a b = ZToReg (Z.quot (regToZ_signed   a) (regToZ_signed   b));
+  rem_def : forall a b, rem  a b = ZToReg (Z.rem  (regToZ_signed   a) (regToZ_signed   b));
+  divu_def: forall a b, divu a b = ZToReg (Z.quot (regToZ_unsigned a) (regToZ_unsigned b));
+  remu_def: forall a b, remu a b = ZToReg (Z.rem  (regToZ_unsigned a) (regToZ_unsigned b));
 }.
 
 Notation fromImm := (@ZToReg _ _) (only parsing).

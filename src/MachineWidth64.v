@@ -2,7 +2,6 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import bbv.Word.
 Require Import riscv.Utility.
-Require Import riscv.word_divmod.
 Import Word.ConversionNotations.
 Import Word.ArithmeticNotations.
 Local Open Scope word_scope.
@@ -13,8 +12,8 @@ Instance MachineWidth64: MachineWidth (word 64) := {|
   add := @wplus 64;
   sub := @wminus 64;
   mul := @wmult 64;
-  div := @riscv_signed_div 63;
-  rem := @riscv_signed_rem 63;
+  div := @wordBinZ Z.quot 64;
+  rem := @wordBinZ Z.rem 64;
   negate := @wneg 64;
   signed_less_than a b := if wslt_dec a b then true else false;
   reg_eqb := @weqb 64;
@@ -42,8 +41,8 @@ Instance MachineWidth64: MachineWidth (word 64) := {|
   srl w n := wrshift w (Z.to_nat n);
   sra w n := wrshift w (Z.to_nat n);
   ltu a b := if wlt_dec a b then true else false;
-  divu := @riscv_unsigned_div 64;
-  remu := @riscv_unsigned_rem 64;
+  divu a b := ZToWord 64 (Z.quot (uwordToZ a) (uwordToZ b));
+  remu a b := ZToWord 64 (Z.rem  (uwordToZ a) (uwordToZ b));
   maxSigned := combine (wones 63) (wzero 1);
   maxUnsigned := wones 64;
   minSigned := wpow2 63;
@@ -64,16 +63,10 @@ Instance MachineWidth64: MachineWidth (word 64) := {|
   ZToReg_regToZ_unsigned := @ZToWord_uwordToZ 64;
   ZToReg_regToZ_signed := @ZToWord_wordToZ 64;
   XLEN_lbound := ltac:(lia);
-  div_def := @riscv_signed_div_def 63;
-  rem_def := @riscv_signed_rem_def 63;
-  divu_def := @riscv_unsigned_div_def 64;
-  remu_def := @riscv_unsigned_rem_def 64;
-  div_zero _ := eq_refl;
-  divu_zero _ := eq_refl;
-  rem_zero _ := eq_refl;
-  remu_zero _ := eq_refl;
-  div_overflow := eq_refl;
-  rem_overflow := eq_refl;
+  div_def  _ _ := eq_refl;
+  rem_def  _ _ := eq_refl;
+  divu_def _ _ := eq_refl;
+  remu_def _ _ := eq_refl;
 |}.
 
 Goal False.
