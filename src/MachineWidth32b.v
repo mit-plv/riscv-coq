@@ -2,7 +2,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import Coq.Logic.ProofIrrelevance.
 Require Import riscv.Utility.
-Require Import riscv.util.div_mod_to_quot_rem.
+Require Import riscv.util.Tactics.
 Local Open Scope Z_scope.
 
 
@@ -283,11 +283,11 @@ Proof.
 Qed.    
 
 Lemma mod_pow2_same_bounds: forall a n,
-    0 < n ->
     a mod 2 ^ n = a ->
+    0 < n ->
     0 <= a < 2 ^ n.
 Proof.
-  intros. rewrite <- H0. apply Z.mod_pos_bound.
+  intros. rewrite <- H. apply Z.mod_pos_bound.
   apply Z.pow_pos_nonneg; omega.
 Qed.    
 
@@ -302,6 +302,27 @@ Lemma pow2_pos: forall n,
     0 < 2 ^ n.
 Proof.
   intros. apply Z.pow_pos_nonneg; omega.
+Qed.
+
+Lemma pow2_times2: forall i,
+    0 < i ->
+    2 ^ i = 2 * 2 ^ (i - 1).
+Proof.
+  intros.
+  rewrite <- Z.pow_succ_r by omega.
+  f_equal.
+  omega.
+Qed.
+
+Lemma pow2_div2: forall i,
+    0 <= i ->
+    2 ^ (i - 1) = 2 ^ i / 2.
+Proof.
+  intros.
+  assert (i = 0 \/ 0 < i) as C by omega. destruct C as [C | C].
+  - subst. reflexivity.
+  - rewrite Z.pow_sub_r by omega.
+    reflexivity.
 Qed.
 
 Lemma div_mul_undo_le: forall a b,
@@ -332,38 +353,137 @@ Proof.
   intro E. rewrite E in H1. cbv in H1. discriminate H1.
 Qed.
 
-Lemma pow2_times2: forall i,
-    0 < i ->
-    2 ^ i = 2 * 2 ^ (i - 1).
+Lemma range_div_pos: forall a b c d,
+    0 < d ->
+    a <= b <= c ->
+    a / d <= b / d <= c / d.
+Proof.
+  intuition idtac.
+  - apply (Z.div_le_mono _ _ _ H H1).
+  - apply (Z.div_le_mono _ _ _ H H2).
+Qed.
+
+Lemma testbit_true_nonneg': forall a i,
+    0 <= i ->
+    2 ^ i <= a < 2 ^ (i + 1) ->
+    Z.testbit a i = true.
 Proof.
   intros.
-  rewrite <- Z.pow_succ_r by omega.
-  f_equal.
+  apply Z.testbit_true; [assumption|].
+  destruct H0 as [A B].
+  pose proof (pow2_pos i H) as Q.
+  apply (Z.div_le_mono _ _ _ Q) in A.
+  rewrite Z_div_same in A by omega.
+  pose proof (Z.div_lt_upper_bound a (2 ^ i) 2 Q) as P.
+  rewrite Z.mul_comm in P.
+  replace i with (i + 1 - 1) in P by omega.
+  rewrite <- pow2_times2 in P by omega.
+  specialize (P B).
+  replace (i + 1 - 1) with i in P by omega.
+  replace (a / 2 ^ i) with 1 by omega.
+  reflexivity.
+Qed.  
+
+Lemma testbit_false_nonneg: forall a i,
+    0 <= a < 2 ^ i ->
+    0 < i ->
+    Z.testbit a (i - 1) = false ->
+    a < 2 ^ (i - 1).
+Proof.
+  intros.
+  assert (2 ^ (i - 1) <= a < 2 ^ i \/ a < 2 ^ (i - 1)) as C by omega.
+  destruct C as [C | C]; [exfalso|assumption].
+  assert (Z.testbit a (i - 1) = true); [|congruence].
+  replace i with (i - 1 + 1) in C at 2 by omega.
+  apply testbit_true_nonneg'; omega.
+Qed.  
+
+Lemma signed_bounds_to_sz_pos: forall sz n,
+    - 2 ^ (sz - 1) <= n < 2 ^ (sz - 1) ->
+    0 < sz.
+Proof.
+  intros.
+  assert (0 < sz \/ sz - 1 < 0) as C by omega.
+  destruct C as [C | C]; [assumption|exfalso].
+  rewrite Z.pow_neg_r in H by assumption.
   omega.
 Qed.
+
+Ltac word_omega_pre :=
+      repeat match goal with
+         | n: Z |- _ => 
+           let B := fresh in assert (0 < n) by omega;
+           unique pose proof (pow2_times2 n B)
+         | _: context[2 ^ ?n] |- _ =>
+           let B := fresh in assert (0 <= n) by omega;
+           unique pose proof (pow2_pos n B)
+         | _: context[?a mod ?m] |- _ =>
+           let B := fresh in assert (0 < m) by omega;
+           unique pose proof (Z.mod_pos_bound a m B)
+         | H: ?a mod 2 ^ _ = ?a      |- _ => apply mod_pow2_same_bounds in H; [|omega]
+         | H: Z.testbit _ _ = true   |- _ => apply testbit_true_nonneg in H; [|omega..]
+         | H: Z.testbit _ _ = false  |- _ => apply testbit_false_nonneg in H; [|omega..]
+         | H1: ?a <= ?b, H2: ?b < ?c  |- _ => unique pose proof (conj H1 H2)
+         | H: - 2 ^ _ <= ?n < 2 ^ _   |- _ => unique pose proof (signed_bounds_to_sz_pos _ _ H)
+         end.
+
+Ltac word_omega := word_omega_pre; omega.
 
 Lemma swordToZ_bound: forall sz (a : word sz),
     0 < sz ->
     - 2 ^ (sz - 1) <= swordToZ a < 2 ^ (sz - 1).
-Proof.
-  word_destruct.
-  + apply mod_pow2_same_bounds in Ma; [|assumption].
-    pose proof (pow2_times2 sz).
-    apply testbit_true_nonneg in E; omega.
-  + apply mod_pow2_same_bounds in Ma; [|assumption].
-    pose proof (pow2_times2 sz).
-Abort.
+Proof. word_destruct; word_omega. Qed.
 
-(*
-subgoal 3 (ID 157) is:
- forall a : word sz, 0 <= uwordToZ a < 2 ^ sz
-subgoal 4 (ID 158) is:
- forall n : Z, - 2 ^ (sz - 1) <= n < 2 ^ (sz - 1) -> swordToZ (ZToWord sz n) = n
-subgoal 5 (ID 159) is:
- forall a : word sz, ZToWord sz (uwordToZ a) = a
-subgoal 6 (ID 160) is:
- forall a : word sz, ZToWord sz (swordToZ a) = a
-*)
+Lemma uwordToZ_bound: forall sz (a : word sz),
+    0 < sz ->
+    0 <= uwordToZ a < 2 ^ sz.
+Proof. word_destruct; word_omega. Qed.
+
+Lemma swordToZ_ZToWord: forall sz n,
+    - 2 ^ (sz - 1) <= n < 2 ^ (sz - 1) ->
+    swordToZ (ZToWord sz n) = n.
+Proof.
+  word_destruct; word_omega_pre;
+    assert (sz = 1 \/ 1 < sz) as C by omega;
+    (destruct C as [C | C];
+     [subst sz;
+      repeat match goal with
+             | _: context[2 ^ ?x] |- _ =>
+               let r := eval cbv in (2 ^ x) in change (2 ^ x) with r in *
+             end;
+      assert (n = -1 \/ n = 0) as C by omega;
+      destruct C; subst n; cbv in E; try reflexivity; congruence |]);
+      match goal with
+        | _: context[?a mod ?m] |- _ =>
+          let B := fresh in
+          assert (m <> 0) by omega;
+          pose proof (Z.mod_eq a m B) as M
+        end;
+      assert (- 2 ^ (sz - 1) <= n <= 2 ^ (sz - 1) + 1) as B by omega;
+      (apply (range_div_pos _ _ _ (2 ^ sz)) in B; [|omega]);
+      assert (2 ^ (sz - 1) mod 2 ^ sz = 2 ^ (sz - 1)) by (apply Z.mod_small; omega);
+      rewrite Z.div_opp_l_nz in B by omega;
+      rewrite Z.div_small in B by omega;
+      (rewrite (Z.div_small (2 ^ (sz - 1) + 1) (2 ^ sz)) in B;
+       [ assert (n / 2 ^ sz = 0 \/ n / 2 ^ sz = -1) as R by omega;
+         destruct R as [R | R]; rewrite R in M; omega
+       | split; try omega;
+         rewrite H4;
+         pose proof (Z.pow_gt_1 2 (sz - 1));
+         omega ]).
+Qed.
+
+Lemma uwordToZ_ZToWord_mod: forall sz n,
+    uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
+Proof. intros. reflexivity. Qed.
+
+Lemma ZToWord_uwordToZ: forall sz (a : word sz),
+    ZToWord sz (uwordToZ a) = a.
+Proof. word_solver. Qed.
+
+Lemma ZToWord_swordToZ: forall sz (a : word sz),
+    ZToWord sz (swordToZ a) = a.
+Proof. word_solver. Qed.
 
 Definition tobbv{sz: Z}(w: word sz): bbv.Word.word (Z.to_nat sz) :=
   bbv.Word.ZToWord _ (uwordToZ w).
@@ -374,7 +494,7 @@ Definition frombbv{sz: nat}(w: bbv.Word.word sz): word (Z.of_nat sz) :=
 Coercion tobbv: word >-> bbv.Word.word.
 Coercion frombbv: bbv.Word.word >-> word.
 
-Instance MachineWidth: MachineWidth (word 32) := {|
+Instance MachineWidth32b: MachineWidth (word 32) := {|
   add := @wadd 32;
   sub := @wsub 32;
   mul := @wmul 32;
@@ -418,20 +538,16 @@ Instance MachineWidth: MachineWidth (word 32) := {|
   ZToReg := ZToWord 32;
   regRing := @word_ring 32;
   ZToReg_morphism := @word_ring_morph_Z 32;
-(*
-  reg_eqb_spec := @weqb_true_iff 32;
-  regToZ_signed_bounds := @wordToZ_size'' 32 ltac:(lia);
-  regToZ_unsigned_bounds := @uwordToZ_bound 32;
-*)
+  reg_eqb_spec := @weqb_spec 32;
+  regToZ_signed_bounds   _ := @swordToZ_bound 32 _ ltac:(lia);
+  regToZ_unsigned_bounds _ := @uwordToZ_bound 32 _ ltac:(lia);
   add_def_signed := @wadd_wsadd 32;
   sub_def_signed := @wsub_wssub 32;
   mul_def_signed := @wmul_wsmul 32;
-(*
-  regToZ_ZToReg_signed := @wordToZ_ZToWord'' 32 ltac:(lia);
-*)
-  regToZ_ZToReg_unsigned_mod _ := eq_refl; (*
+  regToZ_ZToReg_signed := @swordToZ_ZToWord 32;
+  regToZ_ZToReg_unsigned_mod := @uwordToZ_ZToWord_mod 32;
   ZToReg_regToZ_unsigned := @ZToWord_uwordToZ 32;
-  ZToReg_regToZ_signed := @ZToWord_wordToZ 32; *)
+  ZToReg_regToZ_signed := @ZToWord_swordToZ 32;
   XLEN_lbound := ltac:(lia);
   div_def  _ _ := eq_refl;
   rem_def  _ _ := eq_refl;
@@ -439,4 +555,4 @@ Instance MachineWidth: MachineWidth (word 32) := {|
   remu_def _ _ := eq_refl;  
 |}.
 
-Abort.
+Print Assumptions MachineWidth32b.
