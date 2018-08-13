@@ -141,19 +141,26 @@ End ArithOps.
 
 Hint Unfold wopp wadd wsub wmul wsadd wssub wsmul : unf_word_all.
 
-Ltac word_solver_pre :=
-  intros;
-  try match goal with
-  | H: (?x =? ?y) = true |- _ => apply Z.eqb_eq in H; try subst x; try subst y
-  end;
-  repeat autounfold with unf_word_all;    
+Ltac word_destruct :=
+  intuition idtac;
+  repeat autounfold with unf_word_all in *;
   repeat match goal with
          | w: word _ |- _ => let H := fresh "M" w in destruct w as [w H]
          end;
   repeat match goal with
-         | |- context[if ?b then _ else _] => destruct b
-         end;
-  apply subset_eq_compat;
+         | H: (?x =? ?y) = true |- _ =>
+           apply Z.eqb_eq in H; try subst x; try subst y
+         | H: exist _ ?x _ = exist _ ?y _ |- _ =>
+           apply EqdepFacts.eq_sig_fst in H; try subst x; try subst y
+  end;
+  repeat match goal with
+         | |- context[if ?b then _ else _] => let E := fresh "E" in destruct b eqn: E
+         end.
+
+Ltac word_eq_pre :=  
+  try apply subset_eq_compat;
+  try apply Z.eqb_refl;
+  auto;
   match goal with
   | H: ?b mod ?m = ?b |- ?a mod ?m = ?b => refine (eq_trans _ H)
   | H: ?a mod ?m = ?a |- ?a = ?b mod ?m => refine (eq_trans (eq_sym H) _)
@@ -167,7 +174,7 @@ Ltac word_solver_pre :=
   rewrite? Zmult_mod_idemp_r;
   apply mod_eq_from_diff.
 
-Ltac word_solver := word_solver_pre; prove_mod_0.
+Ltac word_solver := word_destruct; word_eq_pre; prove_mod_0.
 
 
 Section ArithOpsEquiv.
@@ -225,6 +232,17 @@ Section MoreOps.
 
 End MoreOps.
 
+Hint Unfold
+    wudiv wuquot wumod wurem
+    wsdiv wsquot wsmod wsrem
+    wor wand wxor
+    weqb
+    wuleb wultb wugeb wugtb
+    wsleb wsltb wsgeb wsgtb
+    wshiftl wshiftr wshiftra
+: unf_word_all.
+
+
 Definition wsplit_lo{sz: Z}(count: Z)(w: word sz): word count :=
   ZToWord count (uwordToZ w).
 
@@ -247,6 +265,105 @@ Lemma word_ring_morph_Z: forall sz,
 Proof.
   intros. constructor; word_solver.
 Qed.
+
+Lemma weqb_spec: forall sz (a b : word sz),
+    weqb a b = true <-> a = b.
+Proof. word_solver. Qed.
+
+Lemma mod_pow2_same_cases: forall a n,
+    a mod 2 ^ n = a ->
+    2 ^ n = 0 /\ a = 0 \/ 0 <= a < 2 ^ n.
+Proof.
+  intros.
+  assert (n < 0 \/ 0 <= n) as C by omega. destruct C as [C | C].
+  - left. rewrite (Z.pow_neg_r 2 n C) in *. rewrite ZLib.mod_0_r in H. auto.
+  - right.
+    rewrite <- H. apply Z.mod_pos_bound.
+    apply Z.pow_pos_nonneg; omega.
+Qed.    
+
+Lemma mod_pow2_same_bounds: forall a n,
+    0 < n ->
+    a mod 2 ^ n = a ->
+    0 <= a < 2 ^ n.
+Proof.
+  intros. rewrite <- H0. apply Z.mod_pos_bound.
+  apply Z.pow_pos_nonneg; omega.
+Qed.    
+
+Lemma pow2_nonneg: forall n,
+    0 <= 2 ^ n.
+Proof.
+  intros. apply Z.pow_nonneg. omega.
+Qed.
+
+Lemma pow2_pos: forall n,
+    0 <= n ->
+    0 < 2 ^ n.
+Proof.
+  intros. apply Z.pow_pos_nonneg; omega.
+Qed.
+
+Lemma div_mul_undo_le: forall a b,
+    0 <= a ->
+    0 < b ->
+    a / b * b <= a.
+Proof.
+  intros.
+  pose proof (Zmod_eq_full a b) as P.
+  pose proof (Z.mod_bound_pos a b) as Q.
+  omega.
+Qed.
+
+Lemma testbit_true_nonneg: forall a i,
+    0 <= a ->
+    0 <= i ->
+    Z.testbit a i = true ->
+    2 ^ i <= a.
+Proof.
+  intros.
+  apply Z.testbit_true in H1; [|assumption].
+  pose proof (pow2_pos i H0).
+  eapply Z.le_trans; [| apply (div_mul_undo_le a (2 ^ i)); omega].
+  replace (2 ^ i) with (1 * 2 ^ i) at 1 by omega.
+  apply Z.mul_le_mono_nonneg_r; [omega|].
+  pose proof (Z.div_pos a (2 ^ i)).
+  assert (a / 2 ^ i <> 0); [|omega].
+  intro E. rewrite E in H1. cbv in H1. discriminate H1.
+Qed.
+
+Lemma pow2_times2: forall i,
+    0 < i ->
+    2 ^ i = 2 * 2 ^ (i - 1).
+Proof.
+  intros.
+  rewrite <- Z.pow_succ_r by omega.
+  f_equal.
+  omega.
+Qed.
+
+Lemma swordToZ_bound: forall sz (a : word sz),
+    0 < sz ->
+    - 2 ^ (sz - 1) <= swordToZ a < 2 ^ (sz - 1).
+Proof.
+  word_destruct.
+  + apply mod_pow2_same_bounds in Ma; [|assumption].
+    pose proof (pow2_times2 sz).
+    apply testbit_true_nonneg in E; omega.
+  + apply mod_pow2_same_bounds in Ma; [|assumption].
+    pose proof (pow2_times2 sz).
+Abort.
+
+(*
+subgoal 3 (ID 157) is:
+ forall a : word sz, 0 <= uwordToZ a < 2 ^ sz
+subgoal 4 (ID 158) is:
+ forall n : Z, - 2 ^ (sz - 1) <= n < 2 ^ (sz - 1) -> swordToZ (ZToWord sz n) = n
+subgoal 5 (ID 159) is:
+ forall a : word sz, ZToWord sz (uwordToZ a) = a
+subgoal 6 (ID 160) is:
+ forall a : word sz, ZToWord sz (swordToZ a) = a
+*)
 
 Definition tobbv{sz: Z}(w: word sz): bbv.Word.word (Z.to_nat sz) :=
   bbv.Word.ZToWord _ (uwordToZ w).
