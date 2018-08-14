@@ -1,8 +1,9 @@
+Require Import Coq.ZArith.ZArith.
 Require Import riscv.util.Monads.
+Require Import riscv.util.Word.
 Require Import riscv.Utility.
-Require Import Coq.ZArith.BinInt.
-Require Import bbv.Word.
-Require Import Decode.
+Require Import riscv.Decode.
+
 
 Inductive AccessType: Set := Instr | Load | Store.
 

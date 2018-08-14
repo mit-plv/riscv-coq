@@ -19,7 +19,7 @@ Section Memory.
   Definition mem := list (word 8).
   Definition mem_size(m: mem): Z := Zlength m.
 
-  Definition read_byte(m: mem)(a: Z): word 8 := Znth m a $0.
+  Definition read_byte(m: mem)(a: Z): word 8 := Znth m a (ZToWord _ 0).
 
   Definition write_byte'(m: mem)(a: Z)(v: word 8): mem :=
     (Zfirstn a m) ++ [v] ++ (Zskipn (a + 1) m).
@@ -31,14 +31,11 @@ Section Memory.
     firstn (length m) (write_byte' m a v).
   
   Definition read_half(m: mem)(a: Z): word 16 :=
-    let v0 := read_byte m a in let v1 := read_byte m (a + 1) in combine v0 v1.
+    let v0 := read_byte m a in let v1 := read_byte m (a + 1) in wappend v1 v0.
   Definition read_word(m: mem)(a: Z): word 32 :=
-    let v0 := read_half m a in let v1 := read_half m (a + 2) in combine v0 v1.
+    let v0 := read_half m a in let v1 := read_half m (a + 2) in wappend v1 v0.
   Definition read_double(m: mem)(a: Z): word 64 :=
-    let v0 := read_word m a in let v1 := read_word m (a + 4) in combine v0 v1.
-
-  Definition lobits(sz: nat)(w: word (sz + sz)): word sz := split1 sz sz w.
-  Definition hibits(sz: nat)(w: word (sz + sz)): word sz := split2 sz sz w.
+    let v0 := read_word m a in let v1 := read_word m (a + 4) in wappend v1 v0.
 
   Definition write_half(m: mem)(a: Z)(v: word 16): mem :=
     let m := write_byte m a (lobits 8 v) in write_byte m (a + 1) (hibits 8 v).
@@ -57,7 +54,7 @@ Section Memory.
     intros. unfold mem_size, const_mem. apply Zlength_map_range. assumption.
   Qed.
 
-  Definition zero_mem: Z -> mem := const_mem $0.
+  Definition zero_mem: Z -> mem := const_mem (ZToWord 8 0).
 
 End Memory.
 
@@ -249,7 +246,7 @@ Proof.
   rewrite (write_read_byte_eq _ (a1 + 1) (a1 + 1)); try reflexivity.
   - rewrite write_read_byte_ne; try omega.
     + rewrite write_read_byte_eq; try reflexivity; try omega.
-      apply (combine_split 8 8).
+      apply (wappend_split 8 8).
     + rewrite write_byte_preserves_mem_size; omega.
     + rewrite write_byte_preserves_mem_size; omega.
   - rewrite write_byte_preserves_mem_size; omega.
@@ -268,14 +265,6 @@ Proof.
   intros. unfold write_half, read_half in *.
   f_equal.
   - rewrite write_read_byte_ne.
-    + apply write_read_byte_ne; omega.
-    + rewrite write_byte_preserves_mem_size; omega.
-    + rewrite write_byte_preserves_mem_size; omega.
-    + intro. subst. rewrite Z.add_mod in H2; try omega.
-      rewrite H0 in H2.
-      simpl in H2.
-      discriminate.
-  - rewrite write_read_byte_ne.
     + apply write_read_byte_ne; try omega.
       intro. subst. rewrite Z.add_mod in H0; try omega.
       rewrite H2 in H0.
@@ -284,6 +273,14 @@ Proof.
     + rewrite write_byte_preserves_mem_size; omega.
     + rewrite write_byte_preserves_mem_size; omega.
     + omega.
+  - rewrite write_read_byte_ne.
+    + apply write_read_byte_ne; omega.
+    + rewrite write_byte_preserves_mem_size; omega.
+    + rewrite write_byte_preserves_mem_size; omega.
+    + intro. subst. rewrite Z.add_mod in H2; try omega.
+      rewrite H0 in H2.
+      simpl in H2.
+      discriminate.
 Qed.
 
 Lemma add_mod_r: forall a m,
@@ -339,7 +336,7 @@ Proof.
   rewrite (write_read_half_eq _ (a1 + 2) (a1 + 2)); try reflexivity; try omega.
   - rewrite write_read_half_ne; try omega.
     + rewrite write_read_half_eq; try reflexivity; try omega.
-      apply (combine_split 16 16).
+      apply (wappend_split 16 16).
     + rewrite write_half_preserves_mem_size; omega.
     + apply diviBy4_implies_diviBy2 in H0. rewrite Z.add_mod by omega.
       rewrite H0.
@@ -365,20 +362,6 @@ Proof.
   pose proof (diviBy4_implies_diviBy2 _ H2).
   f_equal.
   - rewrite write_read_half_ne.
-    + apply write_read_half_ne; omega.
-    + rewrite write_half_preserves_mem_size; omega.
-    + rewrite Z.add_mod by omega.
-      rewrite H4.
-      reflexivity.
-    + rewrite write_half_preserves_mem_size; omega.
-    + assumption.
-    + intro. subst. rewrite Z.add_mod in H2; try omega.
-      rewrite H0 in H2.
-      simpl in H2.
-      discriminate.
-    + omega.
-    + assumption.
-  - rewrite write_read_half_ne.
     + apply write_read_half_ne; try omega.
       * rewrite add_mod_r; omega.
       * intro. subst. rewrite Z.add_mod in H0; try omega.
@@ -392,6 +375,20 @@ Proof.
     + omega.
     + omega.
     + omega.
+  - rewrite write_read_half_ne.
+    + apply write_read_half_ne; omega.
+    + rewrite write_half_preserves_mem_size; omega.
+    + rewrite Z.add_mod by omega.
+      rewrite H4.
+      reflexivity.
+    + rewrite write_half_preserves_mem_size; omega.
+    + assumption.
+    + intro. subst. rewrite Z.add_mod in H2; try omega.
+      rewrite H0 in H2.
+      simpl in H2.
+      discriminate.
+    + omega.
+    + assumption.
 Qed.
 
 Lemma write_word_preserves_mem_size: forall m a v,
@@ -421,7 +418,7 @@ Proof.
   rewrite (write_read_word_eq _ (a1 + 4) (a1 + 4)); try reflexivity; try omega.
   - rewrite write_read_word_ne; try omega.
     + rewrite write_read_word_eq; try reflexivity; try omega.
-      * apply (combine_split 32 32).
+      * apply (wappend_split 32 32).
       * apply diviBy8_implies_diviBy4. assumption.
     + rewrite write_word_preserves_mem_size; omega.
     + apply diviBy8_implies_diviBy4 in H0. rewrite Z.add_mod by omega.
@@ -450,20 +447,6 @@ Proof.
   pose proof (diviBy8_implies_diviBy4 _ H2).
   f_equal.
   - rewrite write_read_word_ne.
-    + apply write_read_word_ne; omega.
-    + rewrite write_word_preserves_mem_size; omega.
-    + rewrite Z.add_mod by omega.
-      rewrite H4.
-      reflexivity.
-    + rewrite write_word_preserves_mem_size; omega.
-    + assumption.
-    + intro. subst. rewrite Z.add_mod in H2; try omega.
-      rewrite H0 in H2.
-      simpl in H2.
-      discriminate.
-    + omega.
-    + omega.
-  - rewrite write_read_word_ne.
     + apply write_read_word_ne; try omega.
       * rewrite add_mod_r; omega.
       * intro. subst. rewrite Z.add_mod in H0; try omega.
@@ -475,6 +458,20 @@ Proof.
     + rewrite write_word_preserves_mem_size; omega.
     + rewrite add_mod_r; omega.
     + omega.
+    + omega.
+    + omega.
+  - rewrite write_read_word_ne.
+    + apply write_read_word_ne; omega.
+    + rewrite write_word_preserves_mem_size; omega.
+    + rewrite Z.add_mod by omega.
+      rewrite H4.
+      reflexivity.
+    + rewrite write_word_preserves_mem_size; omega.
+    + assumption.
+    + intro. subst. rewrite Z.add_mod in H2; try omega.
+      rewrite H0 in H2.
+      simpl in H2.
+      discriminate.
     + omega.
     + omega.
 Qed.

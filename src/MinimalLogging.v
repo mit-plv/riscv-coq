@@ -1,5 +1,4 @@
 Require Import Coq.ZArith.BinInt.
-Require Import bbv.WordScope.
 Require Import riscv.util.BitWidths.
 Require Import riscv.util.Monads.
 Require Import riscv.Decode.
@@ -58,7 +57,7 @@ Section Riscv.
       loadWord a :=
         m <- get;
         res <- (liftL1 loadWord a);
-        put (with_log (m.(log) ++ [EvLoadWord (regToZ_unsigned a) (decode RV64IM (wordToZ res))]) m);;
+        put (with_log (m.(log) ++ [EvLoadWord (regToZ_unsigned a) (decode RV64IM (uwordToZ res))]) m);;
         Return res;
       loadDouble := liftL1 loadDouble;
       storeByte   := liftL2 storeByte;

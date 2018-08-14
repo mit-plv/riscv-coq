@@ -7,10 +7,6 @@ Require Import riscv.Memory.
 Require Import riscv.Program.
 Require Import riscv.RiscvMachine.
 Require Import riscv.util.BitWidths.
-Require Import riscv.MachineWidth_wXLEN.
-Import Word.ArithmeticNotations.
-Import Word.ConversionNotations.
-Local Open Scope word_scope.
 
 
 Set Implicit Arguments.

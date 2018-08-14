@@ -83,7 +83,7 @@ Section Memory.
   Definition const_mem(default: word 8)(size: Z): mem :=
     ListMemoryZAddr.const_mem default size.
 
-  Definition zero_mem: Z -> mem := const_mem $0.
+  Definition zero_mem: Z -> mem := const_mem (ZToWord 8 0).
 
   (* Since mem_size is a bit fancy, we better prove that it's possible to create memory of any
      desired size (as long as it's a multiple of 8 and not bigger than the biggest address) *)

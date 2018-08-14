@@ -4,7 +4,6 @@ Require Import riscv.Riscv.
 Require Import riscv.util.BitWidth32.
 Require Import bbv.HexNotationZ.
 Require Import Coq.ZArith.BinInt.
-Require Import bbv.WordScope.
 Require Import riscv.Utility.
 Require Import riscv.Memory.
 Require Import riscv.Minimal.
@@ -12,14 +11,15 @@ Require Import riscv.MinimalLogging.
 Require Import riscv.Run.
 Require Import riscv.ListMemory.
 Require Import riscv.util.Monads.
+Require Import riscv.MachineWidth32.
 
 Existing Instance DefaultRiscvState.
 
-Instance FunctionRegisterFile: RegisterFile (Register -> word wXLEN) Register (word wXLEN) := {|
-  getReg(rf: Register -> word wXLEN) := rf;
-  setReg(rf: Register -> word wXLEN)(r: Register)(v: word wXLEN) :=
+Instance FunctionRegisterFile: RegisterFile (Register -> word 32) Register (word 32) := {|
+  getReg(rf: Register -> word 32) := rf;
+  setReg(rf: Register -> word 32)(r: Register)(v: word 32) :=
     fun r' => if (Z.eqb r' r) then v else rf r';
-  initialRegs := fun r => $0;
+  initialRegs := fun r => ZToReg 0;
 |}.
 
 Definition fib6_riscv: list MachineInt := [ (* TODO should be "word 32", not MachineInt *)
@@ -52,14 +52,14 @@ Goal False.
   (* decoder seems to work :) *)
 Abort.
 
-Definition RiscvMachine := @RiscvMachine (word 32) mem (Register -> word wXLEN).
+Definition RiscvMachine := @RiscvMachine (word 32) mem (Register -> word 32).
 
 (* This example uses the memory only as instruction memory
    TODO make an example which uses memory to store data *)
 Definition zeroedRiscvMachineCore: RiscvMachineCore := {|
   registers := initialRegs;
-  pc := $0;
-  nextPC := (natToWord 32 4);
+  pc := ZToReg 0;
+  nextPC := ZToReg 4;
   exceptionHandlerAddr := 3;
 |}.
 
@@ -74,7 +74,7 @@ Definition zeroedRiscvMachineL: RiscvMachineL := {|
 |}.
 
 Definition initialRiscvMachineL(imem: list MachineInt): RiscvMachineL :=
-  putProgram (map (@ZToWord 32) imem) $0 zeroedRiscvMachineL.
+  putProgram (map (@ZToWord 32) imem) (ZToReg 0) zeroedRiscvMachineL.
 
 Definition run: nat -> RiscvMachineL -> (option unit) * RiscvMachineL := run.
  (* @run BitWidths32 MachineWidth32 (OState RiscvMachineL) (OState_Monad _) _ _ _ *)
@@ -84,7 +84,7 @@ Definition fib6_L_final(fuel: nat): RiscvMachineL :=
   | (answer, state) => state
   end.
 
-Definition fib6_L_res(fuel: nat): word wXLEN :=
+Definition fib6_L_res(fuel: nat): word XLEN :=
   (fib6_L_final fuel).(machine).(core).(registers) 18.
 
 Definition fib6_L_trace(fuel: nat): Log :=
@@ -95,17 +95,9 @@ Transparent wlt_dec.
 (* only uncomment this if you're sure there are no admits in the computational parts,
    otherwise this will eat all your memory *)
 
-(* 
-TODO make sure this works again!
 Eval cbv in (fib6_L_trace 50).
- *)
 
-(*
-Eval cbv in (fib6_L_res 27).
-Eval cbv in (fib6_L_res 50).
- *)
-
-Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_L_res fuel = $13.
+Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_L_res fuel = ZToReg 13.
   exists 50%nat.
   reflexivity.
 Qed.

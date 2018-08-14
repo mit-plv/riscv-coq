@@ -1,9 +1,7 @@
-Require Import Coq.ZArith.BinInt.
+Require Import Coq.ZArith.ZArith.
 Require Import Coq.setoid_ring.Ring_theory.
-Require Import bbv.Word.
-Require Import bbv.DepEqNat.
+Require Export riscv.util.Word.
 Require Import riscv.util.Monads.
-Require Import riscv.util.BitWidths.
 Require Export riscv.util.ZBitOps.
 
 
@@ -92,10 +90,6 @@ Class MachineWidth(t: Set) := mkMachineWidth {
   add_def_signed: forall a b, add a b = ZToReg (regToZ_signed a + regToZ_signed b);
   sub_def_signed: forall a b, sub a b = ZToReg (regToZ_signed a - regToZ_signed b);
   mul_def_signed: forall a b, mul a b = ZToReg (regToZ_signed a * regToZ_signed b);
-  (* TODO check corner cases of div and mod
-  div_def: forall a b, div a b = ZToReg (regToZ_signed a / regToZ_signed b);
-  rem_def: forall a b, rem a b = ZToReg (regToZ_signed a mod regToZ_signed b);
-  *)
 
   regToZ_ZToReg_signed: forall n : Z,
       - 2 ^ (XLEN - 1) <= n < 2 ^ (XLEN - 1) ->
@@ -191,7 +185,7 @@ Section Derived.
       a = b.
   Proof.
     intros.
-    Check (ZToReg_morphism.(morph_eq)). (* the wrong way *)
+    (* Check (ZToReg_morphism.(morph_eq)). the wrong way *)
   Abort.
   
 End Derived.
@@ -211,16 +205,3 @@ Notation "'when' a b" := (if a then b else Return tt)
 
 
 Definition machineIntToShamt: MachineInt -> Z := id.
-
-(* Note: If you think that wlt_dec and wslt_dec are too expensive to reduce with
-   cbv, you can use wltb and wsltb instead, but it turned out that this
-   was not the problem. *)
-
-(* Redefine shifts so that they do not use eq_rect, which matches on add_comm,
-   which is an opaque proof, which makes cbv blow up *)
-Notation wlshift  := (@wlshift'  _).
-Notation wrshift  := (@wrshift'  _).
-Notation wrshifta := (@wrshifta' _).
-
-(* bbv thinks this should be opaque, but we need it transparent to make sure it reduces *)
-Global Transparent wlt_dec.

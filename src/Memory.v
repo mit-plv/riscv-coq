@@ -1,15 +1,12 @@
 Require Import Coq.Lists.List.
-Require Import bbv.Word.
 Require Import Coq.ZArith.ZArith.
-Require Import bbv.ZLib.
 Require Import Coq.micromega.Lia.
+Require Import bbv.ZLib.
+Require Import riscv.util.Word.
 Require Import riscv.util.div_mod_to_quot_rem.
 Require Import riscv.util.Tactics.
 Require Import riscv.Utility.
 
-Import Word.ArithmeticNotations.
-Import Word.ConversionNotations.
-Local Open Scope word_scope.
 Local Open Scope Z_scope.
 
 Section ValidAddr.
@@ -118,15 +115,15 @@ Class Memory(m t: Set)`{MachineWidth t} := mkMemory {
 
   loadHalf_spec: forall m a,
     valid_addr a 2 (memSize m) ->
-    loadHalf m a = combine (loadByte m a) (loadByte m (add a (ZToReg 1)));
+    loadHalf m a = wappend (loadByte m (add a (ZToReg 1))) (loadByte m a);
 
   loadWord_spec: forall m a,
     valid_addr a 4 (memSize m) ->
-    loadWord m a = combine (loadHalf m a) (loadHalf m (add a (ZToReg 2)));
+    loadWord m a = wappend (loadHalf m (add a (ZToReg 2))) (loadHalf m a);
 
   loadDouble_spec: forall m a,
     valid_addr a 8 (memSize m) ->
-    loadDouble m a = combine (loadWord m a) (loadWord m (add a (ZToReg 4)));
+    loadDouble m a = wappend (loadWord m (add a (ZToReg 4))) (loadWord m a);
 
   (* Note: No storeHalf_spec, storeWord_spec, storeDouble_spec, because we don't
      want to compare memories with = (too restrictive for implementors), nor start
@@ -518,10 +515,6 @@ Ltac pose_regToZ_unsigned_bounds :=
   | context [regToZ_unsigned ?a] => unique pose proof (regToZ_unsigned_bounds a)
   end.
 
-Ltac word_nat_rewrites :=
-  rewrite? wordToNat_wplus';
-  rewrite? wordToNat_natToWord_idempotent' by omega.
-
 Hint Rewrite
      @regToZ_ZToReg_unsigned
      using omega
@@ -582,8 +575,7 @@ Ltac mem_simpl :=
       rewrite? loadStoreWord_ne by mem_simpl;
       rewrite? loadStoreWord_eq by mem_simpl;
       subst;
-      auto;
-      word_nat_rewrites
+      auto
     );
   try solve [repeat ((try omega); f_equal)].
 
@@ -664,9 +656,10 @@ Section MemoryHelpers.
         by (rewrite storeDouble_preserves_memSize; assumption).
       specialize (P H1).
       rewrite loadDouble_spec in P by assumption.
-      pose proof combine_inj as Q.
-      specialize (Q 32%nat 32%nat _ _ _ _ P).
-      destruct Q as [Q _]. assumption.
+      pose proof wappend_inj as Q.
+      specialize (Q 32 32).
+      specialize Q with (3 := P).
+      destruct Q as [_ Q]; [omega..|assumption].
     - specialize (P (sub a2 (ZToReg 4)) v).
       pose proof (regToZ_unsigned_bounds a2).
       assert (regToZ_unsigned a2 = 0 \/
@@ -696,9 +689,10 @@ Section MemoryHelpers.
           ring.
         }
         specialize (P Ne).
-        pose proof combine_inj as Q.
-        specialize (Q 32%nat 32%nat _ _ _ _ P).
-        destruct Q as [_ Q].
+        pose proof wappend_inj as Q.
+        specialize (Q 32 32).
+        specialize Q with (3 := P).
+        destruct Q as [Q _]; try omega.
         ring_simplify (add (sub a2 (ZToReg 4)) (ZToReg 4)) in Q.
         assumption.
       + rewrite sub_def_unsigned.
