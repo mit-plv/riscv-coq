@@ -1,4 +1,3 @@
-Require Import bbv.Word.
 Require Import riscv.Memory.
 Require Import riscv.Utility.
 Require Import riscv.util.Monads.

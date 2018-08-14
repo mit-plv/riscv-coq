@@ -1,6 +1,5 @@
 (* Need to define Register *)
 Require Import Coq.ZArith.ZArith.
-Require Import bbv.WordScope.
 Require Import bbv.BinNotationZ.
 Require Import riscv.util.BitWidths.
 Require Import riscv.Decode.

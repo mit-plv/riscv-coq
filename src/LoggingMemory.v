@@ -1,6 +1,5 @@
 Require Import Coq.Lists.List.
 Import ListNotations.
-Require Import bbv.Word.
 Require Import riscv.Memory.
 Require Import riscv.MonadicMemory.
 Require Import riscv.util.Monads.

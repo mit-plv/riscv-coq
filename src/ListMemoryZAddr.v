@@ -1,16 +1,10 @@
-(* import List before bbv.Word, otherwise Word.combine gets shadowed and huge type class
-   inference failure messages will appear *)
 Require Import Coq.Lists.List.
-Require Import bbv.Word.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import riscv.Utility.
 Require Import riscv.util.Monads.
 Require Import riscv.Memory.
 Import ListNotations.
-Import Word.ArithmeticNotations.
-Import Word.ConversionNotations.
-Local Open Scope word_scope.
 Local Open Scope Z_scope.
 
 

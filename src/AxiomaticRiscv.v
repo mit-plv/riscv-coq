@@ -1,5 +1,4 @@
 Require Import Coq.ZArith.BinInt.
-Require Import bbv.Word.
 Require Import riscv.util.Monads.
 Require Import riscv.Utility.
 Require Import riscv.Decode.

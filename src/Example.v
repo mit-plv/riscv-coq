@@ -1,6 +1,7 @@
 Require Import Coq.Lists.List.
 Import ListNotations.
-Require Import riscv.Riscv.
+Require Import riscv.Program.
+Require Import riscv.Decode.
 Require Import riscv.util.BitWidth32.
 Require Import bbv.HexNotationZ.
 Require Import Coq.ZArith.BinInt.
@@ -89,8 +90,6 @@ Definition fib6_L_res(fuel: nat): word XLEN :=
 
 Definition fib6_L_trace(fuel: nat): Log :=
   (fib6_L_final fuel).(log).
-
-Transparent wlt_dec.
 
 (* only uncomment this if you're sure there are no admits in the computational parts,
    otherwise this will eat all your memory *)
