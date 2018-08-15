@@ -300,9 +300,27 @@ Ltac word_omega_pre :=
 
 Ltac word_omega := word_omega_pre; omega.
 
+Lemma word_eq_bitwise: forall sz (a b: word sz),
+    (forall i, 0 <= i < sz -> Z.testbit (uwordToZ a) i = Z.testbit (uwordToZ b) i) ->
+    a = b.
+Proof.
+  word_destruct.
+  apply subset_eq_compat.
+  assert (sz < 0 \/ sz = 0 \/ 0 < sz) as C by omega. destruct C as [C | [C | C]].
+  - rewrite Z.pow_neg_r in * by assumption.
+    rewrite Zmod_0_r in *.
+    congruence.
+  - subst. change (2 ^ 0) with 1 in *.
+    rewrite Zmod_1_r in *.
+    congruence.
+  - 
+Abort.
+
 Lemma wappend_split: forall sz1 sz2 (w : word (sz1 + sz2)),
     wappend (wsplit_hi sz1 sz2 w) (wsplit_lo sz1 sz2 w) = w.
 Proof.
+   word_destruct. apply subset_eq_compat.
+   rewrite <-? Z.land_ones.
 Admitted.
 
 Lemma wappend_inj: forall sz1 sz2 (a : word sz1) (b : word sz2) (c : word sz1) (d : word sz2),
