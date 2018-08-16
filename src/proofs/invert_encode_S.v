@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.encode.Encode.
 Require Import riscv.util.ZBitOps.
-Require Import riscv.proofs.prove_Zeq_bitwise.
+Require Import riscv.util.prove_Zeq_bitwise.
 
 Lemma invert_encode_S: forall {opcode rs1 rs2 funct3 simm12},
   verify_S opcode rs1 rs2 funct3 simm12 ->

@@ -4,7 +4,7 @@ Require Import riscv.encode.Encode.
 Require Import riscv.Utility.
 Require Import riscv.util.Tactics.
 Require Import riscv.util.div_mod_to_quot_rem.
-Require Import riscv.proofs.prove_Zeq_bitwise.
+Require Import riscv.util.prove_Zeq_bitwise.
 
 
 Local Open Scope bool_scope.
