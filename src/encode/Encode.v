@@ -282,84 +282,84 @@ Definition verify_Invalid(i: Z) :=
     False.
 
 Definition verify_R(opcode: MachineInt)(rd rs1 rs2: Register)(funct3 funct7: MachineInt) :=
-    0 <= opcode < 128 /\
-    0 <= rd < 32 /\
-    0 <= rs1 < 32 /\
-    0 <= rs2 < 32 /\
-    0 <= funct3 < 8 /\
-    0 <= funct7 < 128.
+    0 <= opcode < 2^7 /\
+    0 <= rd     < 2^5 /\
+    0 <= rs1    < 2^5 /\
+    0 <= rs2    < 2^5 /\
+    0 <= funct3 < 2^3 /\
+    0 <= funct7 < 2^7 .
 
 Definition verify_R_atomic(opcode: MachineInt)(rd rs1 rs2: Register)(funct3 aqrl funct5: MachineInt) :=
-    0 <= opcode < 128 /\
-    0 <= rd < 32 /\
-    0 <= rs1 < 32 /\
-    0 <= rs2 < 32 /\
-    0 <= funct3 < 8 /\
-    0 <= aqrl < 4 /\
-    0 <= funct5 < 32.
+    0 <= opcode < 2^7 /\
+    0 <= rd     < 2^5 /\
+    0 <= rs1    < 2^5 /\
+    0 <= rs2    < 2^5 /\
+    0 <= funct3 < 2^3 /\
+    0 <= aqrl   < 2^2 /\
+    0 <= funct5 < 2^5 .
 
 Definition verify_I(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(oimm12: Z) :=
-    0 <= opcode < 128 /\
-    0 <= rd < 32 /\
-    0 <= rs1 < 32 /\
-    0 <= funct3 < 8 /\
-    - 2 ^ 11 <= oimm12 < 2 ^ 11.
+    0 <= opcode < 2^7 /\
+    0 <= rd     < 2^5 /\
+    0 <= rs1    < 2^5 /\
+    0 <= funct3 < 2^3 /\
+    - 2^11 <= oimm12 < 2^11.
 
 Definition verify_I_shift_57(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt) :=
-    0 <= opcode < 128 /\
-    0 <= rd < 32 /\
-    0 <= rs1 < 32 /\
-    0 <= shamt5 < 32 /\
-    0 <= funct3 < 8 /\
-    0 <= funct7 < 128.
+    0 <= opcode < 2^7 /\
+    0 <= rd     < 2^5 /\
+    0 <= rs1    < 2^5 /\
+    0 <= shamt5 < 2^5 /\
+    0 <= funct3 < 2^3 /\
+    0 <= funct7 < 2^7 .
 
 Definition verify_I_shift_66(bitwidth: Z)(opcode: MachineInt)(rd rs1: Register)(shamt6 funct3 funct6: MachineInt) :=
-    0 <= opcode < 128 /\
-    0 <= rd < 32 /\
-    0 <= rs1 < 32 /\
-    0 <= shamt6 < bitwidth /\ (bitwidth = 32 \/ bitwidth = 64) /\
-    0 <= funct3 < 8 /\
-    0 <= funct6 < 64.
+    0 <= opcode < 2^7 /\
+    0 <= rd     < 2^5 /\
+    0 <= rs1    < 2^5 /\
+    0 <= shamt6 < bitwidth /\ (bitwidth = 2^5 \/ bitwidth = 2^6) /\
+    0 <= funct3 < 2^3 /\
+    0 <= funct6 < 2^6 .
 
 Definition verify_I_system(opcode: MachineInt)(rd rs1: Register)(funct3 funct12: MachineInt) :=
-    0 <= opcode < 128 /\
-    0 <= rd < 32 /\
-    0 <= rs1 < 32 /\
-    0 <= funct3 < 8 /\
-    0 <= funct12 < 4096.
+    0 <= opcode  < 2^7 /\
+    0 <= rd      < 2^5 /\
+    0 <= rs1     < 2^5 /\
+    0 <= funct3  < 2^3 /\
+    0 <= funct12 < 2^12 .
 
 Definition verify_S(opcode: MachineInt)(rs1 rs2: Register)(funct3: MachineInt)(simm12: Z) :=
-    0 <= opcode < 128 /\
-    0 <= rs1 < 32 /\
-    0 <= rs2 < 32 /\
-    0 <= funct3 < 8 /\
-    - 2 ^ 11 <= simm12 < 2 ^ 11.
+    0 <= opcode < 2^7 /\
+    0 <= rs1    < 2^5 /\
+    0 <= rs2    < 2^5 /\
+    0 <= funct3 < 2^3 /\
+    - 2^11 <= simm12 < 2^11.
 
 Definition verify_SB(opcode: MachineInt)(rs1 rs2: Register)(funct3: MachineInt)(sbimm12: Z) :=
-    0 <= opcode < 128 /\
-    0 <= rs1 < 32 /\
-    0 <= rs2 < 32 /\
-    0 <= funct3 < 8 /\
-    - 2 ^ 12 <= sbimm12 < 2 ^ 12 /\ sbimm12 mod 2 = 0.
+    0 <= opcode < 2^7 /\
+    0 <= rs1    < 2^5 /\
+    0 <= rs2    < 2^5 /\
+    0 <= funct3 < 2^3 /\
+    - 2^12 <= sbimm12 < 2^12 /\ sbimm12 mod 2 = 0.
 
 Definition verify_U(opcode: MachineInt)(rd: Register)(imm20: Z) :=
-    0 <= opcode < 128 /\
-    0 <= rd < 32 /\
-    - 2 ^ 31 <= imm20 < 2 ^ 31 /\ imm20 mod 2 ^ 12 = 0.
+    0 <= opcode < 2^7 /\
+    0 <= rd     < 2^5 /\
+    - 2^31 <= imm20 < 2^31 /\ imm20 mod 2^12 = 0.
 
 Definition verify_UJ(opcode: MachineInt)(rd: Register)(jimm20: Z) :=
-    0 <= opcode < 128 /\
-    0 <= rd < 32 /\
-    - 2 ^ 20 <= jimm20 < 2 ^ 20 /\ jimm20 mod 2 = 0.
+    0 <= opcode < 2^7 /\
+    0 <= rd     < 2^5 /\
+    - 2^20 <= jimm20 < 2^20 /\ jimm20 mod 2 = 0.
 
 Definition verify_Fence(opcode: MachineInt)(rd rs1: Register)(funct3 prd scc msb4: MachineInt) :=
-    0 <= opcode < 128 /\
-    0 <= rd < 32 /\
-    0 <= rs1 < 32 /\
-    0 <= funct3 < 8 /\
-    0 <= prd < 16 /\
-    0 <= scc < 16 /\
-    0 <= msb4 < 16.
+    0 <= opcode < 2^7 /\
+    0 <= rd     < 2^5 /\
+    0 <= rs1    < 2^5 /\
+    0 <= funct3 < 2^3 /\
+    0 <= prd    < 2^4 /\
+    0 <= scc    < 2^4 /\
+    0 <= msb4   < 2^4 .
 
 (* Only verifies that each field is within bounds and has the correct modulus.
    Validity of opcodes and funct codes follows from the fact that it was an Instruction. *)

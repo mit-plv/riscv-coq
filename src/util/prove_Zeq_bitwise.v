@@ -114,17 +114,6 @@ Proof.
       reflexivity.
 Qed.
 
-Ltac simpl_pow2 :=
-  repeat (so fun hyporgoal => match hyporgoal with
-     | context [2 ^ ?x] => let r := eval cbv in (2 ^ x) in change (2 ^ x) with r in *
-  end).
-
-Ltac simpl_log2up :=
-  repeat match goal with
-         | |- context [Z.log2_up ?a] =>
-           let r := eval cbv in (Z.log2_up a) in change (Z.log2_up a) with r
-         end.
-
 Lemma testbit_above': forall n b i,
     0 <= n ->
     n < b ->
@@ -189,6 +178,17 @@ Proof.
   apply (mod0_testbit a i (Z.log2_up m)); assumption.
 Qed.
 
+Lemma mod20_testbit': forall a i,
+    a mod 2 = 0 ->
+    i = 0 ->
+    Z.testbit a i = false.
+Proof.
+  intros. eapply mod0_testbit'.
+  - eassumption.
+  - reflexivity.
+  - subst. cbv. intuition congruence.
+Qed.
+
 Hint Rewrite
     Z.lxor_spec
     Z.ldiff_spec
@@ -212,14 +212,15 @@ Hint Rewrite
      testbit_above'
      testbit_above_signed'
      mod0_testbit'
-     using (try eassumption; simpl_log2up; simpl_pow2; try reflexivity; omega)
+     mod20_testbit'
+     using (try eassumption; try reflexivity; rewrite? Z.log2_up_pow2 by omega; omega)
 : rew_testbit_expensive.
 
 Ltac rewrite_testbit :=
   repeat
     ((autorewrite with bool_rewriting) ||
      (rewrite_strat (repeat (topdown (hints rew_testbit)))) ||
-     ((rewrite_strat (repeat (topdown (hints rew_testbit_expensive)))); simpl_log2up)).
+     ((rewrite_strat (repeat (topdown (hints rew_testbit_expensive)))))).
 
 Ltac solve_or_split_step :=
     rewrite_testbit;
@@ -239,8 +240,7 @@ Ltac solve_or_split := repeat solve_or_split_step.
 Ltac prove_Zeq_bitwise_pre :=
     (intuition idtac);
     subst;
-    simpl_pow2;
-    repeat (discard_contradictory_or omega);
+    repeat (discard_contradictory_or ltac:(first [discriminate | omega ]));
     repeat (rewrite signExtend_alt2; [|omega|]);
     unfold bitSlice, signExtend2 in *;
     apply Z.bits_inj;
