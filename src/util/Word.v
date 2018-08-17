@@ -1,7 +1,10 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia.
 Require Import Coq.Logic.ProofIrrelevance.
 Require Import bbv.ZLib.
+Require Import bbv.ZHints.
 Require Import riscv.util.ZBitOps.
+Require Import riscv.util.prove_Zeq_bitwise.
 Require Import riscv.util.Tactics.
 Require Import riscv.util.div_mod_to_quot_rem.
 Local Open Scope Z_scope.
@@ -250,9 +253,12 @@ Definition wscast{sz: Z}(sz': Z)(w: word sz): word sz' :=
 (*
 Definition wappend{sz1 sz2: Z}(w1: word sz1)(w2: word sz2): word (sz1 + sz2) :=
   ZToWord (sz1 + sz2) (2 ^ sz2 * (uwordToZ w1) + uwordToZ w2).
-*)
+
 Definition wappend{sz1 sz2: Z}(w1: word sz1)(w2: word sz2): word (sz1 + sz2) :=
   ZToWord (sz1 + sz2) (Z.lor (2 ^ sz2 * (uwordToZ w1)) (uwordToZ w2)).
+ *)
+Definition wappend{sz1 sz2: Z}(w1: word sz1)(w2: word sz2): word (sz1 + sz2) :=
+  ZToWord (sz1 + sz2) (Z.lor (Z.shiftl (uwordToZ w1) sz2) (uwordToZ w2)).
 
 (*
 Definition wslice{sz: Z}(w: word sz)(i j: Z): word (j - i) :=
@@ -300,28 +306,18 @@ Ltac word_omega_pre :=
 
 Ltac word_omega := word_omega_pre; omega.
 
-Lemma word_eq_bitwise: forall sz (a b: word sz),
-    (forall i, 0 <= i < sz -> Z.testbit (uwordToZ a) i = Z.testbit (uwordToZ b) i) ->
-    a = b.
-Proof.
-  word_destruct.
-  apply subset_eq_compat.
-  assert (sz < 0 \/ sz = 0 \/ 0 < sz) as C by omega. destruct C as [C | [C | C]].
-  - rewrite Z.pow_neg_r in * by assumption.
-    rewrite Zmod_0_r in *.
-    congruence.
-  - subst. change (2 ^ 0) with 1 in *.
-    rewrite Zmod_1_r in *.
-    congruence.
-  - 
-Abort.
-
 Lemma wappend_split: forall sz1 sz2 (w : word (sz1 + sz2)),
+    0 <= sz1 ->
+    0 <= sz2 ->
     wappend (wsplit_hi sz1 sz2 w) (wsplit_lo sz1 sz2 w) = w.
 Proof.
-   word_destruct. apply subset_eq_compat.
-   rewrite <-? Z.land_ones.
-Admitted.
+  word_destruct. apply subset_eq_compat.
+  rewrite <-? Z.land_ones by omega.
+  assert (sz1 = 0 /\ sz2 = 0 \/ 0 < sz1 + sz2) as C by omega. destruct C as [[? ?] | ?].
+  - subst. repeat autorewrite with rew_Z_trivial in *|-. subst. reflexivity.
+  - apply mod_pow2_same_bounds in Mw; [|omega].
+    prove_Zeq_bitwise.
+Qed.
 
 Lemma wappend_inj: forall sz1 sz2 (a : word sz1) (b : word sz2) (c : word sz1) (d : word sz2),
     0 <= sz1 ->
@@ -329,12 +325,31 @@ Lemma wappend_inj: forall sz1 sz2 (a : word sz1) (b : word sz2) (c : word sz1) (
     wappend a b = wappend c d ->
     a = c /\ b = d.
 Proof.
-  word_destruct; word_eq_pre.
-  - mod0_exists_quotient H1; [|word_omega].
-    replace (2 ^ sz2 * a - 2 ^ sz2 * c + b - d) with
-            (b - d + (a - c) * (2 ^ sz2)) in E by ring.
-    rewrite Z.pow_add_r in E by omega.
-Admitted.
+  word_destruct; apply subset_eq_compat;
+    assert (sz1 = 0 \/ sz2 = 0 \/ 0 < sz1 /\ 0 < sz2) as C by omega;
+    (destruct C as [? | [? | [? ?]]];
+     (repeat (subst; autorewrite with rew_Z_trivial in * ));
+      [ congruence.. | ]);
+     (repeat match goal with
+             | H: ?a mod 2 ^ _ = ?a |- _ => apply mod_pow2_same_bounds in H; [|omega]
+             end);
+     rewrite <-? Z.land_ones in * by omega;
+     rewrite? Z.land_lor_distr_l in H1;
+     rewrite? Z.land_ones in H1 by omega;
+     rewrite? Z.shiftl_mul_pow2 in H1 by omega;
+     rewrite? Z.pow_add_r in H1 by omega;
+     rewrite? Zmult_mod_distr_r in H1;
+     rewrite? Z.mod_small in H1 by nia;
+     rewrite <-? Z.shiftl_mul_pow2 in H1 by omega.
+     rewrite? or_to_plus in H1 by prove_Zeq_bitwise;
+     rewrite? Z.shiftl_mul_pow2 in H1 by omega;
+     nia.
+     rewrite? or_to_plus in H1 by prove_Zeq_bitwise.
+     rewrite? Z.shiftl_mul_pow2 in H1 by omega.
+     rewrite (Z.mul_comm a) in H1.
+     rewrite (Z.mul_comm c) in H1.
+     apply two_digits_encoding_inj_lo in H1; try assumption.
+Qed.
 
 Lemma word_ring: forall sz,
     ring_theory (ZToWord sz 0) (ZToWord sz 1) wadd wmul wsub wopp eq.

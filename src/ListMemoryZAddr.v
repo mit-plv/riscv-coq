@@ -240,7 +240,7 @@ Proof.
   rewrite (write_read_byte_eq _ (a1 + 1) (a1 + 1)); try reflexivity.
   - rewrite write_read_byte_ne; try omega.
     + rewrite write_read_byte_eq; try reflexivity; try omega.
-      apply (wappend_split 8 8).
+      apply (wappend_split 8 8); omega.
     + rewrite write_byte_preserves_mem_size; omega.
     + rewrite write_byte_preserves_mem_size; omega.
   - rewrite write_byte_preserves_mem_size; omega.
@@ -330,7 +330,7 @@ Proof.
   rewrite (write_read_half_eq _ (a1 + 2) (a1 + 2)); try reflexivity; try omega.
   - rewrite write_read_half_ne; try omega.
     + rewrite write_read_half_eq; try reflexivity; try omega.
-      apply (wappend_split 16 16).
+      apply (wappend_split 16 16); omega.
     + rewrite write_half_preserves_mem_size; omega.
     + apply diviBy4_implies_diviBy2 in H0. rewrite Z.add_mod by omega.
       rewrite H0.
@@ -412,7 +412,7 @@ Proof.
   rewrite (write_read_word_eq _ (a1 + 4) (a1 + 4)); try reflexivity; try omega.
   - rewrite write_read_word_ne; try omega.
     + rewrite write_read_word_eq; try reflexivity; try omega.
-      * apply (wappend_split 32 32).
+      * apply (wappend_split 32 32); omega.
       * apply diviBy8_implies_diviBy4. assumption.
     + rewrite write_word_preserves_mem_size; omega.
     + apply diviBy8_implies_diviBy4 in H0. rewrite Z.add_mod by omega.

@@ -222,17 +222,20 @@ Ltac rewrite_testbit :=
      (rewrite_strat (repeat (topdown (hints rew_testbit)))) ||
      ((rewrite_strat (repeat (topdown (hints rew_testbit_expensive)))))).
 
+Ltac compare_cases cst i :=
+  tryif (first [assert (cst <= i) by omega | assert (i < cst) by omega])
+  then fail
+  else (let C := fresh "C" in
+        assert (i < cst \/ cst <= i) as C by omega;
+        safe_ring_simplify i in C;
+        destruct C as [C | C]).
+
 Ltac solve_or_split_step :=
     rewrite_testbit;
     try solve [f_equal; (reflexivity || omega)];
     match goal with
-    | |- context [Z.testbit _ ?i] =>
-      tryif (first [assert (0 <= i) by omega | assert (i < 0) by omega])
-      then fail
-      else (let C := fresh "C" in
-            assert (i < 0 \/ 0 <= i) as C by omega;
-            safe_ring_simplify i in C;
-            destruct C as [C | C])
+    | |- context [Z.testbit _ ?i] => compare_cases 0 i
+    | |- context [Z.testbit (Z.ones ?sz) ?i] => compare_cases sz i
     end.
 
 Ltac solve_or_split := repeat solve_or_split_step.
