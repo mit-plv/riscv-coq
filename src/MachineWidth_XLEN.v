@@ -55,7 +55,7 @@ Instance MachineWidth_XLEN(sz: Z)(bound: 8 <= sz): MachineWidth (word sz) := {|
   sub_def_signed := @wsub_wssub sz;
   mul_def_signed := @wmul_wsmul sz;
   regToZ_ZToReg_signed := @swordToZ_ZToWord sz;
-  regToZ_ZToReg_unsigned_mod := @uwordToZ_ZToWord_mod sz;
+  regToZ_ZToReg_unsigned_mod := @uwordToZ_ZToWord sz;
   ZToReg_regToZ_unsigned := @ZToWord_uwordToZ sz;
   ZToReg_regToZ_signed := @ZToWord_swordToZ sz;
   XLEN_lbound := bound;

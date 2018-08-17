@@ -9,14 +9,92 @@ Require Import riscv.util.Tactics.
 Require Import riscv.util.div_mod_to_quot_rem.
 Local Open Scope Z_scope.
 
+Module Type WORD.
 
-Definition word(sz: Z) := { x: Z | x mod 2 ^ sz = x }.
+  Parameter word: Z -> Set.
 
-Definition ZToWord(sz: Z)(x: Z): word sz := 
-  exist _ (x mod 2 ^ sz) (Zmod_mod x (2 ^ sz)).
+  Parameter ZToWord: forall (sz: Z) (x: Z), word sz.
 
-Definition uwordToZ{sz: Z}: word sz -> Z := @proj1_sig Z (fun x => x mod 2 ^ sz = x).
+  Parameter uwordToZ: forall {sz: Z} (w: word sz), Z.
 
+  Axiom uwordToZ_ZToWord: forall sz n,
+    uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
+
+  Axiom ZToWord_uwordToZ: forall {sz: Z} (a : word sz),
+    ZToWord sz (uwordToZ a) = a.
+
+End WORD.
+
+Module Word_Z_mod: WORD.
+
+  Definition word(sz: Z) := { x: Z | x mod 2 ^ sz = x }.
+
+  Definition ZToWord(sz: Z)(x: Z): word sz := exist _ (x mod 2 ^ sz) (Zmod_mod x (2 ^ sz)).
+
+  Definition uwordToZ{sz: Z}: word sz -> Z := @proj1_sig Z (fun x => x mod 2 ^ sz = x).
+    
+  Lemma uwordToZ_ZToWord: forall sz n,
+      uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
+  Proof.
+    intros. reflexivity.
+  Qed.
+
+  Lemma ZToWord_uwordToZ: forall sz (a : word sz),
+      ZToWord sz (uwordToZ a) = a.
+  Proof.
+    intros. destruct a as [a Ma]. unfold ZToWord, uwordToZ.
+    apply subset_eq_compat. simpl. assumption.
+  Qed.
+
+End Word_Z_mod.
+
+Export Word_Z_mod.
+
+Section DerivedFromModuleSig.
+
+  Context {sz: Z}.
+
+  Lemma uwordToZ_inj: forall (a b: word sz),
+      uwordToZ a = uwordToZ b -> a = b.
+  Proof.
+    intros.
+    rewrite <- (ZToWord_uwordToZ a).
+    rewrite <- (ZToWord_uwordToZ b).
+    f_equal.
+    assumption.
+  Qed.
+
+  Lemma mod_eq_ZToWord_eq: forall (a b: Z),
+      a mod 2 ^ sz = b mod 2 ^ sz ->
+      ZToWord sz a = ZToWord sz b.
+  Proof.
+    intros.
+    apply uwordToZ_inj.
+    rewrite? uwordToZ_ZToWord.
+    assumption.
+  Qed.
+
+  Lemma ZToWord_eq_mod_eq: forall (a b: Z),
+      ZToWord sz a = ZToWord sz b ->
+      a mod 2 ^ sz = b mod 2 ^ sz.
+  Proof.
+    intros.
+    rewrite <-? uwordToZ_ZToWord.
+    f_equal.
+    assumption.
+  Qed.
+
+  Lemma uwordToZ_mod: forall (a: word sz),
+      uwordToZ a mod 2 ^ sz = uwordToZ a.
+  Proof.
+    intros.
+    rewrite <- (ZToWord_uwordToZ a) at 2.
+    rewrite uwordToZ_ZToWord.
+    reflexivity.
+  Qed.
+    
+End DerivedFromModuleSig.  
+  
 Definition wmsb{sz: Z}(a: word sz): bool := Z.testbit (uwordToZ a) (sz - 1).
 
 Definition swordToZ{sz: Z}(a: word sz): Z :=
@@ -40,7 +118,7 @@ Definition ws_binop(f: Z -> Z -> Z)(sz: Z)(a b: word sz): word sz :=
 Definition ws_binop_t{T: Type}(f: Z -> Z -> T)(sz: Z)(a b: word sz): T :=
   f (swordToZ a) (swordToZ b).
 
-Hint Unfold ZToWord uwordToZ wmsb swordToZ
+Hint Unfold wmsb swordToZ
             wu_unop wu_binop wu_binop_t
             ws_unop ws_binop ws_binop_t
             proj1_sig
@@ -138,13 +216,17 @@ Ltac word_destruct :=
   intuition idtac;
   repeat autounfold with unf_word_all in *;
   repeat match goal with
-         | w: word _ |- _ => let H := fresh "M" w in destruct w as [w H]
+         | w: word ?sz |- _ =>
+           pose proof (ZToWord_uwordToZ w);
+           pose proof (uwordToZ_mod w);
+           let w' := fresh w in forget (uwordToZ w) as w'; subst w
          end;
+  rewrite? uwordToZ_ZToWord in *;
   repeat match goal with
          | H: (?x =? ?y) = true |- _ =>
            apply Z.eqb_eq in H; try subst x; try subst y
-         | H: exist _ ?x _ = exist _ ?y _ |- _ =>
-           apply EqdepFacts.eq_sig_fst in H; try subst x; try subst y
+         | H: ZToWord _ ?x = ZToWord _ ?y |- _ =>
+           apply ZToWord_eq_mod_eq in H; try subst x; try subst y
   end;
   repeat match goal with
          | |- context[if ?b then _ else _] => let E := fresh "E" in destruct b eqn: E
@@ -158,8 +240,7 @@ Ltac word_eq_pre :=
            | ?a mod ?m = 0 => ring_simplify a in H
            end
          end;
-  try apply subset_eq_compat;
-  try apply Z.eqb_refl;
+  apply mod_eq_ZToWord_eq;
   auto;
   try match goal with
       | H: ?b mod ?m = ?b |- _  = ?b => refine (eq_trans _ H)
@@ -307,7 +388,7 @@ Ltac word_omega_pre :=
 Ltac word_omega := word_omega_pre; omega.
 
 Ltac word_bitwise_pre :=
-  apply subset_eq_compat;
+  apply mod_eq_ZToWord_eq;
   rewrite <-? Z.land_ones by omega;
   (repeat match goal with
           | H: ?a mod 2 ^ _ = ?a |- _ => apply mod_pow2_same_bounds in H; [|omega]
@@ -363,7 +444,11 @@ Qed.
 
 Lemma weqb_spec: forall sz (a b : word sz),
     weqb a b = true <-> a = b.
-Proof. word_solver. Qed.
+Proof.
+  word_destruct.
+  - reflexivity.
+  - apply Z.eqb_eq; word_omega.
+Qed.
 
 Lemma swordToZ_bound: forall sz (a : word sz),
     0 < sz ->
@@ -408,14 +493,6 @@ Proof.
          pose proof (Z.pow_gt_1 2 (sz - 1));
          omega ]).
 Qed.
-
-Lemma uwordToZ_ZToWord_mod: forall sz n,
-    uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
-Proof. intros. reflexivity. Qed.
-
-Lemma ZToWord_uwordToZ: forall sz (a : word sz),
-    ZToWord sz (uwordToZ a) = a.
-Proof. word_solver. Qed.
 
 Lemma ZToWord_swordToZ: forall sz (a : word sz),
     ZToWord sz (swordToZ a) = a.

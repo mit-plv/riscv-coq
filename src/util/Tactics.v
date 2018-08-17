@@ -27,3 +27,5 @@ Tactic Notation "so" tactic(f) :=
   | _: ?A |- _  => f A
   |       |- ?A => f A
   end.
+
+Tactic Notation "forget" constr(X) "as" ident(y) := set (y:=X) in *; clearbody y.
