@@ -306,18 +306,32 @@ Ltac word_omega_pre :=
 
 Ltac word_omega := word_omega_pre; omega.
 
+Ltac word_bitwise_pre :=
+  apply subset_eq_compat;
+  rewrite <-? Z.land_ones by omega;
+  (repeat match goal with
+          | H: ?a mod 2 ^ _ = ?a |- _ => apply mod_pow2_same_bounds in H; [|omega]
+          end).
+
+Ltac word_bitwise := word_destruct; word_bitwise_pre; prove_Zeq_bitwise.
+
 Lemma wappend_split: forall sz1 sz2 (w : word (sz1 + sz2)),
     0 <= sz1 ->
     0 <= sz2 ->
     wappend (wsplit_hi sz1 sz2 w) (wsplit_lo sz1 sz2 w) = w.
-Proof.
-  word_destruct. apply subset_eq_compat.
-  rewrite <-? Z.land_ones by omega.
-  assert (sz1 = 0 /\ sz2 = 0 \/ 0 < sz1 + sz2) as C by omega. destruct C as [[? ?] | ?].
-  - subst. repeat autorewrite with rew_Z_trivial in *|-. subst. reflexivity.
-  - apply mod_pow2_same_bounds in Mw; [|omega].
-    prove_Zeq_bitwise.
-Qed.
+Proof. word_bitwise. Qed.
+
+Lemma wsplit_lo_wappend: forall {sz1 sz2} (w1: word sz1) (w2: word sz2),
+    0 <= sz1 ->
+    0 <= sz2 ->
+    wsplit_lo sz1 sz2 (wappend w1 w2) = w2.
+Proof. word_bitwise. Qed.
+
+Lemma wsplit_hi_wappend: forall {sz1 sz2} (w1: word sz1) (w2: word sz2),
+    0 <= sz1 ->
+    0 <= sz2 ->
+    wsplit_hi sz1 sz2 (wappend w1 w2) = w1.
+Proof. word_bitwise. Qed.
 
 Lemma wappend_inj: forall sz1 sz2 (a : word sz1) (b : word sz2) (c : word sz1) (d : word sz2),
     0 <= sz1 ->
@@ -325,30 +339,12 @@ Lemma wappend_inj: forall sz1 sz2 (a : word sz1) (b : word sz2) (c : word sz1) (
     wappend a b = wappend c d ->
     a = c /\ b = d.
 Proof.
-  word_destruct; apply subset_eq_compat;
-    assert (sz1 = 0 \/ sz2 = 0 \/ 0 < sz1 /\ 0 < sz2) as C by omega;
-    (destruct C as [? | [? | [? ?]]];
-     (repeat (subst; autorewrite with rew_Z_trivial in * ));
-      [ congruence.. | ]);
-     (repeat match goal with
-             | H: ?a mod 2 ^ _ = ?a |- _ => apply mod_pow2_same_bounds in H; [|omega]
-             end);
-     rewrite <-? Z.land_ones in * by omega;
-     rewrite? Z.land_lor_distr_l in H1;
-     rewrite? Z.land_ones in H1 by omega;
-     rewrite? Z.shiftl_mul_pow2 in H1 by omega;
-     rewrite? Z.pow_add_r in H1 by omega;
-     rewrite? Zmult_mod_distr_r in H1;
-     rewrite? Z.mod_small in H1 by nia;
-     rewrite <-? Z.shiftl_mul_pow2 in H1 by omega.
-     rewrite? or_to_plus in H1 by prove_Zeq_bitwise;
-     rewrite? Z.shiftl_mul_pow2 in H1 by omega;
-     nia.
-     rewrite? or_to_plus in H1 by prove_Zeq_bitwise.
-     rewrite? Z.shiftl_mul_pow2 in H1 by omega.
-     rewrite (Z.mul_comm a) in H1.
-     rewrite (Z.mul_comm c) in H1.
-     apply two_digits_encoding_inj_lo in H1; try assumption.
+  intros.
+  pose proof (wsplit_lo_wappend a b H H0).
+  pose proof (wsplit_hi_wappend a b H H0).
+  pose proof (wsplit_lo_wappend c d H H0).
+  pose proof (wsplit_hi_wappend c d H H0).
+  split; congruence.
 Qed.
 
 Lemma word_ring: forall sz,
