@@ -1,33 +1,34 @@
 
 default_target: spec
 
-COQFLAGS= -Q ../bbv/theories bbv  -R ./src riscv  
+.PHONY: clean force spec all
 
-DEPFLAGS:=$(COQFLAGS)
+SPEC_VS := $(wildcard src/*.v src/util/*.v)
+ALL_VS := $(shell find src -type f -name '*.v')
 
-COQC=$(COQBIN)coqc
-COQTOP=$(COQBIN)coqtop
-COQDEP=$(COQBIN)coqdep $(DEPFLAGS)
-COQDOC=$(COQBIN)coqdoc
+SPEC_VOS := $(patsubst %.v,%.vo,$(SPEC_VS))
+ALL_VOS := $(patsubst %.v,%.vo,$(ALL_VOS))
 
-%.vo: %.v
-	$(COQC) $(COQFLAGS) $*.v 
+spec: Makefile.coq.spec $(SPEC_VS)
+	$(MAKE) -f Makefile.coq.spec
 
-# Note: riscv-coq depends on ../bbv, but bbv's version is checked by bedrock2's CI
+all: Makefile.coq.all $(ALL_VS)
+	$(MAKE) -f Makefile.coq.all
 
-util: $(patsubst %.v,%.vo,$(wildcard src/util/*.v))
+COQ_MAKEFILE := $(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = riscv
 
-spec: util $(patsubst %.v,%.vo,$(wildcard src/*.v))
+Makefile.coq.spec: force
+	 $(COQ_MAKEFILE) $(SPEC_VS) -o Makefile.coq.spec
 
-encode: spec $(patsubst %.v,%.vo,$(wildcard src/encode/*.v))
+Makefile.coq.all: force
+	$(COQ_MAKEFILE) $(ALL_VS) -o Makefile.coq.all
 
-# beware: the "encode(decode inst) = inst" proof takes about 25min (June 1st, 2018)
-proofs: encode $(patsubst %.v,%.vo,$(wildcard src/proofs/*.v))
+force:
 
-all: spec encode proofs
-
-.depend depend:
-	$(COQDEP) >.depend `find src -name "*.v"`
+clean:: Makefile.coq.all
+	$(MAKE) -f Makefile.coq.all clean
+	find . -type f \( -name '*~' -o -name '*.aux' \) -delete
+	rm -f Makefile.coq.all Makefile.coq.all.conf Makefile.coq.spec Makefile.coq.spec.conf
 
 
 # converting from Haskell using hs-to-coq:
@@ -54,12 +55,3 @@ convert: riscv-semantics_version_check hs-to-coq_version_check $(HS_SOURCES) $(P
 	stack exec hs-to-coq -- -e convert-hs-to-coq/Execute.edits -p convert-hs-to-coq/Execute_preamble.v -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits -N -i $(RISCV_SEMANTICS_DIR)/src -o ./src $(RISCV_SEMANTICS_DIR)/src/ExecuteI64.hs
 	stack exec hs-to-coq -- -e convert-hs-to-coq/Execute.edits -p convert-hs-to-coq/Execute_preamble.v -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits -N -i $(RISCV_SEMANTICS_DIR)/src -o ./src $(RISCV_SEMANTICS_DIR)/src/ExecuteM.hs
 	stack exec hs-to-coq -- -e convert-hs-to-coq/Execute.edits -p convert-hs-to-coq/Execute_preamble.v -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits -N -i $(RISCV_SEMANTICS_DIR)/src -o ./src $(RISCV_SEMANTICS_DIR)/src/ExecuteM64.hs
-
-
-
-clean:
-	find . -type f \( -name '*.glob' -o -name '*.vo' -o -name '*.aux' \) -delete
-	rm .depend
-
-include .depend
-
