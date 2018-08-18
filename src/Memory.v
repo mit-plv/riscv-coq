@@ -656,8 +656,7 @@ Section MemoryHelpers.
         by (rewrite storeDouble_preserves_memSize; assumption).
       specialize (P H1).
       rewrite loadDouble_spec in P by assumption.
-      pose proof wappend_inj as Q.
-      specialize (Q 32 32).
+      pose proof (@wappend_inj 32 32) as Q.
       specialize Q with (3 := P).
       destruct Q as [_ Q]; [omega..|assumption].
     - specialize (P (sub a2 (ZToReg 4)) v).
@@ -689,8 +688,7 @@ Section MemoryHelpers.
           ring.
         }
         specialize (P Ne).
-        pose proof wappend_inj as Q.
-        specialize (Q 32 32).
+        pose proof (@wappend_inj 32 32) as Q.
         specialize Q with (3 := P).
         destruct Q as [Q _]; try omega.
         ring_simplify (add (sub a2 (ZToReg 4)) (ZToReg 4)) in Q.

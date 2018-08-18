@@ -56,7 +56,7 @@ Section Derived.
 
   Context {sz: Z}.
 
-  Lemma uwordToZ_inj: forall (a b: word sz),
+  Lemma uwordToZ_inj: forall {a b: word sz},
       uwordToZ a = uwordToZ b -> a = b.
   Proof.
     intros.
@@ -66,7 +66,7 @@ Section Derived.
     assumption.
   Qed.
 
-  Lemma mod_eq_ZToWord_eq: forall (a b: Z),
+  Lemma mod_eq_ZToWord_eq: forall {a b: Z},
       a mod 2 ^ sz = b mod 2 ^ sz ->
       ZToWord sz a = ZToWord sz b.
   Proof.
@@ -76,7 +76,7 @@ Section Derived.
     assumption.
   Qed.
 
-  Lemma ZToWord_eq_mod_eq: forall (a b: Z),
+  Lemma ZToWord_eq_mod_eq: forall {a b: Z},
       ZToWord sz a = ZToWord sz b ->
       a mod 2 ^ sz = b mod 2 ^ sz.
   Proof.
@@ -95,7 +95,7 @@ Section Derived.
     reflexivity.
   Qed.
 
-  Lemma uwordToZ_ne: forall (a b: word sz),
+  Lemma uwordToZ_ne: forall {a b: word sz},
       uwordToZ a <> uwordToZ b ->
       a <> b.
   Proof.
@@ -166,7 +166,7 @@ Ltac mod0_exists_quotient H :=
   apply Z.mod_divide in H;
   [ let k := fresh "k" in let E := fresh "E" in unfold Z.divide in H; destruct H as [k E] | ].  
 
-Lemma mod_eq_from_diff: forall a b m,
+Lemma mod_eq_from_diff: forall {a b m: Z},
     (a - b) mod m = 0 ->
     a mod m = b mod m.
 Proof.
@@ -177,7 +177,7 @@ Proof.
   apply Z_mod_plus_full.
 Qed.
 
-Lemma mod_eq_to_diff: forall a b m : Z,
+Lemma mod_eq_to_diff: forall {a b m : Z},
     a mod m = b mod m ->
     (a - b) mod m = 0.
 Proof.
@@ -346,29 +346,8 @@ Definition wucast{sz: Z}(sz': Z)(w: word sz): word sz' :=
 Definition wscast{sz: Z}(sz': Z)(w: word sz): word sz' :=
   ZToWord sz' (swordToZ w).
 
-(*
-Definition wappend{sz1 sz2: Z}(w1: word sz1)(w2: word sz2): word (sz1 + sz2) :=
-  ZToWord (sz1 + sz2) (2 ^ sz2 * (uwordToZ w1) + uwordToZ w2).
-
-Definition wappend{sz1 sz2: Z}(w1: word sz1)(w2: word sz2): word (sz1 + sz2) :=
-  ZToWord (sz1 + sz2) (Z.lor (2 ^ sz2 * (uwordToZ w1)) (uwordToZ w2)).
- *)
 Definition wappend{sz1 sz2: Z}(w1: word sz1)(w2: word sz2): word (sz1 + sz2) :=
   ZToWord (sz1 + sz2) (Z.lor (Z.shiftl (uwordToZ w1) sz2) (uwordToZ w2)).
-
-(*
-Definition wslice{sz: Z}(w: word sz)(i j: Z): word (j - i) :=
-  ZToWord (j - i) (bitSlice (uwordToZ w) i j).
-
-Definition lobits(sz: Z)(w: word (2 * sz)): word sz.
-  wslice w sz (2 * sz).
-
-Definition hibits(sz: Z)(w: word (2 * sz)): word sz :=
-  ZToWord sz (bitSlice (uwordToZ w) sz (2 * sz)).
-
-Definition wslice(sz1 sz2 sz3: Z)(w: word (sz1 + sz2 + sz3)): word sz2 :=
-  ZToWord sz2 (bitSlice (uwordToZ w) sz1 (sz1 + sz2)).
- *)
 
 Definition wsplit_lo(sz1 sz2: Z)(w: word (sz1 + sz2)): word sz2 :=
   wucast sz2 w.
@@ -429,7 +408,7 @@ Lemma wsplit_hi_wappend: forall {sz1 sz2} (w1: word sz1) (w2: word sz2),
     wsplit_hi sz1 sz2 (wappend w1 w2) = w1.
 Proof. word_bitwise. Qed.
 
-Lemma wappend_inj: forall sz1 sz2 (a : word sz1) (b : word sz2) (c : word sz1) (d : word sz2),
+Lemma wappend_inj: forall {sz1 sz2} (a : word sz1) (b : word sz2) (c : word sz1) (d : word sz2),
     0 <= sz1 ->
     0 <= sz2 ->
     wappend a b = wappend c d ->
@@ -457,12 +436,36 @@ Proof.
   intros. constructor; word_solver.
 Qed.
 
-Lemma weqb_spec: forall sz (a b : word sz),
+Lemma weqb_spec: forall {sz: Z} (a b : word sz),
     weqb a b = true <-> a = b.
 Proof.
   word_destruct.
   - reflexivity.
   - apply Z.eqb_eq; word_omega.
+Qed.
+
+Lemma weqb_true: forall {sz} (x y : word sz), weqb x y = true -> x = y.
+Proof.
+  eapply @weqb_spec.
+Qed.
+
+Lemma weqb_eq: forall {sz} (a b: word sz), a = b -> weqb a b = true.
+Proof.
+  eapply @weqb_spec.
+Qed.
+
+Lemma weqb_false: forall {sz} (a b: word sz), weqb a b = false -> a <> b.
+Proof.
+  intros. destruct (weqb a b) eqn: E.
+  - discriminate.
+  - intro C. subst. rewrite weqb_eq in E; congruence.
+Qed.
+
+Lemma weqb_ne: forall {sz} (a b: word sz), a <> b -> weqb a b = false.
+Proof.
+  intros. destruct (weqb a b) eqn: E.
+  - apply weqb_true in E. contradiction.
+  - reflexivity.
 Qed.
 
 Lemma swordToZ_bound: forall sz (a : word sz),
