@@ -9,62 +9,50 @@ Require Import riscv.util.Tactics.
 Require Import riscv.util.div_mod_to_quot_rem.
 Local Open Scope Z_scope.
 
-Module Type WORD.
 
-  Parameter word: Z -> Set.
-
-  Parameter ZToWord: forall (sz: Z) (x: Z), word sz.
-
-  Parameter uwordToZ: forall {sz: Z} (w: word sz), Z.
-
-  Axiom uwordToZ_ZToWord: forall sz n,
-    uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
-
-  Axiom ZToWord_uwordToZ: forall {sz: Z} (a : word sz),
-    ZToWord sz (uwordToZ a) = a.
-
-End WORD.
-
-Module Word_Z_mod: WORD.
-
-  Definition word(sz: Z) := { x: Z | x mod 2 ^ sz = x }.
-
-  Definition ZToWord(sz: Z)(x: Z): word sz := exist _ (x mod 2 ^ sz) (Zmod_mod x (2 ^ sz)).
-
-  Definition uwordToZ{sz: Z}: word sz -> Z := @proj1_sig Z (fun x => x mod 2 ^ sz = x).
-    
-  Lemma uwordToZ_ZToWord: forall sz n,
-      uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
-  Proof.
-    intros. reflexivity.
-  Qed.
-
-  Lemma sigma_canonicalize_eq: forall {A : Type},
-      (forall x1 x2 : A, {x1 = x2} + {x1 <> x2}) ->
-      forall (canonicalize: A -> A) (x1 x2: A) (p1: canonicalize x1 = x1) (p2: canonicalize x2 = x2),
+Lemma sigma_canonicalize_eq: forall {A : Type},
+    (forall x1 x2 : A, {x1 = x2} + {x1 <> x2}) ->
+    forall (canonicalize: A -> A) (x1 x2: A) (p1: canonicalize x1 = x1) (p2: canonicalize x2 = x2),
       x1 = x2 ->
       exist (fun x => canonicalize x = x) x1 p1 = exist (fun x => canonicalize x = x) x2 p2.
-  Proof.
-    intros.
-    subst x2.
-    f_equal.
-    apply (UIP_dec X p1 p2).
-  Qed.
-  
-  Lemma ZToWord_uwordToZ: forall sz (a : word sz),
-      ZToWord sz (uwordToZ a) = a.
-  Proof.
-    intros. destruct a as [a Ma]. unfold ZToWord, uwordToZ.
-    simpl.
-    apply (sigma_canonicalize_eq Z.eq_dec).
-    assumption.
-  Qed.
+Proof.
+  intros.
+  subst x2.
+  f_equal.
+  apply (UIP_dec X p1 p2).
+Qed.
 
-End Word_Z_mod.
 
-Export Word_Z_mod.
+Definition word(sz: Z) := { x: Z | x mod 2 ^ sz = x }.
 
-Section DerivedFromModuleSig.
+Definition ZToWord(sz: Z)(x: Z): word sz := exist _ (x mod 2 ^ sz) (Zmod_mod x (2 ^ sz)).
+
+Definition uwordToZ{sz: Z}: word sz -> Z := @proj1_sig Z (fun x => x mod 2 ^ sz = x).
+
+Lemma uwordToZ_ZToWord: forall {sz: Z} (n: Z),
+    uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
+Proof.
+  intros. reflexivity.
+Qed.
+
+Lemma ZToWord_uwordToZ: forall {sz: Z} (a : word sz),
+    ZToWord sz (uwordToZ a) = a.
+Proof.
+  intros. destruct a as [a Ma]. unfold ZToWord, uwordToZ.
+  simpl.
+  apply (sigma_canonicalize_eq Z.eq_dec).
+  assumption.
+Qed.
+
+(** Note: 
+    The two lemmas [uwordToZ_ZToWord] and [ZToWord_uwordToZ] fully specify the data type
+    [word sz] with respect to its constructor [ZToWord] and its destructor [uwordToZ].
+    Therefore, we will never have to unfold [ZToWord] or [uwordToZ] again.
+    We could even mark them as opaque, or put them behind a module signature, but we
+    do not do this because it would prevent [cbv] from reducing expressions.
+*)
+
+Section Derived.
 
   Context {sz: Z}.
 
@@ -106,9 +94,9 @@ Section DerivedFromModuleSig.
     rewrite uwordToZ_ZToWord.
     reflexivity.
   Qed.
-    
-End DerivedFromModuleSig.  
-  
+
+End Derived.
+
 Definition wmsb{sz: Z}(a: word sz): bool := Z.testbit (uwordToZ a) (sz - 1).
 
 Definition swordToZ{sz: Z}(a: word sz): Z :=
