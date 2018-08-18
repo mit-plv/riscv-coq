@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
-Require Import Coq.Logic.ProofIrrelevance.
+Require Import Coq.Logic.Eqdep_dec.
 Require Import bbv.ZLib.
 Require Import bbv.ZHints.
 Require Import riscv.util.ZBitOps.
@@ -39,11 +39,25 @@ Module Word_Z_mod: WORD.
     intros. reflexivity.
   Qed.
 
+  Lemma sigma_canonicalize_eq: forall {A : Type},
+      (forall x1 x2 : A, {x1 = x2} + {x1 <> x2}) ->
+      forall (canonicalize: A -> A) (x1 x2: A) (p1: canonicalize x1 = x1) (p2: canonicalize x2 = x2),
+      x1 = x2 ->
+      exist (fun x => canonicalize x = x) x1 p1 = exist (fun x => canonicalize x = x) x2 p2.
+  Proof.
+    intros.
+    subst x2.
+    f_equal.
+    apply (UIP_dec X p1 p2).
+  Qed.
+  
   Lemma ZToWord_uwordToZ: forall sz (a : word sz),
       ZToWord sz (uwordToZ a) = a.
   Proof.
     intros. destruct a as [a Ma]. unfold ZToWord, uwordToZ.
-    apply subset_eq_compat. simpl. assumption.
+    simpl.
+    apply (sigma_canonicalize_eq Z.eq_dec).
+    assumption.
   Qed.
 
 End Word_Z_mod.
