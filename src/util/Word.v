@@ -95,6 +95,13 @@ Section Derived.
     reflexivity.
   Qed.
 
+  Lemma uwordToZ_ne: forall (a b: word sz),
+      uwordToZ a <> uwordToZ b ->
+      a <> b.
+  Proof.
+    intros a b E C. apply E. f_equal. assumption.
+  Qed.
+
 End Derived.
 
 Definition wmsb{sz: Z}(a: word sz): bool := Z.testbit (uwordToZ a) (sz - 1).
@@ -299,6 +306,12 @@ Section MoreOps.
   Definition wxor  := wu_binop Z.lxor sz.
 
   Definition weqb := wu_binop_t Z.eqb sz.
+
+  Definition weq_dec(x y: word sz): {x = y} + {x <> y}.
+    destruct (Z.eq_dec (uwordToZ x) (uwordToZ y)).
+    - left. apply uwordToZ_inj. assumption.
+    - right. apply uwordToZ_ne. assumption.
+  Defined.
 
   Definition wuleb := wu_binop_t Z.leb sz.
   Definition wultb := wu_binop_t Z.ltb sz.
