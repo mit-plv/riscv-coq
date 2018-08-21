@@ -3,6 +3,7 @@ Require Import Coq.micromega.Lia.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import bbv.ZLib.
 Require Import bbv.ZHints.
+Require Import bbv.N_Z_nat_conversions.
 Require bbv.Word.
 Require Import riscv.util.ZBitOps.
 Require Import riscv.util.prove_Zeq_bitwise.
@@ -62,29 +63,58 @@ Definition ZToWord(sz: Z)(x: Z): word sz :=
 
 Definition uwordToZ{sz: Z}(w: word sz): Z := bbv.Word.uwordToZ w.
 
+Lemma neg_size: forall sz (a: word sz),
+    sz < 0 ->
+    a = Word.wzero (Z.to_nat sz).
+Proof.
+  intros. unfold word in *.
+  remember (Z.to_nat sz) as n.
+  destruct a.
+  - reflexivity.
+  - exfalso. rewrite Z_to_nat_neg in Heqn by assumption. discriminate.
+Qed.
+
 Lemma uwordToZ_ZToWord: forall {sz: Z} (n: Z),
     uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
 Proof.
   intros.
-  unfold uwordToZ, ZToWord, Word.uwordToZ.
-  rewrite Word.wordToN_NToWord_2.
-  - apply Z2N.id. apply Z.mod_pos_bound. admit.
-  - admit.
-Admitted.
+  unfold uwordToZ, ZToWord, bbv.Word.uwordToZ.
+  assert (sz < 0 \/ 0 <= sz) as C by omega.
+  destruct C as [C | C].
+  - rewrite Z.pow_neg_r by assumption. rewrite Zmod_0_r.
+    rewrite Z_to_nat_neg by omega. reflexivity.
+  - pose proof (pow2_pos _ C).
+    rewrite Word.wordToN_NToWord_2.
+    + apply Z2N.id. apply Z.mod_pos_bound. assumption.
+    + rewrite NatLib.pow2_N. change 2%nat with (Z.to_nat 2).
+      rewrite <- Z2Nat.inj_pow by omega.
+      rewrite Z_nat_N.
+      pose proof (Z.mod_pos_bound n (2 ^ sz) H).
+      apply Z2N.inj_lt; omega.
+Qed.
 
 Lemma ZToWord_uwordToZ: forall {sz: Z} (a : word sz),
     ZToWord sz (uwordToZ a) = a.
 Proof.
   intros.
-  unfold uwordToZ, ZToWord, Word.uwordToZ.
-  rewrite Z2N.inj_mod.
-  - rewrite N2Z.id.
-    rewrite N.mod_small.
-    + apply  Word.NToWord_wordToN.
-    + admit.
-  - apply N2Z.is_nonneg.
-  - admit.
-Admitted.
+  unfold uwordToZ, ZToWord, bbv.Word.uwordToZ.
+  assert (sz < 0 \/ 0 <= sz) as C by omega.
+  destruct C as [C | C].
+  - rewrite Z.pow_neg_r by assumption. rewrite Zmod_0_r.
+    rewrite neg_size by assumption.
+    apply Word.NToWord_0.
+  - rewrite Z2N.inj_mod.
+    + rewrite N2Z.id.
+      rewrite N.mod_small.
+      * apply  Word.NToWord_wordToN.
+      * pose proof (Word.wordToN_bound a) as P.
+        rewrite NatLib.pow2_N in P. change 2%nat with (Z.to_nat 2) in P.
+        rewrite <- Z2Nat.inj_pow in P by omega.
+        rewrite Z_nat_N in P.
+        exact P.
+    + apply N2Z.is_nonneg.
+    + apply pow2_pos. assumption.
+Qed.
 
 (** Note: 
     The two lemmas [uwordToZ_ZToWord] and [ZToWord_uwordToZ] fully specify the data type
