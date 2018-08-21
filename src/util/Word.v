@@ -3,46 +3,88 @@ Require Import Coq.micromega.Lia.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import bbv.ZLib.
 Require Import bbv.ZHints.
+Require bbv.Word.
 Require Import riscv.util.ZBitOps.
 Require Import riscv.util.prove_Zeq_bitwise.
 Require Import riscv.util.Tactics.
 Require Import riscv.util.div_mod_to_quot_rem.
 Local Open Scope Z_scope.
 
+(* Note: we don't use this because see below *)
+Module SigmaWord.
 
-Lemma sigma_canonicalize_eq: forall {A : Type},
+  Lemma sigma_canonicalize_eq: forall {A : Type},
     (forall x1 x2 : A, {x1 = x2} + {x1 <> x2}) ->
     forall (canonicalize: A -> A) (x1 x2: A) (p1: canonicalize x1 = x1) (p2: canonicalize x2 = x2),
       x1 = x2 ->
       exist (fun x => canonicalize x = x) x1 p1 = exist (fun x => canonicalize x = x) x2 p2.
-Proof.
-  intros.
-  subst x2.
-  f_equal.
-  apply (UIP_dec X p1 p2).
-Qed.
+  Proof.
+    intros.
+    subst x2.
+    f_equal.
+    apply (UIP_dec X p1 p2).
+  Qed.
 
+  Definition word(sz: Z) := { x: Z | x mod 2 ^ sz = x }.
 
-Definition word(sz: Z) := { x: Z | x mod 2 ^ sz = x }.
+  Definition ZToWord(sz: Z)(x: Z): word sz := exist _ (x mod 2 ^ sz) (Zmod_mod x (2 ^ sz)).
 
-Definition ZToWord(sz: Z)(x: Z): word sz := exist _ (x mod 2 ^ sz) (Zmod_mod x (2 ^ sz)).
+  Definition uwordToZ{sz: Z}: word sz -> Z := @proj1_sig Z (fun x => x mod 2 ^ sz = x).
 
-Definition uwordToZ{sz: Z}: word sz -> Z := @proj1_sig Z (fun x => x mod 2 ^ sz = x).
+  Lemma uwordToZ_ZToWord: forall {sz: Z} (n: Z),
+      uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
+  Proof.
+    intros. reflexivity.
+  Qed.
+
+  Lemma ZToWord_uwordToZ: forall {sz: Z} (a : word sz),
+      ZToWord sz (uwordToZ a) = a.
+  Proof.
+    intros. destruct a as [a Ma]. unfold ZToWord, uwordToZ.
+    simpl.
+    apply (sigma_canonicalize_eq Z.eq_dec).
+    assumption.
+  Qed.
+
+  (* Prints a huge term, and is very slow, therefore this implementation is not usable
+  Eval cbv in (ZToWord 4 3).
+  *)
+End SigmaWord.
+
+(* Instead, we just use bbv.Word: *)
+
+Definition word(sz: Z) := bbv.Word.word (Z.to_nat sz).
+
+(* Note: we do not reuse bbv.Word.ZToWord, because that would make the proof of
+   uwordToZ_ZToWord below very hard *)
+Definition ZToWord(sz: Z)(x: Z): word sz :=
+  bbv.Word.NToWord (Z.to_nat sz) (Z.to_N (x mod 2 ^ sz)).
+
+Definition uwordToZ{sz: Z}(w: word sz): Z := bbv.Word.uwordToZ w.
 
 Lemma uwordToZ_ZToWord: forall {sz: Z} (n: Z),
     uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
 Proof.
-  intros. reflexivity.
-Qed.
+  intros.
+  unfold uwordToZ, ZToWord, Word.uwordToZ.
+  rewrite Word.wordToN_NToWord_2.
+  - apply Z2N.id. apply Z.mod_pos_bound. admit.
+  - admit.
+Admitted.
 
 Lemma ZToWord_uwordToZ: forall {sz: Z} (a : word sz),
     ZToWord sz (uwordToZ a) = a.
 Proof.
-  intros. destruct a as [a Ma]. unfold ZToWord, uwordToZ.
-  simpl.
-  apply (sigma_canonicalize_eq Z.eq_dec).
-  assumption.
-Qed.
+  intros.
+  unfold uwordToZ, ZToWord, Word.uwordToZ.
+  rewrite Z2N.inj_mod.
+  - rewrite N2Z.id.
+    rewrite N.mod_small.
+    + apply  Word.NToWord_wordToN.
+    + admit.
+  - apply N2Z.is_nonneg.
+  - admit.
+Admitted.
 
 (** Note: 
     The two lemmas [uwordToZ_ZToWord] and [ZToWord_uwordToZ] fully specify the data type
