@@ -1,3 +1,4 @@
+Require Export Coq.ZArith.BinIntDef.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import Coq.Logic.Eqdep_dec.
@@ -116,7 +117,7 @@ Proof.
     + apply pow2_pos. assumption.
 Qed.
 
-(** Note: 
+(** Note:
     The two lemmas [uwordToZ_ZToWord] and [ZToWord_uwordToZ] fully specify the data type
     [word sz] with respect to its constructor [ZToWord] and its destructor [uwordToZ].
     Therefore, we will never have to unfold [ZToWord] or [uwordToZ] again.
@@ -236,7 +237,7 @@ Ltac make_mod_nonzero :=
 
 Ltac mod0_exists_quotient H :=
   apply Z.mod_divide in H;
-  [ let k := fresh "k" in let E := fresh "E" in unfold Z.divide in H; destruct H as [k E] | ].  
+  [ let k := fresh "k" in let E := fresh "E" in unfold Z.divide in H; destruct H as [k E] | ].
 
 Lemma mod_eq_from_diff: forall {a b m: Z},
     (a - b) mod m = 0 ->
@@ -372,7 +373,7 @@ Section MoreOps.
   Definition wsquot := ws_binop Z.quot sz.
   Definition wsmod  := ws_binop Z.modulo sz.
   Definition wsrem  := ws_binop Z.rem sz.
-  
+
   Definition wor   := wu_binop Z.lor sz.
   Definition wand  := wu_binop Z.land sz.
   Definition wxor  := wu_binop Z.lxor sz.
@@ -435,7 +436,7 @@ Hint Unfold wucast wscast wappend wsplit_lo wsplit_hi lobits hibits : unf_word_a
 
 Ltac word_omega_pre :=
       repeat match goal with
-         | n: Z |- _ => 
+         | n: Z |- _ =>
            let B := fresh in assert (0 < n) by omega;
            unique pose proof (pow2_times2 n B)
          | _: context[2 ^ ?n] |- _ =>
