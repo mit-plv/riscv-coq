@@ -12,120 +12,29 @@ Require Import riscv.util.Tactics.
 Require Import riscv.util.div_mod_to_quot_rem.
 Local Open Scope Z_scope.
 
-(* Note: we don't use this because see below *)
-Module SigmaWord.
 
-  Lemma sigma_canonicalize_eq: forall {A : Type},
-    (forall x1 x2 : A, {x1 = x2} + {x1 <> x2}) ->
-    forall (canonicalize: A -> A) (x1 x2: A) (p1: canonicalize x1 = x1) (p2: canonicalize x2 = x2),
-      x1 = x2 ->
-      exist (fun x => canonicalize x = x) x1 p1 = exist (fun x => canonicalize x = x) x2 p2.
-  Proof.
-    intros.
-    subst x2.
-    f_equal.
-    apply (UIP_dec X p1 p2).
-  Qed.
-
-  Definition word(sz: Z) := { x: Z | x mod 2 ^ sz = x }.
-
-  Definition ZToWord(sz: Z)(x: Z): word sz := exist _ (x mod 2 ^ sz) (Zmod_mod x (2 ^ sz)).
-
-  Definition uwordToZ{sz: Z}: word sz -> Z := @proj1_sig Z (fun x => x mod 2 ^ sz = x).
-
-  Lemma uwordToZ_ZToWord: forall {sz: Z} (n: Z),
-      uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
-  Proof.
-    intros. reflexivity.
-  Qed.
-
-  Lemma ZToWord_uwordToZ: forall {sz: Z} (a : word sz),
-      ZToWord sz (uwordToZ a) = a.
-  Proof.
-    intros. destruct a as [a Ma]. unfold ZToWord, uwordToZ.
-    simpl.
-    apply (sigma_canonicalize_eq Z.eq_dec).
-    assumption.
-  Qed.
-
-(* Prints a huge term, and is very slow, therefore this implementation is not usable
-  Eval cbv in (ZToWord 4 3).
- *)
-End SigmaWord.
-
-(* Instead, we just use bbv.Word: *)
-
-Definition word(sz: Z) := bbv.Word.word (Z.to_nat sz).
-
-(* Note: we do not reuse bbv.Word.ZToWord, because that would make the proof of
-   uwordToZ_ZToWord below very hard *)
-Definition ZToWord(sz: Z)(x: Z): word sz :=
-  bbv.Word.NToWord (Z.to_nat sz) (Z.to_N (x mod 2 ^ sz)).
-
-Definition uwordToZ{sz: Z}(w: word sz): Z := bbv.Word.uwordToZ w.
-
-Lemma neg_size: forall sz (a: word sz),
-    sz < 0 ->
-    a = Word.wzero (Z.to_nat sz).
-Proof.
-  intros. unfold word in *.
-  remember (Z.to_nat sz) as n.
-  destruct a.
-  - reflexivity.
-  - exfalso. rewrite Z_to_nat_neg in Heqn by assumption. discriminate.
-Qed.
-
-Lemma uwordToZ_ZToWord: forall {sz: Z} (n: Z),
-    uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
-Proof.
-  intros.
-  unfold uwordToZ, ZToWord, bbv.Word.uwordToZ.
-  assert (sz < 0 \/ 0 <= sz) as C by omega.
-  destruct C as [C | C].
-  - rewrite Z.pow_neg_r by assumption. rewrite Zmod_0_r.
-    rewrite Z_to_nat_neg by omega. reflexivity.
-  - pose proof (pow2_pos _ C).
-    rewrite Word.wordToN_NToWord_2.
-    + apply Z2N.id. apply Z.mod_pos_bound. assumption.
-    + rewrite NatLib.pow2_N. change 2%nat with (Z.to_nat 2).
-      rewrite <- Z2Nat.inj_pow by omega.
-      rewrite Z_nat_N.
-      pose proof (Z.mod_pos_bound n (2 ^ sz) H).
-      apply Z2N.inj_lt; omega.
-Qed.
-
-Lemma ZToWord_uwordToZ: forall {sz: Z} (a : word sz),
-    ZToWord sz (uwordToZ a) = a.
-Proof.
-  intros.
-  unfold uwordToZ, ZToWord, bbv.Word.uwordToZ.
-  assert (sz < 0 \/ 0 <= sz) as C by omega.
-  destruct C as [C | C].
-  - rewrite Z.pow_neg_r by assumption. rewrite Zmod_0_r.
-    rewrite neg_size by assumption.
-    apply Word.NToWord_0.
-  - rewrite Z2N.inj_mod.
-    + rewrite N2Z.id.
-      rewrite N.mod_small.
-      * apply  Word.NToWord_wordToN.
-      * pose proof (Word.wordToN_bound a) as P.
-        rewrite NatLib.pow2_N in P. change 2%nat with (Z.to_nat 2) in P.
-        rewrite <- Z2Nat.inj_pow in P by omega.
-        rewrite Z_nat_N in P.
-        exact P.
-    + apply N2Z.is_nonneg.
-    + apply pow2_pos. assumption.
-Qed.
-
-(** Note:
-    The two lemmas [uwordToZ_ZToWord] and [ZToWord_uwordToZ] fully specify the data type
+(** The two axioms [uwordToZ_ZToWord] and [ZToWord_uwordToZ] fully specify the data type
     [word sz] with respect to its constructor [ZToWord] and its destructor [uwordToZ].
-    Therefore, we will never have to unfold [ZToWord] or [uwordToZ] again.
-    We could even mark them as opaque, or put them behind a module signature, but we
-    do not do this because it would prevent [cbv] from reducing expressions.
- *)
+    Therefore, we will never have to unfold [ZToWord] or [uwordToZ] in the word library. *)
+Module Type WORD.
 
-Module Word.
+  Parameter word: Z -> Set.
+
+  Parameter ZToWord: forall (sz: Z) (x: Z), word sz.
+
+  Parameter uwordToZ: forall {sz: Z} (w: word sz), Z.
+
+  Axiom uwordToZ_ZToWord: forall sz n,
+    uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
+
+  Axiom ZToWord_uwordToZ: forall {sz: Z} (a : word sz),
+    ZToWord sz (uwordToZ a) = a.
+
+End WORD.
+
+
+Module Word(W: WORD).
+  Export W.
 
   Section Derived.
 
@@ -593,4 +502,190 @@ Module Word.
 
 End Word.
 
-Export Word.
+
+(** Different ways to instantiate WORD: *)
+
+(* Note: we don't use this because see below *)
+Module SigmaWord <: WORD.
+
+  Lemma sigma_canonicalize_eq: forall {A : Type},
+    (forall x1 x2 : A, {x1 = x2} + {x1 <> x2}) ->
+    forall (canonicalize: A -> A) (x1 x2: A) (p1: canonicalize x1 = x1) (p2: canonicalize x2 = x2),
+      x1 = x2 ->
+      exist (fun x => canonicalize x = x) x1 p1 = exist (fun x => canonicalize x = x) x2 p2.
+  Proof.
+    intros.
+    subst x2.
+    f_equal.
+    apply (UIP_dec X p1 p2).
+  Qed.
+
+  Definition word(sz: Z) := { x: Z | x mod 2 ^ sz = x }.
+
+  Definition ZToWord(sz: Z)(x: Z): word sz := exist _ (x mod 2 ^ sz) (Zmod_mod x (2 ^ sz)).
+
+  Definition uwordToZ{sz: Z}: word sz -> Z := @proj1_sig Z (fun x => x mod 2 ^ sz = x).
+
+  Lemma uwordToZ_ZToWord: forall {sz: Z} (n: Z),
+      uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
+  Proof.
+    intros. reflexivity.
+  Qed.
+
+  Lemma ZToWord_uwordToZ: forall {sz: Z} (a : word sz),
+      ZToWord sz (uwordToZ a) = a.
+  Proof.
+    intros. destruct a as [a Ma]. unfold ZToWord, uwordToZ.
+    simpl.
+    apply (sigma_canonicalize_eq Z.eq_dec).
+    assumption.
+  Qed.
+
+  (* Prints a huge term, and is very slow, therefore this implementation is not usable
+  Eval cbv in (ZToWord 4 3).
+  *)
+End SigmaWord.
+
+
+(* Instead, we can just use bbv.Word: *)
+Module BbvWord <: WORD.
+
+  Definition word(sz: Z) := bbv.Word.word (Z.to_nat sz).
+
+  (* Note: we do not reuse bbv.Word.ZToWord, because that would make the proof of
+   uwordToZ_ZToWord below very hard *)
+  Definition ZToWord(sz: Z)(x: Z): word sz :=
+    bbv.Word.NToWord (Z.to_nat sz) (Z.to_N (x mod 2 ^ sz)).
+
+  Definition uwordToZ{sz: Z}(w: word sz): Z := bbv.Word.uwordToZ w.
+
+  Lemma neg_size: forall sz (a: word sz),
+      sz < 0 ->
+      a = Word.wzero (Z.to_nat sz).
+  Proof.
+    intros. unfold word in *.
+    remember (Z.to_nat sz) as n.
+    destruct a.
+    - reflexivity.
+    - exfalso. rewrite Z_to_nat_neg in Heqn by assumption. discriminate.
+  Qed.
+
+  Lemma uwordToZ_ZToWord: forall {sz: Z} (n: Z),
+      uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
+  Proof.
+    intros.
+    unfold uwordToZ, ZToWord, bbv.Word.uwordToZ.
+    assert (sz < 0 \/ 0 <= sz) as C by omega.
+    destruct C as [C | C].
+    - rewrite Z.pow_neg_r by assumption. rewrite Zmod_0_r.
+      rewrite Z_to_nat_neg by omega. reflexivity.
+    - pose proof (pow2_pos _ C).
+      rewrite Word.wordToN_NToWord_2.
+      + apply Z2N.id. apply Z.mod_pos_bound. assumption.
+      + rewrite NatLib.pow2_N. change 2%nat with (Z.to_nat 2).
+        rewrite <- Z2Nat.inj_pow by omega.
+        rewrite Z_nat_N.
+        pose proof (Z.mod_pos_bound n (2 ^ sz) H).
+        apply Z2N.inj_lt; omega.
+  Qed.
+
+  Lemma ZToWord_uwordToZ: forall {sz: Z} (a : word sz),
+      ZToWord sz (uwordToZ a) = a.
+  Proof.
+    intros.
+    unfold uwordToZ, ZToWord, bbv.Word.uwordToZ.
+    assert (sz < 0 \/ 0 <= sz) as C by omega.
+    destruct C as [C | C].
+    - rewrite Z.pow_neg_r by assumption. rewrite Zmod_0_r.
+      rewrite neg_size by assumption.
+      apply Word.NToWord_0.
+    - rewrite Z2N.inj_mod.
+      + rewrite N2Z.id.
+        rewrite N.mod_small.
+        * apply  Word.NToWord_wordToN.
+        * pose proof (Word.wordToN_bound a) as P.
+          rewrite NatLib.pow2_N in P. change 2%nat with (Z.to_nat 2) in P.
+          rewrite <- Z2Nat.inj_pow in P by omega.
+          rewrite Z_nat_N in P.
+          exact P.
+      + apply N2Z.is_nonneg.
+      + apply pow2_pos. assumption.
+  Qed.
+
+  (* fast, as desired:
+  Eval cbv in (ZToWord 64 (-42)).
+  *)
+End BbvWord.
+
+
+(* The problems with SigmaWord are:
+   - cbv will reduce its argument (P : A -> Prop) to huge terms
+   - cbv will reduce its proof argument of type (P x) to possibly huge terms
+   We can solve this by reimplementing sigma types by fixing the (P : A -> Prop) argument,
+   and making sure proof terms always are just eq_refl, as follows: *)
+Module RecordWord <: WORD.
+
+  Record word_record{sz: Z} := Build_word {
+    word_val: Z;
+    word_mod: word_val mod 2 ^ sz = word_val
+  }.
+
+  Definition word: Z -> Set := @word_record.
+
+  Definition minimize_eq_proof{A: Type}(eq_dec: forall (x y: A), {x = y} + {x <> y}){x y: A}
+    (pf: x = y): x = y :=
+    match eq_dec x y with
+    | left p => p
+    | right n => match n pf: False with end
+    end.
+
+  Definition ZToWord(sz: Z)(x: Z): word sz :=
+    Build_word sz (x mod 2 ^ sz) (minimize_eq_proof Z.eq_dec (Zmod_mod x (2 ^ sz))).
+
+  Definition uwordToZ{sz: Z}: word sz -> Z := word_val.
+
+  Lemma uwordToZ_ZToWord: forall {sz: Z} (n: Z),
+      uwordToZ (ZToWord sz n) = n mod 2 ^ sz.
+  Proof.
+    intros. reflexivity.
+  Qed.
+
+  Lemma sigma_canonicalize_eq: forall {A : Type},
+    (forall x1 x2 : A, {x1 = x2} + {x1 <> x2}) ->
+    forall (canonicalize: A -> A) (x1 x2: A) (p1: canonicalize x1 = x1) (p2: canonicalize x2 = x2),
+      x1 = x2 ->
+      exist (fun x => canonicalize x = x) x1 p1 = exist (fun x => canonicalize x = x) x2 p2.
+  Proof.
+    intros.
+    subst x2.
+    f_equal.
+    apply (UIP_dec X p1 p2).
+  Qed.
+
+  Lemma Build_word_eq: forall (sz x1 x2: Z) (p1: x1 mod 2 ^ sz = x1) (p2: x2 mod 2 ^ sz = x2),
+      x1 = x2 ->
+      Build_word sz x1 p1 = Build_word sz x2 p2.
+  Proof.
+    intros.
+    subst x2.
+    f_equal.
+    apply UIP_dec.
+    apply Z.eq_dec.
+  Qed.
+
+  Lemma ZToWord_uwordToZ: forall {sz: Z} (a : word sz),
+      ZToWord sz (uwordToZ a) = a.
+  Proof.
+    intros. destruct a as [a Ma]. unfold ZToWord, uwordToZ.
+    simpl.
+    apply Build_word_eq.
+    assumption.
+  Qed.
+
+  (* fast, as desired:
+  Eval cbv in (ZToWord 64 (-42)).
+  *)
+
+End RecordWord.
+
+Module Export WordLib := Word RecordWord.
