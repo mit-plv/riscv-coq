@@ -125,6 +125,8 @@ Qed.
     do not do this because it would prevent [cbv] from reducing expressions.
 *)
 
+Module Word.
+
 Section Derived.
 
   Context {sz: Z}.
@@ -588,3 +590,7 @@ Qed.
 Lemma ZToWord_swordToZ: forall sz (a : word sz),
     ZToWord sz (swordToZ a) = a.
 Proof. word_solver. Qed.
+
+End Word.
+
+Export Word.
