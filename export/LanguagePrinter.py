@@ -1,3 +1,4 @@
+import sys
 
 class LanguagePrinter(object):
     def __init__(self, outfile):
@@ -9,6 +10,9 @@ class LanguagePrinter(object):
 
     def writeln(self, line):
         self.outfile.write(self.indent + line + '\n')
+
+    def flush(self):
+        self.outfile.flush()
 
     def startln(self):
         self.outfile.write(self.indent)

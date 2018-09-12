@@ -1035,6 +1035,14 @@ def supportsM(arg_0__):
     return True
 
 def decode(iset, inst):
-    # TODO expr:let
-    pass
-
+    aqrl = ZBitOps.bitSlice(inst, 0b11001, 0b11011)
+    
+    funct5 = ZBitOps.bitSlice(inst, 0b11011, 0b100000)
+    
+    zimm = ZBitOps.bitSlice(inst, 0b1111, 0b10100)
+    
+    funct6 = ZBitOps.bitSlice(inst, 0b11010, 0b100000)
+    
+    shamtHi = ZBitOps.bitSlice(inst, 0b11001, 0b11010)
+    
+    shamtHiTest = 

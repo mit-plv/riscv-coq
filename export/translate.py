@@ -1,3 +1,4 @@
+
 import json
 from LanguagePrinter import LanguagePrinter
 
@@ -136,7 +137,7 @@ def translate_switch(j, p):
 
 
 def translate_expr(j, p, doReturn):
-    global constructor2Type, enumval2Type
+    global constructor2Type, enumval2Type, didPrint
     [s1, s2] = j['what'].split(':')
     assert s1 == 'expr'
     if s2 == 'constructor':
@@ -153,10 +154,35 @@ def translate_expr(j, p, doReturn):
         else:
             print('TODO: ' + j['name'])
         if doReturn: p.end_return_expr()
+    elif s2 == 'let':
+        p.begin_local_var_decl(j['name'], None) # TODO we need to get the right type for C here.
+        if j['nameval']['what']=="expr:let":
+            raise ValueError(" let a = let b is not legal in the input")
+        translate_expr(j['nameval'], p, False)
+        p.end_local_var_decl()
+        translate_expr(j['body'], p, doReturn)
+    elif s2 == 'apply':
+        p.begin_function_call(lambda: translate_expr(j['func'], p, False))
+        isFirst = True
+        for i in j['args']:
+            if not isFirst:
+                p.end_function_arg()
+            translate_expr(i, p, False)
+            isFirst = False
+        p.end_function_call()
+        pass
+    elif s2 == 'global':
+        p.var(j['name'])
     elif s2 == 'lambda':
         ValueError('lambdas arbitrarily nested inside expressions are not supported')
     elif s2 == 'case':
         if not doReturn:
+            p.flush()
+            if not didPrint:
+                ellipsisN(j, 3)
+                print(json.dumps(j, indent=4))
+                didPrint = True
+
             raise ValueError('match is only supported if the branches are allowed to return')
         firstConstructorName = getName(j['cases'][0]['pat'])
         if firstConstructorName in constructor2Type:
@@ -172,6 +198,11 @@ def translate_expr(j, p, doReturn):
     else:
         p.comment('TODO ' + j['what'])
         p.nop()
+        if not didPrint:
+            ellipsisN(j, 3)
+            print(json.dumps(j, indent=3))
+            didPrint = True
+
         # ValueError('unsupported ' + j['what'])
 
 
@@ -181,6 +212,19 @@ def strip_0arg_lambdas(j):
     else:
         return j
 
+def ellipsisN(j, n):
+    if n==0:
+        if isinstance(j, dict) or isinstance(j, list):
+            j.clear()
+    else:
+        if isinstance(j, dict):
+            for key in j:
+                ellipsisN(j[key], n-1)
+        elif isinstance(j, list):
+            for child in j:
+                ellipsisN(child, n-1)
+        else:
+            pass # primitive value, nothing to be done
 
 
 # for debug printing
@@ -223,10 +267,10 @@ def translate_term_decl(j, p):
         translate_expr(j['value']['body'], p, True)
         p.end_fun_decl()
         
-        if not didPrint:
-            ellipsis(j, 'args')
-            print(json.dumps(j, indent=3))
-            didPrint = True
+        # if not didPrint:
+        #     ellipsis(j, 'args')
+        #     print(json.dumps(j, indent=3))
+        #     didPrint = True
 
 
 

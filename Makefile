@@ -37,15 +37,15 @@ all: spec encode proofs
 	$(COQDEP) >.depend `find src -name "*.v"` export/extract.v
 
 
-# Old Python-based conversion:
+# Old Python3-based conversion:
 
 # beware: will overwrite src/Execute.v
 convert_execute: riscv-semantics_version_check
-	cd convert && python execute.py
+	cd convert && python3 execute.py
 
 # beware: will overwrite src/Decode.v
 convert_decode: riscv-semantics_version_check
-	cd convert && python decode.py
+	cd convert && python3 decode.py
 
 
 # New hs-to-coq-based conversion:
@@ -66,18 +66,18 @@ export/json/%.json: export/extract.vo src/%.vo
 	find . -maxdepth 1 -name '*.json' -type f -exec mv -t export/json -- {} +
 
 export/c/%.c: export/json/%.json
-	python export/main.py export/json/$*.json export/c/$*.c
+	python3 export/main.py export/json/$*.json export/c/$*.c
 
-export/py/%.py: export/json/%.json
-	python export/main.py export/json/$*.json export/py/$*.py
+export/py/%.py: export/json/%.json $(wildcard export/*.py)
+	python3 export/main.py export/json/$*.json export/py/$*.py
 
 export/c/%.o: export/c/%.c
 	gcc -std=c11 -Wall -c export/c/$*.c -o export/c/$*.o
 
 # .out files are expected to be empty; this target is just a quick way to check if the
-# python file parses
+# python3 file parses
 export/py/%.out: export/py/%.py
-	python export/py/$*.py > export/py/$*.out
+	python3 export/py/$*.py > export/py/$*.out
 
 clean:
 	find . -type f \( -name '*.glob' -o -name '*.vo' -o -name '*.aux' \) -delete
