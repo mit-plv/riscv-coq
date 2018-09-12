@@ -1045,4 +1045,46 @@ def decode(iset, inst):
     
     shamtHi = ZBitOps.bitSlice(inst, 0b11001, 0b11010)
     
-    shamtHiTest = 
+    shamtHiTest = Datatypes.orb(BinInt.Z.eqb(shamtHi, 0b0), BinInt.Z.eqb(bitwidth(iset), 0b1000000))
+    
+    shamt6 = Utility.machineIntToShamt(ZBitOps.bitSlice(inst, 0b10100, 0b11010))
+    
+    shamt5 = Utility.machineIntToShamt(ZBitOps.bitSlice(inst, 0b10100, 0b11001))
+    
+    sbimm12 = ZBitOps.signExtend(0b1101, BinInt.Z.lor(BinInt.Z.lor(BinInt.Z.lor(BinInt.Z.shiftl(ZBitOps.bitSlice(inst, 0b11111, 0b100000), 0b1100), BinInt.Z.shiftl(ZBitOps.bitSlice(inst, 0b11001, 0b11111), 0b101)), BinInt.Z.shiftl(ZBitOps.bitSlice(inst, 0b1000, 0b1100), 0b1)), BinInt.Z.shiftl(ZBitOps.bitSlice(inst, 0b111, 0b1000), 0b1011)))
+    
+    simm12 = ZBitOps.signExtend(0b1100, BinInt.Z.lor(BinInt.Z.shiftl(ZBitOps.bitSlice(inst, 0b11001, 0b100000), 0b101), ZBitOps.bitSlice(inst, 0b111, 0b1100)))
+    
+    csr12 = ZBitOps.bitSlice(inst, 0b10100, 0b100000)
+    
+    oimm12 = ZBitOps.signExtend(0b1100, ZBitOps.bitSlice(inst, 0b10100, 0b100000))
+    
+    imm12 = ZBitOps.signExtend(0b1100, ZBitOps.bitSlice(inst, 0b10100, 0b100000))
+    
+    jimm20 = ZBitOps.signExtend(0b10101, BinInt.Z.lor(BinInt.Z.lor(BinInt.Z.lor(BinInt.Z.shiftl(ZBitOps.bitSlice(inst, 0b11111, 0b100000), 0b10100), BinInt.Z.shiftl(ZBitOps.bitSlice(inst, 0b10101, 0b11111), 0b1)), BinInt.Z.shiftl(ZBitOps.bitSlice(inst, 0b10100, 0b10101), 0b1011)), BinInt.Z.shiftl(ZBitOps.bitSlice(inst, 0b1100, 0b10100), 0b1100)))
+    
+    oimm20 = ZBitOps.signExtend(0b100000, BinInt.Z.shiftl(ZBitOps.bitSlice(inst, 0b1100, 0b100000), 0b1100))
+    
+    imm20 = ZBitOps.signExtend(0b100000, BinInt.Z.shiftl(ZBitOps.bitSlice(inst, 0b1100, 0b100000), 0b1100))
+    
+    msb4 = ZBitOps.bitSlice(inst, 0b11100, 0b100000)
+    
+    pred = ZBitOps.bitSlice(inst, 0b11000, 0b11100)
+    
+    succ = ZBitOps.bitSlice(inst, 0b10100, 0b11000)
+    
+    rs2 = ZBitOps.bitSlice(inst, 0b10100, 0b11001)
+    
+    rs1 = ZBitOps.bitSlice(inst, 0b1111, 0b10100)
+    
+    rd = ZBitOps.bitSlice(inst, 0b111, 0b1100)
+    
+    funct12 = ZBitOps.bitSlice(inst, 0b10100, 0b100000)
+    
+    funct7 = ZBitOps.bitSlice(inst, 0b11001, 0b100000)
+    
+    funct3 = ZBitOps.bitSlice(inst, 0b1100, 0b1111)
+    
+    opcode = ZBitOps.bitSlice(inst, 0b0, 0b111)
+    
+    decodeI = 
