@@ -44,12 +44,19 @@ class PythonPrinter(LanguagePrinter):
             self.decreaseIndent()
             self.end_decl()
 
+    def if_expr(self, cond, ifyes, ifno):
+        ifyes()
+        self.write(" if ")
+        cond()
+        self.write(" else ")
+        ifno()
+
     def begin_local_var_decl(self, name, typ):
         self.startln()
         self.write(name + ' = ')
 
     def end_local_var_decl(self):
-        self.write('\n')
+       # self.write('\n')
         self.end_decl()
 
     def begin_constant_decl(self, name, typ):

@@ -102,11 +102,11 @@ def translate_match(j, p):
             constructorName = getName(c['pat'])
             argNames = c['pat']['argnames']
             p.begin_match_case(discriminee, constructorName, argNames)
-            translate_expr(c['body'], p, True)
+            translate_expr(c['body'], p, "Return")
             p.end_match_case()
         elif c['pat']['what'] == 'pat:wild':
             p.begin_match_default_case()
-            translate_expr(c['body'], p, True)
+            translate_expr(c['body'], p, "Return")
             p.end_match_default_case()   
         else:
             raise ValueError("unknown " + c['pat']['what'])
@@ -125,11 +125,11 @@ def translate_switch(j, p):
         if c['pat']['what'] == 'pat:constructor':
             constructorName = getName(c['pat'])
             p.begin_switch_case(discriminee, constructorName)
-            translate_expr(c['body'], p, True)
+            translate_expr(c['body'], p, "Return")
             p.end_switch_case()
         elif c['pat']['what'] == 'pat:wild':
             p.begin_switch_default_case()
-            translate_expr(c['body'], p, True)
+            translate_expr(c['body'], p, "Return")
             p.end_switch_default_case()   
         else:
             raise ValueError("unknown " + c['pat']['what'])
@@ -137,11 +137,15 @@ def translate_switch(j, p):
 
 
 def translate_expr(j, p, doReturn):
+    """ doReturn maybe be CondExpr, Return or NoReturn """
     global constructor2Type, enumval2Type, didPrint
-    [s1, s2] = j['what'].split(':')
+    try:
+        [s1, s2] = j['what'].split(':')
+    except:
+        print(j)
     assert s1 == 'expr'
     if s2 == 'constructor':
-        if doReturn: p.begin_return_expr()
+        if doReturn == "Return": p.begin_return_expr()
         constructorName = getName(j)
         if constructorName == 'BinNums.Zpos':
             p.bit_literal(positive_to_bitstring(j['args'][0]))
@@ -151,32 +155,52 @@ def translate_expr(j, p, doReturn):
             p.true_literal()
         elif constructorName == 'Datatypes.false':
             p.false_literal()
+        elif "." not in constructorName: # Constructor is an app, right?
+            print("Transforming constructor in apply")
+            j["func"] = {
+                "name": j["name"],
+                "what" : "expr:global"
+                }
+            del j["name"]
+            j["what"] = "expr:apply"
+#            print(j)
+            translate_expr(j,p,"NoReturn")
         else:
             print('TODO: ' + j['name'])
-        if doReturn: p.end_return_expr()
+        if doReturn == "Return": p.end_return_expr()
     elif s2 == 'let':
         p.begin_local_var_decl(j['name'], None) # TODO we need to get the right type for C here.
         if j['nameval']['what']=="expr:let":
             raise ValueError(" let a = let b is not legal in the input")
-        translate_expr(j['nameval'], p, False)
-        p.end_local_var_decl()
-        translate_expr(j['body'], p, doReturn)
+        if j['nameval']['what'] == "expr:case":
+            print("Emit CondExpr")
+            translate_expr(j['nameval'], p, "CondExpr")
+            p.end_local_var_decl()
+            translate_expr(j['body'], p, doReturn)
+        else:
+            translate_expr(j['nameval'], p, "NoReturn")
+            p.end_local_var_decl()
+            translate_expr(j['body'], p, doReturn)
     elif s2 == 'apply':
-        p.begin_function_call(lambda: translate_expr(j['func'], p, False))
+        # if not didPrint:
+        #     ellipsisN(j, 3)
+        #     print(json.dumps(j, indent=4))
+        #     didPrint = True
+        #     raise ValueError('What does an apply looks like')
+        p.begin_function_call(lambda: translate_expr(j['func'], p, "NoReturn"))
         isFirst = True
         for i in j['args']:
             if not isFirst:
                 p.end_function_arg()
-            translate_expr(i, p, False)
+            translate_expr(i, p, "NoReturn")
             isFirst = False
         p.end_function_call()
-        pass
     elif s2 == 'global':
         p.var(j['name'])
     elif s2 == 'lambda':
         ValueError('lambdas arbitrarily nested inside expressions are not supported')
     elif s2 == 'case':
-        if not doReturn:
+        if doReturn == "NoReturn":
             p.flush()
             if not didPrint:
                 ellipsisN(j, 3)
@@ -189,12 +213,33 @@ def translate_expr(j, p, doReturn):
             translate_match(j, p)
         elif firstConstructorName in enumval2Type:
             translate_switch(j, p)
+        elif doReturn == "CondExpr": # Assuming that the first case is the if true
+            # if not didPrint:
+            #     j=j["cases"][0]["body"]
+            #     ellipsisN(j, 4)
+            #     print(json.dumps(j, indent=4))
+            #     didPrint = True
+
+            p.if_expr((lambda: translate_expr(j["expr"],p,"NoReturn")),
+                      (lambda: translate_expr(j["cases"][0]["body"],p,"CondExpr")),
+                      (lambda: translate_expr(j["cases"][1]["body"],p,"CondExpr")))
+            # p.flush()
+            # if not didPrint:
+            #     ellipsisN(j, 4)
+            #     print(json.dumps(j, indent=4))
+            #     didPrint = True
+            # raise ValueError('Just arrived here')
         else:
+            p.flush()
+            if not didPrint:
+                ellipsisN(j, 4)
+                print(json.dumps(j, indent=4))
+                didPrint = True
             raise ValueError('unknown ' + firstConstructorName)
     elif s2 == 'rel':
-        if doReturn: p.begin_return_expr()
+        if doReturn == "Return": p.begin_return_expr()
         p.var(getName(j))
-        if doReturn: p.end_return_expr()
+        if doReturn == "Return": p.end_return_expr()
     else:
         p.comment('TODO ' + j['what'])
         p.nop()
@@ -252,7 +297,7 @@ def translate_term_decl(j, p):
     if len(sig[0]) == 0:
         typ = sig[1]
         p.begin_constant_decl(name, typ)
-        translate_expr(strip_0arg_lambdas(j['value']), p, False)
+        translate_expr(strip_0arg_lambdas(j['value']), p, "NoReturn")
         p.end_constant_decl()
     else:
         argnames = get_lambda_argnames(j['value'])
@@ -264,7 +309,7 @@ def translate_term_decl(j, p):
         argnamesWithTypes = zip(argnames, sig[0])
         returnType = sig[1]
         p.begin_fun_decl(name, argnamesWithTypes, returnType)
-        translate_expr(j['value']['body'], p, True)
+        translate_expr(j['value']['body'], p, "Return")
         p.end_fun_decl()
         
         # if not didPrint:
