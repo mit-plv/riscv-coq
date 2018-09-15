@@ -1,4 +1,3 @@
-
 import json
 from LanguagePrinter import LanguagePrinter
 
@@ -14,7 +13,7 @@ def type_glob_to_str(j):
     assert j['args'] == []
     return getName(j)
 
-    
+
 def translate_type_decl(j, p):
     assert j['what'] == 'decl:type'
     name = getName(j)
@@ -107,7 +106,7 @@ def translate_match(j, p):
         elif c['pat']['what'] == 'pat:wild':
             p.begin_match_default_case()
             translate_expr(c['body'], p, "Return")
-            p.end_match_default_case()   
+            p.end_match_default_case()
         else:
             raise ValueError("unknown " + c['pat']['what'])
     p.end_match()
@@ -124,13 +123,13 @@ def translate_switch(j, p):
         assert c['what'] == 'case'
         if c['pat']['what'] == 'pat:constructor':
             constructorName = getName(c['pat'])
-            p.begin_switch_case(discriminee, constructorName)
+            p.begin_switch_case(discriminee, constructorName, enumval2Type[constructorName])
             translate_expr(c['body'], p, "Return")
             p.end_switch_case()
         elif c['pat']['what'] == 'pat:wild':
             p.begin_switch_default_case()
             translate_expr(c['body'], p, "Return")
-            p.end_switch_default_case()   
+            p.end_switch_default_case()
         else:
             raise ValueError("unknown " + c['pat']['what'])
     p.end_switch()
@@ -157,7 +156,7 @@ def translate_expr(j, p, doReturn):
             p.bit_literal('0')
         elif constructorName == 'Datatypes.cons':
             if getName(j['args'][1]) != "Datatypes.nil":
-               raise ValueError("cons is only supported to create singleton list") 
+               raise ValueError("cons is only supported to create singleton list")
             p.begin_list()
             translate_expr(j['args'][0],p,"CondExpr")
             p.end_list()
@@ -166,8 +165,9 @@ def translate_expr(j, p, doReturn):
         elif constructorName == 'Datatypes.false':
             p.false_literal()
         elif "." not in constructorName: # Constructor is an app, right?
+            name = j["name"]
             j["func"] = {
-                "name": j["name"],
+                "name": name,
                 "what" : "expr:global"
                 }
             del j["name"]
@@ -245,8 +245,6 @@ def translate_expr(j, p, doReturn):
                 translate_expr(i, p, "CondExpr")
                 isFirst = False
             p.end_function_call()
-
-
     elif s2 == 'global':
         p.var(j['name'])
     elif s2 == 'lambda':
@@ -345,6 +343,13 @@ def translate_term_decl(j, p):
     assert j['what'] == 'decl:term'
     sig = get_signature(j['type'])
     name = getName(j)
+    # if name == "supportsA":
+    #     if not didPrint:
+    #         ellipsis(j, 'args')
+    #         print(json.dumps(j, indent=3))
+    #         didPrint = True
+    #         raise ValueError("Sad")
+
     if len(sig[0]) == 0:
         typ = sig[1]
         p.begin_constant_decl(name, typ)
@@ -362,11 +367,6 @@ def translate_term_decl(j, p):
         p.begin_fun_decl(name, argnamesWithTypes, returnType)
         translate_expr(j['value']['body'], p, "Return")
         p.end_fun_decl()
-        
-        # if not didPrint:
-        #     ellipsis(j, 'args')
-        #     print(json.dumps(j, indent=3))
-        #     didPrint = True
 
 
 
@@ -395,4 +395,3 @@ def translate(j, p):
         # p.writeln(name)
     # p.writeln('\n'.join([d['name'] for d in j['declarations']]))
     # p.writeln(str(j.keys()))
-    

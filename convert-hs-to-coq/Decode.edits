@@ -9,6 +9,7 @@ rename value Data.Bits.xor        = Coq.ZArith.BinInt.Z.lxor
 rename value Data.Bits.testBit    = Coq.ZArith.BinInt.Z.testbit
 rename value Data.Bits.complement = Coq.ZArith.BinInt.Z.lnot
 
+
 rewrite forall x, x GHC.Base./= Decode.InvalidI = match x with | Decode.InvalidI => false | _ => true end
 rewrite forall x, x GHC.Base./= Decode.InvalidM = match x with | Decode.InvalidM => false | _ => true end
 rewrite forall x, x GHC.Base./= Decode.InvalidI64 = match x with | Decode.InvalidI64 => false | _ => true end
@@ -16,6 +17,11 @@ rewrite forall x, x GHC.Base./= Decode.InvalidM64 = match x with | Decode.Invali
 rewrite forall x, x GHC.Base./= Decode.InvalidCSR = match x with | Decode.InvalidCSR => false | _ => true end
 rewrite forall x, x GHC.Base./= Decode.InvalidA = match x with | Decode.InvalidA => false | _ => true end
 rewrite forall x, x GHC.Base./= Decode.InvalidA64 = match x with | Decode.InvalidA64 => false | _ => true end
+
+rewrite forall, Decode.head_default = Coq.Lists.List.nth O 
+rewrite forall x, Decode.isAmbiguous x = Coq.ZArith.BinInt.Z.gtb (Coq.ZArith.BinInt.Z.of_nat (Coq.Lists.List.length x)) 1  
+skip Decode.head_default
+skip Decode.isAmbiguous
 
 skip Decode.Eq___InstructionI
 skip Decode.Eq___InstructionM
