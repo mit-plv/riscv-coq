@@ -44,12 +44,96 @@ class PythonPrinter(LanguagePrinter):
             self.decreaseIndent()
             self.end_decl()
 
-    def if_expr(self, cond, ifyes, ifno):
+    def if_stmt(self, cond, ifyes, ifno):
+        self.startln()
+        self.write('if ')
+        cond()
+        self.write(':\n')
+        self.increaseIndent()
+        self.startln()
         ifyes()
+        self.write('\n')
+        self.decreaseIndent()
+        self.startln()
+        self.write("else:\n")
+        self.increaseIndent()
+        self.startln()
+        ifno()
+        self.write("\n")
+        self.decreaseIndent()
+
+    def if_expr(self, cond, ifyes, ifno):
+        self.write('(')
+        ifyes()
+        self.write("\n")
+        self.increaseIndent()
+        self.startln()
         self.write(" if ")
         cond()
+        self.write("\n")
+        self.startln()
         self.write(" else ")
         ifno()
+        self.write(')')
+        self.decreaseIndent()
+    def begin_list(self):
+        self.write('[')
+
+    def end_list(self):
+        self.write(']')
+
+    def list_length(self, first_arg):
+        self.write("len(")
+        first_arg()
+        self.write(")")
+
+    def list_nth_default(self, index, l, default):
+        self.write("list_nth_default(")
+        index()
+        self.write(', ')
+        l()
+        self.write(', ')
+        default()
+        self.write(')')
+
+    def concat(self, first_arg, second_arg):
+        first_arg()
+        self.write(' + ')
+        second_arg()
+
+    def equality(self, first_arg, second_arg):
+        first_arg()
+        self.write(' == ')
+        second_arg()
+
+    def gt(self, first_arg, second_arg):
+        first_arg()
+        self.write(' > ')
+        second_arg()
+
+    def logical_or(self, first_arg, second_arg):
+        first_arg()
+        self.write(' | ')
+        second_arg()
+
+    def shift_left(self, first_arg, second_arg):
+        first_arg()
+        self.write(' << ')
+        second_arg()
+
+    def boolean_and(self, first_arg, second_arg):
+        first_arg()
+        self.write(' and ')
+        second_arg()
+
+    def boolean_or(self, first_arg, second_arg):
+        first_arg()
+        self.write(' or ')
+        second_arg()
+
+    def empty_list(self):
+        self.begin_list()
+        self.end_list()
 
     def begin_local_var_decl(self, name, typ):
         self.startln()

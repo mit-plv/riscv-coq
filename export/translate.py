@@ -151,20 +151,28 @@ def translate_expr(j, p, doReturn):
             p.bit_literal(positive_to_bitstring(j['args'][0]))
         elif constructorName == 'BinNums.Z0':
             p.bit_literal('0')
+        elif constructorName == 'Datatypes.nil':
+            p.empty_list()
+        elif constructorName == 'Datatypes.O':
+            p.bit_literal('0')
+        elif constructorName == 'Datatypes.cons':
+            if getName(j['args'][1]) != "Datatypes.nil":
+               raise ValueError("cons is only supported to create singleton list") 
+            p.begin_list()
+            translate_expr(j['args'][0],p,"CondExpr")
+            p.end_list()
         elif constructorName == 'Datatypes.true':
             p.true_literal()
         elif constructorName == 'Datatypes.false':
             p.false_literal()
         elif "." not in constructorName: # Constructor is an app, right?
-            print("Transforming constructor in apply")
             j["func"] = {
                 "name": j["name"],
                 "what" : "expr:global"
                 }
             del j["name"]
             j["what"] = "expr:apply"
-#            print(j)
-            translate_expr(j,p,"NoReturn")
+            translate_expr(j,p, "CondExpr")
         else:
             print('TODO: ' + j['name'])
         if doReturn == "Return": p.end_return_expr()
@@ -173,12 +181,11 @@ def translate_expr(j, p, doReturn):
         if j['nameval']['what']=="expr:let":
             raise ValueError(" let a = let b is not legal in the input")
         if j['nameval']['what'] == "expr:case":
-            print("Emit CondExpr")
             translate_expr(j['nameval'], p, "CondExpr")
             p.end_local_var_decl()
             translate_expr(j['body'], p, doReturn)
         else:
-            translate_expr(j['nameval'], p, "NoReturn")
+            translate_expr(j['nameval'], p, "CondExpr")
             p.end_local_var_decl()
             translate_expr(j['body'], p, doReturn)
     elif s2 == 'apply':
@@ -187,14 +194,59 @@ def translate_expr(j, p, doReturn):
         #     print(json.dumps(j, indent=4))
         #     didPrint = True
         #     raise ValueError('What does an apply looks like')
-        p.begin_function_call(lambda: translate_expr(j['func'], p, "NoReturn"))
-        isFirst = True
-        for i in j['args']:
-            if not isFirst:
-                p.end_function_arg()
-            translate_expr(i, p, "NoReturn")
-            isFirst = False
-        p.end_function_call()
+        if doReturn == "Return": p.begin_return_expr()
+        functionName = getName(j['func'])
+        if functionName == 'Datatypes.app':
+            # translate_expr + translate_expr
+            p.concat((lambda: translate_expr(j['args'][0],p,"CondExpr")),
+                     (lambda: translate_expr(j['args'][1],p,"CondExpr")))
+        elif functionName == 'Datatypes.andb':
+            p.boolean_and((lambda: translate_expr(j['args'][0],p,"CondExpr")),
+                          (lambda: translate_expr(j['args'][1],p,"CondExpr")))
+        elif functionName == 'Datatypes.orb':
+            p.boolean_or((lambda: translate_expr(j['args'][0],p,"CondExpr")),
+                         (lambda: translate_expr(j['args'][1],p,"CondExpr")))
+        elif functionName == 'Datatypes.length':
+            p.list_length((lambda: translate_expr(j['args'][0],p,"CondExpr")))
+        elif functionName == 'List.nth':
+            p.list_nth_default((lambda: translate_expr(j['args'][0],p,"CondExpr")),
+                               (lambda: translate_expr(j['args'][1],p,"CondExpr")),
+                               (lambda: translate_expr(j['args'][2],p,"CondExpr")))
+        elif functionName == 'BinInt.Z.lor':
+            p.logical_or((lambda: translate_expr(j['args'][0],p,"CondExpr")),
+                       (lambda: translate_expr(j['args'][1],p,"CondExpr")))
+        elif functionName == 'BinInt.Z.shiftl':
+            p.shift_left((lambda: translate_expr(j['args'][0],p,"CondExpr")),
+                       (lambda: translate_expr(j['args'][1],p,"CondExpr")))
+        elif functionName == 'BinInt.Z.eqb':
+            p.equality((lambda: translate_expr(j['args'][0],p,"CondExpr")),
+                       (lambda: translate_expr(j['args'][1],p,"CondExpr")))
+        elif functionName == 'BinInt.Z.gtb':
+            p.gt((lambda: translate_expr(j['args'][0],p,"CondExpr")),
+                 (lambda: translate_expr(j['args'][1],p,"CondExpr")))
+        elif functionName == 'BinInt.Z.of_nat' or functionName == "Utility.machineIntToShamt" :
+            translate_expr(j['args'][0],p,"CondExpr")
+        elif "." not in functionName:
+            p.begin_function_call(lambda: translate_expr(j['func'], p, "NoReturn"))
+            isFirst = True
+            for i in j['args']:
+                if not isFirst:
+                    p.end_function_arg()
+                translate_expr(i, p, "CondExpr")
+                isFirst = False
+            p.end_function_call()
+        else:
+            print('TODO: ' + functionName)
+            p.begin_function_call(lambda: translate_expr(j['func'], p, "CondExpr"))
+            isFirst = True
+            for i in j['args']:
+                if not isFirst:
+                    p.end_function_arg()
+                translate_expr(i, p, "CondExpr")
+                isFirst = False
+            p.end_function_call()
+
+
     elif s2 == 'global':
         p.var(j['name'])
     elif s2 == 'lambda':
@@ -213,16 +265,15 @@ def translate_expr(j, p, doReturn):
             translate_match(j, p)
         elif firstConstructorName in enumval2Type:
             translate_switch(j, p)
-        elif doReturn == "CondExpr": # Assuming that the first case is the if true
-            # if not didPrint:
-            #     j=j["cases"][0]["body"]
-            #     ellipsisN(j, 4)
-            #     print(json.dumps(j, indent=4))
-            #     didPrint = True
+        elif doReturn == "CondExpr" and firstConstructorName == "Datatypes.true" : # Assuming that the first case is the if true
+            p.if_expr((lambda: translate_expr(j["expr"], p, "NoReturn")),
+                      (lambda: translate_expr(j["cases"][0]["body"], p, "CondExpr")),
+                      (lambda: translate_expr(j["cases"][1]["body"], p, "CondExpr")))
+        elif firstConstructorName == "Datatypes.true":
+            p.if_stmt((lambda: translate_expr(j["expr"], p, "NoReturn")),
+                      (lambda: translate_expr(j["cases"][0]["body"], p, doReturn)),
+                      (lambda: translate_expr(j["cases"][1]["body"], p, doReturn)))
 
-            p.if_expr((lambda: translate_expr(j["expr"],p,"NoReturn")),
-                      (lambda: translate_expr(j["cases"][0]["body"],p,"CondExpr")),
-                      (lambda: translate_expr(j["cases"][1]["body"],p,"CondExpr")))
             # p.flush()
             # if not didPrint:
             #     ellipsisN(j, 4)
