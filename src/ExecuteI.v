@@ -131,11 +131,11 @@ Definition execute {p} {t} `{(RiscvState p t)}
         Bind (getRegister rs1) (fun x => setRegister rd (x + fromImm imm12))
     | Decode.Slti rd rs1 imm12 =>
         Bind (getRegister rs1) (fun x =>
-                let val := (if x < fromImm imm12 : bool then one else zero) in
+                let val := (if x < fromImm imm12 : bool then ZToReg 1 else ZToReg 0) in
                 setRegister rd val)
     | Decode.Sltiu rd rs1 imm12 =>
         Bind (getRegister rs1) (fun x =>
-                let val := (if (ltu x (fromImm imm12)) : bool then one else zero) in
+                let val := (if (ltu x (fromImm imm12)) : bool then ZToReg 1 else ZToReg 0) in
                 setRegister rd val)
     | Decode.Xori rd rs1 imm12 =>
         Bind (getRegister rs1) (fun x => setRegister rd (xor x (fromImm imm12)))
@@ -161,11 +161,11 @@ Definition execute {p} {t} `{(RiscvState p t)}
     | Decode.Slt rd rs1 rs2 =>
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
-                        let val := if x < y : bool then one else zero in setRegister rd val))
+                        let val := if x < y : bool then ZToReg 1 else ZToReg 0 in setRegister rd val))
     | Decode.Sltu rd rs1 rs2 =>
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y =>
-                        let val := if ltu x y : bool then one else zero in setRegister rd val))
+                        let val := if ltu x y : bool then ZToReg 1 else ZToReg 0 in setRegister rd val))
     | Decode.Xor rd rs1 rs2 =>
         Bind (getRegister rs1) (fun x =>
                 Bind (getRegister rs2) (fun y => setRegister rd (xor x y)))
