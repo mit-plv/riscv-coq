@@ -1,7 +1,6 @@
-
 default_target: spec
 
-COQFLAGS= -Q ../bbv bbv  -R ./src riscv  
+COQFLAGS= -Q ../bbv bbv  -R ./src riscv
 
 DEPFLAGS:=$(COQFLAGS)
 
@@ -11,7 +10,7 @@ COQDEP=$(COQBIN)coqdep $(DEPFLAGS)
 COQDOC=$(COQBIN)coqdoc
 
 %.vo: %.v
-	$(COQC) $(COQFLAGS) $*.v 
+	$(COQC) $(COQFLAGS) $*.v
 
 bbv_version_check:
 	./check_dep.sh bbv
@@ -79,9 +78,11 @@ export/c/%.o: export/c/%.c
 export/py/%.out: export/py/%.py
 	python3 export/py/$*.py > export/py/$*.out
 
+testPythonDecode: export/py/Decode.py export/py/TestDecode.py
+	python3 export/py/TestDecode.py
+
 clean:
 	find . -type f \( -name '*.glob' -o -name '*.vo' -o -name '*.aux' \) -delete
 	rm .depend
 
 include .depend
-
