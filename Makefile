@@ -1,7 +1,6 @@
-
 default_target: spec
 
-.PHONY: clean force spec all
+.PHONY: clean force spec all convert
 
 SPEC_VS := $(wildcard src/*.v src/util/*.v)
 ALL_VS := $(shell find src -type f -name '*.v')
@@ -46,8 +45,8 @@ hs-to-coq_version_check:
 export STACK_YAML=$(HS_TO_COQ_DIR)/stack.yaml
 
 HS_SOURCES = $(RISCV_SEMANTICS_DIR)/src/Decode.hs $(RISCV_SEMANTICS_DIR)/src/ExecuteI.hs $(RISCV_SEMANTICS_DIR)/src/ExecuteI64.hs $(RISCV_SEMANTICS_DIR)/src/ExecuteM.hs $(RISCV_SEMANTICS_DIR)/src/ExecuteM64.hs
-PREAMBLES = convert-hs-to-coq/Decode_preamble.v convert-hs-to-coq/Execute_preamble.v 
-EDIT_FILES = convert-hs-to-coq/Decode.edits convert-hs-to-coq/General.edits convert-hs-to-coq/Base.edits  convert-hs-to-coq/Execute.edits 
+PREAMBLES = convert-hs-to-coq/Decode_preamble.v convert-hs-to-coq/Execute_preamble.v
+EDIT_FILES = convert-hs-to-coq/Decode.edits convert-hs-to-coq/General.edits convert-hs-to-coq/Base.edits  convert-hs-to-coq/Execute.edits
 
 convert: riscv-semantics_version_check hs-to-coq_version_check $(HS_SOURCES) $(PREAMBLES) $(EDIT_FILES)
 	stack exec hs-to-coq -- -e convert-hs-to-coq/Decode.edits  -p convert-hs-to-coq/Decode_preamble.v  -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits -N -i $(RISCV_SEMANTICS_DIR)/src -o ./src $(RISCV_SEMANTICS_DIR)/src/Decode.hs
@@ -55,3 +54,32 @@ convert: riscv-semantics_version_check hs-to-coq_version_check $(HS_SOURCES) $(P
 	stack exec hs-to-coq -- -e convert-hs-to-coq/Execute.edits -p convert-hs-to-coq/Execute_preamble.v -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits -N -i $(RISCV_SEMANTICS_DIR)/src -o ./src $(RISCV_SEMANTICS_DIR)/src/ExecuteI64.hs
 	stack exec hs-to-coq -- -e convert-hs-to-coq/Execute.edits -p convert-hs-to-coq/Execute_preamble.v -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits -N -i $(RISCV_SEMANTICS_DIR)/src -o ./src $(RISCV_SEMANTICS_DIR)/src/ExecuteM.hs
 	stack exec hs-to-coq -- -e convert-hs-to-coq/Execute.edits -p convert-hs-to-coq/Execute_preamble.v -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits -N -i $(RISCV_SEMANTICS_DIR)/src -o ./src $(RISCV_SEMANTICS_DIR)/src/ExecuteM64.hs
+
+
+# coq-to-other languages conversion:
+
+# do not rm these intermediate files in a chain
+#.PRECIOUS: export/c/%.c export/py/%.py
+
+# do not remove any intermediate files
+.SECONDARY:
+
+export/json/%.json: export/extract.vo src/%.vo
+	find . -maxdepth 1 -name '*.json' -type f -exec mv -t export/json -- {} +
+
+export/c/%.c: export/json/%.json
+	python3 export/main.py export/json/$*.json export/c/$*.c
+
+export/py/%.py: export/json/%.json $(wildcard export/*.py)
+	python3 export/main.py export/json/$*.json export/py/$*.py
+
+export/c/%.o: export/c/%.c
+	gcc -std=c11 -Wall -c export/c/$*.c -o export/c/$*.o
+
+# .out files are expected to be empty; this target is just a quick way to check if the
+# python3 file parses
+export/py/%.out: export/py/%.py
+	python3 export/py/$*.py > export/py/$*.out
+
+testPythonDecode: export/py/Decode.py export/py/TestDecode.py
+	python3 export/py/TestDecode.py
