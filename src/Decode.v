@@ -19,6 +19,7 @@ Local Open Scope Z_scope.
 (* Converted imports: *)
 
 Require Coq.Init.Datatypes.
+Require Coq.Lists.List.
 Require Import Coq.ZArith.BinInt.
 Require Import Utility.
 
@@ -1103,13 +1104,12 @@ Definition decode : InstructionSet -> Z -> Instruction :=
                                                                                                     then resultA64
                                                                                                     else nil)
                                                                                                    resultCSR))))) in
-    match results with
-    | cons singleResult nil => singleResult
-    | nil => InvalidInstruction inst
-    | _ => InvalidInstruction inst
-    end.
+    if Z.gtb (Z.of_nat (Coq.Lists.List.length results)) 1 : bool
+    then InvalidInstruction inst
+    else Coq.Lists.List.nth O results (InvalidInstruction inst).
 
 (* External variables:
-     Z Z.eqb Z.lor Z.shiftl andb bitSlice bool cons false list machineIntToShamt nil
-     orb signExtend true Coq.Init.Datatypes.app
+     O Z Z.eqb Z.gtb Z.lor Z.of_nat Z.shiftl andb bitSlice bool cons false list
+     machineIntToShamt nil orb signExtend true Coq.Init.Datatypes.app
+     Coq.Lists.List.length Coq.Lists.List.nth
 *)
