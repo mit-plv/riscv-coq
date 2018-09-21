@@ -105,7 +105,7 @@ def translate_match(j, p):
             default_branch = lazy_translate_expr(c['body'], p, 'toStmt')
         else:
             raise ValueError("unknown " + c['pat']['what'])
-    p.match(discriminee, branches, default_branch)
+    return p.stmt.match(discriminee, branches, default_branch)
 
 
 def translate_switch(j, p):
@@ -127,7 +127,7 @@ def translate_switch(j, p):
             default_branch = lazy_translate_expr(c['body'], p, 'toStmt')
         else:
             raise ValueError("unknown " + c['pat']['what'])
-    p.switch(discriminee, enumName, branches, default_branch)
+    return p.stmt.switch(discriminee, enumName, branches, default_branch)
 
 
 def lazy_translate_expr(j, p, mode):
@@ -145,25 +145,33 @@ def translate_expr(j, p, mode):
     except:
         print(j)
     assert s1 == 'expr'
+
+    def maybe_return(res):
+        if mode == 'toExpr':
+            return res
+        elif mode == 'toStmt':
+            return p.stmt.return_value(res)
+        else:
+            raise ValueError("unknown mode: " + mode)
+
     if s2 == 'constructor':
-        if mode == 'toStmt': p.begin_return_expr()
         constructorName = getName(j)
         if constructorName == 'BinNums.Zpos':
-            p.bit_literal(positive_to_bitstring(j['args'][0]))
+            res = p.expr.bit_literal(positive_to_bitstring(j['args'][0]))
         elif constructorName == 'BinNums.Z0':
-            p.bit_literal('0')
+            res = p.expr.bit_literal('0')
         elif constructorName == 'Datatypes.nil':
-            p.list([])
+            res = p.expr.list([])
         elif constructorName == 'Datatypes.O':
-            p.bit_literal('0')
+            res = p.expr.bit_literal('0')
         elif constructorName == 'Datatypes.cons':
             if getName(j['args'][1]) != "Datatypes.nil":
                raise ValueError("cons is only supported to create singleton list")
-            p.list([lazy_translate_expr(j['args'][0], p, 'toExpr')])
+            res = p.expr.list([lazy_translate_expr(j['args'][0], p, 'toExpr')])
         elif constructorName == 'Datatypes.true':
-            p.true_literal()
+            res = p.expr.true_literal()
         elif constructorName == 'Datatypes.false':
-            p.false_literal()
+            res = p.expr.false_literal()
         elif "." not in constructorName: # Constructor is an app, right?
             name = j["name"]
             j["func"] = {
@@ -172,74 +180,77 @@ def translate_expr(j, p, mode):
                 }
             del j["name"]
             j["what"] = "expr:apply"
-            translate_expr(j, p, 'toExpr')
+            res = translate_expr(j, p, 'toExpr')
         else:
             print('TODO: ' + j['name'])
-        if mode == 'toStmt': p.end_return_expr()
+            res = 'TODO({})'.format(j['name']) # default value
+        return maybe_return(res)
     elif s2 == 'let':
         if mode != 'toStmt':
             raise ValueError("a let expression cannot be translated to " +
                              "an expression, but only to a statement")
         # TODO we need to get the right type for C here instead of None
-        p.let_in(j['name'], None,
-                 lazy_translate_expr(j['nameval'], p, 'toExpr'),
-                 lazy_translate_expr(j['body'], p, 'toStmt'))
+        return p.stmt.let_in(j['name'], None,
+                             lazy_translate_expr(j['nameval'], p, 'toExpr'),
+                             lazy_translate_expr(j['body'], p, 'toStmt'))
     elif s2 == 'apply':
         # if not didPrint:
         #     ellipsisN(j, 3)
         #     print(json.dumps(j, indent=4))
         #     didPrint = True
         #     raise ValueError('What does an apply looks like')
-        if mode == 'toStmt': p.begin_return_expr()
         functionName = getName(j['func'])
         if functionName == 'Datatypes.app':
-            p.concat((lazy_translate_expr(j['args'][0], p, 'toExpr')),
-                     (lazy_translate_expr(j['args'][1], p, 'toExpr')))
+            res = p.expr.concat(lazy_translate_expr(j['args'][0], p, 'toExpr'),
+                                lazy_translate_expr(j['args'][1], p, 'toExpr'))
         elif functionName == 'Datatypes.andb':
-            p.boolean_and((lazy_translate_expr(j['args'][0], p, 'toExpr')),
-                          (lazy_translate_expr(j['args'][1], p, 'toExpr')))
+            res = p.expr.boolean_and(lazy_translate_expr(j['args'][0], p, 'toExpr'),
+                                     lazy_translate_expr(j['args'][1], p, 'toExpr'))
         elif functionName == 'Datatypes.orb':
-            p.boolean_or((lazy_translate_expr(j['args'][0], p, 'toExpr')),
-                         (lazy_translate_expr(j['args'][1], p, 'toExpr')))
+            res = p.expr.boolean_or(lazy_translate_expr(j['args'][0], p, 'toExpr'),
+                                    lazy_translate_expr(j['args'][1], p, 'toExpr'))
         elif functionName == 'Datatypes.length':
-            p.list_length((lazy_translate_expr(j['args'][0], p, 'toExpr')))
+            res = p.expr.list_length(lazy_translate_expr(j['args'][0], p, 'toExpr'))
         elif functionName == 'List.nth':
-            p.list_nth_default((lazy_translate_expr(j['args'][0], p, 'toExpr')),
-                               (lazy_translate_expr(j['args'][1], p, 'toExpr')),
-                               (lazy_translate_expr(j['args'][2], p, 'toExpr')))
+            res = p.expr.list_nth_default(lazy_translate_expr(j['args'][0], p, 'toExpr'),
+                                          lazy_translate_expr(j['args'][1], p, 'toExpr'),
+                                          lazy_translate_expr(j['args'][2], p, 'toExpr'))
         elif functionName == 'BinInt.Z.lor':
-            p.logical_or((lazy_translate_expr(j['args'][0], p, 'toExpr')),
-                         (lazy_translate_expr(j['args'][1], p, 'toExpr')))
+            res = p.expr.logical_or(lazy_translate_expr(j['args'][0], p, 'toExpr'),
+                                    lazy_translate_expr(j['args'][1], p, 'toExpr'))
         elif functionName == 'BinInt.Z.shiftl':
-            p.shift_left((lazy_translate_expr(j['args'][0], p, 'toExpr')),
-                         (lazy_translate_expr(j['args'][1], p, 'toExpr')))
+            res = p.expr.shift_left(lazy_translate_expr(j['args'][0], p, 'toExpr'),
+                                    lazy_translate_expr(j['args'][1], p, 'toExpr'))
         elif functionName == 'BinInt.Z.eqb':
-            p.equality((lazy_translate_expr(j['args'][0], p, 'toExpr')),
-                       (lazy_translate_expr(j['args'][1], p, 'toExpr')))
+            res = p.expr.equality(lazy_translate_expr(j['args'][0], p, 'toExpr'),
+                                  lazy_translate_expr(j['args'][1], p, 'toExpr'))
         elif functionName == 'BinInt.Z.gtb':
-            p.gt((lazy_translate_expr(j['args'][0], p, 'toExpr')),
-                 (lazy_translate_expr(j['args'][1], p, 'toExpr')))
+            res = p.expr.gt(lazy_translate_expr(j['args'][0], p, 'toExpr'),
+                            lazy_translate_expr(j['args'][1], p, 'toExpr'))
         elif functionName == 'BinInt.Z.of_nat' or functionName == "Utility.machineIntToShamt" :
-            translate_expr(j['args'][0], p, 'toExpr')
+            res = translate_expr(j['args'][0], p, 'toExpr')
         else:
-            p.function_call(
+            res = p.expr.function_call(
                 lazy_translate_expr(j['func'], p, 'toExpr'),
                 [lazy_translate_expr(arg, p, 'toExpr') for arg in j['args']])
+        return maybe_return(res)
     elif s2 == 'global':
-        p.var(j['name'])
+        return maybe_return(p.expr.var(j['name']))
     elif s2 == 'lambda':
         raise ValueError('lambdas arbitrarily nested inside expressions are not supported')
     elif s2 == 'case':
         firstConstructorName = getName(j['cases'][0]['pat'])
         if firstConstructorName == "Datatypes.true":
             if mode == 'toExpr':
-                p.if_expr((lazy_translate_expr(j["expr"], p, 'toExpr')),
-                          (lazy_translate_expr(j["cases"][0]["body"], p, 'toExpr')),
-                          (lazy_translate_expr(j["cases"][1]["body"], p, 'toExpr')))
+                return p.expr.if_expr(
+                    lazy_translate_expr(j["expr"], p, 'toExpr'),
+                    lazy_translate_expr(j["cases"][0]["body"], p, 'toExpr'),
+                    lazy_translate_expr(j["cases"][1]["body"], p, 'toExpr'))
             elif mode == 'toStmt':
-                p.if_stmt((lazy_translate_expr(j["expr"], p, 'toExpr')),
-                          (lazy_translate_expr(j["cases"][0]["body"], p, 'toStmt')),
-                          (lazy_translate_expr(j["cases"][1]["body"], p, 'toStmt')))
+                return p.stmt.if_stmt(
+                    lazy_translate_expr(j["expr"], p, 'toExpr'),
+                    lazy_translate_expr(j["cases"][0]["body"], p, 'toStmt'),
+                    lazy_translate_expr(j["cases"][1]["body"], p, 'toStmt'))
             else:
                 raise ValueError("unknown mode: " + mode)
         else:
@@ -248,26 +259,18 @@ def translate_expr(j, p, mode):
                 print(json.dumps(j, indent=4))
                 raise ValueError('match is only supported if the branches are allowed to return')
             if firstConstructorName in constructor2Type:
-                translate_match(j, p)
+                return translate_match(j, p)
             elif firstConstructorName in enumval2Type:
-                translate_switch(j, p)
+                return translate_switch(j, p)
             else:
                 ellipsisN(j, 4)
                 print(json.dumps(j, indent=4))
                 raise ValueError('unknown ' + firstConstructorName)
     elif s2 == 'rel':
-        if mode == 'toStmt': p.begin_return_expr()
-        p.var(getName(j))
-        if mode == 'toStmt': p.end_return_expr()
+        return maybe_return(p.expr.var(getName(j)))
     else:
-        p.comment('TODO ' + j['what'])
-        p.nop()
-        if not didPrint:
-            ellipsisN(j, 3)
-            print(json.dumps(j, indent=3))
-            didPrint = True
-
         # ValueError('unsupported ' + j['what'])
+        return maybe_return('TODO({})'.format(j['what']))
 
 
 def strip_0arg_lambdas(j):
