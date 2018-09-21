@@ -177,8 +177,9 @@ def translate_expr(j, p, doReturn):
         if j['nameval']['what']=="expr:let":
             raise ValueError(" let a = let b is not legal in the input")
         # TODO we need to get the right type for C here instead of None
-        p.local_var_decl(j['name'], None, lazy_translate_expr(j['nameval'], p, "CondExpr"))
-        translate_expr(j['body'], p, doReturn)
+        p.let_in(j['name'], None,
+                 lazy_translate_expr(j['nameval'], p, "CondExpr"),
+                 lazy_translate_expr(j['body'], p, doReturn))
     elif s2 == 'apply':
         # if not didPrint:
         #     ellipsisN(j, 3)

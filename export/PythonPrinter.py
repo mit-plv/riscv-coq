@@ -137,11 +137,12 @@ class PythonPrinter(LanguagePrinter):
         self.write(' or ')
         second_arg()
 
-    def local_var_decl(self, name, typ, rhs):
+    def let_in(self, name, typ, rhs, body):
         self.startln()
         self.write(name + ' = ')
         rhs()
         self.end_decl()
+        body()
 
     def constant_decl(self, name, typ, rhs):
         self.write(name + ' = ')
