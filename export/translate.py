@@ -159,7 +159,7 @@ def translate_expr(j, p, doReturn):
         elif constructorName == 'Datatypes.cons':
             if getName(j['args'][1]) != "Datatypes.nil":
                raise ValueError("cons is only supported to create singleton list")
-            p.list([lambda: translate_expr(j['args'][0],p,"CondExpr")])
+            p.list([lazy_translate_expr(j['args'][0],p,"CondExpr")])
         elif constructorName == 'Datatypes.true':
             p.true_literal()
         elif constructorName == 'Datatypes.false':
@@ -180,7 +180,7 @@ def translate_expr(j, p, doReturn):
         if j['nameval']['what']=="expr:let":
             raise ValueError(" let a = let b is not legal in the input")
         # TODO we need to get the right type for C here instead of None
-        p.local_var_decl(j['name'], None, lambda: translate_expr(j['nameval'], p, "CondExpr"))
+        p.local_var_decl(j['name'], None, lazy_translate_expr(j['nameval'], p, "CondExpr"))
         translate_expr(j['body'], p, doReturn)
     elif s2 == 'apply':
         # if not didPrint:
@@ -192,37 +192,37 @@ def translate_expr(j, p, doReturn):
         functionName = getName(j['func'])
         if functionName == 'Datatypes.app':
             # translate_expr + translate_expr
-            p.concat((lambda: translate_expr(j['args'][0],p,"CondExpr")),
-                     (lambda: translate_expr(j['args'][1],p,"CondExpr")))
+            p.concat((lazy_translate_expr(j['args'][0],p,"CondExpr")),
+                     (lazy_translate_expr(j['args'][1],p,"CondExpr")))
         elif functionName == 'Datatypes.andb':
-            p.boolean_and((lambda: translate_expr(j['args'][0],p,"CondExpr")),
-                          (lambda: translate_expr(j['args'][1],p,"CondExpr")))
+            p.boolean_and((lazy_translate_expr(j['args'][0],p,"CondExpr")),
+                          (lazy_translate_expr(j['args'][1],p,"CondExpr")))
         elif functionName == 'Datatypes.orb':
-            p.boolean_or((lambda: translate_expr(j['args'][0],p,"CondExpr")),
-                         (lambda: translate_expr(j['args'][1],p,"CondExpr")))
+            p.boolean_or((lazy_translate_expr(j['args'][0],p,"CondExpr")),
+                         (lazy_translate_expr(j['args'][1],p,"CondExpr")))
         elif functionName == 'Datatypes.length':
-            p.list_length((lambda: translate_expr(j['args'][0],p,"CondExpr")))
+            p.list_length((lazy_translate_expr(j['args'][0],p,"CondExpr")))
         elif functionName == 'List.nth':
-            p.list_nth_default((lambda: translate_expr(j['args'][0],p,"CondExpr")),
-                               (lambda: translate_expr(j['args'][1],p,"CondExpr")),
-                               (lambda: translate_expr(j['args'][2],p,"CondExpr")))
+            p.list_nth_default((lazy_translate_expr(j['args'][0],p,"CondExpr")),
+                               (lazy_translate_expr(j['args'][1],p,"CondExpr")),
+                               (lazy_translate_expr(j['args'][2],p,"CondExpr")))
         elif functionName == 'BinInt.Z.lor':
-            p.logical_or((lambda: translate_expr(j['args'][0],p,"CondExpr")),
-                       (lambda: translate_expr(j['args'][1],p,"CondExpr")))
+            p.logical_or((lazy_translate_expr(j['args'][0],p,"CondExpr")),
+                       (lazy_translate_expr(j['args'][1],p,"CondExpr")))
         elif functionName == 'BinInt.Z.shiftl':
-            p.shift_left((lambda: translate_expr(j['args'][0],p,"CondExpr")),
-                       (lambda: translate_expr(j['args'][1],p,"CondExpr")))
+            p.shift_left((lazy_translate_expr(j['args'][0],p,"CondExpr")),
+                       (lazy_translate_expr(j['args'][1],p,"CondExpr")))
         elif functionName == 'BinInt.Z.eqb':
-            p.equality((lambda: translate_expr(j['args'][0],p,"CondExpr")),
-                       (lambda: translate_expr(j['args'][1],p,"CondExpr")))
+            p.equality((lazy_translate_expr(j['args'][0],p,"CondExpr")),
+                       (lazy_translate_expr(j['args'][1],p,"CondExpr")))
         elif functionName == 'BinInt.Z.gtb':
-            p.gt((lambda: translate_expr(j['args'][0],p,"CondExpr")),
-                 (lambda: translate_expr(j['args'][1],p,"CondExpr")))
+            p.gt((lazy_translate_expr(j['args'][0],p,"CondExpr")),
+                 (lazy_translate_expr(j['args'][1],p,"CondExpr")))
         elif functionName == 'BinInt.Z.of_nat' or functionName == "Utility.machineIntToShamt" :
             translate_expr(j['args'][0],p,"CondExpr")
         else:
             p.function_call(
-                lambda: translate_expr(j['func'], p, "CondExpr"),
+                lazy_translate_expr(j['func'], p, "CondExpr"),
                 [lazy_translate_expr(arg, p, "CondExpr") for arg in j['args']])
     elif s2 == 'global':
         p.var(j['name'])
@@ -243,13 +243,13 @@ def translate_expr(j, p, doReturn):
         elif firstConstructorName in enumval2Type:
             translate_switch(j, p)
         elif doReturn == "CondExpr" and firstConstructorName == "Datatypes.true" : # Assuming that the first case is the if true
-            p.if_expr((lambda: translate_expr(j["expr"], p, "NoReturn")),
-                      (lambda: translate_expr(j["cases"][0]["body"], p, "CondExpr")),
-                      (lambda: translate_expr(j["cases"][1]["body"], p, "CondExpr")))
+            p.if_expr((lazy_translate_expr(j["expr"], p, "NoReturn")),
+                      (lazy_translate_expr(j["cases"][0]["body"], p, "CondExpr")),
+                      (lazy_translate_expr(j["cases"][1]["body"], p, "CondExpr")))
         elif firstConstructorName == "Datatypes.true":
-            p.if_stmt((lambda: translate_expr(j["expr"], p, "NoReturn")),
-                      (lambda: translate_expr(j["cases"][0]["body"], p, doReturn)),
-                      (lambda: translate_expr(j["cases"][1]["body"], p, doReturn)))
+            p.if_stmt((lazy_translate_expr(j["expr"], p, "NoReturn")),
+                      (lazy_translate_expr(j["cases"][0]["body"], p, doReturn)),
+                      (lazy_translate_expr(j["cases"][1]["body"], p, doReturn)))
 
             # p.flush()
             # if not didPrint:
@@ -332,7 +332,7 @@ def translate_term_decl(j, p):
     if len(sig[0]) == 0:
         typ = sig[1]
         p.constant_decl(name, typ,
-                        lambda: translate_expr(strip_0arg_lambdas(j['value']), p, "NoReturn"))
+                        lazy_translate_expr(strip_0arg_lambdas(j['value']), p, "NoReturn"))
     else:
         argnames = get_lambda_argnames(j['value'])
         if len(argnames) != len(sig[0]):
