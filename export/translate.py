@@ -90,26 +90,22 @@ enumval2Type = {}
 
 def translate_match(j, p):
     '''case distinction over a variant (inductive)'''
-    global constructor2Type
     assert j['what'] == 'expr:case'
     assert j['expr']['what'] == 'expr:rel', "match can only discriminate on var, not any expr"
     discriminee = getName(j['expr'])
-    p.begin_match(discriminee)
+    branches = {}
+    default_branch = None
     for c in j['cases']:
         assert c['what'] == 'case'
         if c['pat']['what'] == 'pat:constructor':
             constructorName = getName(c['pat'])
-            argNames = c['pat']['argnames']
-            p.begin_match_case(discriminee, constructorName, argNames)
-            translate_expr(c['body'], p, "Return")
-            p.end_match_case()
+            argNames = c['pat']['argnames'] # TODO pass these to printer appropriately
+            branches[constructorName] = lazy_translate_expr(c['body'], p, "Return")
         elif c['pat']['what'] == 'pat:wild':
-            p.begin_match_default_case()
-            translate_expr(c['body'], p, "Return")
-            p.end_match_default_case()
+            default_branch = lazy_translate_expr(c['body'], p, "Return")
         else:
             raise ValueError("unknown " + c['pat']['what'])
-    p.end_match()
+    p.match(discriminee, branches, default_branch)
 
 
 def translate_switch(j, p):
@@ -118,24 +114,25 @@ def translate_switch(j, p):
     assert j['what'] == 'expr:case'
     assert j['expr']['what'] == 'expr:rel', "switch can only discriminate on var, not any expr"
     discriminee = getName(j['expr'])
-    p.begin_switch(discriminee)
+    enumName = 'Whoops_unknown_enum_name'
+    branches = {}
+    default_branch = None
     for c in j['cases']:
         assert c['what'] == 'case'
         if c['pat']['what'] == 'pat:constructor':
             constructorName = getName(c['pat'])
-            p.begin_switch_case(discriminee, constructorName, enumval2Type[constructorName])
-            translate_expr(c['body'], p, "Return")
-            p.end_switch_case()
+            enumName = enumval2Type[constructorName]
+            branches[constructorName] = lazy_translate_expr(c['body'], p, "Return")
         elif c['pat']['what'] == 'pat:wild':
-            p.begin_switch_default_case()
-            translate_expr(c['body'], p, "Return")
-            p.end_switch_default_case()
+            default_branch = lazy_translate_expr(c['body'], p, "Return")
         else:
             raise ValueError("unknown " + c['pat']['what'])
-    p.end_switch()
+    p.switch(discriminee, enumName, branches, default_branch)
+
 
 def lazy_translate_expr(j, p, doReturn):
     return (lambda: translate_expr(j, p, doReturn))
+
 
 def translate_expr(j, p, doReturn):
     """ doReturn maybe be CondExpr, Return or NoReturn """
@@ -342,10 +339,8 @@ def translate_term_decl(j, p):
                 "but higer order functions are not supported")
         argnamesWithTypes = zip(argnames, sig[0])
         returnType = sig[1]
-        p.begin_fun_decl(name, argnamesWithTypes, returnType)
-        translate_expr(j['value']['body'], p, "Return")
-        p.end_fun_decl()
-
+        p.fun_decl(name, argnamesWithTypes, returnType,
+                   lazy_translate_expr(j['value']['body'], p, "Return"))
 
 
 handlers = {

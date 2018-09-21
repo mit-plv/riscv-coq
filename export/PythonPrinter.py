@@ -171,56 +171,41 @@ class PythonPrinter(LanguagePrinter):
     def var(self, varName):
         self.write(varName)
 
-    def begin_fun_decl(self, name, argnamesWithTypes, returnType):
+    def fun_decl(self, name, argnamesWithTypes, returnType, body):
         self.writeln('def {}({}):'.format(name,
                 ', '.join([argname for argname, tp in argnamesWithTypes])))
         self.increaseIndent()
-
-    def end_fun_decl(self):
+        body()
         self.decreaseIndent()
         self.end_decl()
 
-    def begin_match(self, discriminee):
-        pass # nothing to be done
+    # match over Inductive (where constructors can take args)
+    def match(self, discriminee, branches, default_branch):
+        for constructorName, branchBody in branches.items():
+            self.writeln('if isinstance({}, {}):'.format(discriminee, constructorName))
+            self.increaseIndent()
+            self.startln()
+            branchBody() # TODO make sure branch body can access fields
+            self.decreaseIndent()
+            self.write('\n')
+        if default_branch:
+            self.startln()
+            default_branch()
+            self.write('\n')
 
-    def end_match(self):
-        pass # nothing to be done
-
-    def begin_match_case(self, discriminee, constructorName, argNames):
-        self.writeln('if isinstance({}, {}):'.format(discriminee, constructorName))
-        self.increaseIndent()
-        self.startln()
-
-    def end_match_case(self):
-        self.decreaseIndent()
-        self.write('\n')
-
-    def begin_match_default_case(self):
-        self.startln()
-
-    def end_match_default_case(self):
-        self.write('\n')
-
-    def begin_switch(self, discriminee):
-        pass # nothing to be done
-
-    def end_switch(self):
-        pass # nothing to be done
-
-    def begin_switch_case(self, discriminee, constructorName, enumName):
-        self.writeln('if {} == {}.{}:'.format(discriminee, enumName, constructorName))
-        self.increaseIndent()
-        self.startln()
-
-    def end_switch_case(self):
-        self.decreaseIndent()
-        self.write('\n')
-
-    def begin_switch_default_case(self):
-        self.startln()
-
-    def end_switch_default_case(self):
-        self.write('\n')
+    # match over an enum (where constructors cannot take args)
+    def switch(self, discriminee, enumName, branches, default_branch):
+        for constructorName, branchBody in branches.items():
+            self.writeln('if {} == {}.{}:'.format(discriminee, enumName, constructorName))
+            self.increaseIndent()
+            self.startln()
+            branchBody()
+            self.decreaseIndent()
+            self.write('\n')
+        if default_branch:
+            self.startln()
+            default_branch()
+            self.write('\n')
 
     def begin_return_expr(self):
         self.write('return ')
