@@ -134,6 +134,8 @@ def translate_switch(j, p):
             raise ValueError("unknown " + c['pat']['what'])
     p.end_switch()
 
+def lazy_translate_expr(j, p, doReturn):
+    return (lambda: translate_expr(j, p, doReturn))
 
 def translate_expr(j, p, doReturn):
     """ doReturn maybe be CondExpr, Return or NoReturn """
@@ -151,15 +153,13 @@ def translate_expr(j, p, doReturn):
         elif constructorName == 'BinNums.Z0':
             p.bit_literal('0')
         elif constructorName == 'Datatypes.nil':
-            p.empty_list()
+            p.list([])
         elif constructorName == 'Datatypes.O':
             p.bit_literal('0')
         elif constructorName == 'Datatypes.cons':
             if getName(j['args'][1]) != "Datatypes.nil":
                raise ValueError("cons is only supported to create singleton list")
-            p.begin_list()
-            translate_expr(j['args'][0],p,"CondExpr")
-            p.end_list()
+            p.list([lambda: translate_expr(j['args'][0],p,"CondExpr")])
         elif constructorName == 'Datatypes.true':
             p.true_literal()
         elif constructorName == 'Datatypes.false':
@@ -177,17 +177,11 @@ def translate_expr(j, p, doReturn):
             print('TODO: ' + j['name'])
         if doReturn == "Return": p.end_return_expr()
     elif s2 == 'let':
-        p.begin_local_var_decl(j['name'], None) # TODO we need to get the right type for C here.
         if j['nameval']['what']=="expr:let":
             raise ValueError(" let a = let b is not legal in the input")
-        if j['nameval']['what'] == "expr:case":
-            translate_expr(j['nameval'], p, "CondExpr")
-            p.end_local_var_decl()
-            translate_expr(j['body'], p, doReturn)
-        else:
-            translate_expr(j['nameval'], p, "CondExpr")
-            p.end_local_var_decl()
-            translate_expr(j['body'], p, doReturn)
+        # TODO we need to get the right type for C here instead of None
+        p.local_var_decl(j['name'], None, lambda: translate_expr(j['nameval'], p, "CondExpr"))
+        translate_expr(j['body'], p, doReturn)
     elif s2 == 'apply':
         # if not didPrint:
         #     ellipsisN(j, 3)
@@ -226,25 +220,10 @@ def translate_expr(j, p, doReturn):
                  (lambda: translate_expr(j['args'][1],p,"CondExpr")))
         elif functionName == 'BinInt.Z.of_nat' or functionName == "Utility.machineIntToShamt" :
             translate_expr(j['args'][0],p,"CondExpr")
-        elif "." not in functionName:
-            p.begin_function_call(lambda: translate_expr(j['func'], p, "NoReturn"))
-            isFirst = True
-            for i in j['args']:
-                if not isFirst:
-                    p.end_function_arg()
-                translate_expr(i, p, "CondExpr")
-                isFirst = False
-            p.end_function_call()
         else:
-            print('TODO: ' + functionName)
-            p.begin_function_call(lambda: translate_expr(j['func'], p, "CondExpr"))
-            isFirst = True
-            for i in j['args']:
-                if not isFirst:
-                    p.end_function_arg()
-                translate_expr(i, p, "CondExpr")
-                isFirst = False
-            p.end_function_call()
+            p.function_call(
+                lambda: translate_expr(j['func'], p, "CondExpr"),
+                [lazy_translate_expr(arg, p, "CondExpr") for arg in j['args']])
     elif s2 == 'global':
         p.var(j['name'])
     elif s2 == 'lambda':
@@ -352,9 +331,8 @@ def translate_term_decl(j, p):
 
     if len(sig[0]) == 0:
         typ = sig[1]
-        p.begin_constant_decl(name, typ)
-        translate_expr(strip_0arg_lambdas(j['value']), p, "NoReturn")
-        p.end_constant_decl()
+        p.constant_decl(name, typ,
+                        lambda: translate_expr(strip_0arg_lambdas(j['value']), p, "NoReturn"))
     else:
         argnames = get_lambda_argnames(j['value'])
         if len(argnames) != len(sig[0]):

@@ -78,10 +78,14 @@ class PythonPrinter(LanguagePrinter):
         ifno()
         self.write(')')
         self.decreaseIndent()
-    def begin_list(self):
-        self.write('[')
 
-    def end_list(self):
+    def list(self, elems):
+        self.write('[')
+        sep = ''
+        for elem in elems:
+            self.write(sep)
+            sep = ', '
+            elem()
         self.write(']')
 
     def list_length(self, first_arg):
@@ -133,35 +137,27 @@ class PythonPrinter(LanguagePrinter):
         self.write(' or ')
         second_arg()
 
-    def empty_list(self):
-        self.begin_list()
-        self.end_list()
-
-    def begin_local_var_decl(self, name, typ):
+    def local_var_decl(self, name, typ, rhs):
         self.startln()
         self.write(name + ' = ')
-
-    def end_local_var_decl(self):
-       # self.write('\n')
+        rhs()
         self.end_decl()
 
-    def begin_constant_decl(self, name, typ):
+    def constant_decl(self, name, typ, rhs):
         self.write(name + ' = ')
-
-    def end_constant_decl(self):
+        rhs()
         self.write('\n')
         self.end_decl()
 
-    def begin_function_call(self,func):
+    def function_call(self, func, args):
         func()
         self.write('(')
-
-    def end_function_arg(self):
-        self.write(', ')
-
-    def end_function_call(self):
+        sep = ''
+        for arg in args:
+            self.write(sep)
+            sep = ', '
+            arg()
         self.write(')')
-
 
     def bit_literal(self, s):
         self.write('0b' + s)
