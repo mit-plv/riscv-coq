@@ -189,8 +189,8 @@ def translate_expr(j, p, mode):
         if mode != 'toStmt':
             raise ValueError("a let expression cannot be translated to " +
                              "an expression, but only to a statement")
-        # TODO we need to get the right type for C here instead of None
-        return p.stmt.let_in(j['name'], None,
+        # TODO we need to get the right type for C here instead of just assuming int32_t
+        return p.stmt.let_in(j['name'], 'int32_t',
                              lazy_translate_expr(j['nameval'], p, 'toExpr'),
                              lazy_translate_expr(j['body'], p, 'toStmt'))
     elif s2 == 'apply':

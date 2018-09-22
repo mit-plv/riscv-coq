@@ -67,7 +67,7 @@ convert: riscv-semantics_version_check hs-to-coq_version_check $(HS_SOURCES) $(P
 export/json/%.json: export/extract.vo src/%.vo
 	find . -maxdepth 1 -name '*.json' -type f -exec mv -t export/json -- {} +
 
-export/c/%.c: export/json/%.json
+export/c/%.c: export/json/%.json $(wildcard export/*.py)
 	python3 export/main.py export/json/$*.json export/c/$*.c
 
 export/py/%.py: export/json/%.json $(wildcard export/*.py)
@@ -83,3 +83,11 @@ export/py/%.out: export/py/%.py
 
 testPythonDecode: export/py/Decode.py export/py/TestDecode.py
 	python3 export/py/TestDecode.py
+
+export/c/TestDecode: export/c/TestDecode.c export/c/Decode.o
+	gcc -std=c11 -Wall export/c/TestDecode.c -o export/c/TestDecode # TODO include Decode.o
+
+testCDecode: export/c/TestDecode
+	export/c/TestDecode
+
+testDecode: testPythonDecode testCDecode
