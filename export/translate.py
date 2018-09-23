@@ -55,7 +55,7 @@ def get_signature(j, acc=[]):
     '''returns a tuple of (argTypesList, retType)'''
     if j['what'] == "type:arrow":
         t = type_glob_to_str(j['left']) # higher-order functions are not supported
-        return get_signature(j['right'], [t] + acc)
+        return get_signature(j['right'], acc + [t])
     elif j['what'] == "type:glob":
         t = type_glob_to_str(j)
         return (acc, t)

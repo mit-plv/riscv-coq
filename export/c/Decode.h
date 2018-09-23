@@ -1610,7 +1610,7 @@ bool supportsM(InstructionSet arg_0__) {
     }
 }
 
-Instruction decode(int iset, InstructionSet inst) {
+Instruction decode(InstructionSet iset, int inst) {
     int aqrl = bitSlice(inst, 0b11001, 0b11011);
     int funct5 = bitSlice(inst, 0b11011, 0b100000);
     int zimm = bitSlice(inst, 0b1111, 0b10100);

@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "Decode.h"
 
 int32_t fib6_riscv[] = {
   0x00600993,
@@ -18,6 +19,7 @@ int32_t fib6_riscv[] = {
 int main() {
   size_t N = sizeof(fib6_riscv) / sizeof(fib6_riscv[0]);
   for (size_t i = 0; i < N; i++) {
-    printf("Should decode %d\n", fib6_riscv[i]);
+    Instruction inst = decode(RV32I, fib6_riscv[i]);
+    printf("%d\n", inst.as_IInstruction.f0.kind);
   }
 }

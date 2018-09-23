@@ -67,14 +67,11 @@ convert: riscv-semantics_version_check hs-to-coq_version_check $(HS_SOURCES) $(P
 export/json/%.json: export/extract.vo src/%.vo
 	find . -maxdepth 1 -name '*.json' -type f -exec mv -t export/json -- {} +
 
-export/c/%.c: export/json/%.json $(wildcard export/*.py)
-	python3 export/main.py export/json/$*.json export/c/$*.c
+export/c/%.h: export/json/%.json $(wildcard export/*.py)
+	python3 export/main.py export/json/$*.json export/c/$*.h
 
 export/py/%.py: export/json/%.json $(wildcard export/*.py)
 	python3 export/main.py export/json/$*.json export/py/$*.py
-
-export/c/%.o: export/c/%.c
-	gcc -std=c11 -Wall -c export/c/$*.c -o export/c/$*.o
 
 # .out files are expected to be empty; this target is just a quick way to check if the
 # python3 file parses
@@ -84,8 +81,8 @@ export/py/%.out: export/py/%.py
 testPythonDecode: export/py/Decode.py export/py/TestDecode.py
 	python3 export/py/TestDecode.py
 
-export/c/TestDecode: export/c/TestDecode.c export/c/Decode.o
-	gcc -std=c11 -Wall export/c/TestDecode.c -o export/c/TestDecode # TODO include Decode.o
+export/c/TestDecode: export/c/TestDecode.c export/c/Decode.h
+	gcc -std=c11 -Wall export/c/TestDecode.c -o export/c/TestDecode
 
 testCDecode: export/c/TestDecode
 	export/c/TestDecode

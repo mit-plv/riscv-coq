@@ -12,7 +12,7 @@ inpath = sys.argv[1]
 outpath = sys.argv[2]
 
 with open(inpath, 'r') as fin, open(outpath, 'w') as fout:
-    if outpath[-2:] == '.c':
+    if outpath[-2:] == '.h':
         printer = CPrinter(fout)
     elif outpath[-3:] == '.py':
         printer = PythonPrinter(fout)
@@ -21,4 +21,3 @@ with open(inpath, 'r') as fin, open(outpath, 'w') as fout:
 
     j = json.load(fin)
     translate(j, printer)
-
