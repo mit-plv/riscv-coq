@@ -130,6 +130,60 @@ def translate_switch(j, p):
     return p.stmt.switch(discriminee, enumName, branches, default_branch)
 
 
+stringly_typed = {
+    'aqrl': 'BinNums.Z',
+    'funct5': 'BinNums.Z',
+    'zimm': 'BinNums.Z',
+    'funct6': 'BinNums.Z',
+    'shamtHi': 'BinNums.Z',
+    'shamtHiTest': 'Datatypes.bool',
+    'shamt6': 'BinNums.Z',
+    'shamt5': 'BinNums.Z',
+    'sbimm12': 'BinNums.Z',
+    'simm12': 'BinNums.Z',
+    'csr12': 'BinNums.Z',
+    'oimm12': 'BinNums.Z',
+    'imm12': 'BinNums.Z',
+    'jimm20': 'BinNums.Z',
+    'oimm20': 'BinNums.Z',
+    'imm20': 'BinNums.Z',
+    'msb4': 'BinNums.Z',
+    'pred': 'BinNums.Z',
+    'succ': 'BinNums.Z',
+    'rs2': 'BinNums.Z',
+    'rs1': 'BinNums.Z',
+    'rd': 'BinNums.Z',
+    'funct12': 'BinNums.Z',
+    'funct7': 'BinNums.Z',
+    'funct3': 'BinNums.Z',
+    'opcode': 'BinNums.Z',
+    'decodeI': 'InstructionI',
+    'decodeM': 'InstructionM',
+    'decodeA': 'InstructionA',
+    'decodeI64': 'InstructionI64',
+    'decodeM64': 'InstructionM64',
+    'decodeA64': 'InstructionA64',
+    'decodeCSR': 'InstructionCSR',
+    'resultCSR': 'InstructionList',
+    'resultA64': 'InstructionList',
+    'resultM64': 'InstructionList',
+    'resultI64': 'InstructionList',
+    'resultA': 'InstructionList',
+    'resultM': 'InstructionList',
+    'resultI': 'InstructionList',
+    'results': 'InstructionList'
+}
+
+def varname_to_type(name):
+    global stringly_typed
+    if name in stringly_typed:
+        return stringly_typed[name]
+    else:
+        print("Don't know the type of " + name)
+        stringly_typed[name] = 'void'
+        return 'void'
+
+
 def lazy_translate_expr(j, p, mode):
     return (lambda: translate_expr(j, p, mode))
 
@@ -190,7 +244,7 @@ def translate_expr(j, p, mode):
             raise ValueError("a let expression cannot be translated to " +
                              "an expression, but only to a statement")
         # TODO we need to get the right type for C here instead of just assuming int32_t
-        return p.stmt.let_in(j['name'], 'int32_t',
+        return p.stmt.let_in(j['name'], varname_to_type(j['name']),
                              lazy_translate_expr(j['nameval'], p, 'toExpr'),
                              lazy_translate_expr(j['body'], p, 'toStmt'))
     elif s2 == 'apply':

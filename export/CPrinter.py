@@ -15,6 +15,56 @@ def convert_type(t):
     else:
         return t
 
+lib = '''
+int32_t bitSlice(int32_t w, int32_t start, int32_t stop) {
+    int32_t mask = (1 << (stop - start)) - 1;
+    return (w >> start) & mask;
+}
+
+int32_t signExtend(int32_t l, int32_t n) {
+    if ((n >> (l - 1)) & 1) {
+        return n - (1 << l);
+    } else {
+        return n;
+    }
+}
+'''
+
+InstructionListCode = '''
+typedef struct {
+    Instruction inst;
+    int size;
+} InstructionList;
+
+InstructionList empty_instruction_list() {
+    InstructionList res = { InvalidInstruction(0), 0 };
+    return res;
+}
+
+InstructionList singleton_instruction_list(Instruction i) {
+    InstructionList res = { i, 1 };
+    return res;
+}
+
+InstructionList concat_instruction_list(InstructionList l1, InstructionList l2) {
+    if (l1.size == 0) {
+        return l2;
+    }
+    if (l2.size == 0) {
+        return l1;
+    }
+    InstructionList res = { InvalidInstruction(0), 2 }; // 2 means "more than 1"
+    return res;
+}
+
+Instruction instruction_list_head_default(InstructionList l, Instruction deflt) {
+    if (l.size == 1) {
+        return l.inst;
+    } else {
+        return deflt;
+    }
+}
+'''
 
 class CPrinter(LanguagePrinter):
     def __init__(self, outfile):
@@ -25,6 +75,7 @@ class CPrinter(LanguagePrinter):
         self.writeln('#include <stdbool.h>')
         self.writeln('#include <stdint.h>')
         self.end_decl()
+        self.writeln(lib)
 
     def end_decl(self):
         self.writeln('')
@@ -40,12 +91,11 @@ class CPrinter(LanguagePrinter):
         self.writeln('typedef enum {' + ', '.join(valueNames) + '} ' + name + ';')
         self.end_decl()
 
-    def variant(self, name, branches):
+    def __variant_struct(self, name, branches):
         '''
         name: str
         branches: list of (branchName, typesList) tuples
         '''
-        self.enum(name + '_kind', ['K_' + b[0] for b in branches])
         self.writeln('typedef struct {')
         self.increaseIndent()
         self.writeln('{}_kind kind;'.format(name))
@@ -64,6 +114,47 @@ class CPrinter(LanguagePrinter):
         self.decreaseIndent()
         self.writeln('} ' + name + ';')
         self.end_decl()
+
+    def __variant_constructors(self, name, branches):
+        '''
+        Prints something like
+
+        InstructionCSR Sfence_vma(Register f_0, Register f_1) {
+            InstructionCSR res = { K_Sfence_vma, { .as_Sfence_vma = {f_0, f_1} } };
+            return res;
+        }
+
+        for each constructor
+        '''
+        for branchName, argTypes in branches:
+            params = ', '.join(['{} f_{}'.format(convert_type(t), i)
+                                for i, t in enumerate(argTypes)])
+            self.writeln('{} {}({}) {{'.format(name, branchName, params))
+            self.increaseIndent()
+            self.startln()
+            self.write(name)
+            self.write(' res = {K_')
+            self.write(branchName)
+            self.write(', { .as_')
+            self.write(branchName)
+            self.write(' = {')
+            self.write(', '.join(['f_{}'.format(i) for i in range(len(argTypes))]))
+            self.write('} } };\n')
+            self.writeln('return res;')
+            self.decreaseIndent()
+            self.writeln('}')
+            self.end_decl()
+
+    def variant(self, name, branches):
+        '''
+        name: str
+        branches: list of (branchName, typesList) tuples
+        '''
+        self.enum(name + '_kind', ['K_' + b[0] for b in branches])
+        self.__variant_struct(name, branches)
+        self.__variant_constructors(name, branches)
+        if name == 'Instruction':
+            self.writeln(InstructionListCode)
 
     def constant_decl(self, name, typ, rhs):
         self.writeln('#define ' + name + ' ' + rhs() + '\n')
@@ -120,16 +211,22 @@ class CExpressionPrinter:
         return res
 
     def list(self, elems):
-        return self.__raw_function_call('make_list', [elem() for elem in elems])
+        if len(elems) == 0:
+            return 'empty_instruction_list()';
+        elif len(elems) == 1:
+            return 'singleton_instruction_list(' + elems[0]() + ')';
+        else:
+            raise ValueError('instruction lists of size other than 0 and 1 are not supported')
 
     def list_length(self, arg):
-        return self.__raw_function_call('len', [arg()])
+        return arg() + '.size'
 
     def list_nth_default(self, index, l, default):
-        return self.__raw_function_call("list_nth_default", [index(), l(), default()])
+        assert(index() == '0b0')
+        return self.__raw_function_call("instruction_list_head_default", [l(), default()])
 
     def concat(self, first_arg, second_arg):
-        return self.__binop(first_arg, '+', second_arg)
+        return self.__raw_function_call("concat_instruction_list", [first_arg(), second_arg()])
 
     def equality(self, first_arg, second_arg):
         return self.__binop(first_arg, '==', second_arg)
@@ -176,7 +273,7 @@ class CStatementPrinter:
         return res
 
     def let_in(self, name, typ, rhs, body):
-        res = typ + ' ' + name + ' = '
+        res = convert_type(typ) + ' ' + name + ' = '
         res += rhs()
         res += ';\n' + self.context.indent
         res += body()

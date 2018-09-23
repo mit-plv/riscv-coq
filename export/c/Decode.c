@@ -2,6 +2,20 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+
+int32_t bitSlice(int32_t w, int32_t start, int32_t stop) {
+    int32_t mask = (1 << (stop - start)) - 1;
+    return (w >> start) & mask;
+}
+
+int32_t signExtend(int32_t l, int32_t n) {
+    if ((n >> (l - 1)) & 1) {
+        return n - (1 << l);
+    } else {
+        return n;
+    }
+}
+
 #define Register int
 
 #define Opcode int
@@ -42,6 +56,36 @@ typedef struct {
         } as_InvalidM64;
     };
 } InstructionM64;
+
+InstructionM64 Mulw(Register f_0, Register f_1, Register f_2) {
+    InstructionM64 res = {K_Mulw, { .as_Mulw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionM64 Divw(Register f_0, Register f_1, Register f_2) {
+    InstructionM64 res = {K_Divw, { .as_Divw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionM64 Divuw(Register f_0, Register f_1, Register f_2) {
+    InstructionM64 res = {K_Divuw, { .as_Divuw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionM64 Remw(Register f_0, Register f_1, Register f_2) {
+    InstructionM64 res = {K_Remw, { .as_Remw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionM64 Remuw(Register f_0, Register f_1, Register f_2) {
+    InstructionM64 res = {K_Remuw, { .as_Remuw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionM64 InvalidM64() {
+    InstructionM64 res = {K_InvalidM64, { .as_InvalidM64 = {} } };
+    return res;
+}
 
 typedef enum {K_Mul, K_Mulh, K_Mulhsu, K_Mulhu, K_Div, K_Divu, K_Rem, K_Remu, K_InvalidM} InstructionM_kind;
 
@@ -92,6 +136,51 @@ typedef struct {
         } as_InvalidM;
     };
 } InstructionM;
+
+InstructionM Mul(Register f_0, Register f_1, Register f_2) {
+    InstructionM res = {K_Mul, { .as_Mul = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionM Mulh(Register f_0, Register f_1, Register f_2) {
+    InstructionM res = {K_Mulh, { .as_Mulh = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionM Mulhsu(Register f_0, Register f_1, Register f_2) {
+    InstructionM res = {K_Mulhsu, { .as_Mulhsu = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionM Mulhu(Register f_0, Register f_1, Register f_2) {
+    InstructionM res = {K_Mulhu, { .as_Mulhu = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionM Div(Register f_0, Register f_1, Register f_2) {
+    InstructionM res = {K_Div, { .as_Div = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionM Divu(Register f_0, Register f_1, Register f_2) {
+    InstructionM res = {K_Divu, { .as_Divu = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionM Rem(Register f_0, Register f_1, Register f_2) {
+    InstructionM res = {K_Rem, { .as_Rem = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionM Remu(Register f_0, Register f_1, Register f_2) {
+    InstructionM res = {K_Remu, { .as_Remu = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionM InvalidM() {
+    InstructionM res = {K_InvalidM, { .as_InvalidM = {} } };
+    return res;
+}
 
 typedef enum {K_Ld, K_Lwu, K_Addiw, K_Slliw, K_Srliw, K_Sraiw, K_Sd, K_Addw, K_Subw, K_Sllw, K_Srlw, K_Sraw, K_InvalidI64} InstructionI64_kind;
 
@@ -162,6 +251,71 @@ typedef struct {
         } as_InvalidI64;
     };
 } InstructionI64;
+
+InstructionI64 Ld(Register f_0, Register f_1, int f_2) {
+    InstructionI64 res = {K_Ld, { .as_Ld = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI64 Lwu(Register f_0, Register f_1, int f_2) {
+    InstructionI64 res = {K_Lwu, { .as_Lwu = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI64 Addiw(Register f_0, Register f_1, int f_2) {
+    InstructionI64 res = {K_Addiw, { .as_Addiw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI64 Slliw(Register f_0, Register f_1, int f_2) {
+    InstructionI64 res = {K_Slliw, { .as_Slliw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI64 Srliw(Register f_0, Register f_1, int f_2) {
+    InstructionI64 res = {K_Srliw, { .as_Srliw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI64 Sraiw(Register f_0, Register f_1, int f_2) {
+    InstructionI64 res = {K_Sraiw, { .as_Sraiw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI64 Sd(Register f_0, Register f_1, int f_2) {
+    InstructionI64 res = {K_Sd, { .as_Sd = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI64 Addw(Register f_0, Register f_1, Register f_2) {
+    InstructionI64 res = {K_Addw, { .as_Addw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI64 Subw(Register f_0, Register f_1, Register f_2) {
+    InstructionI64 res = {K_Subw, { .as_Subw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI64 Sllw(Register f_0, Register f_1, Register f_2) {
+    InstructionI64 res = {K_Sllw, { .as_Sllw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI64 Srlw(Register f_0, Register f_1, Register f_2) {
+    InstructionI64 res = {K_Srlw, { .as_Srlw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI64 Sraw(Register f_0, Register f_1, Register f_2) {
+    InstructionI64 res = {K_Sraw, { .as_Sraw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI64 InvalidI64() {
+    InstructionI64 res = {K_InvalidI64, { .as_InvalidI64 = {} } };
+    return res;
+}
 
 typedef enum {K_Lb, K_Lh, K_Lw, K_Lbu, K_Lhu, K_Fence, K_Fence_i, K_Addi, K_Slli, K_Slti, K_Sltiu, K_Xori, K_Ori, K_Andi, K_Srli, K_Srai, K_Auipc, K_Sb, K_Sh, K_Sw, K_Add, K_Sub, K_Sll, K_Slt, K_Sltu, K_Xor, K_Srl, K_Sra, K_Or, K_And, K_Lui, K_Beq, K_Bne, K_Blt, K_Bge, K_Bltu, K_Bgeu, K_Jalr, K_Jal, K_InvalidI} InstructionI_kind;
 
@@ -361,6 +515,206 @@ typedef struct {
     };
 } InstructionI;
 
+InstructionI Lb(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Lb, { .as_Lb = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Lh(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Lh, { .as_Lh = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Lw(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Lw, { .as_Lw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Lbu(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Lbu, { .as_Lbu = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Lhu(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Lhu, { .as_Lhu = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Fence(int f_0, int f_1) {
+    InstructionI res = {K_Fence, { .as_Fence = {f_0, f_1} } };
+    return res;
+}
+
+InstructionI Fence_i() {
+    InstructionI res = {K_Fence_i, { .as_Fence_i = {} } };
+    return res;
+}
+
+InstructionI Addi(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Addi, { .as_Addi = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Slli(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Slli, { .as_Slli = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Slti(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Slti, { .as_Slti = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Sltiu(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Sltiu, { .as_Sltiu = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Xori(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Xori, { .as_Xori = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Ori(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Ori, { .as_Ori = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Andi(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Andi, { .as_Andi = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Srli(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Srli, { .as_Srli = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Srai(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Srai, { .as_Srai = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Auipc(Register f_0, int f_1) {
+    InstructionI res = {K_Auipc, { .as_Auipc = {f_0, f_1} } };
+    return res;
+}
+
+InstructionI Sb(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Sb, { .as_Sb = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Sh(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Sh, { .as_Sh = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Sw(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Sw, { .as_Sw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Add(Register f_0, Register f_1, Register f_2) {
+    InstructionI res = {K_Add, { .as_Add = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Sub(Register f_0, Register f_1, Register f_2) {
+    InstructionI res = {K_Sub, { .as_Sub = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Sll(Register f_0, Register f_1, Register f_2) {
+    InstructionI res = {K_Sll, { .as_Sll = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Slt(Register f_0, Register f_1, Register f_2) {
+    InstructionI res = {K_Slt, { .as_Slt = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Sltu(Register f_0, Register f_1, Register f_2) {
+    InstructionI res = {K_Sltu, { .as_Sltu = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Xor(Register f_0, Register f_1, Register f_2) {
+    InstructionI res = {K_Xor, { .as_Xor = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Srl(Register f_0, Register f_1, Register f_2) {
+    InstructionI res = {K_Srl, { .as_Srl = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Sra(Register f_0, Register f_1, Register f_2) {
+    InstructionI res = {K_Sra, { .as_Sra = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Or(Register f_0, Register f_1, Register f_2) {
+    InstructionI res = {K_Or, { .as_Or = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI And(Register f_0, Register f_1, Register f_2) {
+    InstructionI res = {K_And, { .as_And = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Lui(Register f_0, int f_1) {
+    InstructionI res = {K_Lui, { .as_Lui = {f_0, f_1} } };
+    return res;
+}
+
+InstructionI Beq(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Beq, { .as_Beq = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Bne(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Bne, { .as_Bne = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Blt(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Blt, { .as_Blt = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Bge(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Bge, { .as_Bge = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Bltu(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Bltu, { .as_Bltu = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Bgeu(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Bgeu, { .as_Bgeu = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Jalr(Register f_0, Register f_1, int f_2) {
+    InstructionI res = {K_Jalr, { .as_Jalr = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionI Jal(Register f_0, int f_1) {
+    InstructionI res = {K_Jal, { .as_Jal = {f_0, f_1} } };
+    return res;
+}
+
+InstructionI InvalidI() {
+    InstructionI res = {K_InvalidI, { .as_InvalidI = {} } };
+    return res;
+}
+
 typedef enum {K_Ecall, K_Ebreak, K_Uret, K_Sret, K_Mret, K_Wfi, K_Sfence_vma, K_Csrrw, K_Csrrs, K_Csrrc, K_Csrrwi, K_Csrrsi, K_Csrrci, K_InvalidCSR} InstructionCSR_kind;
 
 typedef struct {
@@ -416,6 +770,76 @@ typedef struct {
         } as_InvalidCSR;
     };
 } InstructionCSR;
+
+InstructionCSR Ecall() {
+    InstructionCSR res = {K_Ecall, { .as_Ecall = {} } };
+    return res;
+}
+
+InstructionCSR Ebreak() {
+    InstructionCSR res = {K_Ebreak, { .as_Ebreak = {} } };
+    return res;
+}
+
+InstructionCSR Uret() {
+    InstructionCSR res = {K_Uret, { .as_Uret = {} } };
+    return res;
+}
+
+InstructionCSR Sret() {
+    InstructionCSR res = {K_Sret, { .as_Sret = {} } };
+    return res;
+}
+
+InstructionCSR Mret() {
+    InstructionCSR res = {K_Mret, { .as_Mret = {} } };
+    return res;
+}
+
+InstructionCSR Wfi() {
+    InstructionCSR res = {K_Wfi, { .as_Wfi = {} } };
+    return res;
+}
+
+InstructionCSR Sfence_vma(Register f_0, Register f_1) {
+    InstructionCSR res = {K_Sfence_vma, { .as_Sfence_vma = {f_0, f_1} } };
+    return res;
+}
+
+InstructionCSR Csrrw(Register f_0, Register f_1, int f_2) {
+    InstructionCSR res = {K_Csrrw, { .as_Csrrw = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionCSR Csrrs(Register f_0, Register f_1, int f_2) {
+    InstructionCSR res = {K_Csrrs, { .as_Csrrs = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionCSR Csrrc(Register f_0, Register f_1, int f_2) {
+    InstructionCSR res = {K_Csrrc, { .as_Csrrc = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionCSR Csrrwi(Register f_0, int f_1, int f_2) {
+    InstructionCSR res = {K_Csrrwi, { .as_Csrrwi = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionCSR Csrrsi(Register f_0, int f_1, int f_2) {
+    InstructionCSR res = {K_Csrrsi, { .as_Csrrsi = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionCSR Csrrci(Register f_0, int f_1, int f_2) {
+    InstructionCSR res = {K_Csrrci, { .as_Csrrci = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionCSR InvalidCSR() {
+    InstructionCSR res = {K_InvalidCSR, { .as_InvalidCSR = {} } };
+    return res;
+}
 
 typedef enum {K_Lr_d, K_Sc_d, K_Amoswap_d, K_Amoadd_d, K_Amoand_d, K_Amoor_d, K_Amoxor_d, K_Amomax_d, K_Amomaxu_d, K_Amomin_d, K_Amominu_d, K_InvalidA64} InstructionA64_kind;
 
@@ -492,6 +916,66 @@ typedef struct {
     };
 } InstructionA64;
 
+InstructionA64 Lr_d(Register f_0, Register f_1, int f_2) {
+    InstructionA64 res = {K_Lr_d, { .as_Lr_d = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionA64 Sc_d(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA64 res = {K_Sc_d, { .as_Sc_d = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA64 Amoswap_d(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA64 res = {K_Amoswap_d, { .as_Amoswap_d = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA64 Amoadd_d(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA64 res = {K_Amoadd_d, { .as_Amoadd_d = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA64 Amoand_d(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA64 res = {K_Amoand_d, { .as_Amoand_d = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA64 Amoor_d(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA64 res = {K_Amoor_d, { .as_Amoor_d = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA64 Amoxor_d(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA64 res = {K_Amoxor_d, { .as_Amoxor_d = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA64 Amomax_d(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA64 res = {K_Amomax_d, { .as_Amomax_d = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA64 Amomaxu_d(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA64 res = {K_Amomaxu_d, { .as_Amomaxu_d = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA64 Amomin_d(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA64 res = {K_Amomin_d, { .as_Amomin_d = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA64 Amominu_d(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA64 res = {K_Amominu_d, { .as_Amominu_d = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA64 InvalidA64() {
+    InstructionA64 res = {K_InvalidA64, { .as_InvalidA64 = {} } };
+    return res;
+}
+
 typedef enum {K_Lr_w, K_Sc_w, K_Amoswap_w, K_Amoadd_w, K_Amoand_w, K_Amoor_w, K_Amoxor_w, K_Amomax_w, K_Amomaxu_w, K_Amomin_w, K_Amominu_w, K_InvalidA} InstructionA_kind;
 
 typedef struct {
@@ -567,6 +1051,66 @@ typedef struct {
     };
 } InstructionA;
 
+InstructionA Lr_w(Register f_0, Register f_1, int f_2) {
+    InstructionA res = {K_Lr_w, { .as_Lr_w = {f_0, f_1, f_2} } };
+    return res;
+}
+
+InstructionA Sc_w(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA res = {K_Sc_w, { .as_Sc_w = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA Amoswap_w(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA res = {K_Amoswap_w, { .as_Amoswap_w = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA Amoadd_w(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA res = {K_Amoadd_w, { .as_Amoadd_w = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA Amoand_w(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA res = {K_Amoand_w, { .as_Amoand_w = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA Amoor_w(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA res = {K_Amoor_w, { .as_Amoor_w = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA Amoxor_w(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA res = {K_Amoxor_w, { .as_Amoxor_w = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA Amomax_w(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA res = {K_Amomax_w, { .as_Amomax_w = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA Amomaxu_w(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA res = {K_Amomaxu_w, { .as_Amomaxu_w = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA Amomin_w(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA res = {K_Amomin_w, { .as_Amomin_w = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA Amominu_w(Register f_0, Register f_1, Register f_2, int f_3) {
+    InstructionA res = {K_Amominu_w, { .as_Amominu_w = {f_0, f_1, f_2, f_3} } };
+    return res;
+}
+
+InstructionA InvalidA() {
+    InstructionA res = {K_InvalidA, { .as_InvalidA = {} } };
+    return res;
+}
+
 typedef enum {K_IInstruction, K_MInstruction, K_AInstruction, K_I64Instruction, K_M64Instruction, K_A64Instruction, K_CSRInstruction, K_InvalidInstruction} Instruction_kind;
 
 typedef struct {
@@ -598,6 +1142,81 @@ typedef struct {
         } as_InvalidInstruction;
     };
 } Instruction;
+
+Instruction IInstruction(InstructionI f_0) {
+    Instruction res = {K_IInstruction, { .as_IInstruction = {f_0} } };
+    return res;
+}
+
+Instruction MInstruction(InstructionM f_0) {
+    Instruction res = {K_MInstruction, { .as_MInstruction = {f_0} } };
+    return res;
+}
+
+Instruction AInstruction(InstructionA f_0) {
+    Instruction res = {K_AInstruction, { .as_AInstruction = {f_0} } };
+    return res;
+}
+
+Instruction I64Instruction(InstructionI64 f_0) {
+    Instruction res = {K_I64Instruction, { .as_I64Instruction = {f_0} } };
+    return res;
+}
+
+Instruction M64Instruction(InstructionM64 f_0) {
+    Instruction res = {K_M64Instruction, { .as_M64Instruction = {f_0} } };
+    return res;
+}
+
+Instruction A64Instruction(InstructionA64 f_0) {
+    Instruction res = {K_A64Instruction, { .as_A64Instruction = {f_0} } };
+    return res;
+}
+
+Instruction CSRInstruction(InstructionCSR f_0) {
+    Instruction res = {K_CSRInstruction, { .as_CSRInstruction = {f_0} } };
+    return res;
+}
+
+Instruction InvalidInstruction(int f_0) {
+    Instruction res = {K_InvalidInstruction, { .as_InvalidInstruction = {f_0} } };
+    return res;
+}
+
+
+typedef struct {
+    Instruction inst;
+    int size;
+} InstructionList;
+
+InstructionList empty_instruction_list() {
+    InstructionList res = { InvalidInstruction(0), 0 };
+    return res;
+}
+
+InstructionList singleton_instruction_list(Instruction i) {
+    InstructionList res = { i, 1 };
+    return res;
+}
+
+InstructionList concat_instruction_list(InstructionList l1, InstructionList l2) {
+    if (l1.size == 0) {
+        return l2;
+    }
+    if (l2.size == 0) {
+        return l1;
+    }
+    InstructionList res = { InvalidInstruction(0), 2 }; // 2 means "more than 1"
+    return res;
+}
+
+Instruction instruction_list_head_default(InstructionList l, Instruction deflt) {
+    if (l.size == 1) {
+        return l.inst;
+    } else {
+        return deflt;
+    }
+}
 
 int bitwidth(InstructionSet arg_0__) {
     switch (arg_0__) {
@@ -992,33 +1611,33 @@ bool supportsM(InstructionSet arg_0__) {
 }
 
 Instruction decode(int iset, InstructionSet inst) {
-    int32_t aqrl = bitSlice(inst, 0b11001, 0b11011);
-    int32_t funct5 = bitSlice(inst, 0b11011, 0b100000);
-    int32_t zimm = bitSlice(inst, 0b1111, 0b10100);
-    int32_t funct6 = bitSlice(inst, 0b11010, 0b100000);
-    int32_t shamtHi = bitSlice(inst, 0b11001, 0b11010);
-    int32_t shamtHiTest = shamtHi == 0b0 || bitwidth(iset) == 0b1000000;
-    int32_t shamt6 = bitSlice(inst, 0b10100, 0b11010);
-    int32_t shamt5 = bitSlice(inst, 0b10100, 0b11001);
-    int32_t sbimm12 = signExtend(0b1101, bitSlice(inst, 0b11111, 0b100000) << 0b1100 | bitSlice(inst, 0b11001, 0b11111) << 0b101 | bitSlice(inst, 0b1000, 0b1100) << 0b1 | bitSlice(inst, 0b111, 0b1000) << 0b1011);
-    int32_t simm12 = signExtend(0b1100, bitSlice(inst, 0b11001, 0b100000) << 0b101 | bitSlice(inst, 0b111, 0b1100));
-    int32_t csr12 = bitSlice(inst, 0b10100, 0b100000);
-    int32_t oimm12 = signExtend(0b1100, bitSlice(inst, 0b10100, 0b100000));
-    int32_t imm12 = signExtend(0b1100, bitSlice(inst, 0b10100, 0b100000));
-    int32_t jimm20 = signExtend(0b10101, bitSlice(inst, 0b11111, 0b100000) << 0b10100 | bitSlice(inst, 0b10101, 0b11111) << 0b1 | bitSlice(inst, 0b10100, 0b10101) << 0b1011 | bitSlice(inst, 0b1100, 0b10100) << 0b1100);
-    int32_t oimm20 = signExtend(0b100000, bitSlice(inst, 0b1100, 0b100000) << 0b1100);
-    int32_t imm20 = signExtend(0b100000, bitSlice(inst, 0b1100, 0b100000) << 0b1100);
-    int32_t msb4 = bitSlice(inst, 0b11100, 0b100000);
-    int32_t pred = bitSlice(inst, 0b11000, 0b11100);
-    int32_t succ = bitSlice(inst, 0b10100, 0b11000);
-    int32_t rs2 = bitSlice(inst, 0b10100, 0b11001);
-    int32_t rs1 = bitSlice(inst, 0b1111, 0b10100);
-    int32_t rd = bitSlice(inst, 0b111, 0b1100);
-    int32_t funct12 = bitSlice(inst, 0b10100, 0b100000);
-    int32_t funct7 = bitSlice(inst, 0b11001, 0b100000);
-    int32_t funct3 = bitSlice(inst, 0b1100, 0b1111);
-    int32_t opcode = bitSlice(inst, 0b0, 0b111);
-    int32_t decodeI = ((opcode == opcode_LOAD && funct3 == funct3_LB)
+    int aqrl = bitSlice(inst, 0b11001, 0b11011);
+    int funct5 = bitSlice(inst, 0b11011, 0b100000);
+    int zimm = bitSlice(inst, 0b1111, 0b10100);
+    int funct6 = bitSlice(inst, 0b11010, 0b100000);
+    int shamtHi = bitSlice(inst, 0b11001, 0b11010);
+    bool shamtHiTest = shamtHi == 0b0 || bitwidth(iset) == 0b1000000;
+    int shamt6 = bitSlice(inst, 0b10100, 0b11010);
+    int shamt5 = bitSlice(inst, 0b10100, 0b11001);
+    int sbimm12 = signExtend(0b1101, bitSlice(inst, 0b11111, 0b100000) << 0b1100 | bitSlice(inst, 0b11001, 0b11111) << 0b101 | bitSlice(inst, 0b1000, 0b1100) << 0b1 | bitSlice(inst, 0b111, 0b1000) << 0b1011);
+    int simm12 = signExtend(0b1100, bitSlice(inst, 0b11001, 0b100000) << 0b101 | bitSlice(inst, 0b111, 0b1100));
+    int csr12 = bitSlice(inst, 0b10100, 0b100000);
+    int oimm12 = signExtend(0b1100, bitSlice(inst, 0b10100, 0b100000));
+    int imm12 = signExtend(0b1100, bitSlice(inst, 0b10100, 0b100000));
+    int jimm20 = signExtend(0b10101, bitSlice(inst, 0b11111, 0b100000) << 0b10100 | bitSlice(inst, 0b10101, 0b11111) << 0b1 | bitSlice(inst, 0b10100, 0b10101) << 0b1011 | bitSlice(inst, 0b1100, 0b10100) << 0b1100);
+    int oimm20 = signExtend(0b100000, bitSlice(inst, 0b1100, 0b100000) << 0b1100);
+    int imm20 = signExtend(0b100000, bitSlice(inst, 0b1100, 0b100000) << 0b1100);
+    int msb4 = bitSlice(inst, 0b11100, 0b100000);
+    int pred = bitSlice(inst, 0b11000, 0b11100);
+    int succ = bitSlice(inst, 0b10100, 0b11000);
+    int rs2 = bitSlice(inst, 0b10100, 0b11001);
+    int rs1 = bitSlice(inst, 0b1111, 0b10100);
+    int rd = bitSlice(inst, 0b111, 0b1100);
+    int funct12 = bitSlice(inst, 0b10100, 0b100000);
+    int funct7 = bitSlice(inst, 0b11001, 0b100000);
+    int funct3 = bitSlice(inst, 0b1100, 0b1111);
+    int opcode = bitSlice(inst, 0b0, 0b111);
+    InstructionI decodeI = ((opcode == opcode_LOAD && funct3 == funct3_LB)
         ? Lb(rd, rs1, oimm12)
         : ((opcode == opcode_LOAD && funct3 == funct3_LH)
             ? Lh(rd, rs1, oimm12)
@@ -1097,7 +1716,7 @@ Instruction decode(int iset, InstructionSet inst) {
                                                                                                                                                             : ((opcode == opcode_JAL)
                                                                                                                                                                 ? Jal(rd, jimm20)
                                                                                                                                                                 : InvalidI())))))))))))))))))))))))))))))))))))))));
-    int32_t decodeM = ((opcode == opcode_OP && funct3 == funct3_MUL && funct7 == funct7_MUL)
+    InstructionM decodeM = ((opcode == opcode_OP && funct3 == funct3_MUL && funct7 == funct7_MUL)
         ? Mul(rd, rs1, rs2)
         : ((opcode == opcode_OP && funct3 == funct3_MULH && funct7 == funct7_MULH)
             ? Mulh(rd, rs1, rs2)
@@ -1114,7 +1733,7 @@ Instruction decode(int iset, InstructionSet inst) {
                                 : ((opcode == opcode_OP && funct3 == funct3_REMU && funct7 == funct7_REMU)
                                     ? Remu(rd, rs1, rs2)
                                     : InvalidM()))))))));
-    int32_t decodeA = ((opcode == opcode_AMO && funct3 == funct3_AMOW && funct5 == funct5_LR && rs2 == 0b0)
+    InstructionA decodeA = ((opcode == opcode_AMO && funct3 == funct3_AMOW && funct5 == funct5_LR && rs2 == 0b0)
         ? Lr_w(rd, rs1, aqrl)
         : ((opcode == opcode_AMO && funct3 == funct3_AMOW && funct5 == funct5_SC)
             ? Sc_w(rd, rs1, rs2, aqrl)
@@ -1137,7 +1756,7 @@ Instruction decode(int iset, InstructionSet inst) {
                                             : ((opcode == opcode_AMO && funct3 == funct3_AMOW && funct5 == funct5_AMOMAXU)
                                                 ? Amomaxu_w(rd, rs1, rs2, aqrl)
                                                 : InvalidA())))))))))));
-    int32_t decodeI64 = ((opcode == opcode_LOAD && funct3 == funct3_LD)
+    InstructionI64 decodeI64 = ((opcode == opcode_LOAD && funct3 == funct3_LD)
         ? Ld(rd, rs1, oimm12)
         : ((opcode == opcode_LOAD && funct3 == funct3_LWU)
             ? Lwu(rd, rs1, oimm12)
@@ -1162,7 +1781,7 @@ Instruction decode(int iset, InstructionSet inst) {
                                                 : ((opcode == opcode_OP_32 && funct3 == funct3_SRAW && funct7 == funct7_SRAW)
                                                     ? Sraw(rd, rs1, rs2)
                                                     : InvalidI64()))))))))))));
-    int32_t decodeM64 = ((opcode == opcode_OP_32 && funct3 == funct3_MULW && funct7 == funct7_MULW)
+    InstructionM64 decodeM64 = ((opcode == opcode_OP_32 && funct3 == funct3_MULW && funct7 == funct7_MULW)
         ? Mulw(rd, rs1, rs2)
         : ((opcode == opcode_OP_32 && funct3 == funct3_DIVW && funct7 == funct7_DIVW)
             ? Divw(rd, rs1, rs2)
@@ -1173,7 +1792,7 @@ Instruction decode(int iset, InstructionSet inst) {
                     : ((opcode == opcode_OP_32 && funct3 == funct3_REMUW && funct7 == funct7_REMUW)
                         ? Remuw(rd, rs1, rs2)
                         : InvalidM64())))));
-    int32_t decodeA64 = ((opcode == opcode_AMO && funct3 == funct3_AMOD && funct5 == funct5_LR && rs2 == 0b0)
+    InstructionA64 decodeA64 = ((opcode == opcode_AMO && funct3 == funct3_AMOD && funct5 == funct5_LR && rs2 == 0b0)
         ? Lr_d(rd, rs1, aqrl)
         : ((opcode == opcode_AMO && funct3 == funct3_AMOD && funct5 == funct5_SC)
             ? Sc_d(rd, rs1, rs2, aqrl)
@@ -1196,7 +1815,7 @@ Instruction decode(int iset, InstructionSet inst) {
                                             : ((opcode == opcode_AMO && funct3 == funct3_AMOD && funct5 == funct5_AMOMAXU)
                                                 ? Amomaxu_d(rd, rs1, rs2, aqrl)
                                                 : InvalidA64())))))))))));
-    int32_t decodeCSR = ((opcode == opcode_SYSTEM && rd == 0b0 && funct3 == funct3_PRIV && funct7 == funct7_SFENCE_VMA)
+    InstructionCSR decodeCSR = ((opcode == opcode_SYSTEM && rd == 0b0 && funct3 == funct3_PRIV && funct7 == funct7_SFENCE_VMA)
         ? Sfence_vma(rs1, rs2)
         : ((opcode == opcode_SYSTEM && rd == 0b0 && funct3 == funct3_PRIV && rs1 == 0b0 && funct12 == funct12_ECALL)
             ? Ecall()
@@ -1223,42 +1842,42 @@ Instruction decode(int iset, InstructionSet inst) {
                                                     : ((opcode == opcode_SYSTEM && funct3 == funct3_CSRRCI)
                                                         ? Csrrci(rd, zimm, csr12)
                                                         : InvalidCSR())))))))))))));
-    int32_t resultCSR = ((isValidCSR(decodeCSR))
-        ? make_list(CSRInstruction(decodeCSR))
-        : make_list());
-    int32_t resultA64 = ((isValidA64(decodeA64))
-        ? make_list(A64Instruction(decodeA64))
-        : make_list());
-    int32_t resultM64 = ((isValidM64(decodeM64))
-        ? make_list(M64Instruction(decodeM64))
-        : make_list());
-    int32_t resultI64 = ((isValidI64(decodeI64))
-        ? make_list(I64Instruction(decodeI64))
-        : make_list());
-    int32_t resultA = ((isValidA(decodeA))
-        ? make_list(AInstruction(decodeA))
-        : make_list());
-    int32_t resultM = ((isValidM(decodeM))
-        ? make_list(MInstruction(decodeM))
-        : make_list());
-    int32_t resultI = ((isValidI(decodeI))
-        ? make_list(IInstruction(decodeI))
-        : make_list());
-    int32_t results = resultI + ((supportsM(iset))
+    InstructionList resultCSR = ((isValidCSR(decodeCSR))
+        ? singleton_instruction_list(CSRInstruction(decodeCSR))
+        : empty_instruction_list());
+    InstructionList resultA64 = ((isValidA64(decodeA64))
+        ? singleton_instruction_list(A64Instruction(decodeA64))
+        : empty_instruction_list());
+    InstructionList resultM64 = ((isValidM64(decodeM64))
+        ? singleton_instruction_list(M64Instruction(decodeM64))
+        : empty_instruction_list());
+    InstructionList resultI64 = ((isValidI64(decodeI64))
+        ? singleton_instruction_list(I64Instruction(decodeI64))
+        : empty_instruction_list());
+    InstructionList resultA = ((isValidA(decodeA))
+        ? singleton_instruction_list(AInstruction(decodeA))
+        : empty_instruction_list());
+    InstructionList resultM = ((isValidM(decodeM))
+        ? singleton_instruction_list(MInstruction(decodeM))
+        : empty_instruction_list());
+    InstructionList resultI = ((isValidI(decodeI))
+        ? singleton_instruction_list(IInstruction(decodeI))
+        : empty_instruction_list());
+    InstructionList results = concat_instruction_list(resultI, concat_instruction_list(((supportsM(iset))
         ? resultM
-        : make_list()) + ((supportsA(iset))
+        : empty_instruction_list()), concat_instruction_list(((supportsA(iset))
         ? resultA
-        : make_list()) + ((bitwidth(iset) == 0b1000000)
+        : empty_instruction_list()), concat_instruction_list(((bitwidth(iset) == 0b1000000)
         ? resultI64
-        : make_list()) + ((bitwidth(iset) == 0b1000000 && supportsM(iset))
+        : empty_instruction_list()), concat_instruction_list(((bitwidth(iset) == 0b1000000 && supportsM(iset))
         ? resultM64
-        : make_list()) + ((bitwidth(iset) == 0b1000000 && supportsA(iset))
+        : empty_instruction_list()), concat_instruction_list(((bitwidth(iset) == 0b1000000 && supportsA(iset))
         ? resultA64
-        : make_list()) + resultCSR;
-    if (len(results) > 0b1) {
+        : empty_instruction_list()), resultCSR))))));
+    if (results.size > 0b1) {
         return InvalidInstruction(inst);
     } else {
-        return list_nth_default(0b0, results, InvalidInstruction(inst));
+        return instruction_list_head_default(results, InvalidInstruction(inst));
     }
 }
 
