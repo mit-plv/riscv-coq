@@ -15,20 +15,6 @@ def convert_type(t):
     else:
         return t
 
-lib = '''
-int32_t bitSlice(int32_t w, int32_t start, int32_t stop) {
-    int32_t mask = (1 << (stop - start)) - 1;
-    return (w >> start) & mask;
-}
-
-int32_t signExtend(int32_t l, int32_t n) {
-    if ((n >> (l - 1)) & 1) {
-        return n - (1 << l);
-    } else {
-        return n;
-    }
-}
-'''
 
 InstructionListCode = '''
 typedef struct {
@@ -67,6 +53,24 @@ Instruction instruction_list_head_default(InstructionList l, Instruction deflt) 
 '''
 
 class CPrinter(LanguagePrinter):
+
+    def begin_extension(self, extensionName):
+        self.branches = {} # constructorName -> body string thunk
+        self.extensionName = extensionName
+
+    def execute_case(self, casename, casebody):
+        self.branches[casename] = casebody
+
+    def end_extension(self):
+        self.writeln('void execute{}(RiscvState s, Instruction{} inst) {{'
+                   .format(self.extensionName, self.extensionName))
+        self.increaseIndent()
+        self.startln()
+        self.write(self.stmt.match('inst', self.branches, default_branch=None))
+        self.decreaseIndent()
+        self.write('}')
+        self.end_decl()
+
     def __init__(self, outfile):
         super(CPrinter, self).__init__(outfile)
         self.expr = CExpressionPrinter(self)
@@ -75,7 +79,6 @@ class CPrinter(LanguagePrinter):
         self.writeln('#include <stdbool.h>')
         self.writeln('#include <stdint.h>')
         self.end_decl()
-        self.writeln(lib)
 
     def end_decl(self):
         self.writeln('')
@@ -245,6 +248,9 @@ class CExpressionPrinter:
 
     def boolean_or(self, first_arg, second_arg):
         return self.__binop(first_arg, '||', second_arg)
+
+    def silent_id(self, arg):
+        return arg()
 
 
 class CStatementPrinter:

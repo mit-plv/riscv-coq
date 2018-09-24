@@ -4,6 +4,10 @@
 
 #include "Utility.h"
 #include "Decode.h"
+#include "ExecuteI64.h"
+#include "ExecuteI.h"
+#include "ExecuteM64.h"
+#include "ExecuteM.h"
 
 int32_t fib6_riscv[] = {
   0x00600993,
@@ -24,4 +28,5 @@ int main() {
     Instruction inst = decode(RV32I, fib6_riscv[i]);
     printf("%d\n", inst.as_IInstruction.f0.kind);
   }
+  printf("TODO actually execute it...\n");
 }

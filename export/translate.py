@@ -8,9 +8,13 @@ def getName(j):
     return name.replace('.coq_', '.').replace('.Coq_', '.')
 
 
-def type_glob_to_str(j):
-    assert j['what'] == 'type:glob'
-    assert j['args'] == []
+def type_glob_to_str(j, ignoreFailures=False):
+    if not ignoreFailures:
+        assert j['what'] == 'type:glob'
+        if j['args'] != []:
+            ellipsisN(j, 3)
+            print(json.dumps(j, indent=4))
+            raise ValueError('polymorphic types are not supported')
     return getName(j)
 
 
@@ -51,16 +55,19 @@ def translate_ind_decl(j, p):
             constructor2Type[getName(c)] = name
 
 
-def get_signature(j, acc=[]):
+def get_signature(j, acc=[], ignoreFailures=False):
     '''returns a tuple of (argTypesList, retType)'''
     if j['what'] == "type:arrow":
-        t = type_glob_to_str(j['left']) # higher-order functions are not supported
-        return get_signature(j['right'], acc + [t])
+        t = type_glob_to_str(j['left'], ignoreFailures)
+        return get_signature(j['right'], acc + [t], ignoreFailures)
     elif j['what'] == "type:glob":
-        t = type_glob_to_str(j)
+        t = type_glob_to_str(j, ignoreFailures)
         return (acc, t)
     else:
-        raise ValueError("unexpected 'what':" + j['what'])
+        if ignoreFailures:
+            return (acc, None)
+        else:
+            raise ValueError("unexpected 'what':" + j['what'])
 
 
 def get_lambda_argnames(j):
@@ -183,9 +190,16 @@ def varname_to_type(name):
         stringly_typed[name] = 'void'
         return 'void'
 
-
 def lazy_translate_expr(j, p, mode):
     return (lambda: translate_expr(j, p, mode))
+
+
+def augment_dict_with_alternative_names(d):
+    res = {}
+    for k in d:
+        res[k] = d[k]
+        res[k.replace('BinInt.Z', 'BinIntDef.Z')] = d[k]
+    return res
 
 
 def translate_expr(j, p, mode):
@@ -254,35 +268,32 @@ def translate_expr(j, p, mode):
         #     didPrint = True
         #     raise ValueError('What does an apply looks like')
         functionName = getName(j['func'])
-        if functionName == 'Datatypes.app':
-            res = p.expr.concat(lazy_translate_expr(j['args'][0], p, 'toExpr'),
-                                lazy_translate_expr(j['args'][1], p, 'toExpr'))
-        elif functionName == 'Datatypes.andb':
-            res = p.expr.boolean_and(lazy_translate_expr(j['args'][0], p, 'toExpr'),
-                                     lazy_translate_expr(j['args'][1], p, 'toExpr'))
-        elif functionName == 'Datatypes.orb':
-            res = p.expr.boolean_or(lazy_translate_expr(j['args'][0], p, 'toExpr'),
-                                    lazy_translate_expr(j['args'][1], p, 'toExpr'))
-        elif functionName == 'Datatypes.length':
-            res = p.expr.list_length(lazy_translate_expr(j['args'][0], p, 'toExpr'))
-        elif functionName == 'List.nth':
-            res = p.expr.list_nth_default(lazy_translate_expr(j['args'][0], p, 'toExpr'),
-                                          lazy_translate_expr(j['args'][1], p, 'toExpr'),
-                                          lazy_translate_expr(j['args'][2], p, 'toExpr'))
-        elif functionName == 'BinInt.Z.lor':
-            res = p.expr.logical_or(lazy_translate_expr(j['args'][0], p, 'toExpr'),
-                                    lazy_translate_expr(j['args'][1], p, 'toExpr'))
-        elif functionName == 'BinInt.Z.shiftl':
-            res = p.expr.shift_left(lazy_translate_expr(j['args'][0], p, 'toExpr'),
-                                    lazy_translate_expr(j['args'][1], p, 'toExpr'))
-        elif functionName == 'BinInt.Z.eqb':
-            res = p.expr.equality(lazy_translate_expr(j['args'][0], p, 'toExpr'),
-                                  lazy_translate_expr(j['args'][1], p, 'toExpr'))
-        elif functionName == 'BinInt.Z.gtb':
-            res = p.expr.gt(lazy_translate_expr(j['args'][0], p, 'toExpr'),
-                            lazy_translate_expr(j['args'][1], p, 'toExpr'))
-        elif functionName == 'BinInt.Z.of_nat' or functionName == "Utility.machineIntToShamt" :
-            res = translate_expr(j['args'][0], p, 'toExpr')
+        unary_funcs = augment_dict_with_alternative_names({
+            'Datatypes.length': p.expr.list_length,
+            'BinInt.Z.of_nat': p.expr.silent_id,
+            'Utility.machineIntToShamt': p.expr.silent_id
+        })
+        binary_funcs = augment_dict_with_alternative_names({
+            'Datatypes.app': p.expr.concat,
+            'Datatypes.andb': p.expr.boolean_and,
+            'Datatypes.orb': p.expr.boolean_or,
+            'BinInt.Z.lor': p.expr.logical_or,
+            'BinInt.Z.shiftl': p.expr.shift_left,
+            'BinInt.Z.eqb': p.expr.equality,
+            'BinInt.Z.gtb': p.expr.gt
+        })
+        ternary_funcs = augment_dict_with_alternative_names({
+            'List.nth': p.expr.list_nth_default
+        })
+        if functionName in unary_funcs:
+            res = unary_funcs[functionName](lazy_translate_expr(j['args'][0], p, 'toExpr'))
+        elif functionName in binary_funcs:
+            res = binary_funcs[functionName](lazy_translate_expr(j['args'][0], p, 'toExpr'),
+                                             lazy_translate_expr(j['args'][1], p, 'toExpr'))
+        elif functionName in ternary_funcs:
+            res = ternary_funcs[functionName](lazy_translate_expr(j['args'][0], p, 'toExpr'),
+                                             lazy_translate_expr(j['args'][1], p, 'toExpr'),
+                                             lazy_translate_expr(j['args'][2], p, 'toExpr'))
         else:
             res = p.expr.function_call(
                 lazy_translate_expr(j['func'], p, 'toExpr'),
@@ -291,6 +302,8 @@ def translate_expr(j, p, mode):
     elif s2 == 'global':
         return maybe_return(p.expr.var(j['name']))
     elif s2 == 'lambda':
+        #ellipsisN(j, 4)
+        print(json.dumps(j, indent=4))
         raise ValueError('lambdas arbitrarily nested inside expressions are not supported')
     elif s2 == 'case':
         firstConstructorName = getName(j['cases'][0]['pat'])
@@ -363,35 +376,57 @@ def ellipsis(j, fieldName):
         pass # primitive value, nothing to be done
 
 
+def strip_prefix(prefix, s):
+    assert s.startswith(prefix)
+    return s[len(prefix):len(s)]
+
+
 didPrint = False
 
 def translate_term_decl(j, p):
     global didPrint
     assert j['what'] == 'decl:term'
-    sig = get_signature(j['type'])
     name = getName(j)
-    # if name == "supportsA":
-    #     if not didPrint:
-    #         ellipsis(j, 'args')
-    #         print(json.dumps(j, indent=3))
-    #         didPrint = True
-    #         raise ValueError("Sad")
-
-    if len(sig[0]) == 0:
-        typ = sig[1]
-        p.constant_decl(name, typ,
-                        lazy_translate_expr(strip_0arg_lambdas(j['value']), p, 'toExpr'))
+    if name == 'execute':
+        sig = get_signature(j['type'], ignoreFailures=True)
+        extension = strip_prefix('Decode.Instruction', sig[0][-1])
+        print(extension)
+        # j = j['value']['body']['cases']
+        # ellipsisN(j, 3)
+        # print(json.dumps(j, indent=3))
+        translate_execute(j['value']['body']['cases'], p, extension)
     else:
-        argnames = get_lambda_argnames(j['value'])
-        if len(argnames) != len(sig[0]):
-            raise ValueError(
-                "number of args in type signature doesn't match number of args " +
-                "in lambda, probably because the function body returns a function, " +
-                "but higer order functions are not supported")
-        argnamesWithTypes = zip(argnames, sig[0])
-        returnType = sig[1]
-        p.fun_decl(name, argnamesWithTypes, returnType,
-                   lazy_translate_expr(j['value']['body'], p, 'toStmt'))
+        sig = get_signature(j['type'])
+        if len(sig[0]) == 0:
+            typ = sig[1]
+            p.constant_decl(name, typ,
+                            lazy_translate_expr(strip_0arg_lambdas(j['value']), p, 'toExpr'))
+        else:
+            argnames = get_lambda_argnames(j['value'])
+            if len(argnames) != len(sig[0]):
+                raise ValueError(
+                    "number of args in type signature doesn't match number of args " +
+                    "in lambda, probably because the function body returns a function, " +
+                    "but higer order functions are not supported")
+            argnamesWithTypes = zip(argnames, sig[0])
+            returnType = sig[1]
+            p.fun_decl(name, argnamesWithTypes, returnType,
+                       lazy_translate_expr(j['value']['body'], p, 'toStmt'))
+
+
+def translate_execute(js, p, extension):
+    global didPrint
+    p.begin_extension(extension)
+    for j in js:
+        assert j['what'] == 'case'
+        if j['pat']['what'] == 'pat:wild':
+            continue # first kind of default case
+        assert j['pat']['what'] == 'pat:constructor'
+        if j['pat']['name'] == 'Decode.Invalid' + extension:
+            continue # second kind of default case
+        p.execute_case(strip_prefix('Decode.', j['pat']['name']),
+                       lazy_translate_expr(j['body'], p, 'toStmt'))
+    p.end_extension()
 
 
 handlers = {

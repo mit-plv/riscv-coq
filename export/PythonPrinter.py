@@ -134,6 +134,9 @@ class PythonExpressionPrinter:
     def boolean_or(self, first_arg, second_arg):
         return self.__binop(first_arg, 'or', second_arg)
 
+    def silent_id(self, arg):
+        return arg()
+
 
 class PythonStatementPrinter:
 

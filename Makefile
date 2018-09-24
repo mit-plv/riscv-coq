@@ -64,6 +64,9 @@ convert: riscv-semantics_version_check hs-to-coq_version_check $(HS_SOURCES) $(P
 # do not remove any intermediate files
 .SECONDARY:
 
+export/extract.vo: export/extract.v spec
+	$(COQBIN)coqc -Q ../bbv/theories bbv -R ./src riscv export/extract.v
+
 export/json/%.json: export/extract.vo src/%.vo
 	find . -maxdepth 1 -name '*.json' -type f -exec mv -t export/json -- {} +
 
@@ -84,7 +87,13 @@ testPythonDecode: export/py/Decode.py export/py/TestDecode.py
 export/c/TestDecode: export/c/TestDecode.c export/c/Decode.h
 	gcc -std=c11 -Wall export/c/TestDecode.c -o export/c/TestDecode
 
+export/c/TestRun: export/c/ExecuteI64.h export/c/ExecuteI.h export/c/ExecuteM64.h export/c/ExecuteM.h export/c/Decode.h export/c/TestRun.c
+	gcc -std=c11 -Wall export/c/TestRun.c -o export/c/TestRun
+
 testCDecode: export/c/TestDecode
 	export/c/TestDecode
+
+testCRun: export/c/TestRun
+	export/c/TestRun
 
 testDecode: testPythonDecode testCDecode
