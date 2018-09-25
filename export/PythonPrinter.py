@@ -79,6 +79,9 @@ class PythonExpressionPrinter:
 
     # public functions:
 
+    def alu_op_name(self, name):
+        return 'Alu.' + name
+
     def function_call(self, func, args):
         return self.__raw_function_call(func(), [arg() for arg in args])
 
@@ -90,6 +93,15 @@ class PythonExpressionPrinter:
 
     def false_literal(self):
         return 'False'
+
+    def negate_bool(self, e):
+        return 'not ' + e()
+
+    def access_type_load(self):
+        return 'AccessType.Load'
+
+    def access_type_store(self):
+        return 'AccessType.Store'
 
     def var(self, varName):
         return varName
@@ -121,6 +133,9 @@ class PythonExpressionPrinter:
 
     def gt(self, first_arg, second_arg):
         return self.__binop(first_arg, '>', second_arg)
+
+    def bigint_mul(self, first_arg, second_arg):
+        return self.__binop(first_arg, '*', second_arg); # TODO
 
     def logical_or(self, first_arg, second_arg):
         return self.__binop(first_arg, '|', second_arg)
