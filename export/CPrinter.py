@@ -55,11 +55,11 @@ Instruction instruction_list_head_default(InstructionList l, Instruction deflt) 
 class CPrinter(LanguagePrinter):
 
     def begin_extension(self, extensionName):
-        self.branches = {} # constructorName -> body string thunk
+        self.branches = {} # constructorName -> (argNames, body string thunk)
         self.extensionName = extensionName
 
-    def execute_case(self, casename, casebody):
-        self.branches[casename] = casebody
+    def execute_case(self, casename, argnames, casebody):
+        self.branches[casename] = (argnames, casebody)
 
     def end_extension(self):
         self.writeln('void execute{}(RiscvState s, Instruction{} inst) {{'
@@ -191,6 +191,9 @@ class CExpressionPrinter:
 
     # public functions:
 
+    def alu_op_name(self, name):
+        return 'alu_' + name
+
     def function_call(self, func, args):
         return self.__raw_function_call(func(), [arg() for arg in args])
 
@@ -202,6 +205,15 @@ class CExpressionPrinter:
 
     def false_literal(self):
         return 'false'
+
+    def negate_bool(self, e):
+        return '! ' + e()
+
+    def access_type_load(self):
+        return 'AccessTypeLoad'
+
+    def access_type_store(self):
+        return 'AccessTypeStore'
 
     def var(self, varName):
         return varName.split('.')[-1]
@@ -237,6 +249,9 @@ class CExpressionPrinter:
 
     def gt(self, first_arg, second_arg):
         return self.__binop(first_arg, '>', second_arg)
+
+    def bigint_mul(self, first_arg, second_arg):
+        return self.__binop(first_arg, '*', second_arg); # TODO
 
     def logical_or(self, first_arg, second_arg):
         return self.__binop(first_arg, '|', second_arg)
@@ -300,11 +315,15 @@ class CStatementPrinter:
     def match(self, discriminee, branches, default_branch, returnsVoid=False):
         res = 'switch ({}.kind) {{\n'.format(discriminee)
         self.context.increaseIndent()
-        for constructorName, branchBody in branches.items():
+        for constructorName, (argNames, branchBody) in branches.items():
             res += self.context.indent
             res += 'case K_{}: '.format(constructorName)
             res += '{\n'
             self.context.increaseIndent()
+            for i, name in enumerate(argNames):
+                res += self.context.indent
+                # TODO get correct type
+                res += ('int {} = {}.as_{}.f{};\n'.format(name, discriminee, constructorName, i))
             res += self.context.indent
             res += branchBody()
             res += '\n'

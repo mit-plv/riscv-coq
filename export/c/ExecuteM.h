@@ -5,67 +5,91 @@
 void executeM(RiscvState s, InstructionM inst) {
     switch (inst.kind) {
         case K_Mul: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, mul(h0, x, y));
+            int rd = inst.as_Mul.f0;
+            int rs1 = inst.as_Mul.f1;
+            int rs2 = inst.as_Mul.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_mul(x, y));
             break;
         }
         case K_Mulh: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, highBits(h0, mul(regToZ_signed(h0, x), regToZ_signed(h0, y))));
+            int rd = inst.as_Mulh.f0;
+            int rs1 = inst.as_Mulh.f1;
+            int rs2 = inst.as_Mulh.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_highBits(alu_regToZ_signed(x) * alu_regToZ_signed(y)));
             break;
         }
         case K_Mulhsu: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, highBits(h0, mul(regToZ_signed(h0, x), regToZ_unsigned(h0, y))));
+            int rd = inst.as_Mulhsu.f0;
+            int rs1 = inst.as_Mulhsu.f1;
+            int rs2 = inst.as_Mulhsu.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_highBits(alu_regToZ_signed(x) * alu_regToZ_unsigned(y)));
             break;
         }
         case K_Mulhu: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, highBits(h0, mul(regToZ_unsigned(h0, x), regToZ_unsigned(h0, y))));
+            int rd = inst.as_Mulhu.f0;
+            int rs1 = inst.as_Mulhu.f1;
+            int rs2 = inst.as_Mulhu.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_highBits(alu_regToZ_unsigned(x) * alu_regToZ_unsigned(y)));
             break;
         }
         case K_Div: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            t q = ((reg_eqb(h0, x, minSigned(h0)) && reg_eqb(h0, y, negate(h0, coq_ZToReg(h0, 0b1))))
+            int rd = inst.as_Div.f0;
+            int rs1 = inst.as_Div.f1;
+            int rs2 = inst.as_Div.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            t q = ((alu_reg_eqb(x, alu_minSigned()) && alu_reg_eqb(y, alu_negate(alu_ZToReg(0b1))))
                 ? x
-                : ((reg_eqb(h0, y, coq_ZToReg(h0, 0b0)))
-                    ? negate(h0, coq_ZToReg(h0, 0b1))
-                    : div(h0, x, y)));
-            setRegister(rd, q);
+                : ((alu_reg_eqb(y, alu_ZToReg(0b0)))
+                    ? alu_negate(alu_ZToReg(0b1))
+                    : alu_div(x, y)));
+            setRegister(s, rd, q);
             break;
         }
         case K_Divu: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            t q = ((reg_eqb(h0, y, coq_ZToReg(h0, 0b0)))
-                ? maxUnsigned(h0)
-                : divu(h0, x, y));
-            setRegister(rd, q);
+            int rd = inst.as_Divu.f0;
+            int rs1 = inst.as_Divu.f1;
+            int rs2 = inst.as_Divu.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            t q = ((alu_reg_eqb(y, alu_ZToReg(0b0)))
+                ? alu_maxUnsigned()
+                : alu_divu(x, y));
+            setRegister(s, rd, q);
             break;
         }
         case K_Rem: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            t r = ((reg_eqb(h0, x, minSigned(h0)) && reg_eqb(h0, y, negate(h0, coq_ZToReg(h0, 0b1))))
-                ? coq_ZToReg(h0, 0b0)
-                : ((reg_eqb(h0, y, coq_ZToReg(h0, 0b0)))
+            int rd = inst.as_Rem.f0;
+            int rs1 = inst.as_Rem.f1;
+            int rs2 = inst.as_Rem.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            t r = ((alu_reg_eqb(x, alu_minSigned()) && alu_reg_eqb(y, alu_negate(alu_ZToReg(0b1))))
+                ? alu_ZToReg(0b0)
+                : ((alu_reg_eqb(y, alu_ZToReg(0b0)))
                     ? x
-                    : rem(h0, x, y)));
-            setRegister(rd, r);
+                    : alu_rem(x, y)));
+            setRegister(s, rd, r);
             break;
         }
         case K_Remu: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            t r = ((reg_eqb(h0, y, coq_ZToReg(h0, 0b0)))
+            int rd = inst.as_Remu.f0;
+            int rs1 = inst.as_Remu.f1;
+            int rs2 = inst.as_Remu.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            t r = ((alu_reg_eqb(y, alu_ZToReg(0b0)))
                 ? x
-                : remu(h0, x, y));
-            setRegister(rd, r);
+                : alu_remu(x, y));
+            setRegister(s, rd, r);
             break;
         }
     }

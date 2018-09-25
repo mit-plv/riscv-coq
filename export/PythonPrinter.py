@@ -174,7 +174,7 @@ class PythonStatementPrinter:
     # match over Inductive (where constructors can take args)
     def match(self, discriminee, branches, default_branch):
         res = ''
-        for constructorName, branchBody in branches.items():
+        for constructorName, (argNames, branchBody) in branches.items():
             res += 'if isinstance({}, {}):\n'.format(discriminee, constructorName)
             self.context.increaseIndent()
             res += self.context.indent

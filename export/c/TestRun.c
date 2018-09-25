@@ -2,8 +2,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define t int32_t
+#define t_signed int32_t
+#define t_unsigned uint32_t
+#define MAX_t_SIGNED   0x7fffffff
+#define MIN_t_SIGNED  -0x80000000
+#define MAX_t_UNSIGNED 0xffffffff
+
 #include "Utility.h"
 #include "Decode.h"
+
+#include "RiscvState.h"
+
 #include "ExecuteI64.h"
 #include "ExecuteI.h"
 #include "ExecuteM64.h"

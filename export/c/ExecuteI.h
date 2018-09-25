@@ -5,291 +5,399 @@
 void executeI(RiscvState s, InstructionI inst) {
     switch (inst.kind) {
         case K_Lb: {
-            t a = getRegister(rs1);
-            t addr = translate(TODO(Program.Load), coq_ZToReg(h0, 0b1), add(h0, a, coq_ZToReg(h0, oimm12)));
-            t x = loadByte(addr);
-            setRegister(rd, int8ToReg(h0, x));
+            int rd = inst.as_Lb.f0;
+            int rs1 = inst.as_Lb.f1;
+            int oimm12 = inst.as_Lb.f2;
+            t a = getRegister(s, rs1);
+            t addr = translate(s, AccessTypeLoad, alu_ZToReg(0b1), alu_add(a, alu_ZToReg(oimm12)));
+            t x = loadByte(s, addr);
+            setRegister(s, rd, alu_int8ToReg(x));
             break;
         }
         case K_Lh: {
-            t a = getRegister(rs1);
-            t addr = translate(TODO(Program.Load), coq_ZToReg(h0, 0b10), add(h0, a, coq_ZToReg(h0, oimm12)));
-            t x = loadHalf(addr);
-            setRegister(rd, int16ToReg(h0, x));
+            int rd = inst.as_Lh.f0;
+            int rs1 = inst.as_Lh.f1;
+            int oimm12 = inst.as_Lh.f2;
+            t a = getRegister(s, rs1);
+            t addr = translate(s, AccessTypeLoad, alu_ZToReg(0b10), alu_add(a, alu_ZToReg(oimm12)));
+            t x = loadHalf(s, addr);
+            setRegister(s, rd, alu_int16ToReg(x));
             break;
         }
         case K_Lw: {
-            t a = getRegister(rs1);
-            t addr = translate(TODO(Program.Load), coq_ZToReg(h0, 0b100), add(h0, a, coq_ZToReg(h0, oimm12)));
-            t x = loadWord(addr);
-            setRegister(rd, int32ToReg(h0, x));
+            int rd = inst.as_Lw.f0;
+            int rs1 = inst.as_Lw.f1;
+            int oimm12 = inst.as_Lw.f2;
+            t a = getRegister(s, rs1);
+            t addr = translate(s, AccessTypeLoad, alu_ZToReg(0b100), alu_add(a, alu_ZToReg(oimm12)));
+            t x = loadWord(s, addr);
+            setRegister(s, rd, alu_int32ToReg(x));
             break;
         }
         case K_Lbu: {
-            t a = getRegister(rs1);
-            t addr = translate(TODO(Program.Load), coq_ZToReg(h0, 0b1), add(h0, a, coq_ZToReg(h0, oimm12)));
-            t x = loadByte(addr);
-            setRegister(rd, uInt8ToReg(h0, x));
+            int rd = inst.as_Lbu.f0;
+            int rs1 = inst.as_Lbu.f1;
+            int oimm12 = inst.as_Lbu.f2;
+            t a = getRegister(s, rs1);
+            t addr = translate(s, AccessTypeLoad, alu_ZToReg(0b1), alu_add(a, alu_ZToReg(oimm12)));
+            t x = loadByte(s, addr);
+            setRegister(s, rd, alu_uInt8ToReg(x));
             break;
         }
         case K_Lhu: {
-            t a = getRegister(rs1);
-            t addr = translate(TODO(Program.Load), coq_ZToReg(h0, 0b10), add(h0, a, coq_ZToReg(h0, oimm12)));
-            t x = loadHalf(addr);
-            setRegister(rd, uInt16ToReg(h0, x));
+            int rd = inst.as_Lhu.f0;
+            int rs1 = inst.as_Lhu.f1;
+            int oimm12 = inst.as_Lhu.f2;
+            t a = getRegister(s, rs1);
+            t addr = translate(s, AccessTypeLoad, alu_ZToReg(0b10), alu_add(a, alu_ZToReg(oimm12)));
+            t x = loadHalf(s, addr);
+            setRegister(s, rd, alu_uInt16ToReg(x));
             break;
         }
         case K_Addi: {
-            t x = getRegister(rs1);
-            setRegister(rd, add(h0, x, coq_ZToReg(h0, imm12)));
+            int rd = inst.as_Addi.f0;
+            int rs1 = inst.as_Addi.f1;
+            int imm12 = inst.as_Addi.f2;
+            t x = getRegister(s, rs1);
+            setRegister(s, rd, alu_add(x, alu_ZToReg(imm12)));
             break;
         }
         case K_Slli: {
-            t x = getRegister(rs1);
-            setRegister(rd, sll(h0, x, shamt6));
+            int rd = inst.as_Slli.f0;
+            int rs1 = inst.as_Slli.f1;
+            int shamt6 = inst.as_Slli.f2;
+            t x = getRegister(s, rs1);
+            setRegister(s, rd, alu_sll(x, shamt6));
             break;
         }
         case K_Slti: {
-            t x = getRegister(rs1);
-            t val = ((signed_less_than(h0, x, coq_ZToReg(h0, imm12)))
-                ? coq_ZToReg(h0, 0b1)
-                : coq_ZToReg(h0, 0b0));
-            setRegister(rd, val);
+            int rd = inst.as_Slti.f0;
+            int rs1 = inst.as_Slti.f1;
+            int imm12 = inst.as_Slti.f2;
+            t x = getRegister(s, rs1);
+            t val = ((alu_signed_less_than(x, alu_ZToReg(imm12)))
+                ? alu_ZToReg(0b1)
+                : alu_ZToReg(0b0));
+            setRegister(s, rd, val);
             break;
         }
         case K_Sltiu: {
-            t x = getRegister(rs1);
-            t val = ((ltu(h0, x, coq_ZToReg(h0, imm12)))
-                ? coq_ZToReg(h0, 0b1)
-                : coq_ZToReg(h0, 0b0));
-            setRegister(rd, val);
+            int rd = inst.as_Sltiu.f0;
+            int rs1 = inst.as_Sltiu.f1;
+            int imm12 = inst.as_Sltiu.f2;
+            t x = getRegister(s, rs1);
+            t val = ((alu_ltu(x, alu_ZToReg(imm12)))
+                ? alu_ZToReg(0b1)
+                : alu_ZToReg(0b0));
+            setRegister(s, rd, val);
             break;
         }
         case K_Xori: {
-            t x = getRegister(rs1);
-            setRegister(rd, xor(h0, x, coq_ZToReg(h0, imm12)));
+            int rd = inst.as_Xori.f0;
+            int rs1 = inst.as_Xori.f1;
+            int imm12 = inst.as_Xori.f2;
+            t x = getRegister(s, rs1);
+            setRegister(s, rd, alu_xor(x, alu_ZToReg(imm12)));
             break;
         }
         case K_Ori: {
-            t x = getRegister(rs1);
-            setRegister(rd, or(h0, x, coq_ZToReg(h0, imm12)));
+            int rd = inst.as_Ori.f0;
+            int rs1 = inst.as_Ori.f1;
+            int imm12 = inst.as_Ori.f2;
+            t x = getRegister(s, rs1);
+            setRegister(s, rd, alu_or(x, alu_ZToReg(imm12)));
             break;
         }
         case K_Andi: {
-            t x = getRegister(rs1);
-            setRegister(rd, and(h0, x, coq_ZToReg(h0, imm12)));
+            int rd = inst.as_Andi.f0;
+            int rs1 = inst.as_Andi.f1;
+            int imm12 = inst.as_Andi.f2;
+            t x = getRegister(s, rs1);
+            setRegister(s, rd, alu_and(x, alu_ZToReg(imm12)));
             break;
         }
         case K_Srli: {
-            t x = getRegister(rs1);
-            setRegister(rd, srl(h0, x, shamt6));
+            int rd = inst.as_Srli.f0;
+            int rs1 = inst.as_Srli.f1;
+            int shamt6 = inst.as_Srli.f2;
+            t x = getRegister(s, rs1);
+            setRegister(s, rd, alu_srl(x, shamt6));
             break;
         }
         case K_Srai: {
-            t x = getRegister(rs1);
-            setRegister(rd, sra(h0, x, shamt6));
+            int rd = inst.as_Srai.f0;
+            int rs1 = inst.as_Srai.f1;
+            int shamt6 = inst.as_Srai.f2;
+            t x = getRegister(s, rs1);
+            setRegister(s, rd, alu_sra(x, shamt6));
             break;
         }
         case K_Auipc: {
-            t pc = getPC();
-            setRegister(rd, add(h0, coq_ZToReg(h0, oimm20), pc));
+            int rd = inst.as_Auipc.f0;
+            int oimm20 = inst.as_Auipc.f1;
+            t pc = getPC(s);
+            setRegister(s, rd, alu_add(alu_ZToReg(oimm20), pc));
             break;
         }
         case K_Sb: {
-            t a = getRegister(rs1);
-            t addr = translate(TODO(Program.Store), coq_ZToReg(h0, 0b1), add(h0, a, coq_ZToReg(h0, simm12)));
-            t x = getRegister(rs2);
-            storeByte(addr, regToInt8(h0, x));
+            int rs1 = inst.as_Sb.f0;
+            int rs2 = inst.as_Sb.f1;
+            int simm12 = inst.as_Sb.f2;
+            t a = getRegister(s, rs1);
+            t addr = translate(s, AccessTypeStore, alu_ZToReg(0b1), alu_add(a, alu_ZToReg(simm12)));
+            t x = getRegister(s, rs2);
+            storeByte(s, addr, alu_regToInt8(x));
             break;
         }
         case K_Sh: {
-            t a = getRegister(rs1);
-            t addr = translate(TODO(Program.Store), coq_ZToReg(h0, 0b10), add(h0, a, coq_ZToReg(h0, simm12)));
-            t x = getRegister(rs2);
-            storeHalf(addr, regToInt16(h0, x));
+            int rs1 = inst.as_Sh.f0;
+            int rs2 = inst.as_Sh.f1;
+            int simm12 = inst.as_Sh.f2;
+            t a = getRegister(s, rs1);
+            t addr = translate(s, AccessTypeStore, alu_ZToReg(0b10), alu_add(a, alu_ZToReg(simm12)));
+            t x = getRegister(s, rs2);
+            storeHalf(s, addr, alu_regToInt16(x));
             break;
         }
         case K_Sw: {
-            t a = getRegister(rs1);
-            t addr = translate(TODO(Program.Store), coq_ZToReg(h0, 0b100), add(h0, a, coq_ZToReg(h0, simm12)));
-            t x = getRegister(rs2);
-            storeWord(addr, regToInt32(h0, x));
+            int rs1 = inst.as_Sw.f0;
+            int rs2 = inst.as_Sw.f1;
+            int simm12 = inst.as_Sw.f2;
+            t a = getRegister(s, rs1);
+            t addr = translate(s, AccessTypeStore, alu_ZToReg(0b100), alu_add(a, alu_ZToReg(simm12)));
+            t x = getRegister(s, rs2);
+            storeWord(s, addr, alu_regToInt32(x));
             break;
         }
         case K_Add: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, add(h0, x, y));
+            int rd = inst.as_Add.f0;
+            int rs1 = inst.as_Add.f1;
+            int rs2 = inst.as_Add.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_add(x, y));
             break;
         }
         case K_Sub: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, sub(h0, x, y));
+            int rd = inst.as_Sub.f0;
+            int rs1 = inst.as_Sub.f1;
+            int rs2 = inst.as_Sub.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_sub(x, y));
             break;
         }
         case K_Sll: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, sll(h0, x, regToShamt(h0, y)));
+            int rd = inst.as_Sll.f0;
+            int rs1 = inst.as_Sll.f1;
+            int rs2 = inst.as_Sll.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_sll(x, alu_regToShamt(y)));
             break;
         }
         case K_Slt: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            t val = ((signed_less_than(h0, x, y))
-                ? coq_ZToReg(h0, 0b1)
-                : coq_ZToReg(h0, 0b0));
-            setRegister(rd, val);
+            int rd = inst.as_Slt.f0;
+            int rs1 = inst.as_Slt.f1;
+            int rs2 = inst.as_Slt.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            t val = ((alu_signed_less_than(x, y))
+                ? alu_ZToReg(0b1)
+                : alu_ZToReg(0b0));
+            setRegister(s, rd, val);
             break;
         }
         case K_Sltu: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            t val = ((ltu(h0, x, y))
-                ? coq_ZToReg(h0, 0b1)
-                : coq_ZToReg(h0, 0b0));
-            setRegister(rd, val);
+            int rd = inst.as_Sltu.f0;
+            int rs1 = inst.as_Sltu.f1;
+            int rs2 = inst.as_Sltu.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            t val = ((alu_ltu(x, y))
+                ? alu_ZToReg(0b1)
+                : alu_ZToReg(0b0));
+            setRegister(s, rd, val);
             break;
         }
         case K_Xor: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, xor(h0, x, y));
+            int rd = inst.as_Xor.f0;
+            int rs1 = inst.as_Xor.f1;
+            int rs2 = inst.as_Xor.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_xor(x, y));
             break;
         }
         case K_Srl: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, srl(h0, x, regToShamt(h0, y)));
+            int rd = inst.as_Srl.f0;
+            int rs1 = inst.as_Srl.f1;
+            int rs2 = inst.as_Srl.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_srl(x, alu_regToShamt(y)));
             break;
         }
         case K_Sra: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, sra(h0, x, regToShamt(h0, y)));
+            int rd = inst.as_Sra.f0;
+            int rs1 = inst.as_Sra.f1;
+            int rs2 = inst.as_Sra.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_sra(x, alu_regToShamt(y)));
             break;
         }
         case K_Or: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, or(h0, x, y));
+            int rd = inst.as_Or.f0;
+            int rs1 = inst.as_Or.f1;
+            int rs2 = inst.as_Or.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_or(x, y));
             break;
         }
         case K_And: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, and(h0, x, y));
+            int rd = inst.as_And.f0;
+            int rs1 = inst.as_And.f1;
+            int rs2 = inst.as_And.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_and(x, y));
             break;
         }
         case K_Lui: {
-            setRegister(rd, coq_ZToReg(h0, imm20));
+            int rd = inst.as_Lui.f0;
+            int imm20 = inst.as_Lui.f1;
+            setRegister(s, rd, alu_ZToReg(imm20));
             break;
         }
         case K_Beq: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            t pc = getPC();
-            if (reg_eqb(h0, x, y)) {
-                t newPC = add(h0, pc, coq_ZToReg(h0, sbimm12));
-                if (negb(reg_eqb(h0, remu(h0, newPC, coq_ZToReg(h0, 0b100)), coq_ZToReg(h0, 0b0)))) {
-                    raiseException(coq_ZToReg(h0, 0b0), coq_ZToReg(h0, 0b0));
+            int rs1 = inst.as_Beq.f0;
+            int rs2 = inst.as_Beq.f1;
+            int sbimm12 = inst.as_Beq.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            t pc = getPC(s);
+            if (alu_reg_eqb(x, y)) {
+                t newPC = alu_add(pc, alu_ZToReg(sbimm12));
+                if (! alu_reg_eqb(alu_remu(newPC, alu_ZToReg(0b100)), alu_ZToReg(0b0))) {
+                    raiseException(s, alu_ZToReg(0b0), alu_ZToReg(0b0));
                 } else {
-                    setPC(newPC);
+                    setPC(s, newPC);
                 }
             }
             break;
         }
         case K_Bne: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            t pc = getPC();
-            if (negb(reg_eqb(h0, x, y))) {
-                t addr = add(h0, pc, coq_ZToReg(h0, sbimm12));
-                if (negb(reg_eqb(h0, remu(h0, addr, coq_ZToReg(h0, 0b100)), coq_ZToReg(h0, 0b0)))) {
-                    raiseException(coq_ZToReg(h0, 0b0), coq_ZToReg(h0, 0b0));
+            int rs1 = inst.as_Bne.f0;
+            int rs2 = inst.as_Bne.f1;
+            int sbimm12 = inst.as_Bne.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            t pc = getPC(s);
+            if (! alu_reg_eqb(x, y)) {
+                t addr = alu_add(pc, alu_ZToReg(sbimm12));
+                if (! alu_reg_eqb(alu_remu(addr, alu_ZToReg(0b100)), alu_ZToReg(0b0))) {
+                    raiseException(s, alu_ZToReg(0b0), alu_ZToReg(0b0));
                 } else {
-                    setPC(addr);
+                    setPC(s, addr);
                 }
             }
             break;
         }
         case K_Blt: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            t pc = getPC();
-            if (signed_less_than(h0, x, y)) {
-                t addr = add(h0, pc, coq_ZToReg(h0, sbimm12));
-                if (negb(reg_eqb(h0, remu(h0, addr, coq_ZToReg(h0, 0b100)), coq_ZToReg(h0, 0b0)))) {
-                    raiseException(coq_ZToReg(h0, 0b0), coq_ZToReg(h0, 0b0));
+            int rs1 = inst.as_Blt.f0;
+            int rs2 = inst.as_Blt.f1;
+            int sbimm12 = inst.as_Blt.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            t pc = getPC(s);
+            if (alu_signed_less_than(x, y)) {
+                t addr = alu_add(pc, alu_ZToReg(sbimm12));
+                if (! alu_reg_eqb(alu_remu(addr, alu_ZToReg(0b100)), alu_ZToReg(0b0))) {
+                    raiseException(s, alu_ZToReg(0b0), alu_ZToReg(0b0));
                 } else {
-                    setPC(addr);
+                    setPC(s, addr);
                 }
             }
             break;
         }
         case K_Bge: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            t pc = getPC();
-            if (negb(signed_less_than(h0, x, y))) {
-                t addr = add(h0, pc, coq_ZToReg(h0, sbimm12));
-                if (negb(reg_eqb(h0, remu(h0, addr, coq_ZToReg(h0, 0b100)), coq_ZToReg(h0, 0b0)))) {
-                    raiseException(coq_ZToReg(h0, 0b0), coq_ZToReg(h0, 0b0));
+            int rs1 = inst.as_Bge.f0;
+            int rs2 = inst.as_Bge.f1;
+            int sbimm12 = inst.as_Bge.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            t pc = getPC(s);
+            if (! alu_signed_less_than(x, y)) {
+                t addr = alu_add(pc, alu_ZToReg(sbimm12));
+                if (! alu_reg_eqb(alu_remu(addr, alu_ZToReg(0b100)), alu_ZToReg(0b0))) {
+                    raiseException(s, alu_ZToReg(0b0), alu_ZToReg(0b0));
                 } else {
-                    setPC(addr);
+                    setPC(s, addr);
                 }
             }
             break;
         }
         case K_Bltu: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            t pc = getPC();
-            if (ltu(h0, x, y)) {
-                t addr = add(h0, pc, coq_ZToReg(h0, sbimm12));
-                if (negb(reg_eqb(h0, remu(h0, addr, coq_ZToReg(h0, 0b100)), coq_ZToReg(h0, 0b0)))) {
-                    raiseException(coq_ZToReg(h0, 0b0), coq_ZToReg(h0, 0b0));
+            int rs1 = inst.as_Bltu.f0;
+            int rs2 = inst.as_Bltu.f1;
+            int sbimm12 = inst.as_Bltu.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            t pc = getPC(s);
+            if (alu_ltu(x, y)) {
+                t addr = alu_add(pc, alu_ZToReg(sbimm12));
+                if (! alu_reg_eqb(alu_remu(addr, alu_ZToReg(0b100)), alu_ZToReg(0b0))) {
+                    raiseException(s, alu_ZToReg(0b0), alu_ZToReg(0b0));
                 } else {
-                    setPC(addr);
+                    setPC(s, addr);
                 }
             }
             break;
         }
         case K_Bgeu: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            t pc = getPC();
-            if (negb(ltu(h0, x, y))) {
-                t addr = add(h0, pc, coq_ZToReg(h0, sbimm12));
-                if (negb(reg_eqb(h0, remu(h0, addr, coq_ZToReg(h0, 0b100)), coq_ZToReg(h0, 0b0)))) {
-                    raiseException(coq_ZToReg(h0, 0b0), coq_ZToReg(h0, 0b0));
+            int rs1 = inst.as_Bgeu.f0;
+            int rs2 = inst.as_Bgeu.f1;
+            int sbimm12 = inst.as_Bgeu.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            t pc = getPC(s);
+            if (! alu_ltu(x, y)) {
+                t addr = alu_add(pc, alu_ZToReg(sbimm12));
+                if (! alu_reg_eqb(alu_remu(addr, alu_ZToReg(0b100)), alu_ZToReg(0b0))) {
+                    raiseException(s, alu_ZToReg(0b0), alu_ZToReg(0b0));
                 } else {
-                    setPC(addr);
+                    setPC(s, addr);
                 }
             }
             break;
         }
         case K_Jalr: {
-            t x = getRegister(rs1);
-            t pc = getPC();
-            t newPC = and(h0, add(h0, x, coq_ZToReg(h0, oimm12)), lnot(h0, coq_ZToReg(h0, 0b1)));
-            if (negb(reg_eqb(h0, remu(h0, newPC, coq_ZToReg(h0, 0b100)), coq_ZToReg(h0, 0b0)))) {
-                raiseException(coq_ZToReg(h0, 0b0), coq_ZToReg(h0, 0b0));
+            int rd = inst.as_Jalr.f0;
+            int rs1 = inst.as_Jalr.f1;
+            int oimm12 = inst.as_Jalr.f2;
+            t x = getRegister(s, rs1);
+            t pc = getPC(s);
+            t newPC = alu_and(alu_add(x, alu_ZToReg(oimm12)), alu_lnot(alu_ZToReg(0b1)));
+            if (! alu_reg_eqb(alu_remu(newPC, alu_ZToReg(0b100)), alu_ZToReg(0b0))) {
+                raiseException(s, alu_ZToReg(0b0), alu_ZToReg(0b0));
             } else {
-                setRegister(rd, add(h0, pc, coq_ZToReg(h0, 0b100)));
-                setPC(newPC);
+                setRegister(s, rd, alu_add(pc, alu_ZToReg(0b100)));
+                setPC(s, newPC);
             }
             break;
         }
         case K_Jal: {
-            t pc = getPC();
-            t newPC = add(h0, pc, coq_ZToReg(h0, jimm20));
-            if (negb(reg_eqb(h0, remu(h0, newPC, coq_ZToReg(h0, 0b100)), coq_ZToReg(h0, 0b0)))) {
-                raiseException(coq_ZToReg(h0, 0b0), coq_ZToReg(h0, 0b0));
+            int rd = inst.as_Jal.f0;
+            int jimm20 = inst.as_Jal.f1;
+            t pc = getPC(s);
+            t newPC = alu_add(pc, alu_ZToReg(jimm20));
+            if (! alu_reg_eqb(alu_remu(newPC, alu_ZToReg(0b100)), alu_ZToReg(0b0))) {
+                raiseException(s, alu_ZToReg(0b0), alu_ZToReg(0b0));
             } else {
-                setRegister(rd, add(h0, pc, coq_ZToReg(h0, 0b100)));
-                setPC(newPC);
+                setRegister(s, rd, alu_add(pc, alu_ZToReg(0b100)));
+                setPC(s, newPC);
             }
             break;
         }

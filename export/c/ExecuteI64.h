@@ -5,74 +5,110 @@
 void executeI64(RiscvState s, InstructionI64 inst) {
     switch (inst.kind) {
         case K_Ld: {
-            t a = getRegister(rs1);
-            t addr = translate(TODO(Program.Load), coq_ZToReg(h0, 0b1000), add(h0, a, coq_ZToReg(h0, oimm12)));
-            t x = loadDouble(addr);
-            setRegister(rd, int64ToReg(h0, x));
+            int rd = inst.as_Ld.f0;
+            int rs1 = inst.as_Ld.f1;
+            int oimm12 = inst.as_Ld.f2;
+            t a = getRegister(s, rs1);
+            t addr = translate(s, AccessTypeLoad, alu_ZToReg(0b1000), alu_add(a, alu_ZToReg(oimm12)));
+            t x = loadDouble(s, addr);
+            setRegister(s, rd, alu_int64ToReg(x));
             break;
         }
         case K_Lwu: {
-            t a = getRegister(rs1);
-            t addr = translate(TODO(Program.Load), coq_ZToReg(h0, 0b100), add(h0, a, coq_ZToReg(h0, oimm12)));
-            t x = loadWord(addr);
-            setRegister(rd, uInt32ToReg(h0, x));
+            int rd = inst.as_Lwu.f0;
+            int rs1 = inst.as_Lwu.f1;
+            int oimm12 = inst.as_Lwu.f2;
+            t a = getRegister(s, rs1);
+            t addr = translate(s, AccessTypeLoad, alu_ZToReg(0b100), alu_add(a, alu_ZToReg(oimm12)));
+            t x = loadWord(s, addr);
+            setRegister(s, rd, alu_uInt32ToReg(x));
             break;
         }
         case K_Addiw: {
-            t x = getRegister(rs1);
-            setRegister(rd, s32(h0, add(h0, x, coq_ZToReg(h0, imm12))));
+            int rd = inst.as_Addiw.f0;
+            int rs1 = inst.as_Addiw.f1;
+            int imm12 = inst.as_Addiw.f2;
+            t x = getRegister(s, rs1);
+            setRegister(s, rd, alu_s32(alu_add(x, alu_ZToReg(imm12))));
             break;
         }
         case K_Slliw: {
-            t x = getRegister(rs1);
-            setRegister(rd, s32(h0, sll(h0, x, shamt5)));
+            int rd = inst.as_Slliw.f0;
+            int rs1 = inst.as_Slliw.f1;
+            int shamt5 = inst.as_Slliw.f2;
+            t x = getRegister(s, rs1);
+            setRegister(s, rd, alu_s32(alu_sll(x, shamt5)));
             break;
         }
         case K_Srliw: {
-            t x = getRegister(rs1);
-            setRegister(rd, s32(h0, srl(h0, u32(h0, x), shamt5)));
+            int rd = inst.as_Srliw.f0;
+            int rs1 = inst.as_Srliw.f1;
+            int shamt5 = inst.as_Srliw.f2;
+            t x = getRegister(s, rs1);
+            setRegister(s, rd, alu_s32(alu_srl(alu_u32(x), shamt5)));
             break;
         }
         case K_Sraiw: {
-            t x = getRegister(rs1);
-            setRegister(rd, s32(h0, sra(h0, s32(h0, x), shamt5)));
+            int rd = inst.as_Sraiw.f0;
+            int rs1 = inst.as_Sraiw.f1;
+            int shamt5 = inst.as_Sraiw.f2;
+            t x = getRegister(s, rs1);
+            setRegister(s, rd, alu_s32(alu_sra(alu_s32(x), shamt5)));
             break;
         }
         case K_Sd: {
-            t a = getRegister(rs1);
-            t addr = translate(TODO(Program.Store), coq_ZToReg(h0, 0b1000), add(h0, a, coq_ZToReg(h0, simm12)));
-            t x = getRegister(rs2);
-            storeDouble(addr, regToInt64(h0, x));
+            int rs1 = inst.as_Sd.f0;
+            int rs2 = inst.as_Sd.f1;
+            int simm12 = inst.as_Sd.f2;
+            t a = getRegister(s, rs1);
+            t addr = translate(s, AccessTypeStore, alu_ZToReg(0b1000), alu_add(a, alu_ZToReg(simm12)));
+            t x = getRegister(s, rs2);
+            storeDouble(s, addr, alu_regToInt64(x));
             break;
         }
         case K_Addw: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, s32(h0, add(h0, x, y)));
+            int rd = inst.as_Addw.f0;
+            int rs1 = inst.as_Addw.f1;
+            int rs2 = inst.as_Addw.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_s32(alu_add(x, y)));
             break;
         }
         case K_Subw: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, s32(h0, sub(h0, x, y)));
+            int rd = inst.as_Subw.f0;
+            int rs1 = inst.as_Subw.f1;
+            int rs2 = inst.as_Subw.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_s32(alu_sub(x, y)));
             break;
         }
         case K_Sllw: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, s32(h0, sll(h0, x, regToShamt5(h0, y))));
+            int rd = inst.as_Sllw.f0;
+            int rs1 = inst.as_Sllw.f1;
+            int rs2 = inst.as_Sllw.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_s32(alu_sll(x, alu_regToShamt5(y))));
             break;
         }
         case K_Srlw: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, s32(h0, srl(h0, u32(h0, x), regToShamt5(h0, y))));
+            int rd = inst.as_Srlw.f0;
+            int rs1 = inst.as_Srlw.f1;
+            int rs2 = inst.as_Srlw.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_s32(alu_srl(alu_u32(x), alu_regToShamt5(y))));
             break;
         }
         case K_Sraw: {
-            t x = getRegister(rs1);
-            t y = getRegister(rs2);
-            setRegister(rd, s32(h0, sra(h0, s32(h0, x), regToShamt5(h0, y))));
+            int rd = inst.as_Sraw.f0;
+            int rs1 = inst.as_Sraw.f1;
+            int rs2 = inst.as_Sraw.f2;
+            t x = getRegister(s, rs1);
+            t y = getRegister(s, rs2);
+            setRegister(s, rd, alu_s32(alu_sra(alu_s32(x), alu_regToShamt5(y))));
             break;
         }
     }

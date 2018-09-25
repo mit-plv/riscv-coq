@@ -106,8 +106,8 @@ def translate_match(j, p):
         assert c['what'] == 'case'
         if c['pat']['what'] == 'pat:constructor':
             constructorName = getName(c['pat'])
-            argNames = c['pat']['argnames'] # TODO pass these to printer appropriately
-            branches[constructorName] = lazy_translate_expr(c['body'], p, 'toStmt')
+            argNames = c['pat']['argnames']
+            branches[constructorName] = (argNames, lazy_translate_expr(c['body'], p, 'toStmt'))
         elif c['pat']['what'] == 'pat:wild':
             default_branch = lazy_translate_expr(c['body'], p, 'toStmt')
         else:
@@ -135,6 +135,53 @@ def translate_switch(j, p):
         else:
             raise ValueError("unknown " + c['pat']['what'])
     return p.stmt.switch(discriminee, enumName, branches, default_branch)
+
+
+funcs_with_ignored_arg0 = [
+    'Utility.add',
+    'Utility.sub',
+    'Utility.mul',
+    'Utility.div',
+    'Utility.rem',
+    'Utility.negate',
+    'Utility.reg_eqb',
+    'Utility.signed_less_than',
+    'Utility.ltu',
+    'Utility.xor',
+    'Utility.or',
+    'Utility.and',
+    'Utility.regToInt8'  ,
+    'Utility.regToInt16' ,
+    'Utility.regToInt32' ,
+    'Utility.regToInt64' ,
+    'Utility.uInt8ToReg' ,
+    'Utility.uInt16ToReg',
+    'Utility.uInt32ToReg',
+    'Utility.uInt64ToReg',
+    'Utility.int8ToReg'  ,
+    'Utility.int16ToReg' ,
+    'Utility.int32ToReg' ,
+    'Utility.int64ToReg' ,
+    'Utility.s32',
+    'Utility.u32',
+    'Utility.regToZ_signed',
+    'Utility.regToZ_unsigned',
+    'Utility.sll',
+    'Utility.srl',
+    'Utility.sra',
+    'Utility.divu',
+    'Utility.remu',
+    'Utility.maxSigned',
+    'Utility.maxUnsigned',
+    'Utility.minSigned',
+    'Utility.regToShamt5',
+    'Utility.regToShamt',
+    'Utility.highBits',
+    'Utility.ZToReg',
+
+    # derived functions:
+    'Utility.lnot'
+]
 
 
 stringly_typed = {
@@ -253,6 +300,10 @@ def translate_expr(j, p, mode):
             res = p.expr.true_literal()
         elif constructorName == 'Datatypes.false':
             res = p.expr.false_literal()
+        elif constructorName == 'Program.Load':
+            res = p.expr.access_type_load()
+        elif constructorName == 'Program.Store':
+            res = p.expr.access_type_store()
         elif "." not in constructorName: # Constructor is an app, right?
             name = j["name"]
             j["func"] = {
@@ -326,7 +377,11 @@ def translate_expr(j, p, mode):
 
         if functionName in riscv_monad_ops:
             numberOfIgnoredArgs = riscv_monad_ops[functionName]
-            j['args'] = j['args'][numberOfIgnoredArgs:]
+            stateArg = {
+                "what": "expr:rel",
+                "name": "s"
+            }
+            j['args'] = [stateArg] + j['args'][numberOfIgnoredArgs:]
             res = p.expr.function_call(
                 lazy_translate_expr(j['func'], p, 'toExpr'),
                 [lazy_translate_expr(arg, p, 'toExpr') for arg in j['args']])
@@ -340,6 +395,7 @@ def translate_expr(j, p, mode):
                 raise ValueError("unknown mode: " + mode)
 
         unary_funcs = augment_dict_with_alternative_names({
+            'Datatypes.negb': p.expr.negate_bool,
             'Datatypes.length': p.expr.list_length,
             'BinInt.Z.of_nat': p.expr.silent_id,
             'Utility.machineIntToShamt': p.expr.silent_id
@@ -350,12 +406,14 @@ def translate_expr(j, p, mode):
             'Datatypes.orb': p.expr.boolean_or,
             'BinInt.Z.lor': p.expr.logical_or,
             'BinInt.Z.shiftl': p.expr.shift_left,
+            'BinInt.Z.mul': p.expr.bigint_mul,
             'BinInt.Z.eqb': p.expr.equality,
             'BinInt.Z.gtb': p.expr.gt
         })
         ternary_funcs = augment_dict_with_alternative_names({
             'List.nth': p.expr.list_nth_default
         })
+
         if functionName in unary_funcs:
             res = unary_funcs[functionName](lazy_translate_expr(j['args'][0], p, 'toExpr'))
         elif functionName in binary_funcs:
@@ -366,13 +424,17 @@ def translate_expr(j, p, mode):
                                              lazy_translate_expr(j['args'][1], p, 'toExpr'),
                                              lazy_translate_expr(j['args'][2], p, 'toExpr'))
         else:
+            if functionName in funcs_with_ignored_arg0:
+                j['args'] = j['args'][1:]
+                j['func']['name'] = p.expr.alu_op_name(
+                    strip_prefix('Utility.', getName(j['func'])))
             res = p.expr.function_call(
                 lazy_translate_expr(j['func'], p, 'toExpr'),
                 [lazy_translate_expr(arg, p, 'toExpr') for arg in j['args']])
         return maybe_return(res)
 
     elif s2 == 'global':
-        return maybe_return(p.expr.var(j['name']))
+        return maybe_return(p.expr.var(getName(j)))
 
     elif s2 == 'lambda':
         ellipsisN(j, 4)
@@ -501,6 +563,7 @@ def translate_execute(js, p, extension):
         if j['pat']['name'] == 'Decode.Invalid' + extension:
             continue # second kind of default case
         p.execute_case(strip_prefix('Decode.', j['pat']['name']),
+                       j['pat']['argnames'],
                        lazy_translate_expr(j['body'], p, 'toStmt'))
     p.end_extension()
 
