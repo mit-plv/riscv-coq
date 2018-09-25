@@ -4,116 +4,137 @@
 
 void executeI(RiscvState s, InstructionI inst) {
     switch (inst.kind) {
-        case K_Lb:
+        case K_Lb: {
             t a = getRegister(rs1);
             t addr = translate(TODO(Program.Load), coq_ZToReg(h0, 0b1), add(h0, a, coq_ZToReg(h0, oimm12)));
             t x = loadByte(addr);
             setRegister(rd, int8ToReg(h0, x));
             break;
-        case K_Lh:
+        }
+        case K_Lh: {
             t a = getRegister(rs1);
             t addr = translate(TODO(Program.Load), coq_ZToReg(h0, 0b10), add(h0, a, coq_ZToReg(h0, oimm12)));
             t x = loadHalf(addr);
             setRegister(rd, int16ToReg(h0, x));
             break;
-        case K_Lw:
+        }
+        case K_Lw: {
             t a = getRegister(rs1);
             t addr = translate(TODO(Program.Load), coq_ZToReg(h0, 0b100), add(h0, a, coq_ZToReg(h0, oimm12)));
             t x = loadWord(addr);
             setRegister(rd, int32ToReg(h0, x));
             break;
-        case K_Lbu:
+        }
+        case K_Lbu: {
             t a = getRegister(rs1);
             t addr = translate(TODO(Program.Load), coq_ZToReg(h0, 0b1), add(h0, a, coq_ZToReg(h0, oimm12)));
             t x = loadByte(addr);
             setRegister(rd, uInt8ToReg(h0, x));
             break;
-        case K_Lhu:
+        }
+        case K_Lhu: {
             t a = getRegister(rs1);
             t addr = translate(TODO(Program.Load), coq_ZToReg(h0, 0b10), add(h0, a, coq_ZToReg(h0, oimm12)));
             t x = loadHalf(addr);
             setRegister(rd, uInt16ToReg(h0, x));
             break;
-        case K_Addi:
+        }
+        case K_Addi: {
             t x = getRegister(rs1);
             setRegister(rd, add(h0, x, coq_ZToReg(h0, imm12)));
             break;
-        case K_Slli:
+        }
+        case K_Slli: {
             t x = getRegister(rs1);
             setRegister(rd, sll(h0, x, shamt6));
             break;
-        case K_Slti:
+        }
+        case K_Slti: {
             t x = getRegister(rs1);
             t val = ((signed_less_than(h0, x, coq_ZToReg(h0, imm12)))
                 ? coq_ZToReg(h0, 0b1)
                 : coq_ZToReg(h0, 0b0));
             setRegister(rd, val);
             break;
-        case K_Sltiu:
+        }
+        case K_Sltiu: {
             t x = getRegister(rs1);
             t val = ((ltu(h0, x, coq_ZToReg(h0, imm12)))
                 ? coq_ZToReg(h0, 0b1)
                 : coq_ZToReg(h0, 0b0));
             setRegister(rd, val);
             break;
-        case K_Xori:
+        }
+        case K_Xori: {
             t x = getRegister(rs1);
             setRegister(rd, xor(h0, x, coq_ZToReg(h0, imm12)));
             break;
-        case K_Ori:
+        }
+        case K_Ori: {
             t x = getRegister(rs1);
             setRegister(rd, or(h0, x, coq_ZToReg(h0, imm12)));
             break;
-        case K_Andi:
+        }
+        case K_Andi: {
             t x = getRegister(rs1);
             setRegister(rd, and(h0, x, coq_ZToReg(h0, imm12)));
             break;
-        case K_Srli:
+        }
+        case K_Srli: {
             t x = getRegister(rs1);
             setRegister(rd, srl(h0, x, shamt6));
             break;
-        case K_Srai:
+        }
+        case K_Srai: {
             t x = getRegister(rs1);
             setRegister(rd, sra(h0, x, shamt6));
             break;
-        case K_Auipc:
+        }
+        case K_Auipc: {
             t pc = getPC();
             setRegister(rd, add(h0, coq_ZToReg(h0, oimm20), pc));
             break;
-        case K_Sb:
+        }
+        case K_Sb: {
             t a = getRegister(rs1);
             t addr = translate(TODO(Program.Store), coq_ZToReg(h0, 0b1), add(h0, a, coq_ZToReg(h0, simm12)));
             t x = getRegister(rs2);
             storeByte(addr, regToInt8(h0, x));
             break;
-        case K_Sh:
+        }
+        case K_Sh: {
             t a = getRegister(rs1);
             t addr = translate(TODO(Program.Store), coq_ZToReg(h0, 0b10), add(h0, a, coq_ZToReg(h0, simm12)));
             t x = getRegister(rs2);
             storeHalf(addr, regToInt16(h0, x));
             break;
-        case K_Sw:
+        }
+        case K_Sw: {
             t a = getRegister(rs1);
             t addr = translate(TODO(Program.Store), coq_ZToReg(h0, 0b100), add(h0, a, coq_ZToReg(h0, simm12)));
             t x = getRegister(rs2);
             storeWord(addr, regToInt32(h0, x));
             break;
-        case K_Add:
+        }
+        case K_Add: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             setRegister(rd, add(h0, x, y));
             break;
-        case K_Sub:
+        }
+        case K_Sub: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             setRegister(rd, sub(h0, x, y));
             break;
-        case K_Sll:
+        }
+        case K_Sll: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             setRegister(rd, sll(h0, x, regToShamt(h0, y)));
             break;
-        case K_Slt:
+        }
+        case K_Slt: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             t val = ((signed_less_than(h0, x, y))
@@ -121,7 +142,8 @@ void executeI(RiscvState s, InstructionI inst) {
                 : coq_ZToReg(h0, 0b0));
             setRegister(rd, val);
             break;
-        case K_Sltu:
+        }
+        case K_Sltu: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             t val = ((ltu(h0, x, y))
@@ -129,35 +151,42 @@ void executeI(RiscvState s, InstructionI inst) {
                 : coq_ZToReg(h0, 0b0));
             setRegister(rd, val);
             break;
-        case K_Xor:
+        }
+        case K_Xor: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             setRegister(rd, xor(h0, x, y));
             break;
-        case K_Srl:
+        }
+        case K_Srl: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             setRegister(rd, srl(h0, x, regToShamt(h0, y)));
             break;
-        case K_Sra:
+        }
+        case K_Sra: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             setRegister(rd, sra(h0, x, regToShamt(h0, y)));
             break;
-        case K_Or:
+        }
+        case K_Or: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             setRegister(rd, or(h0, x, y));
             break;
-        case K_And:
+        }
+        case K_And: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             setRegister(rd, and(h0, x, y));
             break;
-        case K_Lui:
+        }
+        case K_Lui: {
             setRegister(rd, coq_ZToReg(h0, imm20));
             break;
-        case K_Beq:
+        }
+        case K_Beq: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             t pc = getPC();
@@ -170,7 +199,8 @@ void executeI(RiscvState s, InstructionI inst) {
                 }
             }
             break;
-        case K_Bne:
+        }
+        case K_Bne: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             t pc = getPC();
@@ -183,7 +213,8 @@ void executeI(RiscvState s, InstructionI inst) {
                 }
             }
             break;
-        case K_Blt:
+        }
+        case K_Blt: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             t pc = getPC();
@@ -196,7 +227,8 @@ void executeI(RiscvState s, InstructionI inst) {
                 }
             }
             break;
-        case K_Bge:
+        }
+        case K_Bge: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             t pc = getPC();
@@ -209,7 +241,8 @@ void executeI(RiscvState s, InstructionI inst) {
                 }
             }
             break;
-        case K_Bltu:
+        }
+        case K_Bltu: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             t pc = getPC();
@@ -222,7 +255,8 @@ void executeI(RiscvState s, InstructionI inst) {
                 }
             }
             break;
-        case K_Bgeu:
+        }
+        case K_Bgeu: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             t pc = getPC();
@@ -235,7 +269,8 @@ void executeI(RiscvState s, InstructionI inst) {
                 }
             }
             break;
-        case K_Jalr:
+        }
+        case K_Jalr: {
             t x = getRegister(rs1);
             t pc = getPC();
             t newPC = and(h0, add(h0, x, coq_ZToReg(h0, oimm12)), lnot(h0, coq_ZToReg(h0, 0b1)));
@@ -246,7 +281,8 @@ void executeI(RiscvState s, InstructionI inst) {
                 setPC(newPC);
             }
             break;
-        case K_Jal:
+        }
+        case K_Jal: {
             t pc = getPC();
             t newPC = add(h0, pc, coq_ZToReg(h0, jimm20));
             if (negb(reg_eqb(h0, remu(h0, newPC, coq_ZToReg(h0, 0b100)), coq_ZToReg(h0, 0b0)))) {
@@ -256,5 +292,6 @@ void executeI(RiscvState s, InstructionI inst) {
                 setPC(newPC);
             }
             break;
+        }
     }
 }

@@ -302,7 +302,8 @@ class CStatementPrinter:
         self.context.increaseIndent()
         for constructorName, branchBody in branches.items():
             res += self.context.indent
-            res += 'case K_{}:\n'.format(constructorName)
+            res += 'case K_{}: '.format(constructorName)
+            res += '{\n'
             self.context.increaseIndent()
             res += self.context.indent
             res += branchBody()
@@ -311,14 +312,18 @@ class CStatementPrinter:
                 res += self.context.indent
                 res += 'break;\n'
             self.context.decreaseIndent()
+            res += self.context.indent
+            res += '}\n'
         if default_branch:
             res += self.context.indent
-            res += 'default:\n'.format(constructorName)
+            res += 'default: {\n'
             self.context.increaseIndent()
             res += self.context.indent
             res += default_branch()
             self.context.decreaseIndent()
             res += '\n'
+            res += self.context.indent
+            res += '}\n'
         self.context.decreaseIndent()
         res += self.context.indent + '}'
         return res

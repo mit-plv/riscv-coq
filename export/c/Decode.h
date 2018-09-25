@@ -1463,64 +1463,78 @@ int bitwidth(InstructionSet arg_0__) {
 
 bool isValidA(InstructionA inst) {
     switch (inst.kind) {
-        case K_InvalidA:
+        case K_InvalidA: {
             return false;
-        default:
+        }
+        default: {
             return true;
+        }
     }
 }
 
 bool isValidA64(InstructionA64 inst) {
     switch (inst.kind) {
-        case K_InvalidA64:
+        case K_InvalidA64: {
             return false;
-        default:
+        }
+        default: {
             return true;
+        }
     }
 }
 
 bool isValidCSR(InstructionCSR inst) {
     switch (inst.kind) {
-        case K_InvalidCSR:
+        case K_InvalidCSR: {
             return false;
-        default:
+        }
+        default: {
             return true;
+        }
     }
 }
 
 bool isValidI(InstructionI inst) {
     switch (inst.kind) {
-        case K_InvalidI:
+        case K_InvalidI: {
             return false;
-        default:
+        }
+        default: {
             return true;
+        }
     }
 }
 
 bool isValidI64(InstructionI64 inst) {
     switch (inst.kind) {
-        case K_InvalidI64:
+        case K_InvalidI64: {
             return false;
-        default:
+        }
+        default: {
             return true;
+        }
     }
 }
 
 bool isValidM(InstructionM inst) {
     switch (inst.kind) {
-        case K_InvalidM:
+        case K_InvalidM: {
             return false;
-        default:
+        }
+        default: {
             return true;
+        }
     }
 }
 
 bool isValidM64(InstructionM64 inst) {
     switch (inst.kind) {
-        case K_InvalidM64:
+        case K_InvalidM64: {
             return false;
-        default:
+        }
+        default: {
             return true;
+        }
     }
 }
 

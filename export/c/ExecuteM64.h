@@ -4,12 +4,13 @@
 
 void executeM64(RiscvState s, InstructionM64 inst) {
     switch (inst.kind) {
-        case K_Mulw:
+        case K_Mulw: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             setRegister(rd, s32(h0, mul(h0, x, y)));
             break;
-        case K_Divw:
+        }
+        case K_Divw: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             t q = ((reg_eqb(h0, x, minSigned(h0)) && reg_eqb(h0, y, negate(h0, coq_ZToReg(h0, 0b1))))
@@ -19,7 +20,8 @@ void executeM64(RiscvState s, InstructionM64 inst) {
                     : div(h0, x, y)));
             setRegister(rd, s32(h0, q));
             break;
-        case K_Divuw:
+        }
+        case K_Divuw: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             t q = ((reg_eqb(h0, y, coq_ZToReg(h0, 0b0)))
@@ -27,7 +29,8 @@ void executeM64(RiscvState s, InstructionM64 inst) {
                 : divu(h0, x, y));
             setRegister(rd, s32(h0, q));
             break;
-        case K_Remw:
+        }
+        case K_Remw: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             t r = ((reg_eqb(h0, x, minSigned(h0)) && reg_eqb(h0, y, negate(h0, coq_ZToReg(h0, 0b1))))
@@ -37,7 +40,8 @@ void executeM64(RiscvState s, InstructionM64 inst) {
                     : rem(h0, x, y)));
             setRegister(rd, s32(h0, r));
             break;
-        case K_Remuw:
+        }
+        case K_Remuw: {
             t x = getRegister(rs1);
             t y = getRegister(rs2);
             t r = ((reg_eqb(h0, y, coq_ZToReg(h0, 0b0)))
@@ -45,5 +49,6 @@ void executeM64(RiscvState s, InstructionM64 inst) {
                 : remu(h0, x, y));
             setRegister(rd, s32(h0, r));
             break;
+        }
     }
 }
