@@ -66,9 +66,9 @@ class CPrinter(LanguagePrinter):
                    .format(self.extensionName, self.extensionName))
         self.increaseIndent()
         self.startln()
-        self.write(self.stmt.match('inst', self.branches, default_branch=None))
+        self.write(self.stmt.match('inst', self.branches, default_branch=None, returnsVoid=True))
         self.decreaseIndent()
-        self.write('}')
+        self.write('\n}')
         self.end_decl()
 
     def __init__(self, outfile):
@@ -168,6 +168,7 @@ class CPrinter(LanguagePrinter):
         self.increaseIndent()
         self.startln()
         self.write(body())
+        self.write('\n')
         self.decreaseIndent()
         self.writeln('}')
         self.end_decl()
@@ -267,19 +268,26 @@ class CStatementPrinter:
         res += ifyes()
         res += '\n'
         self.context.decreaseIndent()
-        res += self.context.indent
-        res += "} else {\n"
         self.context.increaseIndent()
-        res += self.context.indent
-        res += ifno()
-        res += '\n'
+        ifno = ifno()
         self.context.decreaseIndent()
+        if ifno:
+            res += self.context.indent
+            res += "} else {\n"
+            self.context.increaseIndent()
+            res += self.context.indent
+            self.context.decreaseIndent()
+            res += ifno
+            res += '\n'
         res += self.context.indent
-        res += "}\n"
+        res += "}"
         return res
 
     def let_in(self, name, typ, rhs, body):
-        res = convert_type(typ) + ' ' + name + ' = '
+        if name == '_':
+            res = ""
+        else:
+            res = convert_type(typ) + ' ' + name + ' = '
         res += rhs()
         res += ';\n' + self.context.indent
         res += body()
@@ -289,7 +297,7 @@ class CStatementPrinter:
         return 'pass'
 
     # match over Inductive (where constructors can take args)
-    def match(self, discriminee, branches, default_branch):
+    def match(self, discriminee, branches, default_branch, returnsVoid=False):
         res = 'switch ({}.kind) {{\n'.format(discriminee)
         self.context.increaseIndent()
         for constructorName, branchBody in branches.items():
@@ -298,8 +306,11 @@ class CStatementPrinter:
             self.context.increaseIndent()
             res += self.context.indent
             res += branchBody()
-            self.context.decreaseIndent()
             res += '\n'
+            if returnsVoid:
+                res += self.context.indent
+                res += 'break;\n'
+            self.context.decreaseIndent()
         if default_branch:
             res += self.context.indent
             res += 'default:\n'.format(constructorName)
@@ -309,7 +320,7 @@ class CStatementPrinter:
             self.context.decreaseIndent()
             res += '\n'
         self.context.decreaseIndent()
-        res += self.context.indent + '}\n'
+        res += self.context.indent + '}'
         return res
 
     # match over an enum (where constructors cannot take args)
@@ -333,7 +344,7 @@ class CStatementPrinter:
             self.context.decreaseIndent()
             res += '\n'
         self.context.decreaseIndent()
-        res += self.context.indent + '}\n'
+        res += self.context.indent + '}'
         return res
 
     def return_value(self, e):

@@ -138,6 +138,7 @@ def translate_switch(j, p):
 
 
 stringly_typed = {
+    # Decode:
     'aqrl': 'BinNums.Z',
     'funct5': 'BinNums.Z',
     'zimm': 'BinNums.Z',
@@ -178,7 +179,19 @@ stringly_typed = {
     'resultA': 'InstructionList',
     'resultM': 'InstructionList',
     'resultI': 'InstructionList',
-    'results': 'InstructionList'
+    'results': 'InstructionList',
+
+    # Execute:
+    'a': 't',
+    'addr': 't',
+    'val': 't',
+    'pc': 't',
+    'newPC': 't',
+    'x': 't',
+    'y': 't',
+    'q': 't',
+    'r': 't',
+    '_': 'unit'
 }
 
 def varname_to_type(name):
@@ -253,6 +266,7 @@ def translate_expr(j, p, mode):
             print('TODO: ' + j['name'])
             res = 'TODO({})'.format(j['name']) # default value
         return maybe_return(res)
+
     elif s2 == 'let':
         if mode != 'toStmt':
             raise ValueError("a let expression cannot be translated to " +
@@ -261,6 +275,7 @@ def translate_expr(j, p, mode):
         return p.stmt.let_in(j['name'], varname_to_type(j['name']),
                              lazy_translate_expr(j['nameval'], p, 'toExpr'),
                              lazy_translate_expr(j['body'], p, 'toStmt'))
+
     elif s2 == 'apply':
         # if not didPrint:
         #     ellipsisN(j, 3)
@@ -268,6 +283,62 @@ def translate_expr(j, p, mode):
         #     didPrint = True
         #     raise ValueError('What does an apply looks like')
         functionName = getName(j['func'])
+
+        if functionName == 'Monads.Bind':
+            # j['args'][0] is the monad instance (ignored)
+            rhs = j['args'][1] # first arg of Bind, i.e. rhs of assignment being made
+            f = j['args'][2]   # second arg of Bind, i.e. a lambda
+            if f['what'] != 'expr:lambda':
+                raise ValueError('Bind only accepts inlined lambdas as function argument')
+            binder = f['argnames'][0]
+            return p.stmt.let_in(binder, varname_to_type(binder),
+                                 lazy_translate_expr(rhs, p, 'toExpr'),
+                                 lazy_translate_expr(f['body'], p, 'toStmt'))
+
+        if functionName == 'Monads.Return':
+            # j['args'][0] is the monad instance (ignored)
+            assert getName(j['args'][1]) == 'Datatypes.tt' # can only return unit
+            return None # to get empty else-branch
+
+        # see RiscvProgram and RiscvState in Program.v
+        # maps opname to numOfIgnoredArgs
+        riscv_monad_ops = {
+            # RiscvProgram
+            'Program.getRegister': 3,
+            'Program.setRegister': 3,
+            'Program.loadByte': 3,
+            'Program.loadHalf': 3,
+            'Program.loadWord': 3,
+            'Program.loadDouble': 3,
+            'Program.storeByte': 3,
+            'Program.storeHalf': 3,
+            'Program.storeWord': 3,
+            'Program.storeDouble': 3,
+            'Program.getPC': 3,
+            'Program.setPC': 3,
+            'Program.getCSRField_MTVecBase': 3,
+            'Program.step': 3,
+            'Program.endCycle': 3,
+            # RiscvState
+            'Program.raiseException': 4,
+            'Program.translate': 4
+        }
+
+        if functionName in riscv_monad_ops:
+            numberOfIgnoredArgs = riscv_monad_ops[functionName]
+            j['args'] = j['args'][numberOfIgnoredArgs:]
+            res = p.expr.function_call(
+                lazy_translate_expr(j['func'], p, 'toExpr'),
+                [lazy_translate_expr(arg, p, 'toExpr') for arg in j['args']])
+            if mode == 'toExpr':
+                return res
+            elif mode == 'toStmt':
+                # last statement in execute returns void, no need for return,
+                # but we do need a semicolon
+                return res + ';'
+            else:
+                raise ValueError("unknown mode: " + mode)
+
         unary_funcs = augment_dict_with_alternative_names({
             'Datatypes.length': p.expr.list_length,
             'BinInt.Z.of_nat': p.expr.silent_id,
@@ -299,12 +370,15 @@ def translate_expr(j, p, mode):
                 lazy_translate_expr(j['func'], p, 'toExpr'),
                 [lazy_translate_expr(arg, p, 'toExpr') for arg in j['args']])
         return maybe_return(res)
+
     elif s2 == 'global':
         return maybe_return(p.expr.var(j['name']))
+
     elif s2 == 'lambda':
-        #ellipsisN(j, 4)
+        ellipsisN(j, 4)
         print(json.dumps(j, indent=4))
         raise ValueError('lambdas arbitrarily nested inside expressions are not supported')
+
     elif s2 == 'case':
         firstConstructorName = getName(j['cases'][0]['pat'])
         if firstConstructorName == "Datatypes.true":
@@ -333,8 +407,10 @@ def translate_expr(j, p, mode):
                 ellipsisN(j, 4)
                 print(json.dumps(j, indent=4))
                 raise ValueError('unknown ' + firstConstructorName)
+
     elif s2 == 'rel':
         return maybe_return(p.expr.var(getName(j)))
+
     else:
         # ValueError('unsupported ' + j['what'])
         return maybe_return('TODO({})'.format(j['what']))
