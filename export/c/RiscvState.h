@@ -1,6 +1,6 @@
 typedef struct {
   t *registers;
-  uint8_t *memory;
+  int32_t *memory;
   t* pc;
   t* nextPC;
   t* exceptionHandlerAddr;
@@ -38,7 +38,7 @@ uint16_t loadHalf(RiscvState s, t addr) {
 }
 
 uint32_t loadWord(RiscvState s, t addr) {
-  return 0; // TODO
+  return s.memory[addr/4];
 }
 
 uint64_t loadDouble(RiscvState s, t addr) {

@@ -19,6 +19,9 @@
 #include "ExecuteM64.h"
 #include "ExecuteM.h"
 
+#include "Execute.h"
+#include "Run.h"
+
 int32_t fib6_riscv[] = {
   0x00600993,
   0x00000a13,
@@ -33,10 +36,19 @@ int32_t fib6_riscv[] = {
 };
 
 int main() {
-  size_t N = sizeof(fib6_riscv) / sizeof(fib6_riscv[0]);
-  for (size_t i = 0; i < N; i++) {
-    Instruction inst = decode(RV32I, fib6_riscv[i]);
-    printf("%d\n", inst.as_IInstruction.f0.kind);
+  t regs[32];
+  RiscvState initial;
+  initial.registers = regs;
+  initial.memory = fib6_riscv;
+  initial.pc = 0;
+  initial.nextPC = 4;
+  initial.exceptionHandlerAddr = 666;
+
+  int N = 200;
+  run(N, initial);
+
+  printf("Register values after %d execution steps:\n", N);
+  for (int i = 1; i < 32; i++) {
+    printf("x%d = %d\n", i, regs[i]);
   }
-  printf("TODO actually execute it...\n");
 }
