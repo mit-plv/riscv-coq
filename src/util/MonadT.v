@@ -129,11 +129,19 @@ Module NonDetMonad.
 
   Ltac t :=
     cbv [flatMapSet NonDet setEq singletonSet];
-    intros; split; intros;
+    intros; try split; intros;
     repeat match goal with
            | p: _ * _  |- _ => destruct p
            | H: _ /\ _ |- _ => destruct H
            | E: exists y, _ |- _ => destruct E
+           | H: context [match ?x with _ => _ end] |- _ =>
+             let E := fresh "E" in destruct x eqn: E
+           | |- context [match ?x with _ => _ end] =>
+             let E := fresh "E" in destruct x eqn: E
+           | H: Some _ = Some _ |- _ => inversion H; subst
+           | _ => discriminate
+           | |- _ /\ _ => split; eauto
+(*           | |- exists _, _ => eexists*)
            end;
     subst;
     eauto.
@@ -146,8 +154,18 @@ Module NonDetMonad.
   Proof. all:  t. Defined.
 
 (* existing monad outside (like haskell's ListT and optionT *)
-
+(*
   Definition NonDetT(M: Type -> Type)(A: Type) := M (NonDet A).
+
+  Instance NonDetT_option_is_Monad: Monad (NonDetT option) := {|
+    Bind{A B: Type}(m: option (A -> Prop))(f: A -> option (B -> Prop)) :=
+      _;
+    Return{A: Type}(a: A) := Return (eq a);
+    MonadEq{A: Type}(m1 m2: NonDetT option A) := _;
+  |}.
+  all: unfold NonDetT, NonDet in *.
+  {
+    refine (Bind m (fun aset => _ )).
 
   Instance NonDetT_is_Monad(M: Type -> Type){MM: Monad M}: Monad (NonDetT M) := {|
     Bind{A B: Type}(m: M (A -> Prop))(f: A -> M (B -> Prop)) :=
@@ -182,11 +200,37 @@ Module NonDetMonad.
 
   refine (Bind m (fun aset => exists (a: A), _)).
 *)
+*)
 
-(*
 (* existing monad inside *)
   Definition NonDetT(M: Type -> Type)(A: Type) := M A -> Prop.
 
+  Instance NonDetT_option_is_Monad: Monad (NonDetT option) := {|
+    Bind{A B: Type}(m: option A -> Prop)(f: A -> option B -> Prop) :=
+      fun ob =>
+            exists oa, m oa /\ match oa with
+                               | Some a => f a ob
+                               | None => ob = None
+                               end;
+    Return{A: Type}(a: A) := fun oa => oa = Some a;
+    MonadEq{A: Type}(m1 m2: NonDetT option A) :=
+      forall oa, m1 oa <-> m2 oa;
+  |}.
+  Proof.
+    all: t; try (eexists; split; [eassumption|]; t).
+    - exists None. eauto.
+    - eexists. split.
+      + eexists. split; [eassumption|]. simpl. eassumption.
+      + simpl. assumption.
+    - eexists. split.
+      + eexists. split; [eassumption|]. simpl. eassumption.
+      + simpl. reflexivity.
+    - eexists. split.
+      + eexists. split; [eassumption|]. simpl. reflexivity.
+      + simpl. reflexivity.
+  Defined.
+
+(*
   Instance NonDetT_is_Monad(M: Type -> Type){MM: Monad M}: Monad (NonDetT M) := {|
     Bind{A B: Type}(m: M A -> Prop)(f: A -> M B -> Prop) :=
       _;
