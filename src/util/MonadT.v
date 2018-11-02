@@ -1,17 +1,21 @@
-Require Import Coq.Lists.List. Import ListNotations.
+Require Import Coq.Relations.Relation_Definitions.
+Require Import Coq.Classes.RelationClasses.
+Require Import Coq.Classes.Equivalence.
 
+Local Open Scope equiv_scope.
 
 Class Monad(M: Type -> Type) := mkMonad {
   Bind: forall {A B}, M A -> (A -> M B) -> M B;
   Return: forall {A}, A -> M A;
-  MonadEq: forall {A}, M A -> M A -> Prop;
+  MonadEq: forall A, relation (M A);
+  MonadEqEquiv: forall A, Equivalence (MonadEq A);
 
   left_identity: forall {A B} (a: A) (f: A -> M B),
-    MonadEq (Bind (Return a) f) (f a);
+    Bind (Return a) f === f a;
   right_identity: forall {A} (m: M A),
-    MonadEq (Bind m Return) m;
+    Bind m Return === m;
   associativity: forall {A B C} (m: M A) (f: A -> M B) (g: B -> M C),
-    MonadEq (Bind (Bind m f) g) (Bind m (fun x => Bind (f x) g))
+    Bind (Bind m f) g === Bind m (fun x => Bind (f x) g)
 }.
 
 
@@ -21,8 +25,6 @@ Notation "m1 ;; m2" := (Bind m1 (fun _ => m2))
   (right associativity, at level 60) : monad_scope.
 
 Open Scope monad_scope.
-
-Definition TODO{A: Type}: A. Admitted.
 
 
 Instance option_Monad: Monad option := {|
@@ -49,9 +51,14 @@ Instance OptionT_is_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
               | None => Return None
               end);
   Return{A}(a: A) := Return (Some a);
-  MonadEq{A} := @MonadEq M MM (option A);
+  MonadEq A := @MonadEq M MM (option A);
+  MonadEqEquiv A := _;
 |}.
 Proof.
+  - constructor; repeat intro.
+    + Search Equivalence option.  Set Printing Implicit.
+      destruct MM. simpl.
+reflexivity.
   all: intros.
   - apply (left_identity (Some a) (fun o =>
                                      match o with
