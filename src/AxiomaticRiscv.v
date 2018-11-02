@@ -7,6 +7,7 @@ Require Import riscv.Program.
 Require Import riscv.RiscvMachine.
 Require Import riscv.util.BitWidths.
 
+Existing Instance OState_Monad.
 
 Set Implicit Arguments.
 
@@ -26,15 +27,15 @@ Section AxiomaticRiscv.
   Local Notation RiscvMachine := (@RiscvMachine t Mem RF).
 
   Context {RVM: RiscvProgram (OState RiscvMachine) t}.
-  
+
   (* assumes generic translate and raiseException functions *)
-  Context {RVS: @RiscvState (OState RiscvMachine) t _ _ RVM}.  
+  Context {RVS: @RiscvState (OState RiscvMachine) t _ _ RVM}.
 
   Class AxiomaticRiscv :=  mkAxiomaticRiscv {
-      
+
       Bind_getRegister0: forall {A: Type} (f: t -> OState RiscvMachine A),
         Bind (getRegister Register0) f = f (ZToReg 0);
-      
+
       Bind_getRegister: forall {A: Type} x (f: t -> OState RiscvMachine A)
                           (initialL: RiscvMachine),
           valid_register x ->
@@ -66,7 +67,7 @@ Section AxiomaticRiscv.
                        (initialL: RiscvMachine),
           (Bind (loadWord addr) f) initialL =
           (f (Memory.loadWord initialL.(machineMem) addr)) initialL;
-      
+
       Bind_loadDouble: forall {A: Type} (addr: t) (f: word 64 -> OState RiscvMachine A)
                        (initialL: RiscvMachine),
           (Bind (loadDouble addr) f) initialL =
@@ -104,14 +105,14 @@ Section AxiomaticRiscv.
                     (f: unit -> OState RiscvMachine A) (initialL: RiscvMachine),
           (Bind (setPC v) f) initialL =
           (f tt) (with_nextPC v initialL);
-      
+
       Bind_step: forall {A: Type} (f: unit -> OState RiscvMachine A) m,
           (Bind step f) m =
           (f tt) (with_nextPC (add m.(core).(nextPC) (ZToReg 4)) (with_pc m.(core).(nextPC) m));
 
       execState_step: forall m,
           step m = (Some tt, with_nextPC (add m.(core).(nextPC) (ZToReg 4)) (with_pc m.(core).(nextPC) m));
-      
+
       execState_Return: forall {S A} (s: S) (a: A),
           (Return a) s = (Some a, s);
 

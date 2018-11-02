@@ -26,16 +26,16 @@ Section Riscv.
   Inductive LogEvent :=
   | EvLoadWord(addr: Z)(i: Instruction)
   | EvStoreWord(addr: Z)(v: word 32).
-  
+
   Definition Log := list LogEvent.
-  
+
   Record RiscvMachineL := mkRiscvMachineL {
     machine: @RiscvMachine t Mem RF;
     log: Log;
   }.
 
   Definition with_machine m ml := mkRiscvMachineL m ml.(log).
-  Definition with_log l ml := mkRiscvMachineL ml.(machine) l.  
+  Definition with_log l ml := mkRiscvMachineL ml.(machine) l.
 
   Definition liftL0{B: Type}(f: OState RiscvMachine B):  OState RiscvMachineL B :=
     fun s => let (ob, ma) := f s.(machine) in (ob, with_machine ma s).
@@ -46,7 +46,7 @@ Section Riscv.
   Definition liftL2{A1 A2 B: Type}(f: A1 -> A2 -> OState RiscvMachine B):
     A1 -> A2 -> OState RiscvMachineL B :=
     fun a1 a2 s => let (ob, ma) := f a1 a2 s.(machine) in (ob, with_machine ma s).
-                                           
+
   Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) t :=  {|
       getRegister := liftL1 getRegister;
       setRegister := liftL2 setRegister;

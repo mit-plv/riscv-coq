@@ -186,6 +186,70 @@ Instance OState_Monad(S: Type): Monad (OState S) := {|
 - intros. extensionality s. destruct (m s). destruct o; reflexivity.
 Defined.
 
+Definition OStateND(S A: Type) := S -> (S -> option A -> Prop) -> Prop.
+
+Axiom iff_eq: forall (P Q: Prop), P <-> Q -> P = Q.
+Definition TODO{A: Type}: A. Admitted.
+
+Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
+  Bind := fun (A B : Type) (m : OStateND S A) (f : A -> OStateND S B)
+              (s : S) (post : S -> option B -> Prop) =>
+            exists mid : S -> option A -> Prop,
+              m s mid /\
+              (forall (s' : S) (oa : option A),
+                  mid s' oa -> oa = None /\ post s' None \/
+                                            (exists a : A, oa = Some a /\ f a s' post));
+  Return := fun (A : Type) (a : A) (s : S) (post : S -> option A -> Prop) => post s (Some a);
+|}.
+- intros. extensionality s. extensionality post. apply iff_eq.
+  split; intro.
+  + destruct H as (mid & H1 & H2).
+    specialize (H2 _ _ H1). destruct H2 as [(? & ?) | (? & ? & ?)].
+    * discriminate.
+    * inversion H. subst. assumption.
+  + apply TODO.
+- apply TODO.
+- apply TODO.
+Defined.
+
+(*
+Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
+  Bind := fun {A B: Type} (m: OStateND S A) (f: A -> OStateND S B) => _;
+  Return := fun {A: Type} (a: A) => _;
+|}.
+{
+cbv [OStateND] in *.
+refine(fun s post => _ ).
+refine  (exists (mid: S -> option A -> Prop), m s mid /\ forall s' oa, mid s' oa -> (
+Logic.or (oa = None /\ post s' None) (exists a, oa = Some a /\ f a s' post)
+      )).
+}
+{
+  cbv [OStateND] in *.
+  refine (fun s post => post s (Some a)).
+}
+all: apply TODO.
+Defined.
+*)
+
+(*
+Definition OStateND(S A: Type) := S -> (option A) * S -> Prop.
+
+Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
+  Bind := fun {A B: Type} (m: OStateND S A) (f: A -> OStateND S B) =>
+            (fun (s: S) => exists (oas: option A * S), m s oas /\ match oas with
+            | (Some a, s') => f a s'
+            | (None, s') => eq (None, s')
+            end);
+  Return := fun {A: Type} (a: A) =>
+              fun (s: S) => (Some a, s)
+|}.
+- intros. reflexivity.
+- intros. extensionality s. destruct (m s). destruct o; reflexivity.
+- intros. extensionality s. destruct (m s). destruct o; reflexivity.
+Defined.
+*)
+
 (* TODO if we want to use MonadPlus, we'd have to define a custom equivalence on
    the state monad which only considers A, but not S *)
 Axiom OStateEq_to_eq: forall {S A: Type} (s1 s2: S) (a1 a2: option A),
