@@ -1,4 +1,4 @@
-Require Import Coq.Setoids.Setoid.
+Require Import Coq.Lists.List. Import ListNotations.
 
 
 Class Monad(M: Type -> Type) := mkMonad {
@@ -22,8 +22,15 @@ Notation "m1 ;; m2" := (Bind m1 (fun _ => m2))
 
 Open Scope monad_scope.
 
+Definition TODO{A: Type}: A. Admitted.
 
 Module OptionMonad.
+
+  Definition recover{A: Type}(oa: option A)(default: A): A :=
+    match oa with
+    | Some a => a
+    | None => default
+    end.
 
   Instance option_Monad: Monad option := {|
     Bind := fun {A B: Type} (o: option A) (f: A -> option B) => match o with
@@ -87,21 +94,71 @@ Module StateMonad.
     - intros. destruct (m s). reflexivity.
   Defined.
 
-  Definition StateT(M: Type -> Type)(S A: Type) := S -> M (A * S)%type.
+  Definition StateT(S: Type)(M: Type -> Type)(A: Type) := S -> M (A * S)%type.
   (* wrong:
   Definition StateT(M: Type -> Type)(S A: Type) := M (State S A).
   *)
 
-  Instance StateT_is_Monad(M: Type -> Type){MM: Monad M}(S: Type): Monad (StateT M S) := {|
-    Bind{A B: Type}(m: StateT M S A)(f: A -> StateT M S B) :=
+  Instance StateT_is_Monad(M: Type -> Type){MM: Monad M}(S: Type): Monad (StateT S M) := {|
+    Bind{A B: Type}(m: StateT S M A)(f: A -> StateT S M B) :=
       fun (s: S) => Bind (m s) (fun '(a, s) => f a s);
     Return{A: Type}(a: A) :=
       fun (s: S) => Return (a, s);
-    MonadEq{A: Type}(m1 m2: StateT M S A) := forall (s: S), MonadEq (m1 s) (m2 s);
+    MonadEq{A: Type}(m1 m2: StateT S M A) := forall (s: S), MonadEq (m1 s) (m2 s);
   |}.
   Admitted.
 
 End StateMonad.
+
+Module ListMonad.
+
+  Definition flatMap{A B: Type}(l: list A)(f: A -> list B): list B :=
+    fold_left (fun bs a => bs ++ f a) l [].
+
+  Definition singletonList{A: Type}(a: A): list A := [a].
+
+  Definition listEq{A: Type}(l1 l2: list A): Prop :=
+    forall a, In a l1 <-> In a l2.
+
+  Lemma list_Eq_refl: forall {A: Type} (l: list A),
+      listEq l l.
+  Proof.
+    repeat intro. reflexivity.
+  Qed.
+
+  Lemma flatMap_singletonList_l: forall {A B: Type} (a: A) (f: A -> list B),
+      flatMap (singletonList a) f = f a.
+  Proof.
+    intros. reflexivity.
+  Qed.
+
+  Lemma flatMap_singletonList_r: forall {A: Type} (l: list A),
+      flatMap l singletonList = l.
+  Proof. Admitted.
+
+  Instance List_Monad: Monad list := {|
+    Bind := @flatMap;
+    Return := @singletonList;
+    MonadEq := @listEq;
+  |}.
+  Proof.
+    all: intros.
+    - rewrite flatMap_singletonList_l. apply list_Eq_refl.
+    - rewrite flatMap_singletonList_r. apply list_Eq_refl.
+    - apply TODO.
+  Defined.
+
+(* Haskell Documentation
+   newtype ListT (m :: * -> * ) a #
+
+Parameterizable list monad, with an inner monad.
+
+  Note: this does not yield a monad unless the argument monad is commutative.
+
+(i.e. order of side effects doesn't matter)
+  *)
+
+End ListMonad.
 
 
 Module NonDetMonad.
@@ -152,6 +209,7 @@ Module NonDetMonad.
     MonadEq := @setEq;
   |}.
   Proof. all:  t. Defined.
+
 
 (* existing monad outside (like haskell's ListT and optionT *)
 (*
@@ -205,7 +263,67 @@ Module NonDetMonad.
 (* existing monad inside *)
   Definition NonDetT(M: Type -> Type)(A: Type) := M A -> Prop.
 
+  Definition arbitraryT{M: Type -> Type}(A: Type): NonDetT M A :=
+    fun ma => True.
+
+  Definition choiceT{M: Type -> Type}{MM: Monad M}{A: Type}(a1 a2: A): NonDetT M A :=
+    fun ma => MonadEq ma (Return a1) \/ MonadEq ma (Return a2).
+
+
   Instance NonDetT_option_is_Monad: Monad (NonDetT option) := {|
+    Bind{A B: Type}(m: option A -> Prop)(f: A -> option B -> Prop) :=
+      fun ob => match ob with
+                | Some b => exists a, m (Some a) /\ f a (Some b)
+                | None => m None \/ exists a, m (Some a) /\ f a None
+                end;
+(*
+        (exists a, m (Some a) /\ f a ob) \/
+        (m None /\ ob = None);
+
+
+            exists oa, match oa with
+                               | Some a => m (Some a) /\ f a ob
+                               | None => m None /\ ob = None
+                               end;
+*)
+    Return{A: Type}(a: A) := fun oa => oa = Some a;
+    MonadEq{A: Type}(m1 m2: NonDetT option A) :=
+      forall oa, m1 oa <-> m2 oa;
+  |}.
+  Admitted.
+
+  Instance NonDetT_option_is_Monad': Monad (NonDetT option) := {|
+    Bind{A B: Type}(m: option A -> Prop)(f: A -> option B -> Prop) :=
+      fun ob =>
+        exists oa, m oa /\
+                   OptionMonad.recover
+                     (Bind oa (fun a => Return (f a ob)))
+                     (MonadEq ob None);
+    Return{A: Type}(a: A) := fun oa => oa = Some a;
+    MonadEq{A: Type}(m1 m2: NonDetT option A) :=
+      forall oa, m1 oa <-> m2 oa;
+  |}.
+  Admitted.
+
+  Instance NonDetT_option_is_Monad'': Monad (NonDetT option) := {|
+    Bind{A B: Type}(m: option A -> Prop)(f: A -> option B -> Prop) :=
+      fun ob =>
+        (exists a, m (Some a) /\ f a ob) \/
+        (m None /\ ob = None);
+
+(*
+            exists oa, match oa with
+                               | Some a => m (Some a) /\ f a ob
+                               | None => m None /\ ob = None
+                               end;
+*)
+    Return{A: Type}(a: A) := fun oa => oa = Some a;
+    MonadEq{A: Type}(m1 m2: NonDetT option A) :=
+      forall oa, m1 oa <-> m2 oa;
+  |}.
+  Admitted.
+
+  Instance NonDetT_option_is_Monad''': Monad (NonDetT option) := {|
     Bind{A B: Type}(m: option A -> Prop)(f: A -> option B -> Prop) :=
       fun ob =>
             exists oa, m oa /\ match oa with
@@ -230,7 +348,6 @@ Module NonDetMonad.
       + simpl. reflexivity.
   Defined.
 
-(*
   Instance NonDetT_is_Monad(M: Type -> Type){MM: Monad M}: Monad (NonDetT M) := {|
     Bind{A B: Type}(m: M A -> Prop)(f: A -> M B -> Prop) :=
       _;
@@ -238,22 +355,9 @@ Module NonDetMonad.
     MonadEq{A: Type}(m1 m2: NonDetT M A) := _;
   |}.
 all: unfold NonDet in *.
-
-{
-  refine (fun mb => _).
-  refine (exists (ma: M A), m ma /\ @MonadEq M MM B (@Bind M MM _ _ ma f) mb).
-  refine (Bind m (fun a => _)). unfold NonDet.
-  intro mb.
-
-unfold
-  pose proof (@MonadEq M MM ).
-
-  apply (@MonadEq M MM A m1 m2).
-
-apply (MonadEq (Return a)).
+Abort.
 
 End NonDetMonad.
-*)
 
 Class MonadTrans(T: (Type -> Type) -> (Type -> Type)) := mkMonadTrans {
   lift{M: Type -> Type}{MM: Monad M}{A: Type}: M A -> T M A;
@@ -279,4 +383,14 @@ Admitted.
   rewrite left_identity. reflexivity.
 Defined.
 *)
-End NonDetMonad.
+
+
+Module Test.
+
+  Import NonDetMonad. Import OptionMonad. Import StateMonad.
+
+  Definition Riscv(S: Type): Type -> Type :=
+    StateT S (optionT NonDet).
+  Eval cbv in Riscv.
+
+End Test.
