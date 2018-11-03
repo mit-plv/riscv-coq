@@ -1,23 +1,16 @@
-Require Import Coq.Relations.Relation_Definitions.
-Require Import Coq.Classes.RelationClasses.
-Require Import Coq.Classes.Equivalence.
-
-Local Open Scope equiv_scope.
-
 Class Monad(M: Type -> Type) := mkMonad {
   Bind: forall {A B}, M A -> (A -> M B) -> M B;
   Return: forall {A}, A -> M A;
-  MonadEq: forall A, relation (M A);
-  MonadEqEquiv: forall A, Equivalence (MonadEq A);
 
+  (* Let's see whether we really need them (maybe in FlatToRiscv)
   left_identity: forall {A B} (a: A) (f: A -> M B),
     Bind (Return a) f === f a;
   right_identity: forall {A} (m: M A),
     Bind m Return === m;
   associativity: forall {A B C} (m: M A) (f: A -> M B) (g: B -> M C),
     Bind (Bind m f) g === Bind m (fun x => Bind (f x) g)
+  *)
 }.
-
 
 Notation "x <- m1 ; m2" := (Bind m1 (fun x => m2))
   (right associativity, at level 60) : monad_scope.
@@ -26,24 +19,17 @@ Notation "m1 ;; m2" := (Bind m1 (fun _ => m2))
 
 Open Scope monad_scope.
 
-
 Instance option_Monad: Monad option := {|
   Bind := fun {A B: Type} (o: option A) (f: A -> option B) => match o with
             | Some x => f x
             | None => None
             end;
   Return := fun {A: Type} (a: A) => Some a;
-  MonadEq := fun {A: Type} => @eq (option A);
 |}.
-Proof.
-  - intros. reflexivity.
-  - intros. destruct m; reflexivity.
-  - intros. destruct m; reflexivity.
-Defined.
 
 Definition optionT(M: Type -> Type)(A: Type) := M (option A).
 
-Instance OptionT_is_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
+Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
   Bind{A}{B}(m: M (option A))(f: A -> M (option B)) :=
     Bind m (fun (o: option A) =>
               match o with
@@ -51,23 +37,7 @@ Instance OptionT_is_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
               | None => Return None
               end);
   Return{A}(a: A) := Return (Some a);
-  MonadEq A := @MonadEq M MM (option A);
-  MonadEqEquiv A := _;
 |}.
-Proof.
-  - constructor; repeat intro.
-    + Search Equivalence option.  Set Printing Implicit.
-      destruct MM. simpl.
-reflexivity.
-  all: intros.
-  - apply (left_identity (Some a) (fun o =>
-                                     match o with
-                                     | Some a => f a
-                                     | None => Return None
-                                       end)).
-  - pose proof (@right_identity M MM (option A) m).
-    (* probably will need refl/sym/trans of MonadEq *)
-Admitted.
 
 Module OptionMonad.
   Definition success{A: Type}: A -> option A := Some.
@@ -87,32 +57,22 @@ Instance State_Monad(S: Type): Monad (State S) := {|
               fun (s: S) => let (a, s') := m s in f a s' ;
   Return := fun {A: Type} (a: A) =>
                 fun (s: S) => (a, s);
-  MonadEq := fun {A: Type} (m1 m2: State S A) =>
-                 forall s, m1 s = m2 s;
 |}.
-Proof.
-  - intros. reflexivity.
-  - intros. destruct (m s). reflexivity.
-  - intros. destruct (m s). reflexivity.
-Defined.
 
 Definition StateT(S: Type)(M: Type -> Type)(A: Type) := S -> M (A * S)%type.
 
-Instance StateT_is_Monad(M: Type -> Type){MM: Monad M}(S: Type): Monad (StateT S M) := {|
+Instance StateT_Monad(M: Type -> Type){MM: Monad M}(S: Type): Monad (StateT S M) := {|
   Bind{A B: Type}(m: StateT S M A)(f: A -> StateT S M B) :=
     fun (s: S) => Bind (m s) (fun '(a, s) => f a s);
   Return{A: Type}(a: A) :=
     fun (s: S) => Return (a, s);
-  MonadEq{A: Type}(m1 m2: StateT S M A) := forall (s: S), MonadEq (m1 s) (m2 s);
 |}.
-Admitted.
 
 Module StateMonad.
   Definition get{S: Type}: State S S := fun (s: S) => (s, s).
   Definition gets{S A: Type}(f: S -> A): State S A := fun (s: S) => (f s, s).
   Definition put{S: Type}(s: S): State S unit := fun _ => (tt, s).
 End StateMonad.
-
 
 Definition NonDet(A: Type) := A -> Prop.
 
@@ -142,28 +102,157 @@ End NonDetMonad.
 Instance NonDet_Monad: Monad NonDet := {|
   Bind := @NonDetMonad.flatMapSet;
   Return := @NonDetMonad.singletonSet;
-  MonadEq := @NonDetMonad.setEq;
 |}.
-Proof.
-  all:
-    cbv [NonDetMonad.flatMapSet NonDet NonDetMonad.setEq NonDetMonad.singletonSet];
-    intros; try split; intros;
-    repeat match goal with
-           | p: _ * _  |- _ => destruct p
-           | H: _ /\ _ |- _ => destruct H
-           | E: exists y, _ |- _ => destruct E
-           end;
-    subst;
-    eauto.
-Defined.
+
+Definition OStateND(S: Type): Type -> Type := optionT (StateT S (optionT NonDet)).
+(*
+Eval cbv in OStateND.
+     = fun S A : Type => S -> option (option A * S) -> Prop
+  option around A is for recoverable failure,
+  option around (option A * S) means hard failure.
+*)
 
 
-Module Test.
+Module OldVersions.
 
-  Import NonDetMonad. Import OptionMonad. Import StateMonad.
+  (* turns recoverable failure into hard failure *)
+  Definition nothrow{S A}(m: OStateND S A): S -> option (A * S) -> Prop :=
+    fun s oas => match oas with
+                 | Some (a, s') => m s (Some (Some a, s'))
+               | None => m s None \/ exists s', m s (Some (None, s'))
+                 end.
 
-  Definition Riscv(S: Type): Type -> Type :=
-    StateT S (optionT NonDet).
-  Eval cbv in Riscv.
+  Definition ignoreAns{S A}(m: S -> option (A * S) -> Prop): S -> (S -> Prop) -> Prop.
+  Abort.
 
-End Test.
+
+  Section RunsTo.
+
+    Variable State: Type.
+    (* the option represents hard unacceptable failure, the Prop represents non-determinism *)
+    Variable step: State -> (option State) -> Prop.
+
+    Inductive runsTo(initial: State)(P: State -> Prop): Prop :=
+    | runsToDone:
+        P initial ->
+        runsTo initial P
+    | runsToStep:
+        (forall omid, step initial omid -> exists mid, omid = Some mid /\ runsTo mid P) ->
+        runsTo initial P.
+
+    Check runsTo_ind. (* bad! *)
+  End RunsTo.
+
+End OldVersions.
+
+
+Module DeterministicByAccident.
+
+  Variable State: Type.
+  Variable step: OStateND State unit.
+
+  Inductive runsTo(initial: State)(P: State -> Prop): Prop :=
+    | runsToDone:
+        P initial ->
+        runsTo initial P
+    | runsToStep: forall mid,
+        (forall omid, step initial omid -> omid = Some (Some tt, mid)) ->
+        runsTo mid P ->
+        runsTo initial P.
+End DeterministicByAccident.
+
+Module MoreOld.
+
+  Variable State: Type.
+  Variable step: OStateND State unit.
+
+  Inductive runsTo(initial: State)(P: State -> Prop): Prop :=
+    | runsToDone:
+        P initial ->
+        runsTo initial P
+    | runsToStep:
+        (* shouldn't repeat here! *)
+        (forall omid, step initial omid -> exists mid, omid = Some (Some tt, mid)) ->
+        (forall mid, step initial (Some (Some tt, mid)) -> runsTo mid P) ->
+        runsTo initial P.
+
+End MoreOld.
+
+
+Section RunsTo.
+
+  Variable State: Type.
+  Variable step: OStateND State unit.
+
+  Inductive runsTo(initial: State)(P: State -> Prop): Prop :=
+    | runsToDone:
+        P initial ->
+        runsTo initial P
+    | runsToStep:
+        (forall omid,
+            step initial omid ->
+            exists mid, omid = Some (Some tt, mid) /\ runsTo mid P) ->
+        runsTo initial P.
+
+  Hint Constructors runsTo.
+
+  Print runsTo_ind. (* bad (not a fixpoint) *)
+
+  Lemma runsTo_induct: forall (R : State -> (State -> Prop) -> Prop),
+      (forall (initial : State) (P : State -> Prop), P initial -> R initial P) ->
+      (forall (initial : State) (P : State -> Prop),
+          (forall (omid : option (option unit * State)),
+              step initial omid ->
+              exists mid, omid = Some (Some tt, mid) /\ runsTo mid P /\ R mid P) ->
+         R initial P) ->
+      forall (initial : State) (P : State -> Prop), runsTo initial P -> R initial P.
+  Proof.
+    intros R Base Step.
+    fix IH 3; intros. destruct H.
+    - apply Base. assumption.
+    - apply Step. intros.
+      specialize (H omid H0).
+      destruct H as (mid & ? & Rmid).
+      subst omid.
+      eexists. split; [reflexivity|].
+      split; [assumption|].
+      apply IH. apply Rmid.
+  Qed.
+
+  Lemma runsTo_trans: forall initial P,
+      runsTo initial P ->
+      forall Q,
+        (forall middle, P middle -> runsTo middle Q) ->
+        runsTo initial Q.
+  Proof.
+    pose proof (runsTo_induct (fun initial P =>
+      forall Q, runsTo initial P ->
+                (forall middle, P middle -> runsTo middle Q) ->
+                runsTo initial Q)) as Ind.
+    simpl in Ind.
+    intros initial P R1 Q R2.
+    specialize Ind with (P := P) (Q := Q) (3 := R1) (4 := R1) (5 := R2).
+    apply Ind.
+    - clear. intros. eauto.
+    - clear. intros initial P IH Q R1 R2.
+      apply runsToStep.
+      intros omid St.
+      specialize (IH omid St).
+      destruct IH as (mid & ? & R3 & R4).
+      subst omid.
+      eexists; split; [reflexivity|].
+      eauto.
+  Qed.
+
+  Lemma runsTo_weaken: forall (P Q : State -> Prop) initial,
+    runsTo initial P ->
+    (forall final, P final -> Q final) ->
+    runsTo initial Q.
+  Proof.
+    intros. eapply runsTo_trans; [eassumption|].
+    intros final Pf. apply runsToDone. auto.
+  Qed.
+
+End RunsTo.
+
+Print Assumptions runsTo_weaken.
