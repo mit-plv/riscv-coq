@@ -104,13 +104,24 @@ Instance NonDet_Monad: Monad NonDet := {|
   Return := @NonDetMonad.singletonSet;
 |}.
 
+
+Definition OState(S: Type): Type -> Type := optionT (StateT S option).
+
+Goal forall S A,
+    OState S A = (S -> option (option A * S)).
+Proof. intros. reflexivity. Qed.
+
 Definition OStateND(S: Type): Type -> Type := optionT (StateT S (optionT NonDet)).
+
+Goal forall S A,
+    OStateND S A = (S -> option (option A * S) -> Prop).
+Proof. intros. reflexivity. Qed.
 (*
-Eval cbv in OStateND.
-     = fun S A : Type => S -> option (option A * S) -> Prop
   option around A is for recoverable failure,
   option around (option A * S) means hard failure.
 *)
+
+Definition deterministic{S A: Type}(m: OState S A): OStateND S A := fun s => eq (m s).
 
 
 Module OldVersions.
