@@ -29,6 +29,21 @@ Instance option_Monad: Monad option := {|
   Return := fun {A: Type} (a: A) => Some a;
 |}.
 
+(*
+The proper way to do monad transformers would be this:
+
+Record optionT(M: Type -> Type)(A: Type): Type := {
+  runOptionT: M (option A)
+}.
+
+Build_optionT
+     : forall (M : Type -> Type) (A : Type), M (option A) -> optionT M A
+runOptionT
+     : forall (M : Type -> Type) (A : Type), optionT M A -> M (option A)
+
+but how is this really different from just creating an alias like below?
+*)
+
 Definition optionT(M: Type -> Type)(A: Type) := M (option A).
 
 Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
