@@ -1,3 +1,5 @@
+Require Import Coq.Lists.List.
+
 Class Monad(M: Type -> Type) := mkMonad {
   Bind: forall {A B}, M A -> (A -> M B) -> M B;
   Return: forall {A}, A -> M A;
@@ -84,6 +86,35 @@ Module NonDetMonad.
   Definition mapSet{A B: Type}(aset: A -> Prop)(f: A -> B): B -> Prop :=
     fun b => exists a, aset a /\ f a = b.
 
+  Definition fmap{M: Type -> Type}{MM: Monad M}{A B: Type}(ma: M A)(f: A -> B): M B :=
+    Bind ma (fun (a: A) => Return (f a)).
+
+  Definition foo0{A: Type} := @mapSet (A -> Prop) A.
+  Eval cbv in @foo0.
+  (*
+  Definition bar{A: Type}(M: Type -> Type)(mla: M (list A)
+*)
+
+  Definition bar{A: Type}(M: Type -> Type){MM: Monad M}(mla: M (list A)): list (M A).
+  Abort. (*maybe too strong and therefore impossible *)
+(*
+    refine (cons _ nil).
+    apply (fmap (A := list A)).
+    apply mla.
+    refine (List.map _ _).
+*)
+
+  Definition foo{A: Type}(M: Type -> Type){MM: Monad M}(m: list (M (list A))): list (M A).
+    (* would be possible if we had bar.
+       not possible because deciding whether we return nil or cons requires to
+       enter the monad m to inspect it, but once we entered, we'll have to return an M
+  refine (fold_left (fun (ma : M A) (mla: M (list A)) => _) m _).
+
+  Definition foo{A: Type}(M: Type -> Type)(m: NonDet (M (NonDet A))): NonDet (M A).
+    unfold NonDet in *.
+*)
+  Abort.
+
   Definition bigUnion{B: Type}(sets: (B -> Prop) -> Prop): B -> Prop :=
     fun b => exists set, sets set /\ set b.
 
@@ -104,6 +135,19 @@ Instance NonDet_Monad: Monad NonDet := {|
   Return := @NonDetMonad.singletonSet;
 |}.
 
+Definition NonDetT(M: Type -> Type)(A: Type) := NonDet (M A).
+
+Goal forall (M: Type -> Type) (A: Type), NonDet (M A) = (M A -> Prop).
+  intros. reflexivity. Qed.
+
+Instance NonDetT_Monad(M: Type -> Type){MM: Monad M}: Monad (NonDetT M) := {|
+  Bind{A B}(m: NonDet (M A))(f: A -> NonDet (M B)) := _;
+  Return := _
+|}.
+unfold NonDet in *.
+destruct MM.
+apply f.
+Abort.
 
 Definition OState(S: Type): Type -> Type := optionT (StateT S option).
 
@@ -119,10 +163,23 @@ Proof. intros. reflexivity. Qed.
 (*
   option around A is for recoverable failure,
   option around (option A * S) means hard failure.
-*)
+
+before we wanted this:
+Definition OStateND(S A: Type) := S -> (S -> option A -> Prop) -> Prop.
+
+ *)
+Definition OrigOState(S A: Type) := S -> option A * S.
+Definition OStateND'(S A: Type) := S -> (option A * S -> Prop) -> Prop.
+
+(* double NonDet *)
+Definition DNonDetT(M: Type -> Type)(A: Type) := M (A -> Prop) -> Prop.
+Goal forall S A, DNonDetT (OrigOState S) A = OStateND' S A.
+  intros.
+  cbv.
+Abort. (* doesn't hold *)
 
 Definition deterministic{S A: Type}(m: OState S A): OStateND S A := fun s => eq (m s).
-
+(* this is return of NonDet *)
 
 Module OldVersions.
 
