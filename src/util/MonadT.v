@@ -44,7 +44,36 @@ runOptionT
 but how is this really different from just creating an alias like below?
 *)
 
+(* wrong direction: *)
 Definition optionT(M: Type -> Type)(A: Type) := M (option A).
+Definition runOptionT{M : Type -> Type}{A : Type}: optionT M A -> M (option A) := id.
+
+Definition listT(M: Type -> Type)(A: Type) := M (list A).
+Definition runListT{M : Type -> Type}{A : Type}: listT M A -> M (list A) := id.
+
+(* if we do it in the correct direction, runOptionT is not just id any more:
+Definition optionT(M: Type -> Type)(A: Type) := option (M A).
+Definition runOptionT{M : Type -> Type}{A : Type}: optionT M A -> M (option A).
+Abort.
+
+monadic calculation contains intermediate values of suspicious structure
+
+[ None;  (Some 1) ] must not be (optionT list nat)
+
+[ Some _; Some _; ]
+[ None ]
+are ok
+
+
+if we consider however
+listT option nat
+
+[ None; Some 1 ] is ok
+
+*)
+
+Eval cbv in (optionT list nat).
+
 
 Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
   Bind{A}{B}(m: M (option A))(f: A -> M (option B)) :=
