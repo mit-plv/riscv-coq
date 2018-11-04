@@ -17,11 +17,14 @@ Notation "m1 ;; m2" := (bind m1 (fun _ => m2))
 
 Open Scope monad_scope.
 
-Instance identity_monad: Monad (@id Type) := {|
+Definition Id: Type -> Type := id.
+
+Instance Id_monad: Monad Id := {|
   ret := @id;
   mmap{A B} := @id (A -> B);
   join := @id;
 |}.
+
 
 Record optionT(M: Type -> Type)(A: Type): Type := mkOptionT {
   runOptionT: M (option A)
@@ -76,42 +79,84 @@ Instance listT_Monad(M: Type -> Type){MM: Monad M}: Monad (listT M) := {|
     mkListT (mmap (mapList f)
                   (runListT nma));
   join{A}(nmnma: (listT M) ((listT M) A)) :=
-    mkListT (join (mmap (fun (nnma: list (listT M A)) => _)
+    mkListT (join (mmap (fun nnma =>
+                           fold_left
+                             (fun (acc: M (list A)) (elem: listT M A) =>
+                                l1 <- runListT elem; l2 <- acc; ret (l1 ++ l2))
+                             nnma
+                             (ret nil))
                         (runListT nmnma)));
 |}.
-induction nnma.
-- apply (ret nil).
-- apply runListT in a.
-  refine (l1 <- a; l2 <- IHnnma; ret (l1 ++ l2)).
-Defined.
 
+Definition State(S A: Type) := S -> (A * S).
 
-Definition NonDet(A: Type) := A -> Prop.
+Record StateT(S: Type)(M: Type -> Type)(A: Type): Type := mkStateT {
+  runStateT: S -> M (A * S)%type
+}.
+Arguments mkStateT {S} {M} {A} (_).
+Arguments runStateT {S} {M} {A} (_).
 
-Definition retNonDet{A}: A -> NonDet A := eq.
+Instance StateT_Monad(S: Type)(M: Type -> Type){MM: Monad M}: Monad (StateT S M) := {|
+  ret{A}(a: A) := mkStateT (fun s => ret (a, s));
+  mmap{A B}(f: A -> B)(sma: StateT S M A) :=
+    mkStateT (fun s => mmap (fun '(a, s0) => (f a, s0)) (runStateT sma s));
+  join{A}(smsma: (StateT S M) ((StateT S M) A)) :=
+    mkStateT (fun s1 => p <- runStateT smsma s1; let '(ssma, s2) := p in runStateT ssma s2);
+|}.
 
-Definition mapNonDet{A B}(f: A -> B)(aset: NonDet A): NonDet B :=
-  fun b => exists a, aset a /\ f a = b.
+Definition get{S: Type}{M: Type -> Type}{MM: Monad M}: StateT S M S :=
+  mkStateT (fun (s: S) => ret (s, s)).
 
-Definition flattenNonDet{A}(asetset: NonDet (NonDet A)): NonDet A :=
-  fun a => exists aset, asetset aset /\ aset a.
+Definition put{S: Type}{M: Type -> Type}{MM: Monad M}(s: S): StateT S M unit :=
+  mkStateT (fun _ => ret (tt, s)).
+
+(*
+Definition OOState(S: Type): Type -> Type := optionT (optionT (StateT S Id)).
+
+Definition runOOState{S A: Type}(m: OOState S A)(s: S): option (option A * S).
+  apply runOptionT in m.
+  apply runOptionT in m.
+  apply (@runStateT S) in m. 2: apply s.
+  apply runOptionT in m.
+  cbv in m.
+*)
+
+Definition OOState(S: Type): Type -> Type := optionT (StateT S (optionT Id)).
+
+Definition runOOState{S A: Type}(m: OOState S A)(s: S): option (option A * S) :=
+  runOptionT (runStateT (runOptionT m) s).
+
+Definition OOStateND(S: Type): Type -> Type := listT (OOState S).
+
+Definition runOOStateND{S A: Type}(m: OOStateND S A)(s: S): list (option (option A * S)).
+  apply runListT in m.
+  apply (@runOOState S (list A)) in m. 2: apply s.
+Abort.
+
+(* if we use listT for the nondeterminism, it doesn't help much towards getting transformers,
+   because we'd have to put listT at the innermost level *)
 
 Record NonDetT(M: Type -> Type)(A: Type): Type := mkNonDetT {
-  runNonDetT: M (NonDet A)
+  runNonDetT: list (M A)
 }.
 Arguments mkNonDetT {M} {A} (_).
 Arguments runNonDetT {M} {A} (_).
 
+Definition flatMapList{A B: Type}(f: A -> list B)(l: list A): list B :=
+  List.concat (List.map f l).
+
 Instance NonDetT_Monad(M: Type -> Type){MM: Monad M}: Monad (NonDetT M) := {|
-  ret{A}(a: A) := mkNonDetT (ret (retNonDet a));
+  ret{A}(a: A) := mkNonDetT (cons (ret a) nil);
   mmap{A B}(f: A -> B)(nma: NonDetT M A) :=
-    mkNonDetT (mmap (mapNonDet f)
-                    (runNonDetT nma));
+    mkNonDetT (List.map (mmap f) (runNonDetT nma));
   join{A}(nmnma: (NonDetT M) ((NonDetT M) A)) :=
-    mkNonDetT (join (mmap (fun (nnma: NonDet (NonDetT M A)) => _)
-                          (runNonDetT nmnma)));
+    mkNonDetT _;
 |}.
-
-Check (exists (nma: NonDetT M A), nnma nma /\ runNonDetT nma = _).
-
+(* same problem as earlier: we'd need to know now whether to apply nil or cons,
+   to know that we'd have to enter the monad *)
 Abort.
+
+
+(*
+will have to do (run1; get) to obtain list of possible new states
+*)
