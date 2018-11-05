@@ -111,6 +111,40 @@ Definition put{S: Type}{M: Type -> Type}{MM: Monad M}(s: S): StateT S M unit :=
   mkStateT (fun _ => ret (tt, s)).
 
 (*
+These are not very useful because often we'll have to write
+"lift (t := optionT)" instead of just "lift" to prevent typeclass
+search from looping infinitely, so we prefer to just define lift_xxxT
+separately
+
+Class MonadTrans(t: (Type -> Type) -> Type -> Type) := {
+  lift: forall {M: Type -> Type} {MM: Monad M} {A: Type}, M A -> t M A;
+}.
+
+Instance optionT_MonadTrans: MonadTrans optionT := {
+  lift{M}{MM}{A}(m: M A) := mkOptionT (mmap Some m);
+}.
+
+Instance stateT_MonadTrans(S: Type): MonadTrans (StateT S) := {
+  lift{M}{MM}{A}(m: M A) := mkStateT (fun s => a <- m; ret (a, s));
+}.
+
+Instance listT_MonadTrans: MonadTrans listT := {
+  lift{M}{MM}{A}(m: M A) := mkListT (mmap (fun a => cons a nil) m);
+}.
+*)
+
+
+Definition liftOptionT{M: Type -> Type}{MM: Monad M}{A: Type}(m: M A): optionT M A :=
+  mkOptionT (mmap Some m).
+
+Definition liftStateT{S: Type}{M: Type -> Type}{MM: Monad M}{A: Type}(m: M A): StateT S M A :=
+  mkStateT (fun s => a <- m; ret (a, s)).
+
+Definition liftListT{M: Type -> Type}{MM: Monad M}{A: Type}(m: M A): listT M A :=
+  mkListT (mmap (fun a => cons a nil) m).
+
+
+(*
 Definition OOState(S: Type): Type -> Type := optionT (optionT (StateT S Id)).
 
 Definition runOOState{S A: Type}(m: OOState S A)(s: S): option (option A * S).
@@ -133,30 +167,72 @@ Definition runOOStateND{S A: Type}(m: OOStateND S A)(s: S): list (option (option
   apply (@runOOState S (list A)) in m. 2: apply s.
 Abort.
 
-(* if we use listT for the nondeterminism, it doesn't help much towards getting transformers,
-   because we'd have to put listT at the innermost level *)
+Definition OState(S: Type): Type -> Type := optionT (StateT S Id).
 
-Record NonDetT(M: Type -> Type)(A: Type): Type := mkNonDetT {
-  runNonDetT: list (M A)
-}.
-Arguments mkNonDetT {M} {A} (_).
-Arguments runNonDetT {M} {A} (_).
+Definition runOState{S A: Type}(m: OState S A)(s: S): option A * S :=
+  runStateT (runOptionT m) s.
 
-Definition flatMapList{A B: Type}(f: A -> list B)(l: list A): list B :=
-  List.concat (List.map f l).
+Definition OStateND(S: Type): Type -> Type := listT (OState S).
 
-Instance NonDetT_Monad(M: Type -> Type){MM: Monad M}: Monad (NonDetT M) := {|
-  ret{A}(a: A) := mkNonDetT (cons (ret a) nil);
-  mmap{A B}(f: A -> B)(nma: NonDetT M A) :=
-    mkNonDetT (List.map (mmap f) (runNonDetT nma));
-  join{A}(nmnma: (NonDetT M) ((NonDetT M) A)) :=
-    mkNonDetT _;
-|}.
-(* same problem as earlier: we'd need to know now whether to apply nil or cons,
-   to know that we'd have to enter the monad *)
-Abort.
+Definition runOStateND{S A: Type}(m: OStateND S A)(s: S): option (list A) * S :=
+  runOState (runListT m) s.
 
+Section Test.
+
+  Context {M: Type -> Type}.
+  Axiom run1: M unit.
+End Test.
+
+Axiom RiscvMachine: Type.
+(*Check (@lift optionT _ _ _ _ get).*)
+Check (@run1 (OStateND RiscvMachine);; liftListT (liftOptionT get)).
+Check (runOStateND (@run1 (OStateND RiscvMachine);; liftListT (liftOptionT get))).
+
+Definition comp1: OStateND (nat * nat) nat :=
+  both <- liftListT (liftOptionT get); ret (fst both).
+
+Definition comp20: OStateND (nat * nat) nat.
+  refine (liftListT ( _)).
+  unfold OState.
+  refine (mkOptionT _).
+  refine (ret None).
+Defined.
+
+Definition comp2: OStateND (nat * nat) nat :=
+  liftListT (mkOptionT (ret None)).
+
+Definition comp12: OStateND (nat * nat) nat :=
+  c1 <- comp1;
+  c2 <- comp2;
+  ret (c1 + c2)%nat.
+
+Compute (runOStateND comp12 (12, 23)).
+
+Definition rvRunND(s: RiscvMachine): option (list RiscvMachine) :=
+  fst (runOStateND (@run1 (OStateND RiscvMachine);; liftListT (liftOptionT get)) s).
+
+
+Section RunsTo.
+
+  Variable State: Type.
+  Variable step: State -> option (list State).
+
+(* something is wrong: it should be "list (option State)":
+  some nondet choices fail, others succeed.
+  But maybe the way we compose, the monad already does the collecting for us,
+  and only returns Some if all choices succeeded?
+ *)
 
 (*
-will have to do (run1; get) to obtain list of possible new states
+  Inductive runsTo(initial: State)(P: State -> Prop): Prop :=
+    | runsToDone:
+        P initial ->
+        runsTo initial P
+    | runsToStep:
+        (forall omid,
+            step initial omid ->
+            exists mids, omid = Some mids /\
+                        List.Forall (fun mid => runsTo mid P) mids) ->
+        runsTo initial P.
 *)
+End RunsTo.
