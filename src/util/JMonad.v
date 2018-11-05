@@ -154,7 +154,7 @@ Definition runOOState{S A: Type}(m: OOState S A)(s: S): option (option A * S).
   apply runOptionT in m.
   cbv in m.
 *)
-
+(*
 Definition OOState(S: Type): Type -> Type := optionT (StateT S (optionT Id)).
 
 Definition runOOState{S A: Type}(m: OOState S A)(s: S): option (option A * S) :=
@@ -166,13 +166,27 @@ Definition runOOStateND{S A: Type}(m: OOStateND S A)(s: S): list (option (option
   apply runListT in m.
   apply (@runOOState S (list A)) in m. 2: apply s.
 Abort.
+*)
 
-Definition OState(S: Type): Type -> Type := optionT (StateT S Id).
+Definition OState(S: Type): Type -> Type := StateT S (optionT Id).
 
-Definition runOState{S A: Type}(m: OState S A)(s: S): option A * S :=
-  runStateT (runOptionT m) s.
+Definition OState' (S:Type) (trou:Type->Type) : Type -> Type := StateT S (optionT trou).
 
-Definition OStateND(S: Type): Type -> Type := listT (OState S).
+Definition runOState{S A: Type}(m: OState S A)(s: S): option (A * S) :=
+  runOptionT (runStateT m s).
+
+Definition finaleState (S:Type): Type -> Type := OState' S (listT Id).
+
+Definition myLift{S A: Type}(m: OState S A): finaleState S A.
+unfold OState, finaleState, OState' in *.
+pose (runStateT m).
+
+Definition runFinalState{S A: Type}(m: finaleState S A)(s: S): list (option( A * S)) :=
+  runListT (runOptionT (runStateT m s)).
+
+(*Definition OStateND(S: Type): Type -> Type := listT (OState S).*)
+Definition runFinal
+Definition OStateND(S: Type): Type -> Type := StateT S (optionT Id).
 
 Definition runOStateND{S A: Type}(m: OStateND S A)(s: S): option (list A) * S :=
   runOState (runListT m) s.
