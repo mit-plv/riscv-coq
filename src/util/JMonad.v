@@ -143,53 +143,54 @@ Definition liftStateT{S: Type}{M: Type -> Type}{MM: Monad M}{A: Type}(m: M A): S
 Definition liftListT{M: Type -> Type}{MM: Monad M}{A: Type}(m: M A): listT M A :=
   mkListT (mmap (fun a => cons a nil) m).
 
+(*
+   Note: No way of composing
+     NonDet A := list A
+   and
+     State S A := S -> (A * S)
+   results in this signature!
+*)
+Definition NDS(S A: Type): Type := S -> list (A * S).
+
+(* note: no "pick" is needed as argument here *)
+Instance NDS_Monad(S: Type): Monad (NDS S) := {|
+  ret{A}(a: A) :=
+    fun s => cons (a, s) nil;
+  mmap{A B}(f: A -> B)(m: NDS S A) :=
+    fun s => List.map (fun '(a, s) => (f a, s)) (m s);
+  join{A}(mm: NDS S (NDS S A)) :=
+    fun s1 => List.concat (List.map (fun '(m, s2) => m s2) (mm s1));
+|}.
 
 (*
-Definition OOState(S: Type): Type -> Type := optionT (optionT (StateT S Id)).
+Definition NDS(S A: Type): Type := S -> (A * S) -> Prop.
 
-Definition runOOState{S A: Type}(m: OOState S A)(s: S): option (option A * S).
-  apply runOptionT in m.
-  apply runOptionT in m.
-  apply (@runStateT S) in m. 2: apply s.
-  apply runOptionT in m.
-  cbv in m.
-*)
-(*
-Definition OOState(S: Type): Type -> Type := optionT (StateT S (optionT Id)).
-
-Definition runOOState{S A: Type}(m: OOState S A)(s: S): option (option A * S) :=
-  runOptionT (runStateT (runOptionT m) s).
-
-Definition OOStateND(S: Type): Type -> Type := listT (OOState S).
-
-Definition runOOStateND{S A: Type}(m: OOStateND S A)(s: S): list (option (option A * S)).
-  apply runListT in m.
-  apply (@runOOState S (list A)) in m. 2: apply s.
-Abort.
+Instance NDS_Monad(S: Type)(pick: forall (A: Type), NDS S A): Monad (NDS S) := {|
+  ret{A}(a: A) := fun s1 '(v, s2) => s1 = s2 /\ a = v;
+  mmap{A B}(f: A -> B)(m: NDS S A) := fun s1 '(b, s2) => _;
+  join{A}(mm: NDS S (NDS S A)) := _;
+|}.
 *)
 
-Definition OState(S: Type): Type -> Type := StateT S (optionT Id).
+Module way1.
 
-Definition OState' (S:Type) (trou:Type->Type) : Type -> Type := StateT S (optionT trou).
+  Definition OState(S: Type): Type -> Type := StateT S (optionT Id).
 
-Definition runOState{S A: Type}(m: OState S A)(s: S): option (A * S) :=
-  runOptionT (runStateT m s).
+  Definition runOState{S A: Type}(m: OState S A)(s: S): option (A * S) :=
+    runOptionT (runStateT m s).
 
-Definition finaleState (S:Type): Type -> Type := OState' S (listT Id).
+End way1.
 
-Definition myLift{S A: Type}(m: OState S A): finaleState S A.
-unfold OState, finaleState, OState' in *.
-pose (runStateT m).
+Definition OState(S: Type): Type -> Type := optionT (StateT S Id).
 
-Definition runFinalState{S A: Type}(m: finaleState S A)(s: S): list (option( A * S)) :=
-  runListT (runOptionT (runStateT m s)).
+Definition runOState{S A: Type}(m: OState S A)(s: S): option A * S :=
+  runStateT (runOptionT m) s.
 
-(*Definition OStateND(S: Type): Type -> Type := listT (OState S).*)
-Definition runFinal
-Definition OStateND(S: Type): Type -> Type := StateT S (optionT Id).
+Definition OStateND(S: Type): Type -> Type := optionT (NDS S).
 
-Definition runOStateND{S A: Type}(m: OStateND S A)(s: S): option (list A) * S :=
-  runOState (runListT m) s.
+Definition runOStateND{S A: Type}(m: OStateND S A)(s: S): list (option A * S) :=
+ runOptionT m s.
+
 
 Section Test.
 
@@ -197,6 +198,7 @@ Section Test.
   Axiom run1: M unit.
 End Test.
 
+(*
 Axiom RiscvMachine: Type.
 (*Check (@lift optionT _ _ _ _ get).*)
 Check (@run1 (OStateND RiscvMachine);; liftListT (liftOptionT get)).
@@ -224,7 +226,7 @@ Compute (runOStateND comp12 (12, 23)).
 
 Definition rvRunND(s: RiscvMachine): option (list RiscvMachine) :=
   fst (runOStateND (@run1 (OStateND RiscvMachine);; liftListT (liftOptionT get)) s).
-
+*)
 
 Section RunsTo.
 
