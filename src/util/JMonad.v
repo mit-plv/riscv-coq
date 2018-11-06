@@ -152,6 +152,22 @@ Definition liftListT{M: Type -> Type}{MM: Monad M}{A: Type}(m: M A): listT M A :
 *)
 Definition NDS(S A: Type): Type := S -> list (A * S).
 
+Record NDStateT(S: Type)(M: Type -> Type)(A: Type): Type := mkNDStateT {
+  runNDStateT: S -> M (A * S)%type (* TODO where to put list ?? *)
+}.
+Arguments mkNDStateT {S} {M} {A} (_).
+Arguments runNDStateT {S} {M} {A} (_).
+
+(*
+Instance NDStateT_Monad(S: Type)(M: Type -> Type){MM: Monad M}: Monad (NDStateT S M) := {|
+  ret{A}(a: A) := mkStateT (fun s => ret (a, s));
+  mmap{A B}(f: A -> B)(sma: StateT S M A) :=
+    mkStateT (fun s => mmap (fun '(a, s0) => (f a, s0)) (runStateT sma s));
+  join{A}(smsma: (StateT S M) ((StateT S M) A)) :=
+    mkStateT (fun s1 => p <- runStateT smsma s1; let '(ssma, s2) := p in runStateT ssma s2);
+|}.
+*)
+
 (* note: no "pick" is needed as argument here *)
 Instance NDS_Monad(S: Type): Monad (NDS S) := {|
   ret{A}(a: A) :=
@@ -203,6 +219,7 @@ Axiom RiscvMachine: Type.
 (*Check (@lift optionT _ _ _ _ get).*)
 Check (@run1 (OStateND RiscvMachine);; liftListT (liftOptionT get)).
 Check (runOStateND (@run1 (OStateND RiscvMachine);; liftListT (liftOptionT get))).
+*)
 
 Definition comp1: OStateND (nat * nat) nat :=
   both <- liftListT (liftOptionT get); ret (fst both).
