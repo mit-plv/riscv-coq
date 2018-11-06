@@ -155,6 +155,23 @@ Definition comp7: StateT nat (listT Id) unit :=
   else
     put 11.
 
+(* Why is composition of transformers dangerous? Here is a broken example *)
+
+Definition comp7': (listT (StateT (nat * nat)  Id) (nat * nat)) :=
+  y <- pick (seq 0 2);
+    (if Nat.eq_dec y 0 then
+       ( thepair <- lift_into_listT get;
+                 lift_into_listT (put (0, snd thepair));;
+                 lift_into_listT get
+       )
+     else
+       ( thepair <- lift_into_listT get;
+           lift_into_listT (put (fst thepair, 0 ));;
+                        lift_into_listT get))
+.
+
+Compute (runStateT (runListT comp7') (1,1)). (* 0,0 is an invalid state, reached here *)
+
 
 Definition comp8: (listT (StateT nat Id) nat) :=
   x <- lift_into_listT get;
