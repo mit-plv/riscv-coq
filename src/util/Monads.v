@@ -187,30 +187,75 @@ Instance OState_Monad(S: Type): Monad (OState S) := {|
 - intros. extensionality s. destruct (m s). destruct o; reflexivity.
 Defined.
 
+Module WithOption.
+
+  Definition OStateND(S A: Type) := S -> option (S -> A -> Prop).
+
+  Lemma OStateND_weaken{S A: Type}: forall (m: OStateND S A) (P Q: S -> A -> Prop),
+      (forall s a, P s a -> Q s a) ->
+      forall s, m s = Some P -> m s = Some Q.
+  Proof.
+    intros. unfold OStateND in *.
+    (* makes even less sense *)
+  Abort.
+
+End WithOption.
+
 Definition OStateND(S A: Type) := S -> (S -> A -> Prop) -> Prop.
 
 Definition TODO{A: Type}: A. Admitted.
+
+Lemma OStateND_weaken{S A: Type}: forall (m: OStateND S A) (P Q: S -> A -> Prop),
+  (forall s a, P s a -> Q s a) ->
+  forall s, m s P -> m s Q.
+Proof.
+  intros. unfold OStateND in *.
+Abort.
+
 
 Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
   Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
     fun (s : S) (post : S -> B -> Prop) =>
       exists mid : S -> A -> Prop,
-        m s mid /\ (forall s' a, mid s' a -> f a s' post);
+        m s mid /\ (forall s' a, mid s' a <-> f a s' post);
   Return{A}(a : A) :=
-    fun (s : S) (post : S -> A -> Prop) => post s a;
+    fun (s : S) (post : S -> A -> Prop) =>
+      (* with builtin weakening: just "post s a"
+         with precision: *)
+      forall s' a', s' = s /\ a' = a <-> post s' a';
 |}.
 - intros.
   extensionality s. extensionality post.
-  apply propositional_extensionality. split; intro H.
+  apply propositional_extensionality.
+  (*
+  split; intro H.
   + destruct H as (mid & midsa & H). auto.
   + exists (fun s a => f a s post). split; [assumption|]. auto.
+  *)
+  admit.
 - intros.
   extensionality s. extensionality post.
   apply propositional_extensionality. split; intro H.
   + destruct H as (mid & msmid & H).
     replace post with mid; [assumption|].
-    (* doesn't hold because Return allows state to change as long as it still satisfies
-       post *)
+    extensionality s'. extensionality a.
+    specialize (H s' a).
+    apply propositional_extensionality.
+    rewrite H.
+    split; intros.
+    * specialize (H0 s' a). apply H0. auto.
+    * split; intros.
+      -- destruct H1; subst. assumption.
+      --
+        (*
+If we allow post to be imprecise, right_associativity doesn't hold
+(because Return can sneak in an extra state change, and probably it
+wont' be possible to find an equivalence under which right_identity
+holds, because right_identity looks asymmetric in this setting.
+
+If we require post to be precise, (as in the code above),
+we should get something similar to list-based non-determinism, but
+it doesn't really look like so. *)
 
 Admitted.
 
