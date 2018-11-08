@@ -1,4 +1,5 @@
 Require Import Coq.Logic.FunctionalExtensionality.
+Require Import Coq.Logic.PropExtensionality.
 Require Import Coq.Lists.List.
 
 Class Monad(M: Type -> Type) := mkMonad {
@@ -186,13 +187,38 @@ Instance OState_Monad(S: Type): Monad (OState S) := {|
 - intros. extensionality s. destruct (m s). destruct o; reflexivity.
 Defined.
 
-Definition OStateND(S A: Type) := S -> (S -> option A -> Prop) -> Prop.
+Definition OStateND(S A: Type) := S -> (S -> A -> Prop) -> Prop.
 
-Axiom iff_eq: forall (P Q: Prop), P <-> Q -> P = Q.
 Definition TODO{A: Type}: A. Admitted.
 
 Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
-  Bind := fun (A B : Type) (m : OStateND S A) (f : A -> OStateND S B)
+  Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
+    fun (s : S) (post : S -> B -> Prop) =>
+      exists mid : S -> A -> Prop,
+        m s mid /\ (forall s' a, mid s' a -> f a s' post);
+  Return{A}(a : A) :=
+    fun (s : S) (post : S -> A -> Prop) => post s a;
+|}.
+- intros.
+  extensionality s. extensionality post.
+  apply propositional_extensionality. split; intro H.
+  + destruct H as (mid & midsa & H). auto.
+  + exists (fun s a => f a s post). split; [assumption|]. auto.
+- intros.
+  extensionality s. extensionality post.
+  apply propositional_extensionality. split; intro H.
+  + destruct H as (mid & msmid & H).
+    replace post with mid; [assumption|].
+    (* doesn't hold because Return allows state to change as long as it still satisfies
+       post *)
+
+Admitted.
+
+
+Definition OOStateND(S A: Type) := S -> (S -> option A -> Prop) -> Prop.
+
+Instance OOStateND_Monad(S: Type): Monad (OOStateND S) := {|
+  Bind := fun (A B : Type) (m : OOStateND S A) (f : A -> OOStateND S B)
               (s : S) (post : S -> option B -> Prop) =>
             exists mid : S -> option A -> Prop,
               m s mid /\
@@ -201,7 +227,7 @@ Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
                                             (exists a : A, oa = Some a /\ f a s' post));
   Return := fun (A : Type) (a : A) (s : S) (post : S -> option A -> Prop) => post s (Some a);
 |}.
-- intros. extensionality s. extensionality post. apply iff_eq.
+- intros. extensionality s. extensionality post. apply propositional_extensionality.
   split; intro.
   + destruct H as (mid & H1 & H2).
     specialize (H2 _ _ H1). destruct H2 as [(? & ?) | (? & ? & ?)].
@@ -209,7 +235,35 @@ Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
     * inversion H. subst. assumption.
   + apply TODO.
 - apply TODO.
-- apply TODO.
+- intros. extensionality s. extensionality post.
+  apply propositional_extensionality. split; intro.
+  + destruct H as (midB & (midA & HA & HB) & Hpost).
+    exists midA. split; [exact HA|].
+    intros s' oa Hma.
+    specialize HB with (1 := Hma).
+    destruct HB as [[? ?] | [a [Eq HB]]]; [left|right]; subst oa.
+    * specialize Hpost with (1 := H0).
+      destruct Hpost as [[_ X] | [b [? ?]]]; [auto | discriminate].
+    * exists a. split; [reflexivity|].
+      exists midB. split; [assumption|].
+      intros s'' ob Hmb.
+      apply Hpost.
+      assumption.
+  + destruct H as (midA & Hma & H).
+    evar (PSome: Prop).
+    exists (fun s ob => match ob with | None => post s None | Some _ => PSome end).
+    (*exists (fun s ob => exists o, ob = Some o /\ PSome).*)
+    split.
+    * exists midA. split; [exact Hma|].
+      intros s' oa HA.
+      specialize H with (1 := HA).
+      destruct H as [H | [a [Eq [midB [F H]]]]]; [left; assumption|right].
+      subst oa.
+      exists a; split; [reflexivity|].
+      apply TODO.
+    * apply TODO.
+Grab Existential Variables.
+apply True.
 Defined.
 
 (*
