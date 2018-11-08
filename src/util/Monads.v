@@ -201,17 +201,30 @@ Proof.
   destruct oa; reflexivity.
 Qed.
 
+Definition set(A: Type): Type := A -> Prop.
+
+Definition contains{A: Type}(s: set A)(a: A) := s a.
+
+Notation "a '\in' s" := (contains s a) (at level 50).
+
+Definition union{A: Type}(s1 s2: set A): set A := fun a => a \in s1 \/ a \in s2.
+
+Definition empty_set{A: Type}: set A := fun a => False.
+
 Module WithOption.
 
-  Definition OStateND(S A: Type) := S -> option (S -> A -> Prop).
+  Definition OStateND(S A: Type) := S -> option (set (S * A)).
 
-  Lemma OStateND_weaken{S A: Type}: forall (m: OStateND S A) (P Q: S -> A -> Prop),
-      (forall s a, P s a -> Q s a) ->
-      forall s, m s = Some P -> m s = Some Q.
-  Proof.
-    intros. unfold OStateND in *.
-    (* makes even less sense *)
-  Abort.
+  Definition folding_step{S A B: Type}(f: A -> OStateND S B):
+    S * A -> option (set (S * B)) -> option (set (S * B)) :=
+    fun '(s, a) res =>
+      bind_option (f a s)
+                  (fun newres =>
+                     bind_option res
+                                 (fun oldres => Some (union newres oldres))).
+
+  (* this combination doesn't work because we can't fold over a set ( -> Prop)
+     and arrive in option *)
 
 End WithOption.
 
@@ -277,18 +290,33 @@ Module WithOptionAndList.
   Abort.
 End WithOptionAndList.
 
-Definition set(A: Type): Type := A -> Prop.
 
-Definition contains{A: Type}(s: set A)(a: A) := s a.
-
-Notation "a '\in' s" := (contains s a) (at level 50).
-
-
-
-Definition OStateND(S A: Type) := S -> set (S * A) -> Prop.
+(* outer set is for hard failure and different choices of how specific we want to be,
+   inner set is for non-determinism *)
+Definition OStateND(S A: Type) := S -> set (set (S * A)).
 
 Definition TODO{A: Type}: A. Admitted.
 
+Definition bind_set{A B: Type}(sa: set A)(f: A -> set B): set B :=
+  fun b => exists a, a \in sa /\ b \in (f a).
+
+Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
+  Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
+    fun (s : S) => bind_set (m s) (fun (mid: set (S * A)) => _);
+  Return{A}(a : A) :=
+    fun (s : S) => _;
+|}.
+
+
+(*
+    Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
+      fun (s : S) => bind_option (m s) (fun l => fold_right (folding_step f)
+                                                            (Some nil)
+                                                            l);
+    Return{A}(a : A) :=
+      fun (s : S) => Some (cons (s, a) nil);
+*)
+Abort.
 
 Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
   Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
