@@ -187,6 +187,20 @@ Instance OState_Monad(S: Type): Monad (OState S) := {|
 - intros. extensionality s. destruct (m s). destruct o; reflexivity.
 Defined.
 
+Definition bind_option{A B: Type}(oa: option A)(f: A -> option B): option B :=
+  match oa with
+  | Some a => f a
+  | None => None
+  end.
+
+Lemma bind_option_assoc{A B C: Type}: forall (f: A -> option B) (g: B -> option C)
+                                             (oa: option A),
+    bind_option (bind_option oa f) g = bind_option oa (fun a => bind_option (f a) g).
+Proof.
+  intros.
+  destruct oa; reflexivity.
+Qed.
+
 Module WithOption.
 
   Definition OStateND(S A: Type) := S -> option (S -> A -> Prop).
@@ -201,45 +215,102 @@ Module WithOption.
 
 End WithOption.
 
-Definition OStateND(S A: Type) := S -> (S -> A -> Prop) -> Prop.
+
+Module WithOptionAndList.
+
+  Definition OStateND(S A: Type) := S -> option (list (S * A)).
+
+  Definition folding_step{S A B: Type}(f: A -> OStateND S B):
+    S * A -> option (list (S * B)) -> option (list (S * B)) :=
+    fun '(s, a) res =>
+      bind_option (f a s)
+                  (fun newres =>
+                     bind_option res
+                                 (fun oldres => Some (newres ++ oldres))).
+
+  (*
+  Definition folding_step{S A B: Type}(f: A -> OStateND S B):
+    S * A -> option (list (S * B)) -> option (list (S * B)) :=
+    (fun '(s, a) res =>
+       match f a s, res with
+       | Some newres, Some oldres => Some (newres ++ oldres)
+       | _, _ => None
+       end).
+  *)
+
+  Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
+    Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
+      fun (s : S) => bind_option (m s) (fun l => fold_right (folding_step f)
+                                                            (Some nil)
+                                                            l);
+    Return{A}(a : A) :=
+      fun (s : S) => Some (cons (s, a) nil);
+  |}.
+  - intros.
+    extensionality s.
+    simpl.
+    destruct (f a s); [|reflexivity].
+    simpl.
+    f_equal.
+    apply app_nil_r.
+  - intros.
+    extensionality s.
+    destruct (m s); [|reflexivity].
+    clear s m.
+    induction l; [reflexivity|].
+    simpl in *.
+    destruct a as [s a].
+    rewrite IHl.
+    reflexivity.
+  - intros. extensionality s.
+    rewrite bind_option_assoc.
+    f_equal.
+    extensionality l.
+    induction l; [reflexivity|].
+    destruct a as [s' a].
+    simpl.
+    destruct (f a s') eqn: E.
+    + simpl.
+      rewrite bind_option_assoc.
+      simpl.
+
+  Abort.
+End WithOptionAndList.
+
+Definition set(A: Type): Type := A -> Prop.
+
+Definition contains{A: Type}(s: set A)(a: A) := s a.
+
+Notation "a '\in' s" := (contains s a) (at level 50).
+
+
+
+Definition OStateND(S A: Type) := S -> set (S * A) -> Prop.
 
 Definition TODO{A: Type}: A. Admitted.
-
-Lemma OStateND_weaken{S A: Type}: forall (m: OStateND S A) (P Q: S -> A -> Prop),
-  (forall s a, P s a -> Q s a) ->
-  forall s, m s P -> m s Q.
-Proof.
-  unfold OStateND in *. intros m P Q.
-  intro H.
-  intro s.
-  specialize (H s).
-  generalize (m s P) as msP.
-  generalize (m s Q) as msQ.
-  clear m.
-  clear.
-  (* false *)
-Abort.
 
 
 Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
   Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
-    fun (s : S) (post : S -> B -> Prop) =>
-      exists mid : S -> A -> Prop,
-        m s mid /\ (forall s' a, mid s' a <-> f a s' post);
+    fun (s : S) (post : set (S * B)) =>
+      exists mid : set (S * A),
+        m s mid /\ (forall s' a, (s', a) \in mid <-> f a s' post);
   Return{A}(a : A) :=
-    fun (s : S) (post : S -> A -> Prop) =>
+    fun (s : S) (post : set (S * A)) =>
       (* with builtin weakening: just "post s a"
          with precision: *)
-      forall s' a', (s' = s /\ a' = a) <-> post s' a';
+      forall s' a', (s' = s /\ a' = a) <-> (s', a') \in post;
 |}.
 - intros.
   extensionality s. extensionality post.
   apply propositional_extensionality.
-  (*
   split; intro H.
-  + destruct H as (mid & midsa & H). auto.
-  + exists (fun s a => f a s post). split; [assumption|]. auto.
-  *)
+  + destruct H as (mid & H1 & H2). apply H2. apply H1. auto.
+  + exists (fun '(s, a) => f a s post). split.
+    * intros. split; intros.
+      -- destruct H0; subst s' a'. unfold contains. exact H.
+      -- unfold contains in H0. (* same confusion as below *)
+  (*
   admit.
 - intros.
   extensionality s. extensionality post.
@@ -255,7 +326,7 @@ Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
     * split; intros.
       -- destruct H1; subst. assumption.
       --
-        (*
+
 If we allow post to be imprecise, right_associativity doesn't hold
 (because Return can sneak in an extra state change, and probably it
 wont' be possible to find an equivalence under which right_identity
