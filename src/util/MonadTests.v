@@ -172,6 +172,46 @@ Definition comp7': (listT (StateT (nat * nat)  Id) (nat * nat)) :=
 
 Compute (runStateT (runListT comp7') (1,1)). (* 0,0 is an invalid state, reached here *)
 
+Definition comp7'': StateT (nat * nat) (listT Id) (nat * nat) :=
+  y <- lift_into_StateT (pick (seq 0 2));
+  (if Nat.eq_dec y 0 then (
+       thepair <- get;
+       put (0, snd thepair);;
+       get
+   ) else (
+      thepair <- get;
+      put (fst thepair, 0);;
+      get
+   ))
+.
+
+Definition NDState(S: Type): Type -> Type := StateT S (listT Id).
+Definition runNDState{S A: Type}(m: NDState S A)(s: S): list (A * S) :=
+  runListT (runStateT m s).
+
+Module way1.
+  Definition OState(S: Type): Type -> Type := StateT S (optionT Id).
+  Definition runOState{S A: Type}(m: OState S A)(s: S): option (A * S) :=
+    runOptionT (runStateT m s).
+
+  Definition OStateND(S: Type): Type -> Type := StateT S (optionT (listT Id)).
+  Definition runOStateND{S A: Type}(m: OStateND S A)(s: S): list (option (A * S)) :=
+    runListT (runOptionT (runStateT m s)).
+  (* list of option requires us to ensure that each element is not None *)
+End way1.
+
+
+Definition OState(S: Type): Type -> Type := optionT (StateT S Id).
+Definition runOState{S A: Type}(m: OState S A)(s: S): option A * S :=
+  runStateT (runOptionT m) s.
+
+Definition OStateND(S: Type): Type -> Type := optionT (StateT S (listT Id)).
+Definition runOStateND{S A: Type}(m: OStateND S A)(s: S): list (option A * S) :=
+ runListT (runStateT (runOptionT m) s).
+
+
+Compute (runListT (runStateT comp7'' (1, 1))).
+(* if we compose the other way, this example works fine (getting answer * state pairs) *)
 
 Definition comp8: (listT (StateT nat Id) nat) :=
   x <- lift_into_listT get;
