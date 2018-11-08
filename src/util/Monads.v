@@ -209,7 +209,15 @@ Lemma OStateND_weaken{S A: Type}: forall (m: OStateND S A) (P Q: S -> A -> Prop)
   (forall s a, P s a -> Q s a) ->
   forall s, m s P -> m s Q.
 Proof.
-  intros. unfold OStateND in *.
+  unfold OStateND in *. intros m P Q.
+  intro H.
+  intro s.
+  specialize (H s).
+  generalize (m s P) as msP.
+  generalize (m s Q) as msQ.
+  clear m.
+  clear.
+  (* false *)
 Abort.
 
 
@@ -222,7 +230,7 @@ Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
     fun (s : S) (post : S -> A -> Prop) =>
       (* with builtin weakening: just "post s a"
          with precision: *)
-      forall s' a', s' = s /\ a' = a <-> post s' a';
+      forall s' a', (s' = s /\ a' = a) <-> post s' a';
 |}.
 - intros.
   extensionality s. extensionality post.
