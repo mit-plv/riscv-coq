@@ -23,6 +23,15 @@ Instance Id_monad: Monad Id := {|
 |}.
 
 
+Definition NonDet(A: Type): Type := A -> Prop.
+
+Instance NonDet_Monad: Monad NonDet := {|
+  Bind{A B}(m: NonDet A)(f: A -> NonDet B) :=
+    fun (b: B) => exists a, m a /\ f a b;
+  Return{A} := eq;
+|}.
+
+
 Record optionT(M: Type -> Type)(A: Type): Type := mkOptionT {
   runOptionT: M (option A)
 }.
@@ -200,6 +209,15 @@ Module way1.
   (* list of option requires us to ensure that each element is not None *)
 End way1.
 
+Module way2.
+
+  Definition OStateND(S: Type): Type -> Type := StateT S (optionT NonDet).
+  Definition runOStateND{S A: Type}(m: OStateND S A)(s: S): NonDet (option (A * S)) :=
+    runOptionT (runStateT m s).
+
+  (* basically "S -> (option (A * S) -> Prop)", which is the
+     same as "S -> option (A * S) -> Prop" *)
+End way2.
 
 Definition OState(S: Type): Type -> Type := optionT (StateT S Id).
 Definition runOState{S A: Type}(m: OState S A)(s: S): option A * S :=

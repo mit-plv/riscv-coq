@@ -63,6 +63,40 @@ Instance OptionMonadPlus: MonadPlus option := {|
 Defined.
 
 
+Definition NonDet(A: Type): Type := A -> Prop.
+
+Instance NonDet_Monad: Monad NonDet := {|
+  Bind{A B}(m: NonDet A)(f: A -> NonDet B) :=
+    fun (b: B) => exists a, m a /\ f a b;
+  Return{A} := eq;
+|}.
+- intros.
+  extensionality b.
+  apply propositional_extensionality. split; intros.
+  + destruct H as (a0 & E & H).
+    subst a0.
+    assumption.
+  + eexists; split; [reflexivity|].
+    assumption.
+- intros.
+  extensionality b.
+  apply propositional_extensionality. split; intros.
+  + destruct H as (a & H & E).
+    subst b.
+    assumption.
+  + eexists; split; [|reflexivity].
+    assumption.
+- intros.
+  extensionality c.
+  apply propositional_extensionality. split; intros.
+  + destruct H as (b & (a & ? & ?) & ?).
+    eexists; split; [eassumption|].
+    eauto.
+  + destruct H as (a & ? & (b & ? & ?)).
+    eauto.
+Defined.
+
+
 Definition State(S A: Type) := S -> (A * S).
 
 Instance State_Monad(S: Type): Monad (State S) := {|
@@ -293,6 +327,55 @@ Module WithOptionAndList.
 End WithOptionAndList.
 
 
+Module Another.
+  (* option is for failure, Prop is for non-determinism *)
+  Definition OStateND(S A: Type) := S -> option (A * S) -> Prop.
+
+  Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
+    Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
+      fun (s : S) (obs: option (B * S)) =>
+        (m s None /\ obs = None) \/
+        (exists a s', m s (Some (a, s')) /\ f a s' obs);
+    Return{A}(a : A) :=
+      fun (s : S) (oas: option (A * S)) => oas = Some (a, s);
+  |}.
+  - intros. extensionality s. extensionality obs.
+    apply propositional_extensionality. split; intros.
+    + destruct H as [(? & ?) | (a0 & s' & ? & ?)]; [discriminate|].
+      inversion H; subst s' a0; clear H. assumption.
+    + right. eexists; eexists; split; [reflexivity|]. assumption.
+  - intros. extensionality s. extensionality oas.
+    apply propositional_extensionality. split; intros.
+    + destruct H as [(? & ?) | (a0 & s' & ? & ?)].
+      * subst. assumption.
+      * subst. assumption.
+    + destruct oas as [(a & s')|].
+      * right. eauto.
+      * left. eauto.
+  - intros.
+    extensionality s. extensionality ocs.
+    apply propositional_extensionality. split; intros.
+    + destruct H as [H | H].
+      * destruct H as [H ?]. subst ocs.
+        destruct H as [[H _] | H]; [ left; auto | ].
+        destruct H as (a & s' & H1 & H2).
+        right.
+        eauto 8.
+      * destruct H as (b & s' & H & H1).
+        destruct H as [[H ?] | H]; [discriminate|].
+        destruct H as (a & s'' & H2 & H3).
+        right.
+        eauto 8.
+    + destruct H as [[? ?] | H].
+      * subst ocs. left. eauto.
+      * destruct H as (a & s' & H1 & H).
+        destruct H as [(? & ?) | H].
+        -- subst ocs. eauto 8.
+        -- destruct H as (b & s'' & ? & ?). eauto 10.
+  Defined.
+
+End Another.
+
 (* outer set is for hard failure and different choices of how specific we want to be,
    inner set is for non-determinism *)
 Definition OStateND(S A: Type) := S -> set (set (S * A)).
@@ -384,9 +467,6 @@ which is cumbersome as well. *)
   Abort.
 
 End NextTry.
-
-
-
 
 Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
   Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
