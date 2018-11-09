@@ -114,3 +114,15 @@ Defined.
 (* provides the link between "S -> option (A * S) -> Prop" and "S -> (S -> Prop) -> Prop" *)
 Definition computation_satisfies{S: Type}(m: OStateND S unit)(s: S)(post: S -> Prop): Prop :=
   forall (o: option (unit * S)), m s o -> exists s', o = Some (tt, s') /\ post s'.
+
+Definition get{S: Type}: OStateND S S :=
+  fun (s: S) (oss: option (S * S)) => oss = Some (s, s).
+
+Definition put{S: Type}(new_s: S): OStateND S unit :=
+  fun (s: S) (ous: option (unit * S)) => ous = Some (tt, new_s).
+
+Definition fail_hard{S A: Type}: OStateND S A :=
+  fun (s: S) (oas: option (A * S)) => oas = None.
+
+Definition arbitrary{S: Type}(A: Type): OStateND S A :=
+  fun (s: S) (oas: option (A * S)) => exists a, oas = Some (a, s).
