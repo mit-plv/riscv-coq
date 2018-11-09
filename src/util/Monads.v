@@ -22,6 +22,24 @@ Notation "m1 ;; m2" := (Bind m1 (fun _ => m2))
 
 Open Scope monad_scope.
 
+Ltac prove_monad_law :=
+  repeat match goal with
+         | |- _ => intro
+         | |- _ => apply functional_extensionality
+         | |- _ => apply propositional_extensionality; split; intros
+         | H: exists x, _ |- _ => destruct H
+         | H: _ /\ _ |- _ => destruct H
+         | p: _ * _ |- _ => destruct p
+         | |- context [ let (_, _) := ?p in _ ] => let E := fresh "E" in destruct p eqn: E
+         | H: Some _ = Some _ |- _ => inversion H; clear H; subst
+         | H: (_, _) = (_, _) |- _ => inversion H; clear H; subst
+         | |- _ => discriminate
+         | |- _ => progress subst
+         | |- _ => solve [eauto 10]
+         | H: _ \/ _ |- _ => destruct H
+         | o: option _ |- _ => destruct o
+         end.
+
 Instance option_Monad: Monad option := {|
   Bind := fun {A B: Type} (o: option A) (f: A -> option B) => match o with
           | Some x => f x
@@ -29,9 +47,7 @@ Instance option_Monad: Monad option := {|
           end;
   Return := fun {A: Type} (a: A) => Some a
 |}.
-- intros. reflexivity.
-- intros. destruct m; reflexivity.
-- intros. destruct m; reflexivity.
+all: prove_monad_law.
 Defined.
 
 
@@ -42,30 +58,7 @@ Instance NonDet_Monad: Monad NonDet := {|
     fun (b: B) => exists a, m a /\ f a b;
   Return{A} := eq;
 |}.
-- intros.
-  extensionality b.
-  apply propositional_extensionality. split; intros.
-  + destruct H as (a0 & E & H).
-    subst a0.
-    assumption.
-  + eexists; split; [reflexivity|].
-    assumption.
-- intros.
-  extensionality b.
-  apply propositional_extensionality. split; intros.
-  + destruct H as (a & H & E).
-    subst b.
-    assumption.
-  + eexists; split; [|reflexivity].
-    assumption.
-- intros.
-  extensionality c.
-  apply propositional_extensionality. split; intros.
-  + destruct H as (b & (a & ? & ?) & ?).
-    eexists; split; [eassumption|].
-    eauto.
-  + destruct H as (a & ? & (b & ? & ?)).
-    eauto.
+all: prove_monad_law.
 Defined.
 
 
@@ -77,9 +70,7 @@ Instance State_Monad(S: Type): Monad (State S) := {|
   Return := fun {A: Type} (a: A) =>
               fun (s: S) => (a, s)
 |}.
-- intros. reflexivity.
-- intros. extensionality s. destruct (m s). reflexivity.
-- intros. extensionality s. destruct (m s). reflexivity.
+all: prove_monad_law.
 Defined.
 
 Module StateM.
@@ -100,9 +91,7 @@ Instance OState_Monad(S: Type): Monad (OState S) := {|
   Return := fun {A: Type} (a: A) =>
               fun (s: S) => (Some a, s)
 |}.
-- intros. reflexivity.
-- intros. extensionality s. destruct (m s). destruct o; reflexivity.
-- intros. extensionality s. destruct (m s). destruct o; reflexivity.
+all: prove_monad_law.
 Defined.
 
 
@@ -119,19 +108,5 @@ Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
   Return{A}(a : A) :=
     fun (s : S) (oas: option (A * S)) => oas = Some (a, s);
 |}.
-all:
-  repeat match goal with
-         | |- _ => intro
-         | |- _ => apply functional_extensionality
-         | |- _ => apply propositional_extensionality; split; intros
-         | H: exists x, _ |- _ => destruct H
-         | H: _ /\ _ |- _ => destruct H
-         | p: _ * _ |- _ => destruct p
-         | H: Some _ = Some _ |- _ => inversion H; clear H; subst
-         | |- _ => discriminate
-         | |- _ => progress subst
-         | |- _ => solve [eauto 10]
-         | H: _ \/ _ |- _ => destruct H
-         | o: option _ |- _ => destruct o
-         end.
+all: prove_monad_law.
 Defined.
