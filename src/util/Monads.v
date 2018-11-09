@@ -211,6 +211,8 @@ Definition union{A: Type}(s1 s2: set A): set A := fun a => a \in s1 \/ a \in s2.
 
 Definition empty_set{A: Type}: set A := fun a => False.
 
+Definition singleton_set{A: Type}(a: A): set A := eq a.
+
 Module WithOption.
 
   Definition OStateND(S A: Type) := S -> option (set (S * A)).
@@ -300,28 +302,98 @@ Definition TODO{A: Type}: A. Admitted.
 Definition bind_set{A B: Type}(sa: set A)(f: A -> set B): set B :=
   fun b => exists a, a \in sa /\ b \in (f a).
 
-Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
-  Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
-    fun (s : S) => bind_set (m s) (fun (mid: set (S * A)) => _);
-  Return{A}(a : A) :=
-    fun (s : S) => _;
-|}.
+Module SetsLikeList.
 
+  Definition fold_set{A B: Type}(f: B -> set A -> set A)(initial: set A)(sb: set B): set A.
+    (* not possible: cannot thread accumulator through appying f to all elements of sb *)
+  Admitted.
 
-(*
+  Definition folding_step{S A B: Type}(f: A -> OStateND S B):
+    S * A -> set (set (S * B)) -> set (set (S * B)) :=
+    fun '(s, a) res =>
+      bind_set (f a s)
+               (fun newres =>
+                  bind_set res
+                           (fun oldres => singleton_set (union newres oldres))).
+
+  Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
     Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
-      fun (s : S) => bind_option (m s) (fun l => fold_right (folding_step f)
-                                                            (Some nil)
-                                                            l);
+      fun (s : S) => bind_set (m s) (fun (mid: set (S * A)) =>
+                                       (fold_set (folding_step f)
+                                                 (singleton_set empty_set)
+                                                 mid));
     Return{A}(a : A) :=
-      fun (s : S) => Some (cons (s, a) nil);
+      fun (s : S) => singleton_set (singleton_set (s, a));
+  |}.
+  Abort.
+End SetsLikeList.
+
+(* "bind" for a set which is used to encode "option", i.e. 0 or one value *)
+Definition bind_option_set{A B: Type}(sa: set A)(f: A -> set B): set B :=
+    fun b => exists a, a \in sa /\ (forall a', a' \in sa -> a' = a) /\ b \in (f a).
+
+Module TryWithoutFoldSet.
+
+  Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
+    Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
+      fun (s : S) => bind_option_set (m s)
+                                     (fun (mid: set (S * A)) =>
+     (* not what we want: bind_set will ignore empty sets returned by bind_option_set *)
+                                        bind_set mid (fun '(s', a) =>
+                                                        bind_option_set (f a s')
+                                                                        (fun sbs =>
+                                                                           singleton_set sbs)));
+    Return{A}(a : A) :=
+      fun (s : S) => singleton_set (singleton_set (s, a));
+  |}.
+  Abort.
+
+End TryWithoutFoldSet.
+
+(* already in Coq lib
+Definition exists_unique{A: Type}(P: A -> Prop): Prop :=
+  exists (a: A), P a /\ forall (a': A), P a -> a' = a.
 *)
-Abort.
+
+Module NextTry.
+
+  Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
+    Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
+      fun (s : S) (post: set (S * B)) =>
+        exists! (mid: set (S * A)), mid \in m s /\ (_: Prop);
+    Return{A}(a : A) :=
+      fun (s : S) => singleton_set (singleton_set (s, a));
+  |}.
+  pose (forall s' a, (s', a) \in mid -> f a s' = f a s').
+
+    (*
+It seems there is no nice way to get the monad laws to hold
+
+If we want right_associativity to hold, we need to make sure Bind & Return
+return a unique postcond set.
+If we use option to encode this, we can't put a (A -> Prop) inside it,
+because we can't fold over an (A -> Prop) and arrive in an option, so
+we have to put list in it, but then associativity becomes a fold_right
+nightmare, and the fold_right will probably pop up elsewhere too, and it's
+inconvenient to use fold_right because it "threads" through the set in a
+very particular order just to assert no Nones and to take the union,
+this seems cumbersome to reason about.
+But if we choose not to use option, but set and then ensure uniqueness,
+we have to add many uniqueness conditions (not evern sure if possible),
+which is cumbersome as well. *)
+  Abort.
+
+End NextTry.
+
+
+
 
 Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
   Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
     fun (s : S) (post : set (S * B)) =>
       exists mid : set (S * A),
+        (* if "f a s'" returns an empty set (i.e. (fun post' => False)),
+           then the -> will never hold, which is good *)
         m s mid /\ (forall s' a, (s', a) \in mid <-> f a s' post);
   Return{A}(a : A) :=
     fun (s : S) (post : set (S * A)) =>
