@@ -327,58 +327,34 @@ Module WithOptionAndList.
 End WithOptionAndList.
 
 
-Module Another.
-  (* option is for failure, Prop is for non-determinism *)
-  Definition OStateND(S A: Type) := S -> option (A * S) -> Prop.
+(* option is for failure, Prop is for non-determinism *)
+Definition OStateND(S A: Type) := S -> option (A * S) -> Prop.
 
-  Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
-    Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
-      fun (s : S) (obs: option (B * S)) =>
-        (m s None /\ obs = None) \/
-        (exists a s', m s (Some (a, s')) /\ f a s' obs);
-    Return{A}(a : A) :=
-      fun (s : S) (oas: option (A * S)) => oas = Some (a, s);
-  |}.
-  - intros. extensionality s. extensionality obs.
-    apply propositional_extensionality. split; intros.
-    + destruct H as [(? & ?) | (a0 & s' & ? & ?)]; [discriminate|].
-      inversion H; subst s' a0; clear H. assumption.
-    + right. eexists; eexists; split; [reflexivity|]. assumption.
-  - intros. extensionality s. extensionality oas.
-    apply propositional_extensionality. split; intros.
-    + destruct H as [(? & ?) | (a0 & s' & ? & ?)].
-      * subst. assumption.
-      * subst. assumption.
-    + destruct oas as [(a & s')|].
-      * right. eauto.
-      * left. eauto.
-  - intros.
-    extensionality s. extensionality ocs.
-    apply propositional_extensionality. split; intros.
-    + destruct H as [H | H].
-      * destruct H as [H ?]. subst ocs.
-        destruct H as [[H _] | H]; [ left; auto | ].
-        destruct H as (a & s' & H1 & H2).
-        right.
-        eauto 8.
-      * destruct H as (b & s' & H & H1).
-        destruct H as [[H ?] | H]; [discriminate|].
-        destruct H as (a & s'' & H2 & H3).
-        right.
-        eauto 8.
-    + destruct H as [[? ?] | H].
-      * subst ocs. left. eauto.
-      * destruct H as (a & s' & H1 & H).
-        destruct H as [(? & ?) | H].
-        -- subst ocs. eauto 8.
-        -- destruct H as (b & s'' & ? & ?). eauto 10.
-  Defined.
+Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
+  Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
+    fun (s : S) (obs: option (B * S)) =>
+      (m s None /\ obs = None) \/
+      (exists a s', m s (Some (a, s')) /\ f a s' obs);
+  Return{A}(a : A) :=
+    fun (s : S) (oas: option (A * S)) => oas = Some (a, s);
+|}.
+all:
+  repeat match goal with
+         | |- _ => intro
+         | |- _ => apply functional_extensionality
+         | |- _ => apply propositional_extensionality; split; intros
+         | H: exists x, _ |- _ => destruct H
+         | H: _ /\ _ |- _ => destruct H
+         | p: _ * _ |- _ => destruct p
+         | H: Some _ = Some _ |- _ => inversion H; clear H; subst
+         | |- _ => discriminate
+         | |- _ => progress subst
+         | |- _ => solve [eauto 10]
+         | H: _ \/ _ |- _ => destruct H
+         | o: option _ |- _ => destruct o
+         end.
+Defined.
 
-End Another.
-
-(* outer set is for hard failure and different choices of how specific we want to be,
-   inner set is for non-determinism *)
-Definition OStateND(S A: Type) := S -> set (set (S * A)).
 
 Definition TODO{A: Type}: A. Admitted.
 
@@ -386,6 +362,10 @@ Definition bind_set{A B: Type}(sa: set A)(f: A -> set B): set B :=
   fun b => exists a, a \in sa /\ b \in (f a).
 
 Module SetsLikeList.
+
+  (* outer set is for hard failure and different choices of how specific we want to be,
+     inner set is for non-determinism *)
+  Definition OStateND(S A: Type) := S -> set (set (S * A)).
 
   Definition fold_set{A B: Type}(f: B -> set A -> set A)(initial: set A)(sb: set B): set A.
     (* not possible: cannot thread accumulator through appying f to all elements of sb *)
@@ -417,6 +397,10 @@ Definition bind_option_set{A B: Type}(sa: set A)(f: A -> set B): set B :=
 
 Module TryWithoutFoldSet.
 
+  (* outer set is for hard failure and different choices of how specific we want to be,
+     inner set is for non-determinism *)
+  Definition OStateND(S A: Type) := S -> set (set (S * A)).
+
   Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
     Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
       fun (s : S) => bind_option_set (m s)
@@ -439,6 +423,10 @@ Definition exists_unique{A: Type}(P: A -> Prop): Prop :=
 *)
 
 Module NextTry.
+
+  (* outer set is for hard failure and different choices of how specific we want to be,
+     inner set is for non-determinism *)
+  Definition OStateND(S A: Type) := S -> set (set (S * A)).
 
   Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
     Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
@@ -468,7 +456,13 @@ which is cumbersome as well. *)
 
 End NextTry.
 
-Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
+Module YetAnother.
+
+  (* outer set is for hard failure and different choices of how specific we want to be,
+   inner set is for non-determinism *)
+  Definition OStateND(S A: Type) := S -> set (set (S * A)).
+
+  Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
   Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
     fun (s : S) (post : set (S * B)) =>
       exists mid : set (S * A),
@@ -480,7 +474,7 @@ Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
       (* with builtin weakening: just "post s a"
          with precision: *)
       forall s' a', (s' = s /\ a' = a) <-> (s', a') \in post;
-|}.
+  |}.
 - intros.
   extensionality s. extensionality post.
   apply propositional_extensionality.
@@ -516,12 +510,14 @@ If we require post to be precise, (as in the code above),
 we should get something similar to list-based non-determinism, but
 it doesn't really look like so. *)
 
-Admitted.
+  Admitted.
+End YetAnother.
 
+Module OO1.
 
-Definition OOStateND(S A: Type) := S -> (S -> option A -> Prop) -> Prop.
+  Definition OOStateND(S A: Type) := S -> (S -> option A -> Prop) -> Prop.
 
-Instance OOStateND_Monad(S: Type): Monad (OOStateND S) := {|
+  Instance OOStateND_Monad(S: Type): Monad (OOStateND S) := {|
   Bind := fun (A B : Type) (m : OOStateND S A) (f : A -> OOStateND S B)
               (s : S) (post : S -> option B -> Prop) =>
             exists mid : S -> option A -> Prop,
@@ -569,6 +565,8 @@ Instance OOStateND_Monad(S: Type): Monad (OOStateND S) := {|
 Grab Existential Variables.
 apply True.
 Defined.
+
+End OO1.
 
 (*
 Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
