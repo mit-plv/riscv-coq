@@ -63,11 +63,11 @@ Section Riscv.
         m <- get;
         put (with_nextPC (add m.(core).(nextPC) (ZToReg 4)) (with_pc m.(core).(nextPC) m));
 
-      getCSRField_MTVecBase :=
-        machine <- get;
-        Return machine.(core).(exceptionHandlerAddr);
+      isMMIOAddr a := false; (* this simple machine has no MMIO *)
 
-      endCycle A := Return None;
+      (* fail hard if exception is thrown because at the moment, we want to prove that
+         code output by the compiler never throws exceptions *)
+      raiseException{A: Type}(isInterrupt: mword)(exceptionCode: mword) := Return None;
   |}.
 
   (* Puts given program at address 0, and makes pc point to beginning of program, i.e. 0.
@@ -81,20 +81,7 @@ Section Riscv.
     (with_nextPC (add addr (ZToReg 4))
     (with_machineMem (store_word_list prog addr ma.(machineMem)) ma))).
 
-  Ltac destruct_if :=
-    match goal with
-    | |- context [if ?x then _ else _] => destruct x
-    end.
-
-  Instance MinimalRiscvSatisfiesAxioms:
-    @AxiomaticRiscv mword MW RF RFI Mem MemIsMem IsRiscvMachine.
-  Proof.
-    constructor; intros; simpl; try reflexivity; destruct_if; try reflexivity;
-      subst; unfold valid_register, Register0 in *; omega.
-  Qed.
-
 End Riscv.
 
 (* needed because it was defined inside a Section *)
 Existing Instance IsRiscvMachine.
-Existing Instance MinimalRiscvSatisfiesAxioms.

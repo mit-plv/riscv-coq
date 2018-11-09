@@ -68,8 +68,8 @@ Section Riscv.
         liftL2 storeWord a v;
       storeDouble := liftL2 storeDouble;
       step := liftL0 step;
-      getCSRField_MTVecBase := liftL0 getCSRField_MTVecBase;
-      endCycle A := Return None;
+      isMMIOAddr := isMMIOAddr;
+      raiseException{A} := liftL2 (raiseException (A := A));
   |}.
 
   Definition putProgram(prog: list (word 32))(addr: t)(ma: RiscvMachineL): RiscvMachineL :=

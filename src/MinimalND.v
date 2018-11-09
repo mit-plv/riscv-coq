@@ -1,3 +1,5 @@
+Require Import Coq.Logic.FunctionalExtensionality.
+Require Import Coq.Logic.PropExtensionality.
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.util.BitWidths.
 Require Import riscv.util.Monads. Import OStateNDOperations.
@@ -8,7 +10,9 @@ Require Import riscv.Execute.
 Require Import riscv.util.PowerFunc.
 Require Import riscv.Utility.
 Require Import Coq.Lists.List. Import ListNotations.
-Require Import riscv.RiscvMachine.
+Require Export riscv.RiscvMachineL.
+Require Import riscv.AxiomaticRiscv.
+Require Import Coq.micromega.Lia.
 
 
 Section Riscv.
@@ -24,20 +28,7 @@ Section Riscv.
   Context {RF: Type}.
   Context {RFI: RegisterFile RF Register t}.
 
-  (* MMIO trace *)
-  Inductive LogEvent :=
-  | EvInput(addr: Z)(v: word 32)
-  | EvOutput(addr: Z)(v: word 32).
-
-  Definition Log := list LogEvent.
-
-  Record RiscvMachineL := mkRiscvMachineL {
-    machine: @RiscvMachine t Mem RF;
-    log: Log;
-  }.
-
-  Definition with_machine m ml := mkRiscvMachineL m ml.(log).
-  Definition with_log l ml := mkRiscvMachineL ml.(machine) l.
+  Local Notation RiscvMachineL := (@RiscvMachineL t Mem RF).
 
 (*
   Definition liftL0{B: Type}(f: OStateND (@RiscvMachine t Mem RF) B):  OStateND RiscvMachineL B (*:=
@@ -97,10 +88,10 @@ Section Riscv.
     s <- get; success (deterministic s None).
 *)
 
+  Definition simple_isMMIOAddr: t -> bool := reg_eqb (ZToReg 65524). (* maybe like spike *)
+
   Definition logEvent(e: LogEvent): OStateND RiscvMachineL unit :=
     m <- get; put (with_log (e :: m.(log)) m).
-
-  Definition isMMIOAddr(a: t): bool. Admitted.
 
   Definition liftLoad{R}(f: Mem -> t -> R): t -> OStateND RiscvMachineL R :=
     fun a => m <- get; Return (f (m.(machine).(machineMem)) a).
@@ -136,7 +127,7 @@ Section Riscv.
 
       loadByte   := liftLoad Memory.loadByte;
       loadHalf   := liftLoad Memory.loadHalf;
-      loadWord a := if isMMIOAddr a
+      loadWord a := if simple_isMMIOAddr a
                     then
                       inp <- arbitrary (word 32);
                       logEvent (EvInput (regToZ_unsigned a) inp);;
@@ -155,11 +146,45 @@ Section Riscv.
         let m' := with_nextPC (add m.(core).(nextPC) (ZToReg 4)) (with_pc m.(core).(nextPC) m) in
         put (with_machine m' mach);
 
-      getCSRField_MTVecBase := fail_hard;
+      isMMIOAddr := simple_isMMIOAddr;
 
-      endCycle A := fail_hard;
+      (* fail hard if exception is thrown because at the moment, we want to prove that
+         code output by the compiler never throws exceptions *)
+      raiseException{A: Type}(isInterrupt: t)(exceptionCode: t) := fail_hard;
   |}.
+
+  Instance MinimalNDSatisfiesAxioms:
+    @AxiomaticRiscv t MW RF RFI Mem MemIsMem IsRiscvMachineL.
+  Proof.
+    constructor;
+    repeat match goal with
+           | |- _ => reflexivity
+           | |- _ => progress (
+                         unfold valid_register, Register0,
+                                get, put, fail_hard, arbitrary,
+                                liftLoad, liftStore, logEvent in *;
+                         subst;
+                         simpl in *)
+           | |- _ => intro
+           | |- _ => apply functional_extensionality
+           | |- _ => apply propositional_extensionality; split; intros
+           | H: exists x, _ |- _ => destruct H
+           | H: _ /\ _ |- _ => destruct H
+           | p: _ * _ |- _ => destruct p
+           | |- context [ let (_, _) := ?p in _ ] => let E := fresh "E" in destruct p eqn: E
+           | H: Some _ = Some _ |- _ => inversion H; clear H; subst
+           | H: (_, _) = (_, _) |- _ => inversion H; clear H; subst
+           | |- _ => discriminate
+           | |- _ => solve [exfalso; lia]
+           | |- _ => solve [eauto 15]
+           | |- context [if ?x then _ else _] => let E := fresh "E" in destruct x eqn: E
+           | _: context [if ?x then _ else _] |- _ => let E := fresh "E" in destruct x eqn: E
+           | H: _ \/ _ |- _ => destruct H
+           | o: option _ |- _ => destruct o
+           end.
+  Qed.
 
 End Riscv.
 
 Existing Instance IsRiscvMachineL. (* needed because it was defined inside a Section *)
+Existing Instance MinimalNDSatisfiesAxioms.

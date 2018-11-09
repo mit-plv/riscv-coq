@@ -24,21 +24,16 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   getPC: M t;
   setPC: t -> M unit;
 
-  (* TODO support all get/setCSRField, this ZToReg 1 is just for the exception handler address *)
-  getCSRField_MTVecBase: M MachineInt;
-
   step: M unit; (* updates PC *)
 
-  endCycle: forall {A}, M A;
+  (* note: does not return "M bool", because this is a static constant *)
+  isMMIOAddr: t -> bool;
+
+  raiseException{A: Type}(isInterrupt: t)(exceptionCode: t): M A;
 }.
 
 
-(* The Haskell spec defines concrete implementations for raiseException and translate,
-   but we prefer to leave them abstract, so that we can prove more general theorems *)
 Class RiscvState`{MP: RiscvProgram} := mkRiscvState {
-  (* ends current cycle, sets exception flag, and sets PC to exception handler address *)
-  raiseException{A: Type}(isInterrupt: t)(exceptionCode: t): M A;
-
   (* checks that addr is aligned, and translates the (possibly virtual) addr to a physical
      address, raising an exception if the address is invalid *)
   translate(accessType: AccessType)(alignment: t)(addr: t): M t;
@@ -56,14 +51,6 @@ Section Riscv.
   (* provides operations on t *)
   Context {MW: MachineWidth t}.
 
-  Definition default_raiseException{A: Type}{MP: RiscvProgram}
-    (isInterrupt: t)(exceptionCode: t): M A :=
-    pc <- getPC;
-    addr <- getCSRField_MTVecBase;
-    setPC (fromImm (addr * 4)%Z);;
-    endCycle.
-
-
   Local Open Scope alu_scope.
   Local Open Scope Z_scope.
 
@@ -72,11 +59,10 @@ Section Riscv.
   Definition default_translate{MP: RiscvProgram}
     (accessType: AccessType)(alignment: t)(addr: t): M t :=
     if remu addr alignment /= ZToReg 0
-    then default_raiseException (ZToReg 0) (ZToReg 4)
+    then raiseException (ZToReg 0) (ZToReg 4)
     else Return addr.
 
   Instance DefaultRiscvState{MP: RiscvProgram}: RiscvState := {|
-    raiseException A := default_raiseException;
     translate := default_translate;
   |}.
 
