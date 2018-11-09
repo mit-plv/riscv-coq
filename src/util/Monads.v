@@ -110,3 +110,7 @@ Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
 |}.
 all: prove_monad_law.
 Defined.
+
+(* provides the link between "S -> option (A * S) -> Prop" and "S -> (S -> Prop) -> Prop" *)
+Definition computation_satisfies{S: Type}(m: OStateND S unit)(s: S)(post: S -> Prop): Prop :=
+  forall (o: option (unit * S)), m s o -> exists s', o = Some (tt, s') /\ post s'.
