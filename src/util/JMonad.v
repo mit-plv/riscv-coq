@@ -219,7 +219,6 @@ Axiom RiscvMachine: Type.
 (*Check (@lift optionT _ _ _ _ get).*)
 Check (@run1 (OStateND RiscvMachine);; liftListT (liftOptionT get)).
 Check (runOStateND (@run1 (OStateND RiscvMachine);; liftListT (liftOptionT get))).
-*)
 
 Definition comp1: OStateND (nat * nat) nat :=
   both <- liftListT (liftOptionT get); ret (fst both).

@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import riscv.util.BitWidths.
-Require Import riscv.util.Monads.
+Require Import riscv.util.Monads. Import OStateOperations.
 Require Import riscv.Decode.
 Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)
 Require Import riscv.Program.
@@ -25,7 +25,7 @@ Section Riscv.
   Definition liftStore{R}(f: Mem -> mword -> R -> Mem):
     mword -> R -> OState RiscvMachine unit :=
     fun a v => m <- get; put (with_machineMem (f m.(machineMem) a v) m).
-  
+
   Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) mword :=
   {|
       getRegister reg :=
@@ -92,7 +92,7 @@ Section Riscv.
     constructor; intros; simpl; try reflexivity; destruct_if; try reflexivity;
       subst; unfold valid_register, Register0 in *; omega.
   Qed.
-  
+
 End Riscv.
 
 (* needed because it was defined inside a Section *)

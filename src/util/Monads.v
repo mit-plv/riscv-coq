@@ -73,11 +73,11 @@ Instance State_Monad(S: Type): Monad (State S) := {|
 all: prove_monad_law.
 Defined.
 
-Module StateM.
-Definition get{S: Type}: State S S := fun (s: S) => (s, s).
-Definition gets{S A: Type}(f: S -> A): State S A := fun (s: S) => (f s, s).
-Definition put{S: Type}(s: S): State S unit := fun _ => (tt, s).
-End StateM.
+Module StateOperations.
+  Definition get{S: Type}: State S S := fun (s: S) => (s, s).
+  Definition gets{S A: Type}(f: S -> A): State S A := fun (s: S) => (f s, s).
+  Definition put{S: Type}(s: S): State S unit := fun _ => (tt, s).
+End StateOperations.
 
 
 Definition OState(S A: Type) := S -> (option A) * S.
@@ -93,6 +93,12 @@ Instance OState_Monad(S: Type): Monad (OState S) := {|
 |}.
 all: prove_monad_law.
 Defined.
+
+Module OStateOperations.
+  Definition get{S: Type}: OState S S := fun (s: S) => (Some s, s).
+  Definition gets{S A: Type}(f: S -> A): OState S A := fun (s: S) => (Some (f s), s).
+  Definition put{S: Type}(s: S): OState S unit := fun _ => (Some tt, s).
+End OStateOperations.
 
 
 (* option is for failure, Prop is for non-determinism.
@@ -115,14 +121,18 @@ Defined.
 Definition computation_satisfies{S: Type}(m: OStateND S unit)(s: S)(post: S -> Prop): Prop :=
   forall (o: option (unit * S)), m s o -> exists s', o = Some (tt, s') /\ post s'.
 
-Definition get{S: Type}: OStateND S S :=
-  fun (s: S) (oss: option (S * S)) => oss = Some (s, s).
+Module OStateNDOperations.
 
-Definition put{S: Type}(new_s: S): OStateND S unit :=
-  fun (s: S) (ous: option (unit * S)) => ous = Some (tt, new_s).
+  Definition get{S: Type}: OStateND S S :=
+    fun (s: S) (oss: option (S * S)) => oss = Some (s, s).
 
-Definition fail_hard{S A: Type}: OStateND S A :=
-  fun (s: S) (oas: option (A * S)) => oas = None.
+  Definition put{S: Type}(new_s: S): OStateND S unit :=
+    fun (s: S) (ous: option (unit * S)) => ous = Some (tt, new_s).
 
-Definition arbitrary{S: Type}(A: Type): OStateND S A :=
-  fun (s: S) (oas: option (A * S)) => exists a, oas = Some (a, s).
+  Definition fail_hard{S A: Type}: OStateND S A :=
+    fun (s: S) (oas: option (A * S)) => oas = None.
+
+  Definition arbitrary{S: Type}(A: Type): OStateND S A :=
+    fun (s: S) (oas: option (A * S)) => exists a, oas = Some (a, s).
+
+End OStateNDOperations.

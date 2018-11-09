@@ -1,6 +1,6 @@
 Require Import riscv.Memory.
 Require Import riscv.Utility.
-Require Import riscv.util.Monads.
+Require Import riscv.util.Monads. Export OStateOperations.
 
 Class MonadicMemory(m: Type -> Type)(a: Set) := mkMonadicMemory {
   loadByte   : a -> m (word  8);

@@ -2,7 +2,7 @@ Require Import Coq.Lists.List.
 Import ListNotations.
 Require Import riscv.Memory.
 Require Import riscv.MonadicMemory.
-Require Import riscv.util.Monads.
+Require Import riscv.util.Monads. Import StateOperations.
 Require Import riscv.Utility.
 
 
@@ -31,39 +31,39 @@ Instance StateLoggingMemory_is_MonadicMemory(M: Set)(t: Set){MW: MachineWidth t}
   MonadicMemory (State (LoggingMemory M t)) t :=
 {|
   loadByte a :=
-     m <- StateM.get;
+     m <- get;
      let r := Memory.loadByte (fst m) a in
-     StateM.put (log m (Trace_loadByte a r));;
+     put (log m (Trace_loadByte a r));;
      Return r;
   loadHalf a :=
-     m <- StateM.get;
+     m <- get;
      let r := Memory.loadHalf (fst m) a in
-     StateM.put (log m (Trace_loadHalf a r));;
+     put (log m (Trace_loadHalf a r));;
      Return r;
   loadWord a :=
-     m <- StateM.get;
+     m <- get;
      let r := Memory.loadWord (fst m) a in
-     StateM.put (log m (Trace_loadWord a r));;
+     put (log m (Trace_loadWord a r));;
      Return r;
   loadDouble a :=
-     m <- StateM.get;
+     m <- get;
      let r := Memory.loadDouble (fst m) a in
-     StateM.put (log m (Trace_loadDouble a r));;
+     put (log m (Trace_loadDouble a r));;
      Return r;
   storeByte a v :=
-     m <- StateM.get;
+     m <- get;
      let m' := Memory.storeByte (fst m) a v in
-     StateM.put (log (m', snd m) (Trace_storeByte a v));
+     put (log (m', snd m) (Trace_storeByte a v));
   storeHalf a v :=
-     m <- StateM.get;
+     m <- get;
      let m' := Memory.storeHalf (fst m) a v in
-     StateM.put (log (m', snd m) (Trace_storeHalf a v));
+     put (log (m', snd m) (Trace_storeHalf a v));
   storeWord a v :=
-     m <- StateM.get;
+     m <- get;
      let m' := Memory.storeWord (fst m) a v in
-     StateM.put (log (m', snd m) (Trace_storeWord a v));
+     put (log (m', snd m) (Trace_storeWord a v));
   storeDouble a v :=
-     m <- StateM.get;
+     m <- get;
      let m' := Memory.storeDouble (fst m) a v in
-     StateM.put (log (m', snd m) (Trace_storeDouble a v));
+     put (log (m', snd m) (Trace_storeDouble a v));
 |}.

@@ -17,7 +17,6 @@ Section Riscv.
 
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
-  Context {MP: MonadPlus M}.
   Context {RVP: RiscvProgram M mword}.
   Context {RVS: RiscvState M mword}.
 
@@ -26,7 +25,7 @@ Section Riscv.
     | BW32 => RV32IM
     | BW64 => RV64IM
     end.
-  
+
   Definition run1:
     M unit :=
     pc <- getPC;

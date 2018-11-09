@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.util.BitWidths.
-Require Import riscv.util.Monads.
+Require Import riscv.util.Monads. Import OStateNDOperations.
 Require Import riscv.Decode.
 Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)
 Require Import riscv.Program.
@@ -8,7 +8,8 @@ Require Import riscv.Execute.
 Require Import riscv.util.PowerFunc.
 Require Import riscv.Utility.
 Require Import Coq.Lists.List. Import ListNotations.
-Require Import riscv.Minimal.
+Require Import riscv.RiscvMachine.
+
 
 Section Riscv.
 
@@ -50,7 +51,7 @@ Section Riscv.
     A1 -> A2 -> OStateND RiscvMachineL B. (*  :=
     fun a1 a2 s => let (ob, ma) := f a1 a2 s.(machine) in (ob, with_machine ma s). *)
   Admitted.
-*)
+
   Definition liftL0{B: Type}(f: OState (@RiscvMachine t Mem RF) B):  OStateND RiscvMachineL B (*:=
     fun s => let (ob, ma) := f s.(machine) in (ob, with_machine ma s).*)
 . Admitted.
@@ -62,9 +63,9 @@ Section Riscv.
     A1 -> A2 -> OStateND RiscvMachineL B. (*  :=
     fun a1 a2 s => let (ob, ma) := f a1 a2 s.(machine) in (ob, with_machine ma s). *)
   Admitted.
-
+*)
   Definition TODO{A: Type}: A. Admitted.
-
+(*
   Definition get: OStateND RiscvMachineL RiscvMachineL.
     intro s. intro set.
     apply (forall mach ans, set mach ans <-> ans = Some mach /\ mach = s).
@@ -94,45 +95,70 @@ Section Riscv.
   (* recoverable (through option) *)
   Definition throw{A}: OStateND RiscvMachineL A :=
     s <- get; success (deterministic s None).
+*)
 
   Definition logEvent(e: LogEvent): OStateND RiscvMachineL unit :=
     m <- get; put (with_log (e :: m.(log)) m).
 
   Definition isMMIOAddr(a: t): bool. Admitted.
 
+  Definition liftLoad{R}(f: Mem -> t -> R): t -> OStateND RiscvMachineL R :=
+    fun a => m <- get; Return (f (m.(machine).(machineMem)) a).
+
+  Definition liftStore{R}(f: Mem -> t -> R -> Mem):
+    t -> R -> OStateND RiscvMachineL unit :=
+    fun a v =>
+      m <- get;
+      let newMem := f m.(machine).(machineMem) a v in
+      put (with_machine (with_machineMem newMem (m.(machine))) m).
+
   Instance IsRiscvMachineL: RiscvProgram (OStateND RiscvMachineL) t :=  {|
-      getRegister := liftL1 getRegister;
-      setRegister := liftL2 setRegister;
-      getPC := liftL0 getPC;
-      setPC := liftL1 setPC;
-      loadByte   := liftL1 loadByte;
-      loadHalf   := liftL1 loadHalf;
+      getRegister reg :=
+        if Z.eq_dec reg Register0 then
+          Return (ZToReg 0)
+        else
+          mach <- get;
+          Return (getReg mach.(machine).(core).(registers) reg);
+
+      setRegister reg v :=
+        if Z.eq_dec reg Register0 then
+          Return tt
+        else
+          mach <- get;
+          let newRegs := setReg mach.(machine).(core).(registers) reg v in
+          put (with_machine (with_registers newRegs mach.(machine)) mach);
+
+      getPC := mach <- get; Return mach.(machine).(core).(pc);
+
+      setPC newPC :=
+        mach <- get;
+        put (with_machine (with_nextPC newPC mach.(machine)) mach);
+
+      loadByte   := liftLoad Memory.loadByte;
+      loadHalf   := liftLoad Memory.loadHalf;
       loadWord a := if isMMIOAddr a
                     then
                       inp <- arbitrary (word 32);
-                      logEvent (EvInput (regToZ_unsigned a) inp);; answer inp
-                    else liftL1 loadWord a;
-      loadDouble := liftL1 loadDouble;
-      storeByte   := liftL2 storeByte;
-      storeHalf   := liftL2 storeHalf;
-      storeWord a v := TODO;
-      storeDouble := liftL2 storeDouble;
-      step := liftL0 step;
-      getCSRField_MTVecBase := liftL0 getCSRField_MTVecBase;
-      endCycle A := TODO;
+                      logEvent (EvInput (regToZ_unsigned a) inp);;
+                      Return inp
+                    else liftLoad Memory.loadWord a;
+      loadDouble := liftLoad Memory.loadDouble;
+
+      storeByte   := liftStore Memory.storeByte;
+      storeHalf   := liftStore Memory.storeHalf;
+      storeWord   := liftStore Memory.storeWord;
+      storeDouble := liftStore Memory.storeDouble;
+
+      step :=
+        mach <- get;
+        let m := mach.(machine) in
+        let m' := with_nextPC (add m.(core).(nextPC) (ZToReg 4)) (with_pc m.(core).(nextPC) m) in
+        put (with_machine m' mach);
+
+      getCSRField_MTVecBase := fail_hard;
+
+      endCycle A := fail_hard;
   |}.
-(*
-  - refine (if isMMIOAddr a then _ else _).
-    { refine (inp <- arbitrary (word 32); _).
-      refine (logEvent (EvInput (regToZ_unsigned a) inp);; answer inp).
-    }
-    {
-      exact (liftL1 loadWord a).
-    }
-  Defined.
-*)
-  Definition putProgram(prog: list (word 32))(addr: t)(ma: RiscvMachineL): RiscvMachineL :=
-    with_machine (putProgram prog addr ma.(machine)) ma.
 
 End Riscv.
 
