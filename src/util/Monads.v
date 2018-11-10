@@ -22,6 +22,8 @@ Notation "m1 ;; m2" := (Bind m1 (fun _ => m2))
 
 Open Scope monad_scope.
 
+Create HintDb unf_monad_ops.
+
 Ltac prove_monad_law :=
   repeat match goal with
          | |- _ => intro
@@ -34,7 +36,7 @@ Ltac prove_monad_law :=
          | H: Some _ = Some _ |- _ => inversion H; clear H; subst
          | H: (_, _) = (_, _) |- _ => inversion H; clear H; subst
          | |- _ => discriminate
-         | |- _ => progress subst
+         | |- _ => progress (autounfold with unf_monad_ops in *; subst; simpl in *)
          | |- _ => solve [eauto 10]
          | H: _ \/ _ |- _ => destruct H
          | o: option _ |- _ => destruct o
@@ -134,5 +136,15 @@ Module OStateNDOperations.
 
   Definition arbitrary{S: Type}(A: Type): OStateND S A :=
     fun (s: S) (oas: option (A * S)) => exists a, oas = Some (a, s).
+
+  Hint Unfold get put fail_hard arbitrary : unf_monad_ops.
+
+  Lemma Bind_get{S A: Type}: forall (f: S -> OStateND S A) (s: S),
+      Bind get f s = f s s.
+  Proof. prove_monad_law. Qed.
+
+  Lemma Bind_put{S A: Type}: forall (f: unit -> OStateND S A) (s0 s1: S),
+      Bind (put s1) f s0 = f tt s1.
+  Proof. prove_monad_law. Qed.
 
 End OStateNDOperations.
