@@ -1,4 +1,6 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.Logic.FunctionalExtensionality.
+Require Import Coq.Logic.PropExtensionality.
 Require Import riscv.util.BitWidths.
 Require Import riscv.util.Monads. Import OStateOperations.
 Require Import riscv.Decode.
@@ -7,47 +9,48 @@ Require Import riscv.Program.
 Require Import riscv.Utility.
 Require Import riscv.AxiomaticRiscv.
 Require Export riscv.RiscvMachine.
+Require Import Coq.micromega.Lia.
+
 
 Section Riscv.
 
-  Context {Mem: Set}.
-  Context {mword: Set}.
-  Context {MW: MachineWidth mword}.
-  Context {MemIsMem: Memory Mem mword}.
-  Context {RF: Type}.
-  Context {RFI: RegisterFile RF Register mword}.
+  Context {t: Set}.
+  Context {MW: MachineWidth t}.
+  Context {MF: MemoryFunctions t}.
+  Context {RFF: RegisterFileFunctions Register t}.
 
-  Local Notation RiscvMachine := (@RiscvMachine mword Mem RF).
+  Local Notation RiscvMachineL := (RiscvMachine Register t Empty_set).
 
-  Definition liftLoad{R}(f: Mem -> mword -> R): mword -> OState RiscvMachine R :=
-    fun a => m <- gets machineMem; Return (f m a).
+  Definition liftLoad{R}(f: Mem t -> t -> R): t -> OState RiscvMachineL R :=
+    fun a => m <- get; Return (f (m.(getMem)) a).
 
-  Definition liftStore{R}(f: Mem -> mword -> R -> Mem):
-    mword -> R -> OState RiscvMachine unit :=
-    fun a v => m <- get; put (with_machineMem (f m.(machineMem) a v) m).
+  Definition liftStore{R}(f: Mem t -> t -> R -> Mem t):
+    t -> R -> OState RiscvMachineL unit :=
+    fun a v =>
+      m <- get;
+      put (setMem m (f m.(getMem) a v)).
 
-  Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) mword :=
-  {|
+  Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) t :=  {|
       getRegister reg :=
         if Z.eq_dec reg Register0 then
           Return (ZToReg 0)
         else
-          machine <- get;
-          Return (getReg machine.(core).(registers) reg);
+          mach <- get;
+          Return (getReg mach.(getRegs) reg);
 
       setRegister reg v :=
         if Z.eq_dec reg Register0 then
           Return tt
         else
-          machine <- get;
-          let newRegs := setReg machine.(core).(registers) reg v in
-          put (with_registers newRegs machine);
+          mach <- get;
+          let newRegs := setReg mach.(getRegs) reg v in
+          put (setRegs mach newRegs);
 
-      getPC := machine <- get; Return machine.(core).(pc);
+      getPC := mach <- get; Return mach.(getPc);
 
       setPC newPC :=
-        machine <- get;
-        put (with_nextPC newPC machine);
+        mach <- get;
+        put (setNextPc mach newPC);
 
       loadByte   := liftLoad Memory.loadByte;
       loadHalf   := liftLoad Memory.loadHalf;
@@ -61,27 +64,54 @@ Section Riscv.
 
       step :=
         m <- get;
-        put (with_nextPC (add m.(core).(nextPC) (ZToReg 4)) (with_pc m.(core).(nextPC) m));
+        let m' := setPc m m.(getNextPc) in
+        let m'' := setNextPc m' (add m.(getNextPc) (ZToReg 4)) in
+        put m'';
 
       isMMIOAddr a := false; (* this simple machine has no MMIO *)
 
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
-      raiseException{A: Type}(isInterrupt: mword)(exceptionCode: mword) := Return None;
+      raiseException{A: Type}(isInterrupt: t)(exceptionCode: t) := Return None;
   |}.
 
-  (* Puts given program at address 0, and makes pc point to beginning of program, i.e. 0.
-     TODO maybe later allow any address?
-     Note: Keeps the original exceptionHandlerAddr, and the values of the registers,
-     which might contain any undefined garbage values, so the compiler correctness proof
-     will show that the program is correct even then, i.e. no initialisation of the registers
-     is needed. *)
-  Definition putProgram(prog: list (word 32))(addr: mword)(ma: RiscvMachine): RiscvMachine :=
-    (with_pc addr
-    (with_nextPC (add addr (ZToReg 4))
-    (with_machineMem (store_word_list prog addr ma.(machineMem)) ma))).
+  Instance MinimalSatisfiesAxioms: AxiomaticRiscv t Empty_set (OState RiscvMachineL) := {|
+    mcomp_sat := @OStateOperations.computation_satisfies RiscvMachineL;
+  |}.
+  (* TODO this should be possible without destructing so deeply *)
+  all: abstract (
+    repeat match goal with
+           | |- _ => reflexivity
+           | |- _ => progress (
+                         unfold computation_satisfies,
+                                isMMIOAddr, IsRiscvMachineL,
+                                valid_register, Register0,
+                                get, put, fail_hard,
+                                liftLoad, liftStore in *;
+                         subst;
+                         simpl in *)
+           | |- _ => intro
+           | |- _ => apply functional_extensionality
+           | |- _ => apply propositional_extensionality; split; intros
+           | u: unit |- _ => destruct u
+           | H: exists x, _ |- _ => destruct H
+           | H: {_ : _ | _} |- _ => destruct H
+           | H: _ /\ _ |- _ => destruct H
+           | p: _ * _ |- _ => destruct p
+           | |- context [ let (_, _) := ?p in _ ] => let E := fresh "E" in destruct p eqn: E
+           | H: Some _ = Some _ |- _ => inversion H; clear H; subst
+           | H: (_, _) = (_, _) |- _ => inversion H; clear H; subst
+           | |- _ => discriminate
+           | |- _ => solve [exfalso; lia]
+           | |- _ => solve [eauto 15]
+           | |- context [if ?x then _ else _] => let E := fresh "E" in destruct x eqn: E
+           | _: context [if ?x then _ else _] |- _ => let E := fresh "E" in destruct x eqn: E
+           | H: _ \/ _ |- _ => destruct H
+           end).
+  Defined.
 
 End Riscv.
 
-(* needed because it was defined inside a Section *)
-Existing Instance IsRiscvMachine.
+(* needed because defined inside a Section *)
+Existing Instance IsRiscvMachineL.
+Existing Instance MinimalSatisfiesAxioms.

@@ -97,9 +97,28 @@ all: prove_monad_law.
 Defined.
 
 Module OStateOperations.
+
   Definition get{S: Type}: OState S S := fun (s: S) => (Some s, s).
-  Definition gets{S A: Type}(f: S -> A): OState S A := fun (s: S) => (Some (f s), s).
+
   Definition put{S: Type}(s: S): OState S unit := fun _ => (Some tt, s).
+
+  Definition fail_hard{S A: Type}: OState S A :=
+    fun (s: S) => (None, s).
+
+  Hint Unfold get put fail_hard : unf_monad_ops.
+
+  Lemma Bind_get{S A: Type}: forall (f: S -> OState S A) (s: S),
+      Bind get f s = f s s.
+  Proof. prove_monad_law. Qed.
+
+  Lemma Bind_put{S A: Type}: forall (f: unit -> OState S A) (s0 s1: S),
+      Bind (put s1) f s0 = f tt s1.
+  Proof. prove_monad_law. Qed.
+
+  (* provides the link between "S -> option A * S" and "S -> (S -> Prop) -> Prop" *)
+  Definition computation_satisfies{S: Type}(m: OState S unit)(s: S)(post: S -> Prop): Prop :=
+    exists s', m s = (Some tt, s') /\ post s'.
+
 End OStateOperations.
 
 
@@ -118,10 +137,6 @@ Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
 |}.
 all: prove_monad_law.
 Defined.
-
-(* provides the link between "S -> option (A * S) -> Prop" and "S -> (S -> Prop) -> Prop" *)
-Definition computation_satisfies{S: Type}(m: OStateND S unit)(s: S)(post: S -> Prop): Prop :=
-  forall (o: option (unit * S)), m s o -> exists s', o = Some (tt, s') /\ post s'.
 
 Module OStateNDOperations.
 
@@ -146,5 +161,9 @@ Module OStateNDOperations.
   Lemma Bind_put{S A: Type}: forall (f: unit -> OStateND S A) (s0 s1: S),
       Bind (put s1) f s0 = f tt s1.
   Proof. prove_monad_law. Qed.
+
+  (* provides the link between "S -> option (A * S) -> Prop" and "S -> (S -> Prop) -> Prop" *)
+  Definition computation_satisfies{S: Type}(m: OStateND S unit)(s: S)(post: S -> Prop): Prop :=
+    forall (o: option (unit * S)), m s o -> exists s', o = Some (tt, s') /\ post s'.
 
 End OStateNDOperations.

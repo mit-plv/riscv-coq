@@ -1,56 +1,65 @@
+Require Import riscv.Memory.
+Require Import riscv.Utility.
+(*
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.util.BitWidths.
 Require Import riscv.Decode.
-Require Import riscv.Memory.
-Require Import riscv.Utility.
 
+*)
 
-Class RegisterFile{RF R V: Type} := mkRegisterFile {
-  getReg: RF -> R -> V;
-  setReg: RF -> R -> V -> RF;
-  initialRegs: RF;
+Class RegisterFileFunctions(R V: Type) := mkRegisterFileFunctions {
+  RegisterFile: Type;
+  getReg: RegisterFile -> R -> V;
+  setReg: RegisterFile -> R -> V -> RegisterFile;
+  initialRegs: RegisterFile;
 }.
 
-Arguments RegisterFile: clear implicits.
+Arguments RegisterFile _ _ {_}.
 
-Section Riscv.
 
+Section Machine.
+
+  Context {Reg: Set}.
   Context {mword: Set}.
   Context {MW: MachineWidth mword}.
-  Context {Mem: Set}.
-  Context {MemIsMem: Memory Mem mword}.
-  Context {RF: Type}.
-  Context {RFI: RegisterFile RF Register mword}.
-  
-  Record RiscvMachineCore := mkRiscvMachineCore {
-    registers: RF;
-    pc: mword;
-    nextPC: mword;
-    exceptionHandlerAddr: MachineInt;
-  }.
+  Context {RFF: RegisterFileFunctions Reg mword}.
+  Context {MF: MemoryFunctions mword}.
+  Context {LogItem: Set}.
 
   Record RiscvMachine := mkRiscvMachine {
-    core: RiscvMachineCore;
-    machineMem: Mem;
+    getRegs: RegisterFile Reg mword;
+    getPc: mword;
+    getNextPc: mword;
+    getMem: Mem mword;
+    getLog: list LogItem;
   }.
 
-  Definition with_registers r ma :=
-    mkRiscvMachine (mkRiscvMachineCore
-        r ma.(core).(pc) ma.(core).(nextPC) ma.(core).(exceptionHandlerAddr))
-        ma.(machineMem).
-  Definition with_pc p ma :=
-    mkRiscvMachine (mkRiscvMachineCore
-        ma.(core).(registers) p ma.(core).(nextPC) ma.(core).(exceptionHandlerAddr))
-        ma.(machineMem).
-  Definition with_nextPC npc ma :=
-    mkRiscvMachine (mkRiscvMachineCore
-        ma.(core).(registers) ma.(core).(pc) npc ma.(core).(exceptionHandlerAddr))
-        ma.(machineMem).
-  Definition with_exceptionHandlerAddr eh ma :=
-    mkRiscvMachine (mkRiscvMachineCore
-        ma.(core).(registers) ma.(core).(pc) ma.(core).(nextPC) eh)
-        ma.(machineMem).
-  Definition with_machineMem m ma :=
-    mkRiscvMachine ma.(core) m.
+  Definition setRegs: RiscvMachine -> RegisterFile Reg mword -> RiscvMachine :=
+    fun '(mkRiscvMachine regs1 pc nextPC mem log) regs2 =>
+          mkRiscvMachine regs2 pc nextPC mem log.
 
-End Riscv.
+  Definition setPc: RiscvMachine -> mword -> RiscvMachine :=
+    fun '(mkRiscvMachine regs pc1 nextPC mem log) pc2 =>
+          mkRiscvMachine regs pc2 nextPC mem log.
+
+  Definition setNextPc: RiscvMachine -> mword -> RiscvMachine :=
+    fun '(mkRiscvMachine regs pc nextPC1 mem log) nextPC2 =>
+          mkRiscvMachine regs pc nextPC2 mem log.
+
+  Definition setMem: RiscvMachine -> Mem mword -> RiscvMachine :=
+    fun '(mkRiscvMachine regs pc nextPC mem1 log) mem2 =>
+          mkRiscvMachine regs pc nextPC mem2 log.
+
+  Definition logAppend: RiscvMachine -> LogItem -> RiscvMachine :=
+    fun '(mkRiscvMachine regs pc nextPC mem log) item =>
+          mkRiscvMachine regs pc nextPC mem (item :: log).
+
+  Definition putProgram(prog: list (word 32))(addr: mword)(ma: RiscvMachine): RiscvMachine :=
+    setPc (setNextPc (setMem ma
+                             (store_word_list prog addr ma.(getMem)))
+                     (add addr (ZToReg 4)))
+          addr.
+
+End Machine.
+
+Arguments RiscvMachine _ _ {_} {_} {_} _.

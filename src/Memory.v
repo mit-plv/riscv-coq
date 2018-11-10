@@ -39,24 +39,26 @@ Qed.
 
 End ValidAddr.
 
-Class Memory(m t: Set)`{MachineWidth t} := mkMemory {
-  memSize: m -> Z;
+Class MemoryFunctions(t: Set)`{MachineWidth t} := mkMemoryFunctions {
+  Mem: Type;
 
-  loadByte   : m -> t -> word  8;
-  loadHalf   : m -> t -> word 16;
-  loadWord   : m -> t -> word 32;
-  loadDouble : m -> t -> word 64;
-  storeByte  : m -> t -> word  8 -> m;
-  storeHalf  : m -> t -> word 16 -> m;
-  storeWord  : m -> t -> word 32 -> m;
-  storeDouble: m -> t -> word 64 -> m;
+  memSize: Mem -> Z;
+
+  loadByte   : Mem -> t -> word  8;
+  loadHalf   : Mem -> t -> word 16;
+  loadWord   : Mem -> t -> word 32;
+  loadDouble : Mem -> t -> word 64;
+  storeByte  : Mem -> t -> word  8 -> Mem;
+  storeHalf  : Mem -> t -> word 16 -> Mem;
+  storeWord  : Mem -> t -> word 32 -> Mem;
+  storeDouble: Mem -> t -> word 64 -> Mem;
 
   memSize_bound: forall m,
     memSize m <= 2^XLEN;
 
   memSize_mod8: forall m,
     memSize m mod 8 = 0;
-  
+
   loadStoreByte_eq: forall m (a1 a2: t) v,
     valid_addr a1 1 (memSize m) ->
     a2 = a1 ->
@@ -132,6 +134,9 @@ Class Memory(m t: Set)`{MachineWidth t} := mkMemory {
      you get back when you do a load, and you can split a load into the unit on
      which the store was done. *)
 }.
+
+Arguments Mem _ {_} {_}.
+
 
 Lemma valid_addr_8_4: forall {t: Set} {MW: MachineWidth t} (addr: t) size,
     valid_addr addr 8 size ->
@@ -259,7 +264,7 @@ Lemma map_nat_range_cons: forall {R: Type} (f: nat -> R) (count start: nat),
 Proof.
   intros. reflexivity.
 Qed.
-  
+
 Lemma length_map_nat_range{R: Type}: forall (f: nat -> R) (count start: nat),
     length (map_nat_range f start count) = count.
 Proof.
@@ -313,7 +318,7 @@ Proof.
       apply Z2Nat.inj_lt; omega.
   - exfalso. destruct H as [H _].
     unfold Z.le in H. simpl in H. congruence.
-Qed.    
+Qed.
 
 (* TODO is there a more principled approach for lemmas of this kind? *)
 Lemma Znth_error_Some: forall (A : Type) (l : list A) (n : Z),
@@ -350,7 +355,7 @@ Proof.
   destruct n; try discriminate; erewrite map_nth_error; eauto.
 Qed.
 
-Ltac demod :=  
+Ltac demod :=
   repeat match goal with
          | H: _ mod _ = 0 |- _ => apply Nat.mod_divides in H; [destruct H | congruence]
          end.
@@ -479,7 +484,7 @@ Section MachineWidthHelpers.
     intros.
     apply regToZ_ZToReg_unsigned. pose proof pow2_sz_4. omega.
   Qed.
-  
+
   Lemma regToZ_unsigned_four: regToZ_unsigned (ZToReg 4) = 4.
   Proof.
     intros.
@@ -496,7 +501,7 @@ Ltac regOmega := regOmega_pre; omega.
 Hint Rewrite
      Nat.succ_inj_wd
      Nat.mul_0_r
-     Nat.add_0_r 
+     Nat.add_0_r
      mod_add_r
      mul_div_exact
 using omega
@@ -535,7 +540,7 @@ Hint Rewrite @storeWord_preserves_memSize : rew_mem.
 Ltac subst_0_Z :=
   repeat match goal with
          | i: Z |- _ => assert (i = 0) by omega; subst i
-         end. 
+         end.
 
 Ltac mem_sideconditions :=
   unfold valid_addr in *;
@@ -582,10 +587,9 @@ Ltac mem_simpl :=
 
 Section MemoryHelpers.
 
-  Context {Mem: Set}.
   Context {t: Set}.
   Context {MW: MachineWidth t}.
-  Context {MM: Memory Mem t}.
+  Context {MF: MemoryFunctions t}.
 
   Add Ring tring: (@regRing t MW).
 
@@ -622,7 +626,7 @@ Section MemoryHelpers.
     - rewrite regToZ_ZToReg_unsigned by omega. reflexivity.
     - rewrite regToZ_ZToReg_unsigned; omega.
   Qed.
-  
+
   Lemma loadWord_storeDouble_ne: forall m (a1 a2: t) v,
       valid_addr a1 8 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
@@ -698,7 +702,7 @@ Section MemoryHelpers.
         rewrite regToZ_ZToReg_unsigned; omega.
   Qed.
 
-  Lemma loadWord_storeDouble_ne': forall (m : Mem) (a1 a2 : t) (v : word 64),
+  Lemma loadWord_storeDouble_ne': forall (m : Mem t) (a1 a2 : t) (v : word 64),
       in_range a1 8 0 (memSize m) ->
       in_range a2 4 0 (memSize m) ->
       (* a2 (4 bytes big) is not in the 8-byte range starting at a1 *)
@@ -717,28 +721,28 @@ Section MemoryHelpers.
     omega.
   Qed.
 
-  Definition store_byte_list(l: list (word 8))(a: t)(m: Mem): Mem :=
+  Definition store_byte_list(l: list (word 8))(a: t)(m: Mem t): Mem t :=
     fold_left_index (fun i m w => storeByte m (add a (ZToReg i)) w) l 0 m.
-  
-  Definition load_byte_list(m: Mem)(start: t)(count: Z): list (word 8) :=
+
+  Definition load_byte_list(m: Mem t)(start: t)(count: Z): list (word 8) :=
     map_range (fun i => loadByte m (add start (ZToReg i))) count.
 
-  Definition store_half_list(l: list (word 16))(a: t)(m: Mem): Mem :=
+  Definition store_half_list(l: list (word 16))(a: t)(m: Mem t): Mem t :=
     fold_left_index (fun i m w => storeHalf m (add a (ZToReg (2 * i))) w) l 0 m.
 
-  Definition load_half_list(m: Mem)(start: t)(count: Z): list (word 16) :=
+  Definition load_half_list(m: Mem t)(start: t)(count: Z): list (word 16) :=
     map_range (fun i => loadHalf m (add start (ZToReg (2 * i)))) count.
 
-  Definition store_word_list(l: list (word 32))(a: t)(m: Mem): Mem :=
+  Definition store_word_list(l: list (word 32))(a: t)(m: Mem t): Mem t :=
     fold_left_index (fun i m w => storeWord m (add a (ZToReg (4 * i))) w) l 0 m.
 
-  Definition load_word_list(m: Mem)(start: t)(count: Z): list (word 32) :=
+  Definition load_word_list(m: Mem t)(start: t)(count: Z): list (word 32) :=
     map_range (fun i => loadWord m (add start (ZToReg (4 * i)))) count.
 
-  Definition store_double_list(l: list (word 64))(a: t)(m: Mem): Mem :=
+  Definition store_double_list(l: list (word 64))(a: t)(m: Mem t): Mem t :=
     fold_left_index (fun i m w => storeDouble m (add a (ZToReg (4 * i))) w) l 0 m.
 
-  Definition load_double_list(m: Mem)(start: t)(count: Z): list (word 64) :=
+  Definition load_double_list(m: Mem t)(start: t)(count: Z): list (word 64) :=
     map_range (fun i => loadDouble m (add start (ZToReg (8 * i)))) count.
 
   Lemma Znth_error_load_word_list: forall m l i offset,
@@ -839,7 +843,7 @@ Section MemoryHelpers.
       store_word_list nil a m = m.
   Proof. intros. reflexivity. Qed.
 
-  Lemma store_word_list_preserves_memSize_aux: forall ll (m: Mem) a l,
+  Lemma store_word_list_preserves_memSize_aux: forall ll (m: Mem t) a l,
       length l = ll ->
       memSize (store_word_list l a m) = memSize m.
   Proof.
@@ -850,13 +854,13 @@ Section MemoryHelpers.
     apply storeWord_preserves_memSize.
   Qed.
 
-  Lemma store_word_list_preserves_memSize: forall (m: Mem) l a,
+  Lemma store_word_list_preserves_memSize: forall (m: Mem t) l a,
       memSize (store_word_list l a m) = memSize m.
   Proof.
     intros. eapply store_word_list_preserves_memSize_aux. reflexivity.
   Qed.
 
-  Lemma loadWord_before_store_word_list: forall l (m: Mem) (a1 a2: t),
+  Lemma loadWord_before_store_word_list: forall l (m: Mem t) (a1 a2: t),
       regToZ_unsigned a1 + 4 <= regToZ_unsigned a2 ->
       regToZ_unsigned a2 + 4 * (Zlength l) <= (memSize m) ->
       valid_addr a1 4 (memSize m) ->
@@ -870,9 +874,9 @@ Section MemoryHelpers.
       rewrite loadStoreWord_ne; mem_sideconditions.
     - rewrite IHl by mem_sideconditions.
       rewrite loadStoreWord_ne; mem_sideconditions.
-  Qed.      
+  Qed.
 
-  Lemma loadWord_after_store_word_list: forall l (m: Mem) (a1 a2: t),
+  Lemma loadWord_after_store_word_list: forall l (m: Mem t) (a1 a2: t),
       regToZ_unsigned a2 + 4 * (Zlength l) <= regToZ_unsigned a1 ->
       valid_addr a1 4 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
@@ -885,9 +889,9 @@ Section MemoryHelpers.
       rewrite loadStoreWord_ne; mem_sideconditions.
     - rewrite IHl by mem_sideconditions.
       rewrite loadStoreWord_ne; mem_sideconditions.
-  Qed.      
+  Qed.
 
-  Lemma loadWord_outside_store_word_list: forall l (m: Mem) a1 a2,
+  Lemma loadWord_outside_store_word_list: forall l (m: Mem t) a1 a2,
       not_in_range a1 4 (regToZ_unsigned a2) (4 * Zlength l) ->
       regToZ_unsigned a2 + 4 * Zlength l <= memSize m ->
       valid_addr a1 4 (memSize m) ->
@@ -902,14 +906,14 @@ Section MemoryHelpers.
   Local Arguments Nat.div: simpl never.
   Local Arguments nth: simpl never.
 
-  Lemma loadWord_inside_store_word_list_aux: forall l (m: Mem) i offset,
+  Lemma loadWord_inside_store_word_list_aux: forall l (m: Mem t) i offset,
       0 <= i < Zlength l ->
       regToZ_unsigned offset + 4 * Zlength l <= memSize m ->
       valid_addr offset 4 (memSize m) ->
       Some (loadWord (store_word_list l offset m) (ZToReg (regToZ_unsigned offset + 4 * i))) =
       Znth_error l i.
   Proof.
-    induction l; intros; unfold in_range in *; simpl in *; mem_sideconditions. 
+    induction l; intros; unfold in_range in *; simpl in *; mem_sideconditions.
     rewrite store_word_list_cons.
     destruct_list_length; simpl in *.
     - rewrite store_word_list_nil.
@@ -922,11 +926,11 @@ Section MemoryHelpers.
         rewrite loadStoreWord_eq by mem_sideconditions.
         reflexivity.
       + mem_sideconditions.
-        specialize (IHl (storeWord m offset a) (i - 1) (add offset (ZToReg 4))). 
+        specialize (IHl (storeWord m offset a) (i - 1) (add offset (ZToReg 4))).
         rewrite <- IHl; mem_sideconditions.
   Qed.
-  
-  Lemma loadWord_inside_store_word_list: forall l (m: Mem) addr offset,
+
+  Lemma loadWord_inside_store_word_list: forall l (m: Mem t) addr offset,
       in_range addr 4 (regToZ_unsigned offset) (4 * Zlength l) ->
       regToZ_unsigned offset + 4 * Zlength l <= memSize m ->
       valid_addr offset 4 (memSize m) ->
@@ -938,8 +942,8 @@ Section MemoryHelpers.
                          (regToZ_unsigned (sub addr offset) / 4) offset);
       mem_sideconditions.
   Qed.
-  
-  Lemma loadDouble_before_store_word_list: forall l (m: Mem) (a1 a2: t),
+
+  Lemma loadDouble_before_store_word_list: forall l (m: Mem t) (a1 a2: t),
       regToZ_unsigned a1 + 8 <= regToZ_unsigned a2 ->
       regToZ_unsigned a2 + 4 * (Zlength l) <= (memSize m) ->
       valid_addr a1 8 (memSize m) ->
@@ -960,7 +964,7 @@ Section MemoryHelpers.
       reflexivity.
   Qed.
 
-  Lemma loadDouble_after_store_word_list: forall l (m: Mem) (a1 a2: t),
+  Lemma loadDouble_after_store_word_list: forall l (m: Mem t) (a1 a2: t),
       regToZ_unsigned a2 + 4 * (Zlength l) <= regToZ_unsigned a1 ->
       valid_addr a1 8 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
@@ -980,7 +984,7 @@ Section MemoryHelpers.
       reflexivity.
   Qed.
 
-  Lemma loadDouble_outside_store_word_list: forall l (m: Mem) a1 a2,
+  Lemma loadDouble_outside_store_word_list: forall l (m: Mem t) a1 a2,
       not_in_range a1 8 (regToZ_unsigned a2) (4 * Zlength l) ->
       regToZ_unsigned a2 + 4 * Zlength l <= memSize m ->
       valid_addr a1 8 (memSize m) ->
@@ -1020,9 +1024,9 @@ Section MemoryHelpers.
     remember (Z.of_nat a0) as i; clear Heqi.
     mem_sideconditions.
     rewrite? regToZ_ZToReg_unsigned; try omega; mem_sideconditions.
-  Qed.    
-  
-  Lemma load_store_word_list_eq: forall l (m: Mem) ll a1 a2,
+  Qed.
+
+  Lemma load_store_word_list_eq: forall l (m: Mem t) ll a1 a2,
       a2 = a1 ->
       ll = Zlength l ->
       regToZ_unsigned a1 mod 4 = 0 ->

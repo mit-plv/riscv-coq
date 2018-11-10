@@ -6,52 +6,59 @@ Require Import riscv.Decode.
 Require Import riscv.Memory.
 Require Import riscv.Program.
 Require Import riscv.RiscvMachine.
-Require Import riscv.RiscvMachineL.
 Require Import riscv.util.BitWidths.
 
-
-Set Implicit Arguments.
 
 (* Note: Register 0 is not considered valid because it cannot be written *)
 Definition valid_register(r: Register): Prop := (0 < r < 32)%Z.
 
-Section AxiomaticRiscv.
+Section Axiomatic.
 
   Context {t: Set}.
   Context {MW: MachineWidth t}.
-  Context {RF: Type}.
-  Context {RFI: RegisterFile RF Register t}.
+  Context {RFF: RegisterFileFunctions Register t}.
+  Context {MF: MemoryFunctions t}.
+  Context {Event: Set}.
 
-  Context {Mem: Set}.
-  Context {MemIsMem: Memory Mem t}.
+  Local Notation RiscvMachineL := (RiscvMachine Register t Event).
 
-  Local Notation RiscvMachineL := (@RiscvMachineL t Mem RF).
-
-  Context {RVM: RiscvProgram (OStateND RiscvMachineL) t}.
-
-  (* assumes generic translate and raiseException functions *)
-  Context {RVS: @RiscvState (OStateND RiscvMachineL) t _ _ RVM}.
+  Context {M: Type -> Type}.
+  Context {MM: Monad M}.
+  Context {RVM: RiscvProgram M t}.
+  Context {RVS: @RiscvState M t _ _ RVM}.
 
   Class AxiomaticRiscv :=  mkAxiomaticRiscv {
 
-      do_getRegister0: forall {A: Type},
-        getRegister Register0 = Return (ZToReg 0);
+    (* Abstract predicate specifying when a monadic computation satisfies a
+       postcondition when run on given initial machine *)
+    mcomp_sat: M unit -> RiscvMachineL -> (RiscvMachineL -> Prop) -> Prop;
 
-      do_getRegister: forall {A: Type} x (initialL: RiscvMachineL),
-          valid_register x ->
-          getRegister x initialL =
-          Return (getReg initialL.(machine).(core).(registers) x) initialL;
+    mkInputEvent : { a: t | isMMIOAddr a = true } -> word 32 -> Event;
+    mkOutputEvent: { a: t | isMMIOAddr a = true } -> word 32 -> Event;
 
-      do_setRegister: forall {A: Type} x (v: t) (initialL: RiscvMachineL),
-          valid_register x ->
-          setRegister x v initialL =
-          Return tt (with_machine
-                       (with_registers
-                          (setReg initialL.(machine).(core).(registers) x v)
-                          initialL.(machine))
-                       initialL);
+    go_getRegister: forall (initialL: RiscvMachineL) (x: Register) post (f: t -> M unit),
+      valid_register x ->
+      mcomp_sat (f (getReg initialL.(getRegs) x)) initialL post ->
+      mcomp_sat (Bind (getRegister x) f) initialL post;
 
-      do_setRegister0: forall {A: Type} (v: t) (initialL: RiscvMachineL),
+(*  Will have to specify in RegisterFileFunctions that getReg of Register0 is always 0
+    go_getRegister0: forall (initialL: RiscvMachineL) post (f: t -> M unit),
+      mcomp_sat (f (getReg initialL.(getRegs) Register0)) initialL post ->
+      mcomp_sat (Bind (getRegister Register0) f) initialL post;
+*)
+
+    go_setRegister: forall initialL x v post (f: unit -> M unit),
+      valid_register x ->
+      mcomp_sat (f tt) (setRegs initialL (setReg initialL.(getRegs) x v)) post ->
+      mcomp_sat (Bind (setRegister x v) f) initialL post;
+
+    go_MMInput: forall {A: Type} (addr: t) (initialL: RiscvMachineL) f post
+        (pf: isMMIOAddr addr = true),
+        (forall (inp: word 32),
+            mcomp_sat (f inp) (logAppend initialL (mkInputEvent (exist _ addr pf) inp)) post) ->
+        mcomp_sat (Bind (loadWord addr) f) initialL post;
+
+(*    do_setRegister0: forall {A: Type} (v: t) (initialL: RiscvMachineL),
           setRegister Register0 v initialL = Return tt initialL;
 
       do_loadByte: forall {A: Type} (addr: t) (initialL: RiscvMachineL),
@@ -119,18 +126,9 @@ Section AxiomaticRiscv.
       do_setPC: forall {A: Type} (v: t) (initialL: RiscvMachineL),
           setPC v initialL =
           Return tt (with_machine (with_nextPC v initialL.(machine)) initialL);
-
-      (*
-      do_step: forall {A: Type} (f: unit -> OStateND RiscvMachineL A) m,
-          step f m =
-          (f tt) (with_nextPC (add m.(core).(nextPC) (ZToReg 4)) (with_pc m.(core).(nextPC) m));
-
-      execState_step: forall m,
-          step m = (Some tt, with_nextPC (add m.(core).(nextPC) (ZToReg 4)) (with_pc m.(core).(nextPC) m));
-
-      execState_Return: forall {S A} (s: S) (a: A),
-          (Return a) s = (Some a, s);
-      *)
+*)
   }.
 
-End AxiomaticRiscv.
+End Axiomatic.
+
+Arguments AxiomaticRiscv t {_} {_} {_} Event M {_} {_}.

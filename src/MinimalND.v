@@ -10,7 +10,8 @@ Require Import riscv.Execute.
 Require Import riscv.util.PowerFunc.
 Require Import riscv.Utility.
 Require Import Coq.Lists.List. Import ListNotations.
-Require Export riscv.RiscvMachineL.
+Require Import riscv.RiscvMachine.
+Require Export riscv.MMIOTrace.
 Require Import riscv.AxiomaticRiscv.
 Require Import Coq.micromega.Lia.
 
@@ -18,90 +19,25 @@ Require Import Coq.micromega.Lia.
 Section Riscv.
 
   Context {t: Set}.
-
   Context {MW: MachineWidth t}.
+  Context {MF: MemoryFunctions t}.
+  Context {RFF: RegisterFileFunctions Register t}.
 
-  Context {Mem: Set}.
-
-  Context {MemIsMem: Memory Mem t}.
-
-  Context {RF: Type}.
-  Context {RFI: RegisterFile RF Register t}.
-
-  Local Notation RiscvMachineL := (@RiscvMachineL t Mem RF).
-
-(*
-  Definition liftL0{B: Type}(f: OStateND (@RiscvMachine t Mem RF) B):  OStateND RiscvMachineL B (*:=
-    fun s => let (ob, ma) := f s.(machine) in (ob, with_machine ma s).*)
-. Admitted.
-
-  Definition liftL1{A B: Type}(f: A -> OStateND (@RiscvMachine t Mem RF) B): A -> OStateND RiscvMachineL B. (* :=
-    fun a s => let (ob, ma) := f a s.(machine) in (ob, with_machine ma s).*) Admitted.
-
-  Definition liftL2{A1 A2 B: Type}(f: A1 -> A2 -> OStateND (@RiscvMachine t Mem RF) B):
-    A1 -> A2 -> OStateND RiscvMachineL B. (*  :=
-    fun a1 a2 s => let (ob, ma) := f a1 a2 s.(machine) in (ob, with_machine ma s). *)
-  Admitted.
-
-  Definition liftL0{B: Type}(f: OState (@RiscvMachine t Mem RF) B):  OStateND RiscvMachineL B (*:=
-    fun s => let (ob, ma) := f s.(machine) in (ob, with_machine ma s).*)
-. Admitted.
-
-  Definition liftL1{A B: Type}(f: A -> OState (@RiscvMachine t Mem RF) B): A -> OStateND RiscvMachineL B. (* :=
-    fun a s => let (ob, ma) := f a s.(machine) in (ob, with_machine ma s).*) Admitted.
-
-  Definition liftL2{A1 A2 B: Type}(f: A1 -> A2 -> OState (@RiscvMachine t Mem RF) B):
-    A1 -> A2 -> OStateND RiscvMachineL B. (*  :=
-    fun a1 a2 s => let (ob, ma) := f a1 a2 s.(machine) in (ob, with_machine ma s). *)
-  Admitted.
-*)
-  Definition TODO{A: Type}: A. Admitted.
-(*
-  Definition get: OStateND RiscvMachineL RiscvMachineL.
-    intro s. intro set.
-    apply (forall mach ans, set mach ans <-> ans = Some mach /\ mach = s).
-  Defined.
-
-  Definition put(s: RiscvMachineL): OStateND RiscvMachineL unit.
-    refine (fun initial set => forall mach ans, set mach ans <-> mach = s /\ ans = Some tt).
-  Defined.
-
-  Definition failure{A}: OStateND RiscvMachineL A := fun s outcomes => False.
-
-  Definition success{A}(set: RiscvMachineL -> option A -> Prop): OStateND RiscvMachineL A.
-    refine (fun initial set' => forall mach ans, set' mach ans <-> set mach ans).
-  Defined.
-
-  Definition deterministic{S A}(m: S)(ans: option A): S -> option A -> Prop :=
-    fun s ans' => s = m /\ ans = ans'. (* todo * instead of curry and jus eq *)
-
-  Definition arbitrary(A: Type): OStateND RiscvMachineL A.
-    refine (s <- get; success _).
-    refine (fun s' oa => s = s' /\ exists a, oa = Some a).
-  Defined.
-
-  Definition answer{A: Type}(ans: A): OStateND RiscvMachineL A :=
-    s <- get; success (deterministic s (Some ans)).
-
-  (* recoverable (through option) *)
-  Definition throw{A}: OStateND RiscvMachineL A :=
-    s <- get; success (deterministic s None).
-*)
+  Local Notation RiscvMachineL := (RiscvMachine Register t (MMIOEvent t)).
 
   Definition simple_isMMIOAddr: t -> bool := reg_eqb (ZToReg 65524). (* maybe like spike *)
 
-  Definition logEvent(e: LogEvent): OStateND RiscvMachineL unit :=
-    m <- get; put (with_log (e :: m.(log)) m).
+  Definition logEvent(e: MMIOEvent t): OStateND RiscvMachineL unit :=
+    m <- get; put (logAppend m e).
 
-  Definition liftLoad{R}(f: Mem -> t -> R): t -> OStateND RiscvMachineL R :=
-    fun a => m <- get; Return (f (m.(machine).(machineMem)) a).
+  Definition liftLoad{R}(f: Mem t -> t -> R): t -> OStateND RiscvMachineL R :=
+    fun a => m <- get; Return (f (m.(getMem)) a).
 
-  Definition liftStore{R}(f: Mem -> t -> R -> Mem):
+  Definition liftStore{R}(f: Mem t -> t -> R -> Mem t):
     t -> R -> OStateND RiscvMachineL unit :=
     fun a v =>
       m <- get;
-      let newMem := f m.(machine).(machineMem) a v in
-      put (with_machine (with_machineMem newMem (m.(machine))) m).
+      put (setMem m (f m.(getMem) a v)).
 
   Instance IsRiscvMachineL: RiscvProgram (OStateND RiscvMachineL) t :=  {|
       getRegister reg :=
@@ -109,28 +45,28 @@ Section Riscv.
           Return (ZToReg 0)
         else
           mach <- get;
-          Return (getReg mach.(machine).(core).(registers) reg);
+          Return (getReg mach.(getRegs) reg);
 
       setRegister reg v :=
         if Z.eq_dec reg Register0 then
           Return tt
         else
           mach <- get;
-          let newRegs := setReg mach.(machine).(core).(registers) reg v in
-          put (with_machine (with_registers newRegs mach.(machine)) mach);
+          let newRegs := setReg mach.(getRegs) reg v in
+          put (setRegs mach newRegs);
 
-      getPC := mach <- get; Return mach.(machine).(core).(pc);
+      getPC := mach <- get; Return mach.(getPc);
 
       setPC newPC :=
         mach <- get;
-        put (with_machine (with_nextPC newPC mach.(machine)) mach);
+        put (setNextPc mach newPC);
 
       loadByte   := liftLoad Memory.loadByte;
       loadHalf   := liftLoad Memory.loadHalf;
       loadWord a := if simple_isMMIOAddr a
                     then
                       inp <- arbitrary (word 32);
-                      logEvent (EvInput (regToZ_unsigned a) inp);;
+                      logEvent (MMInput, a, inp);;
                       Return inp
                     else liftLoad Memory.loadWord a;
       loadDouble := liftLoad Memory.loadDouble;
@@ -141,10 +77,10 @@ Section Riscv.
       storeDouble := liftStore Memory.storeDouble;
 
       step :=
-        mach <- get;
-        let m := mach.(machine) in
-        let m' := with_nextPC (add m.(core).(nextPC) (ZToReg 4)) (with_pc m.(core).(nextPC) m) in
-        put (with_machine m' mach);
+        m <- get;
+        let m' := setPc m m.(getNextPc) in
+        let m'' := setNextPc m' (add m.(getNextPc) (ZToReg 4)) in
+        put m'';
 
       isMMIOAddr := simple_isMMIOAddr;
 
@@ -154,13 +90,19 @@ Section Riscv.
   |}.
 
   Instance MinimalNDSatisfiesAxioms:
-    @AxiomaticRiscv t MW RF RFI Mem MemIsMem IsRiscvMachineL.
-  Proof.
-    constructor;
+    AxiomaticRiscv t (MMIOEvent t) (OStateND RiscvMachineL) :=
+  {|
+    mcomp_sat := @OStateNDOperations.computation_satisfies RiscvMachineL;
+    mkInputEvent a v := (MMInput, proj1_sig a, v);
+    mkOutputEvent a v := (MMOutput, proj1_sig a, v);
+  |}.
+  (* TODO this should be possible without destructing so deeply *)
+  all: abstract (
     repeat match goal with
            | |- _ => reflexivity
            | |- _ => progress (
-                         unfold valid_register, Register0,
+                         unfold computation_satisfies,
+                                valid_register, Register0,
                                 get, put, fail_hard, arbitrary,
                                 liftLoad, liftStore, logEvent in *;
                          subst;
@@ -168,6 +110,7 @@ Section Riscv.
            | |- _ => intro
            | |- _ => apply functional_extensionality
            | |- _ => apply propositional_extensionality; split; intros
+           | u: unit |- _ => destruct u
            | H: exists x, _ |- _ => destruct H
            | H: _ /\ _ |- _ => destruct H
            | p: _ * _ |- _ => destruct p
@@ -180,11 +123,11 @@ Section Riscv.
            | |- context [if ?x then _ else _] => let E := fresh "E" in destruct x eqn: E
            | _: context [if ?x then _ else _] |- _ => let E := fresh "E" in destruct x eqn: E
            | H: _ \/ _ |- _ => destruct H
-           | o: option _ |- _ => destruct o
-           end.
-  Qed.
+           end).
+  Defined.
 
 End Riscv.
 
-Existing Instance IsRiscvMachineL. (* needed because it was defined inside a Section *)
+(* needed because defined inside a Section *)
+Existing Instance IsRiscvMachineL.
 Existing Instance MinimalNDSatisfiesAxioms.

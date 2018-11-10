@@ -16,36 +16,32 @@ Section Riscv.
 
   Context {MW: MachineWidth t}.
 
-  Context {Mem: Set}.
+  Context {MFMemIsMem: MemoryFunctions t}.
 
-  Context {MemIsMem: Memory Mem t}.
-
-  Context {RF: Type}.
-  Context {RFI: RegisterFile RF Register t}.
+  Context {RFF: RegisterFileFunctions Register t}.
 
   Inductive LogEvent :=
   | EvLoadWord(addr: Z)(i: Instruction)
   | EvStoreWord(addr: Z)(v: word 32).
 
-  Definition Log := list LogEvent.
+  Local Notation RiscvMachine := (riscv.RiscvMachine.RiscvMachine Register t Empty_set).
+  Local Notation RiscvMachineL := (riscv.RiscvMachine.RiscvMachine Register t LogEvent).
 
-  Record RiscvMachineL := mkRiscvMachineL {
-    machine: @RiscvMachine t Mem RF;
-    log: Log;
-  }.
+  Definition downgrade: RiscvMachineL -> RiscvMachine :=
+    fun '(mkRiscvMachine regs pc nextPC mem log) => mkRiscvMachine regs pc nextPC mem nil.
 
-  Definition with_machine m ml := mkRiscvMachineL m ml.(log).
-  Definition with_log l ml := mkRiscvMachineL ml.(machine) l.
+  Definition upgrade: RiscvMachine -> list LogEvent -> RiscvMachineL :=
+    fun '(mkRiscvMachine regs pc nextPC mem _) log => mkRiscvMachine regs pc nextPC mem log.
 
   Definition liftL0{B: Type}(f: OState RiscvMachine B):  OState RiscvMachineL B :=
-    fun s => let (ob, ma) := f s.(machine) in (ob, with_machine ma s).
+    fun s => let (ob, s') := f (downgrade s) in (ob, upgrade s' s.(getLog)).
 
   Definition liftL1{A B: Type}(f: A -> OState RiscvMachine B): A -> OState RiscvMachineL B :=
-    fun a s => let (ob, ma) := f a s.(machine) in (ob, with_machine ma s).
+    fun a s => let (ob, s') := f a (downgrade s) in (ob, upgrade s' s.(getLog)).
 
   Definition liftL2{A1 A2 B: Type}(f: A1 -> A2 -> OState RiscvMachine B):
     A1 -> A2 -> OState RiscvMachineL B :=
-    fun a1 a2 s => let (ob, ma) := f a1 a2 s.(machine) in (ob, with_machine ma s).
+    fun a1 a2 s => let (ob, s') := f a1 a2 (downgrade s) in (ob, upgrade s' s.(getLog)).
 
   Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) t :=  {|
       getRegister := liftL1 getRegister;
@@ -57,23 +53,20 @@ Section Riscv.
       loadWord a :=
         m <- get;
         res <- (liftL1 loadWord a);
-        put (with_log (m.(log) ++ [EvLoadWord (regToZ_unsigned a) (decode RV64IM (uwordToZ res))]) m);;
+        put (logAppend m (EvLoadWord (regToZ_unsigned a) (decode RV64IM (uwordToZ res))));;
         Return res;
       loadDouble := liftL1 loadDouble;
       storeByte   := liftL2 storeByte;
       storeHalf   := liftL2 storeHalf;
       storeWord a v :=
         m <- get;
-        put (with_log (m.(log) ++ [EvStoreWord (regToZ_unsigned a) v]) m);;
+        put (logAppend m (EvStoreWord (regToZ_unsigned a) v));;
         liftL2 storeWord a v;
       storeDouble := liftL2 storeDouble;
       step := liftL0 step;
       isMMIOAddr := isMMIOAddr;
       raiseException{A} := liftL2 (raiseException (A := A));
   |}.
-
-  Definition putProgram(prog: list (word 32))(addr: t)(ma: RiscvMachineL): RiscvMachineL :=
-    with_machine (putProgram prog addr ma.(machine)) ma.
 
 End Riscv.
 

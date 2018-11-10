@@ -16,7 +16,8 @@ Require Import riscv.MachineWidth32.
 
 Existing Instance DefaultRiscvState.
 
-Instance FunctionRegisterFile: RegisterFile (Register -> word 32) Register (word 32) := {|
+Instance FunctionRegisterFile: RegisterFileFunctions Register (word 32) := {|
+  RegisterFile := Register -> word 32;
   getReg(rf: Register -> word 32) := rf;
   setReg(rf: Register -> word 32)(r: Register)(v: word 32) :=
     fun r' => if (Z.eqb r' r) then v else rf r';
@@ -53,26 +54,20 @@ Goal False.
   (* decoder seems to work :) *)
 Abort.
 
-Definition RiscvMachine := @RiscvMachine (word 32) mem (Register -> word 32).
+Definition RiscvMachine := riscv.RiscvMachine.RiscvMachine Register (word 32) Empty_set.
+Definition RiscvMachineL := riscv.RiscvMachine.RiscvMachine Register (word 32) LogEvent.
 
 (* This example uses the memory only as instruction memory
    TODO make an example which uses memory to store data *)
-Definition zeroedRiscvMachineCore: RiscvMachineCore := {|
-  registers := initialRegs;
-  pc := ZToReg 0;
-  nextPC := ZToReg 4;
-  exceptionHandlerAddr := 3;
-|}.
-
 Definition zeroedRiscvMachine: RiscvMachine := {|
-    core := zeroedRiscvMachineCore;
-    machineMem := zero_mem 100;
+  getRegs := initialRegs;
+  getPc := ZToReg 0;
+  getNextPc := ZToReg 4;
+  getMem := zero_mem 100;
+  getLog := @nil Empty_set;
 |}.
 
-Definition zeroedRiscvMachineL: RiscvMachineL := {|
-    machine := zeroedRiscvMachine;
-    log := nil;
-|}.
+Definition zeroedRiscvMachineL: RiscvMachineL := upgrade zeroedRiscvMachine (@nil LogEvent).
 
 Definition initialRiscvMachineL(imem: list MachineInt): RiscvMachineL :=
   putProgram (map (@ZToWord 32) imem) (ZToReg 0) zeroedRiscvMachineL.
@@ -86,10 +81,10 @@ Definition fib6_L_final(fuel: nat): RiscvMachineL :=
   end.
 
 Definition fib6_L_res(fuel: nat): word XLEN :=
-  (fib6_L_final fuel).(machine).(core).(registers) 18.
+  (fib6_L_final fuel).(getRegs) 18.
 
-Definition fib6_L_trace(fuel: nat): Log :=
-  (fib6_L_final fuel).(log).
+Definition fib6_L_trace(fuel: nat): list LogEvent :=
+  (fib6_L_final fuel).(getLog).
 
 (* only uncomment this if you're sure there are no admits in the computational parts,
    otherwise this will eat all your memory *)

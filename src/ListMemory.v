@@ -113,7 +113,7 @@ Local Ltac wrap L :=
   try apply ne_regToZ_unsigned;
   (congruence || momega || idtac).
 
-Instance mem_is_Memory(mword: Set){MW: MachineWidth mword}: Memory mem mword := 
+Instance mem_is_Memory(mword: Set){MW: MachineWidth mword}: MemoryFunctions mword :=
 {|
   memSize     := mem_size;
   loadByte    := read_byte;
