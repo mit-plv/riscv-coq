@@ -54,6 +54,26 @@ Section Machine.
     fun '(mkRiscvMachine regs pc nextPC mem log1) log2 =>
           mkRiscvMachine regs pc nextPC mem log2.
 
+  Definition withRegs: RegisterFile Reg mword -> RiscvMachine -> RiscvMachine :=
+    fun regs2 '(mkRiscvMachine regs1 pc nextPC mem log) =>
+                mkRiscvMachine regs2 pc nextPC mem log.
+
+  Definition withPc: mword -> RiscvMachine -> RiscvMachine :=
+    fun pc2 '(mkRiscvMachine regs pc1 nextPC mem log) =>
+              mkRiscvMachine regs pc2 nextPC mem log.
+
+  Definition withNextPc: mword -> RiscvMachine -> RiscvMachine :=
+    fun nextPC2 '(mkRiscvMachine regs pc nextPC1 mem log) =>
+                  mkRiscvMachine regs pc nextPC2 mem log.
+
+  Definition withMem: Mem mword -> RiscvMachine -> RiscvMachine :=
+    fun mem2 '(mkRiscvMachine regs pc nextPC mem1 log)  =>
+               mkRiscvMachine regs pc nextPC mem2 log.
+
+  Definition withLog: list LogItem -> RiscvMachine -> RiscvMachine :=
+    fun log2 '(mkRiscvMachine regs pc nextPC mem log1) =>
+               mkRiscvMachine regs pc nextPC mem log2.
+
   Definition logCons(m: RiscvMachine)(i: LogItem): RiscvMachine :=
     setLog m (i :: m.(getLog)).
 
