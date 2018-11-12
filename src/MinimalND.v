@@ -28,7 +28,7 @@ Section Riscv.
   Definition simple_isMMIOAddr: t -> bool := reg_eqb (ZToReg 65524). (* maybe like spike *)
 
   Definition logEvent(e: MMIOEvent t): OStateND RiscvMachineL unit :=
-    m <- get; put (logAppend m e).
+    m <- get; put (logCons m e).
 
   Definition liftLoad{R}(f: Mem t -> t -> R): t -> OStateND RiscvMachineL R :=
     fun a => m <- get; Return (f (m.(getMem)) a).

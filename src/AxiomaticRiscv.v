@@ -55,7 +55,7 @@ Section Axiomatic.
     go_MMInput: forall {A: Type} (addr: t) (initialL: RiscvMachineL) f post
         (pf: isMMIOAddr addr = true),
         (forall (inp: word 32),
-            mcomp_sat (f inp) (logAppend initialL (mkInputEvent (exist _ addr pf) inp)) post) ->
+            mcomp_sat (f inp) (logCons initialL (mkInputEvent (exist _ addr pf) inp)) post) ->
         mcomp_sat (Bind (loadWord addr) f) initialL post;
 
 (*    do_setRegister0: forall {A: Type} (v: t) (initialL: RiscvMachineL),

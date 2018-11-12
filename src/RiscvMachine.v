@@ -50,9 +50,15 @@ Section Machine.
     fun '(mkRiscvMachine regs pc nextPC mem1 log) mem2 =>
           mkRiscvMachine regs pc nextPC mem2 log.
 
-  Definition logAppend: RiscvMachine -> LogItem -> RiscvMachine :=
-    fun '(mkRiscvMachine regs pc nextPC mem log) item =>
-          mkRiscvMachine regs pc nextPC mem (item :: log).
+  Definition setLog: RiscvMachine -> list LogItem -> RiscvMachine :=
+    fun '(mkRiscvMachine regs pc nextPC mem log1) log2 =>
+          mkRiscvMachine regs pc nextPC mem log2.
+
+  Definition logCons(m: RiscvMachine)(i: LogItem): RiscvMachine :=
+    setLog m (i :: m.(getLog)).
+
+  Definition logAppend(m: RiscvMachine)(items: list LogItem): RiscvMachine :=
+    setLog m (items ++ m.(getLog)).
 
   Definition putProgram(prog: list (word 32))(addr: mword)(ma: RiscvMachine): RiscvMachine :=
     setPc (setNextPc (setMem ma

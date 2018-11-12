@@ -53,14 +53,14 @@ Section Riscv.
       loadWord a :=
         m <- get;
         res <- (liftL1 loadWord a);
-        put (logAppend m (EvLoadWord (regToZ_unsigned a) (decode RV64IM (uwordToZ res))));;
+        put (logCons m (EvLoadWord (regToZ_unsigned a) (decode RV64IM (uwordToZ res))));;
         Return res;
       loadDouble := liftL1 loadDouble;
       storeByte   := liftL2 storeByte;
       storeHalf   := liftL2 storeHalf;
       storeWord a v :=
         m <- get;
-        put (logAppend m (EvStoreWord (regToZ_unsigned a) v));;
+        put (logCons m (EvStoreWord (regToZ_unsigned a) v));;
         liftL2 storeWord a v;
       storeDouble := liftL2 storeDouble;
       step := liftL0 step;
