@@ -3,6 +3,7 @@ Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.PropExtensionality.
 Require Import riscv.util.BitWidths.
 Require Import riscv.util.Monads. Import OStateOperations.
+Require Import riscv.util.MonadNotations.
 Require Import riscv.Decode.
 Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)
 Require Import riscv.Program.
