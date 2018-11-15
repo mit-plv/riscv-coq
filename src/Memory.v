@@ -161,64 +161,6 @@ Ltac destruct_list_length :=
        destruct (destruct_list_length _ L) as [ ? | ? ]; [ subst L | ]
   end.
 
-Section MachineWidthHelpers.
-  Context {t: Set}.
-  Context {MW: MachineWidth t}.
-
-  Lemma pow2_sz_4: 4 < 2 ^ XLEN.
-  Proof.
-    pose proof XLEN_lbound.
-    change 4 with (2 ^ 2).
-    apply Z.pow_lt_mono_r; omega.
-  Qed.
-
-  Lemma regToZ_unsigned_eq: forall (a b: t), regToZ_unsigned a = regToZ_unsigned b -> a = b.
-  Proof.
-    intros.
-    rewrite <- (ZToReg_regToZ_unsigned a).
-    rewrite <- (ZToReg_regToZ_unsigned b).
-    congruence.
-  Qed.
-
-  Lemma regToZ_unsigned_ne: forall (a b: t), regToZ_unsigned a <> regToZ_unsigned b -> a <> b.
-  Proof.
-    intros.
-    intro C.
-    subst b.
-    apply H.
-    reflexivity.
-  Qed.
-
-  Lemma ne_regToZ_unsigned: forall (a b: t),
-      a <> b -> regToZ_unsigned a <> regToZ_unsigned b.
-  Proof.
-    intros.
-    intro C.
-    apply H.
-    apply regToZ_unsigned_eq.
-    assumption.
-  Qed.
-
-  Lemma regToZ_unsigned_one: regToZ_unsigned (ZToReg 1) = 1.
-  Proof.
-    intros.
-    apply regToZ_ZToReg_unsigned. pose proof pow2_sz_4. omega.
-  Qed.
-
-  Lemma regToZ_unsigned_two: regToZ_unsigned (ZToReg 2) = 2.
-  Proof.
-    intros.
-    apply regToZ_ZToReg_unsigned. pose proof pow2_sz_4. omega.
-  Qed.
-
-  Lemma regToZ_unsigned_four: regToZ_unsigned (ZToReg 4) = 4.
-  Proof.
-    intros.
-    apply regToZ_ZToReg_unsigned. pose proof pow2_sz_4. omega.
-  Qed.
-
-End MachineWidthHelpers.
-
 Ltac regOmega_pre := apply regToZ_unsigned_eq || apply regToZ_unsigned_ne.
 
 Ltac regOmega := regOmega_pre; omega.
