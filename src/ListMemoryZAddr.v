@@ -23,7 +23,7 @@ Section Memory.
      should not work because out of bounds writes-then-reads don't work *)
   Definition write_byte(m: mem)(a: Z)(v: word 8): mem :=
     firstn (length m) (write_byte' m a v).
-  
+
   Definition read_half(m: mem)(a: Z): word 16 :=
     let v0 := read_byte m a in let v1 := read_byte m (a + 1) in wappend v1 v0.
   Definition read_word(m: mem)(a: Z): word 32 :=
@@ -60,7 +60,7 @@ Lemma write_read_byte_eq': forall m a1 a2 v,
     read_byte (write_byte' m a1 v) a2 = v.
 Proof.
   intros. subst. unfold write_byte', read_byte, mem_size in *.
-  unfold Zfirstn, Zskipn, Znth, Zlength in *.
+  unfold Zfirstn, Zskipn, Znth in *. rewrite Zlength_correct in *.
   pose proof (@firstn_length_le _ m (Z.to_nat a1)).
   rewrite app_nth2 by omega'.
   rewrite H0 by omega'.
@@ -93,7 +93,8 @@ Proof.
   intros. unfold write_byte', read_byte, mem_size in *.
   pose proof (@firstn_length_le _ m (Z.to_nat a1)).
   pose proof (@firstn_length_le _ m (Z.to_nat a2)).
-  unfold Znth, Zfirstn, Zskipn, Zlength in *.
+  unfold Znth, Zfirstn, Zskipn in *.
+  rewrite Zlength_correct in *.
   rewrite Z2Nat.inj_add by omega.
   apply Z_ne_to_nat_ne in H1; [|omega..].
   apply Z_bounds_to_nat_bound in H.
@@ -144,7 +145,8 @@ Lemma write_byte_preserves_mem_size': forall m a v,
     mem_size (write_byte' m a v) = mem_size m.
 Proof.
   intros. unfold mem_size, write_byte' in *.
-  unfold Zlength, Zfirstn, Zskipn in *.
+  unfold Zfirstn, Zskipn in *.
+  rewrite? Zlength_correct in *.
   repeat rewrite app_length.
   rewrite firstn_length_le by omega'.
   rewrite skipn_length_le by omega'.
@@ -160,7 +162,8 @@ Proof.
   replace (length m) with (length (write_byte' m a1 v)).
   - rewrite firstn_all. reflexivity.
   - pose proof (write_byte_preserves_mem_size' m a1 v H) as P.
-    unfold mem_size, Zlength in *.
+    unfold mem_size in *.
+    rewrite? Zlength_correct in *.
     apply Nat2Z.inj in P.
     assumption.
 Qed.
@@ -209,7 +212,8 @@ Proof.
   - unfold write_byte', Zfirstn, Zskipn.
     rewrite! Z2Nat_nonpos by omega.
     simpl.
-    unfold mem_size, Zlength in *.
+    unfold mem_size in *.
+    rewrite? Zlength_correct in *.
     apply Znat.inj_eq.
     apply firstn_length_le.
     simpl.
@@ -220,7 +224,8 @@ Proof.
     rewrite <- (P v) at 1.
     rewrite firstn_all_write_byte' by assumption.
     reflexivity.
-  - unfold mem_size, Zlength in *.
+  - unfold mem_size in *.
+    rewrite? Zlength_correct in *.
     apply Znat.inj_eq.
     apply firstn_length_le.
     unfold write_byte', Zfirstn, Zskipn.
@@ -301,7 +306,7 @@ Proof.
   replace (n' * (al * 2)) with (n' * 2 * al) by ring.
   apply Z.mod_mul.
   assumption.
-Qed.  
+Qed.
 
 Lemma write_half_preserves_mem_size: forall m a v,
     mem_size (write_half m a v) = mem_size m.
@@ -316,7 +321,7 @@ Lemma diviBy4_implies_diviBy2: forall n,
 Proof.
   intros.
   apply weaken_alignment; [assumption | omega].
-Qed.  
+Qed.
 
 Lemma write_read_word_eq: forall m a1 a2 v,
     a1 + 4 <= mem_size m ->
@@ -398,7 +403,7 @@ Lemma diviBy8_implies_diviBy4: forall n,
 Proof.
   intros.
   apply weaken_alignment; [assumption | omega].
-Qed.  
+Qed.
 
 Lemma write_read_double_eq: forall m a1 a2 v,
     a1 + 8 <= mem_size m ->

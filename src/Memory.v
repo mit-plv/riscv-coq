@@ -163,8 +163,6 @@ Definition Znth{T: Type}(l: list T)(i: Z)(default: T): T :=
 *)
 Definition Znth{T: Type}(l: list T)(i: Z)(default: T): T := nth (Z.to_nat i) l default.
 
-Definition Zlength{T: Type}(l: list T): Z := Z.of_nat (length l).
-
 Definition Zfirstn{T: Type}(n: Z)(l: list T): list T := firstn (Z.to_nat n) l.
 
 Definition Zskipn{T: Type}(n: Z)(l: list T): list T := skipn (Z.to_nat n) l.
@@ -243,7 +241,7 @@ Qed.
 Lemma map_Zlength: forall (A B : Type) (f : A -> B) (l : list A),
     Zlength (map f l) = Zlength l.
 Proof.
-  intros. unfold Zlength in *. rewrite map_length. reflexivity.
+  intros. rewrite? Zlength_correct. rewrite map_length. reflexivity.
 Qed.
 
 Definition map_nat_range{R: Type}(f: nat -> R): nat -> nat -> list R :=
@@ -275,7 +273,7 @@ Lemma Zlength_map_range{R: Type}: forall (f: Z -> R) (count: Z),
     0 <= count ->
     Zlength (map_range f count) = count.
 Proof.
-  intros. unfold map_range, Zlength.
+  intros. unfold map_range. rewrite Zlength_correct.
   rewrite length_map_nat_range.
   apply Z2Nat.id.
   assumption.
@@ -324,7 +322,7 @@ Qed.
 Lemma Znth_error_Some: forall (A : Type) (l : list A) (n : Z),
     Znth_error l n <> None <-> 0 <= n < Zlength l.
 Proof using .
-  intros. unfold Znth_error, Zlength.
+  intros. unfold Znth_error. rewrite Zlength_correct.
   pose proof (nth_error_Some l (Z.to_nat n)) as P.
   split; intros.
   - apply proj1 in P.
@@ -337,14 +335,14 @@ Qed.
 Lemma Znth_error_ge_None: forall {A : Type} (l : list A) (n : Z),
     Zlength l <= n -> Znth_error l n = None.
 Proof.
-  unfold Zlength, Znth_error. intros.
+  unfold Znth_error. intros. rewrite Zlength_correct in *.
   destruct n; try reflexivity; apply nth_error_None;
     apply Nat2Z.inj_le; rewrite? Z2Nat.id; lia.
 Qed.
 
 Lemma Zlength_nonneg: forall {A: Type} (l: list A), 0 <= Zlength l.
 Proof.
-  intros. unfold Zlength. lia.
+  intros. rewrite Zlength_correct. lia.
 Qed.
 
 Lemma map_Znth_error: forall {A B : Type} (f : A -> B) (n : Z) (l : list A) {d : A},
@@ -364,7 +362,7 @@ Ltac demod :=
 Lemma destruct_list_length: forall A (l: list A),
     l = nil \/ 0 < Zlength l.
 Proof.
-  intros. destruct l; cbv; auto.
+  intros. rewrite Zlength_correct. destruct l; cbv; auto.
 Qed.
 
 Lemma Zlength_cons: forall {A: Type} (a: A) (l: list A),
@@ -372,7 +370,7 @@ Lemma Zlength_cons: forall {A: Type} (a: A) (l: list A),
 Proof.
   intros.
   simpl.
-  unfold Zlength.
+  rewrite? Zlength_correct.
   change (length (a :: l)) with (S (length l)).
   rewrite Nat2Z.inj_succ.
   reflexivity.
@@ -388,7 +386,7 @@ Lemma Zlength_app: forall {A: Type} (l1 l2: list A),
 Proof.
   intros.
   simpl.
-  unfold Zlength.
+  rewrite? Zlength_correct.
   rewrite app_length.
   lia.
 Qed.
