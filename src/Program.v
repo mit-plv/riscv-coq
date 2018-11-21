@@ -26,9 +26,6 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
 
   step: M unit; (* updates PC *)
 
-  (* note: does not return "M bool", because this is a static constant *)
-  isMMIOAddr: t -> bool;
-
   raiseException{A: Type}(isInterrupt: t)(exceptionCode: t): M A;
 }.
 

@@ -83,8 +83,6 @@ Section Riscv.
         let m'' := setNextPc m' (add m.(getNextPc) (ZToReg 4)) in
         put m'';
 
-      isMMIOAddr := simple_isMMIOAddr;
-
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
       raiseException{A: Type}(isInterrupt: t)(exceptionCode: t) := fail_hard;
@@ -94,8 +92,6 @@ Section Riscv.
     AxiomaticRiscv t (MMIOEvent t) (OStateND RiscvMachineL) :=
   {|
     mcomp_sat := @OStateNDOperations.computation_satisfies RiscvMachineL;
-    mkInputEvent a v := (MMInput, proj1_sig a, v);
-    mkOutputEvent a v := (MMOutput, proj1_sig a, v);
   |}.
   (* TODO this should be possible without destructing so deeply *)
   all: abstract (

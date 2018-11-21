@@ -33,30 +33,20 @@ Section Axiomatic.
        postcondition when run on given initial machine *)
     mcomp_sat: M unit -> RiscvMachineL -> (RiscvMachineL -> Prop) -> Prop;
 
-    mkInputEvent : { a: t | isMMIOAddr a = true } -> word 32 -> Event;
-    mkOutputEvent: { a: t | isMMIOAddr a = true } -> word 32 -> Event;
-
     go_getRegister: forall (initialL: RiscvMachineL) (x: Register) post (f: t -> M unit),
       valid_register x ->
       mcomp_sat (f (getReg initialL.(getRegs) x)) initialL post ->
       mcomp_sat (Bind (getRegister x) f) initialL post;
 
-(*  Will have to specify in RegisterFileFunctions that getReg of Register0 is always 0
+(*  Will have to specify in RegisterFileFunctions that getReg of Register0 is always 0 *)
     go_getRegister0: forall (initialL: RiscvMachineL) post (f: t -> M unit),
-      mcomp_sat (f (getReg initialL.(getRegs) Register0)) initialL post ->
+      mcomp_sat (f (ZToReg 0)) initialL post ->
       mcomp_sat (Bind (getRegister Register0) f) initialL post;
-*)
 
     go_setRegister: forall initialL x v post (f: unit -> M unit),
       valid_register x ->
       mcomp_sat (f tt) (setRegs initialL (setReg initialL.(getRegs) x v)) post ->
       mcomp_sat (Bind (setRegister x v) f) initialL post;
-
-    go_MMInput: forall {A: Type} (addr: t) (initialL: RiscvMachineL) f post
-        (pf: isMMIOAddr addr = true),
-        (forall (inp: word 32),
-            mcomp_sat (f inp) (logCons initialL (mkInputEvent (exist _ addr pf) inp)) post) ->
-        mcomp_sat (Bind (loadWord addr) f) initialL post;
 
 (*    do_setRegister0: forall {A: Type} (v: t) (initialL: RiscvMachineL),
           setRegister Register0 v initialL = Return tt initialL;

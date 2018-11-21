@@ -65,7 +65,6 @@ Section Riscv.
         liftL2 storeWord a v;
       storeDouble := liftL2 storeDouble;
       step := liftL0 step;
-      isMMIOAddr := isMMIOAddr;
       raiseException{A} := liftL2 (raiseException (A := A));
   |}.
 

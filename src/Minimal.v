@@ -69,8 +69,6 @@ Section Riscv.
         let m'' := setNextPc m' (add m.(getNextPc) (ZToReg 4)) in
         put m'';
 
-      isMMIOAddr a := false; (* this simple machine has no MMIO *)
-
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
       raiseException{A: Type}(isInterrupt: t)(exceptionCode: t) := Return None;
@@ -80,12 +78,12 @@ Section Riscv.
     mcomp_sat := @OStateOperations.computation_satisfies RiscvMachineL;
   |}.
   (* TODO this should be possible without destructing so deeply *)
-  all: abstract (
+  all:  (
     repeat match goal with
            | |- _ => reflexivity
            | |- _ => progress (
                          unfold computation_satisfies,
-                                isMMIOAddr, IsRiscvMachineL,
+                                IsRiscvMachineL,
                                 valid_register, Register0,
                                 get, put, fail_hard,
                                 liftLoad, liftStore in *;
