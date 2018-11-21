@@ -38,7 +38,6 @@ Section Axiomatic.
       mcomp_sat (f (getReg initialL.(getRegs) x)) initialL post ->
       mcomp_sat (Bind (getRegister x) f) initialL post;
 
-(*  Will have to specify in RegisterFileFunctions that getReg of Register0 is always 0 *)
     go_getRegister0: forall (initialL: RiscvMachineL) post (f: t -> M unit),
       mcomp_sat (f (ZToReg 0)) initialL post ->
       mcomp_sat (Bind (getRegister Register0) f) initialL post;

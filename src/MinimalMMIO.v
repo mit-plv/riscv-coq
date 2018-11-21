@@ -88,7 +88,7 @@ Section Riscv.
       raiseException{A: Type}(isInterrupt: t)(exceptionCode: t) := fail_hard;
   |}.
 
-  Instance MinimalNDSatisfiesAxioms:
+  Instance MinimalMMIOSatisfiesAxioms:
     AxiomaticRiscv t (MMIOEvent t) (OStateND RiscvMachineL) :=
   {|
     mcomp_sat := @OStateNDOperations.computation_satisfies RiscvMachineL;
@@ -127,4 +127,4 @@ End Riscv.
 
 (* needed because defined inside a Section *)
 Existing Instance IsRiscvMachineL.
-Existing Instance MinimalNDSatisfiesAxioms.
+Existing Instance MinimalMMIOSatisfiesAxioms.
