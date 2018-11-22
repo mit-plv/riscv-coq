@@ -65,6 +65,7 @@ Section Riscv.
         liftL2 storeWord a v;
       storeDouble := liftL2 storeDouble;
       step := liftL0 step;
+      isPhysicalMemAddr := liftL1 isPhysicalMemAddr;
       raiseException{A} := liftL2 (raiseException (A := A));
   |}.
 

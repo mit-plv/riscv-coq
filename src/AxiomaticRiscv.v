@@ -33,6 +33,11 @@ Section Axiomatic.
        postcondition when run on given initial machine *)
     mcomp_sat: M unit -> RiscvMachineL -> (RiscvMachineL -> Prop) -> Prop;
 
+    (* Note: These lemmas could be simplified by not wrapping each operation inside
+       a Bind, but then the postcondition would have to take a return value as an
+       additional input, and before applying these lemmas in the compiler correctness
+       proof (where we always have a Bind), we'd have to split up the Bind *)
+
     go_getRegister: forall (initialL: RiscvMachineL) (x: Register) post (f: t -> M unit),
       valid_register x ->
       mcomp_sat (f (getReg initialL.(getRegs) x)) initialL post ->
@@ -42,80 +47,49 @@ Section Axiomatic.
       mcomp_sat (f (ZToReg 0)) initialL post ->
       mcomp_sat (Bind (getRegister Register0) f) initialL post;
 
+    go_setRegister0: forall initialL v post (f: unit -> M unit),
+      mcomp_sat (f tt) initialL post ->
+      mcomp_sat (Bind (setRegister Register0 v) f) initialL post;
+
     go_setRegister: forall initialL x v post (f: unit -> M unit),
       valid_register x ->
       mcomp_sat (f tt) (setRegs initialL (setReg initialL.(getRegs) x v)) post ->
       mcomp_sat (Bind (setRegister x v) f) initialL post;
 
-(*    do_setRegister0: forall {A: Type} (v: t) (initialL: RiscvMachineL),
-          setRegister Register0 v initialL = Return tt initialL;
+    go_loadWord: forall initialL addr (f: word 32 -> M unit) (post: RiscvMachineL -> Prop),
+        (forall undefBehavior: M unit,
+            mcomp_sat (Bind (isPhysicalMemAddr addr)
+                            (fun b => if b
+                                      then f (Memory.loadWord initialL.(getMem) addr)
+                                      else undefBehavior))
+                      initialL post) ->
+        mcomp_sat (Bind (Program.loadWord addr) f) initialL post;
 
-      do_loadByte: forall {A: Type} (addr: t) (initialL: RiscvMachineL),
-          loadByte addr initialL =
-          Return (Memory.loadByte initialL.(machine).(machineMem) addr) initialL;
+    go_storeWord: forall initialL addr v post (f: unit -> M unit),
+        (forall undefBehavior: M unit,
+            mcomp_sat (Bind (isPhysicalMemAddr addr)
+                            (fun b => if b then (f tt) else undefBehavior))
+                      (setMem initialL (Memory.storeWord initialL.(getMem) addr v))
+                      post) ->
+        mcomp_sat (Bind (Program.storeWord addr v) f) initialL post;
 
-      do_loadHalf: forall {A: Type} (addr: t) (initialL: RiscvMachineL),
-          loadHalf addr initialL =
-          Return (Memory.loadHalf initialL.(machine).(machineMem) addr) initialL;
+    go_getPC: forall initialL f (post: RiscvMachineL -> Prop),
+        mcomp_sat (f initialL.(getPc)) initialL post ->
+        mcomp_sat (Bind getPC f) initialL post;
 
-      do_loadWord: forall {A: Type} (addr: t) (initialL: RiscvMachineL),
-          isMMIOAddr addr = false ->
-          loadWord addr initialL =
-          Return (Memory.loadWord initialL.(machine).(machineMem) addr) initialL;
+    go_setPC: forall initialL v post (f: unit -> M unit),
+        mcomp_sat (f tt) (setNextPc initialL v) post ->
+        mcomp_sat (Bind (setPC v) f) initialL post;
 
-      do_MMInput: forall {A: Type} (addr: t) (initialL: RiscvMachineL),
-          isMMIOAddr addr = true ->
-          loadWord addr initialL =
-            (inp <- OStateNDOperations.arbitrary (word 32);
-             m <- OStateNDOperations.get;
-             OStateNDOperations.put
-               (with_log ((EvInput (regToZ_unsigned addr) inp) :: m.(log)) m);;
-             Return inp) initialL;
+    go_step: forall initialL (post: RiscvMachineL -> Prop),
+        mcomp_sat
+          (Return tt)
+          (setNextPc (setPc initialL
+                            initialL.(getNextPc))
+                     (add initialL.(getNextPc) (ZToReg 4)))
+          post ->
+        mcomp_sat step initialL post;
 
-      do_loadDouble: forall {A: Type} (addr: t) (initialL: RiscvMachineL),
-          loadDouble addr initialL =
-          Return (Memory.loadDouble initialL.(machine).(machineMem) addr) initialL;
-
-      do_storeByte: forall {A: Type} (addr: t) (v: word 8) (initialL: RiscvMachineL),
-          storeByte addr v initialL =
-          (Return tt) (with_machine
-                         (with_machineMem
-                            (Memory.storeByte initialL.(machine).(machineMem) addr v)
-                            initialL.(machine))
-                         initialL);
-
-      do_storeHalf: forall {A: Type} (addr: t) (v: word 16) (initialL: RiscvMachineL),
-          storeHalf addr v initialL =
-          Return tt (with_machine
-                       (with_machineMem
-                          (Memory.storeHalf initialL.(machine).(machineMem) addr v)
-                          initialL.(machine))
-                       initialL);
-
-      do_storeWord: forall {A: Type} (addr: t) (v: word 32) (initialL: RiscvMachineL),
-          storeWord addr v initialL =
-          Return tt (with_machine
-                       (with_machineMem
-                          (Memory.storeWord initialL.(machine).(machineMem) addr v)
-                          initialL.(machine))
-                       initialL);
-
-      do_storeDouble: forall {A: Type} (addr: t) (v: word 64) (initialL: RiscvMachineL),
-          storeDouble addr v initialL =
-          Return tt (with_machine
-                       (with_machineMem
-                          (Memory.storeDouble initialL.(machine).(machineMem) addr v)
-                          initialL.(machine))
-                       initialL);
-
-      do_getPC: forall {A: Type} (initialL: RiscvMachineL),
-          getPC initialL =
-          Return initialL.(machine).(core).(pc) initialL;
-
-      do_setPC: forall {A: Type} (v: t) (initialL: RiscvMachineL),
-          setPC v initialL =
-          Return tt (with_machine (with_nextPC v initialL.(machine)) initialL);
-*)
   }.
 
 End Axiomatic.

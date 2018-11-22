@@ -22,12 +22,20 @@ Section Riscv.
 
   Local Notation RiscvMachineL := (RiscvMachine Register t Empty_set).
 
+  Definition addrInRange(a: t): OState RiscvMachineL bool :=
+    mach <- get;
+    Return (regToZ_unsigned a <? mach.(getMem).(memSize)).
+
+  Definition assert(cond: OState RiscvMachineL bool): OState RiscvMachineL unit :=
+    b <- cond; if b then (Return tt) else fail_hard.
+
   Definition liftLoad{R}(f: Mem t -> t -> R): t -> OState RiscvMachineL R :=
-    fun a => m <- get; Return (f (m.(getMem)) a).
+    fun a => assert (addrInRange a);; m <- get; Return (f (m.(getMem)) a).
 
   Definition liftStore{R}(f: Mem t -> t -> R -> Mem t):
     t -> R -> OState RiscvMachineL unit :=
     fun a v =>
+      assert (addrInRange a);;
       m <- get;
       put (setMem m (f m.(getMem) a v)).
 
@@ -69,44 +77,56 @@ Section Riscv.
         let m'' := setNextPc m' (add m.(getNextPc) (ZToReg 4)) in
         put m'';
 
+      isPhysicalMemAddr := addrInRange;
+
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
-      raiseException{A: Type}(isInterrupt: t)(exceptionCode: t) := Return None;
+      raiseException{A: Type}(isInterrupt: t)(exceptionCode: t) := fail_hard;
   |}.
+
+  Ltac t :=
+    repeat match goal with
+       | |- _ => reflexivity
+       | |- _ => progress (
+                     unfold computation_satisfies,
+                            IsRiscvMachineL,
+                            valid_register, Register0,
+                            get, put, fail_hard,
+                            addrInRange, assert, liftLoad, liftStore in *;
+                     subst;
+                     simpl in *)
+       | |- _ => intro
+       | |- _ => apply functional_extensionality
+       | |- _ => apply propositional_extensionality; split; intros
+       | u: unit |- _ => destruct u
+       | H: exists x, _ |- _ => destruct H
+       | H: {_ : _ | _} |- _ => destruct H
+       | H: _ /\ _ |- _ => destruct H
+       | p: _ * _ |- _ => destruct p
+       | |- context [ let (_, _) := ?p in _ ] => let E := fresh "E" in destruct p eqn: E
+       | H: Some _ = Some _ |- _ => inversion H; clear H; subst
+       | H: (_, _) = (_, _) |- _ => inversion H; clear H; subst
+       | |- _ * _ => constructor
+       | |- option _ => exact None
+       | |- _ => discriminate
+       | |- _ => congruence
+       | |- _ => solve [exfalso; lia]
+       | |- _ => solve [eauto 15]
+       | |- context [if ?x then _ else _] => let E := fresh "E" in destruct x eqn: E
+       | _: context [if ?x then _ else _] |- _ => let E := fresh "E" in destruct x eqn: E
+       | H: _ \/ _ |- _ => destruct H
+       | r: RiscvMachineL |- _ =>
+         destruct r as [regs pc npc m l];
+         simpl in *;
+         rewrite @storeWord_preserves_memSize in *
+       | H: _ |- _ => refine (H (fun _ => _)) (* undef behavior of load/store outside range *)
+       end.
 
   Instance MinimalSatisfiesAxioms: AxiomaticRiscv t Empty_set (OState RiscvMachineL) := {|
     mcomp_sat := @OStateOperations.computation_satisfies RiscvMachineL;
   |}.
   (* TODO this should be possible without destructing so deeply *)
-  all:  (
-    repeat match goal with
-           | |- _ => reflexivity
-           | |- _ => progress (
-                         unfold computation_satisfies,
-                                IsRiscvMachineL,
-                                valid_register, Register0,
-                                get, put, fail_hard,
-                                liftLoad, liftStore in *;
-                         subst;
-                         simpl in *)
-           | |- _ => intro
-           | |- _ => apply functional_extensionality
-           | |- _ => apply propositional_extensionality; split; intros
-           | u: unit |- _ => destruct u
-           | H: exists x, _ |- _ => destruct H
-           | H: {_ : _ | _} |- _ => destruct H
-           | H: _ /\ _ |- _ => destruct H
-           | p: _ * _ |- _ => destruct p
-           | |- context [ let (_, _) := ?p in _ ] => let E := fresh "E" in destruct p eqn: E
-           | H: Some _ = Some _ |- _ => inversion H; clear H; subst
-           | H: (_, _) = (_, _) |- _ => inversion H; clear H; subst
-           | |- _ => discriminate
-           | |- _ => solve [exfalso; lia]
-           | |- _ => solve [eauto 15]
-           | |- context [if ?x then _ else _] => let E := fresh "E" in destruct x eqn: E
-           | _: context [if ?x then _ else _] |- _ => let E := fresh "E" in destruct x eqn: E
-           | H: _ \/ _ |- _ => destruct H
-           end).
+  all: abstract t.
   Defined.
 
 End Riscv.
