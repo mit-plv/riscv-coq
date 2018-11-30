@@ -29,10 +29,10 @@ Section Riscv.
   Local Notation RiscvMachineL := (riscv.RiscvMachine.RiscvMachine Register t LogEvent).
 
   Definition downgrade: RiscvMachineL -> RiscvMachine :=
-    fun '(mkRiscvMachine regs pc nextPC mem log) => mkRiscvMachine regs pc nextPC mem nil.
+    fun '(mkRiscvMachine regs pc nextPC im mem log) => mkRiscvMachine regs pc nextPC im mem nil.
 
-  Definition upgrade: RiscvMachine -> list LogEvent -> RiscvMachineL :=
-    fun '(mkRiscvMachine regs pc nextPC mem _) log => mkRiscvMachine regs pc nextPC mem log.
+  Definition upgrade: RiscvMachine -> list (LogItem t LogEvent) -> RiscvMachineL :=
+    fun '(mkRiscvMachine regs pc nextPC im mem _) log => mkRiscvMachine regs pc nextPC im mem log.
 
   Definition liftL0{B: Type}(f: OState RiscvMachine B):  OState RiscvMachineL B :=
     fun s => let (ob, s') := f (downgrade s) in (ob, upgrade s' s.(getLog)).
@@ -54,18 +54,17 @@ Section Riscv.
       loadWord a :=
         m <- get;
         res <- (liftL1 loadWord a);
-        put (logCons m (EvLoadWord (regToZ_unsigned a) (decode RV64IM (uwordToZ res))));;
+        put (logCons m (EvLoadWord (regToZ_unsigned a) (decode RV64IM (uwordToZ res)), nil, nil));;
         Return res;
       loadDouble := liftL1 loadDouble;
       storeByte   := liftL2 storeByte;
       storeHalf   := liftL2 storeHalf;
       storeWord a v :=
         m <- get;
-        put (logCons m (EvStoreWord (regToZ_unsigned a) v));;
+        put (logCons m (EvStoreWord (regToZ_unsigned a) v, nil, nil));;
         liftL2 storeWord a v;
       storeDouble := liftL2 storeDouble;
       step := liftL0 step;
-      isPhysicalMemAddr := liftL1 isPhysicalMemAddr;
       raiseException{A} := liftL2 (raiseException (A := A));
   |}.
 

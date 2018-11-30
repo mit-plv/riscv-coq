@@ -26,8 +26,9 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
 
   step: M unit; (* updates PC *)
 
-  (* Returns false on out of range addresses, on MMIO addresses, device addresses, etc *)
+  (* Returns false on out of range addresses, on MMIO addresses, device addresses, etc
   isPhysicalMemAddr: t -> M bool;
+     not needed at the moment because we expose state record *)
 
   raiseException{A: Type}(isInterrupt: t)(exceptionCode: t): M A;
 }.

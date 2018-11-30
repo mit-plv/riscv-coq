@@ -63,11 +63,12 @@ Definition zeroedRiscvMachine: RiscvMachine := {|
   getRegs := initialRegs;
   getPc := ZToReg 0;
   getNextPc := ZToReg 4;
+  isMem a := regToZ_unsigned a <? 100;
   getMem := zero_mem 100;
-  getLog := @nil Empty_set;
+  getLog := nil;
 |}.
 
-Definition zeroedRiscvMachineL: RiscvMachineL := upgrade zeroedRiscvMachine (@nil LogEvent).
+Definition zeroedRiscvMachineL: RiscvMachineL := upgrade zeroedRiscvMachine nil.
 
 Definition initialRiscvMachineL(imem: list MachineInt): RiscvMachineL :=
   putProgram (map (@ZToWord 32) imem) (ZToReg 0) zeroedRiscvMachineL.
@@ -83,7 +84,7 @@ Definition fib6_L_final(fuel: nat): RiscvMachineL :=
 Definition fib6_L_res(fuel: nat): word XLEN :=
   (fib6_L_final fuel).(getRegs) 18.
 
-Definition fib6_L_trace(fuel: nat): list LogEvent :=
+Definition fib6_L_trace(fuel: nat): list (LogItem (word 32) LogEvent) :=
   (fib6_L_final fuel).(getLog).
 
 (* only uncomment this if you're sure there are no admits in the computational parts,

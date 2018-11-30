@@ -22,22 +22,21 @@ Section Riscv.
 
   Local Notation RiscvMachineL := (RiscvMachine Register t Empty_set).
 
-  Definition addrInRange(a: t): OState RiscvMachineL bool :=
-    mach <- get;
-    Return (regToZ_unsigned a <? mach.(getMem).(memSize)).
+  Definition isMemAddr(a: t): OState RiscvMachineL bool :=
+    mach <- get; Return (mach.(isMem) a).
 
   Definition assert(cond: OState RiscvMachineL bool): OState RiscvMachineL unit :=
     b <- cond; if b then (Return tt) else fail_hard.
 
   Definition liftLoad{R}(f: Mem t -> t -> R): t -> OState RiscvMachineL R :=
-    fun a => assert (addrInRange a);; m <- get; Return (f (m.(getMem)) a).
+    fun a => assert (isMemAddr a);; m <- get; Return (f (m.(getMem)) a).
 
   Definition liftStore{R}(f: Mem t -> t -> R -> Mem t):
     t -> R -> OState RiscvMachineL unit :=
     fun a v =>
-      assert (addrInRange a);;
+      assert (isMemAddr a);;
       m <- get;
-      put (setMem m (f m.(getMem) a v)).
+      put (withMem (f m.(getMem) a v) m).
 
   Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) t :=  {|
       getRegister reg :=
@@ -77,8 +76,6 @@ Section Riscv.
         let m'' := setNextPc m' (add m.(getNextPc) (ZToReg 4)) in
         put m'';
 
-      isPhysicalMemAddr := addrInRange;
-
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
       raiseException{A: Type}(isInterrupt: t)(exceptionCode: t) := fail_hard;
@@ -92,7 +89,8 @@ Section Riscv.
                             IsRiscvMachineL,
                             valid_register, Register0,
                             get, put, fail_hard,
-                            addrInRange, assert, liftLoad, liftStore in *;
+                            in_range,
+                            isMemAddr, assert, liftLoad, liftStore in *;
                      subst;
                      simpl in *)
        | |- _ => intro
@@ -112,6 +110,7 @@ Section Riscv.
        | |- _ => congruence
        | |- _ => solve [exfalso; lia]
        | |- _ => solve [eauto 15]
+       | |- _ => rewrite! Z.ltb_nlt in *; omega
        | |- context [if ?x then _ else _] => let E := fresh "E" in destruct x eqn: E
        | _: context [if ?x then _ else _] |- _ => let E := fresh "E" in destruct x eqn: E
        | H: _ \/ _ |- _ => destruct H

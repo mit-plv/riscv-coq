@@ -22,30 +22,30 @@ Section Riscv.
   Context {MF: MemoryFunctions t}.
   Context {RFF: RegisterFileFunctions Register t}.
 
-  Local Notation RiscvMachineL := (RiscvMachine Register t (MMIOEvent t)).
+  Local Notation RiscvMachineL := (RiscvMachine Register t MMIOAction).
 
-  Definition simple_isMMIOAddr: t -> bool := reg_eqb (ZToReg 65524). (* maybe like spike *)
+  Definition theMMIOAddr: t := (ZToReg 65524). (* maybe like spike *)
 
+  Definition simple_isMMIOAddr: t -> bool := reg_eqb theMMIOAddr.
 
-  Definition logEvent(e: MMIOEvent t): OStateND RiscvMachineL unit :=
-    m <- get; put (logCons m e).
+  Definition logEvent(e: LogItem t MMIOAction): OStateND RiscvMachineL unit :=
+    m <- get; put (withLogItem e m).
 
-  Definition addrInRange(a: t): OStateND RiscvMachineL bool :=
-    mach <- get;
-    Return (regToZ_unsigned a <? mach.(getMem).(memSize)).
+  Definition isMemAddr(a: t): OStateND RiscvMachineL bool :=
+    mach <- get; Return (mach.(isMem) a).
 
   Definition assert(cond: OStateND RiscvMachineL bool): OStateND RiscvMachineL unit :=
     b <- cond; if b then (Return tt) else fail_hard.
 
   Definition liftLoad{R}(f: Mem t -> t -> R): t -> OStateND RiscvMachineL R :=
-    fun a => assert (addrInRange a);; m <- get; Return (f (m.(getMem)) a).
+    fun a => assert (isMemAddr a);; m <- get; Return (f (m.(getMem)) a).
 
   Definition liftStore{R}(f: Mem t -> t -> R -> Mem t):
     t -> R -> OStateND RiscvMachineL unit :=
     fun a v =>
-      assert (addrInRange a);;
+      assert (isMemAddr a);;
       m <- get;
-      put (setMem m (f m.(getMem) a v)).
+      put (withMem (f m.(getMem) a v) m).
 
   Instance IsRiscvMachineL: RiscvProgram (OStateND RiscvMachineL) t :=  {|
       getRegister reg :=
@@ -71,19 +71,32 @@ Section Riscv.
 
       loadByte   := liftLoad Memory.loadByte;
       loadHalf   := liftLoad Memory.loadHalf;
-      loadWord a := if simple_isMMIOAddr a
-                    then
-                      inp <- arbitrary (word 32);
-                      logEvent (MMInput, a, inp);;
-                      Return inp
-                    else liftLoad Memory.loadWord a;
+
+      loadWord a :=
+        mach <- get;
+        if mach.(isMem) a then
+          liftLoad Memory.loadWord a
+        else
+          if simple_isMMIOAddr a then
+            inp <- arbitrary (word 32);
+            logEvent (MMInput, [a], [uInt32ToReg inp]);;
+            Return inp
+          else
+            fail_hard;
       loadDouble := liftLoad Memory.loadDouble;
 
       storeByte   := liftStore Memory.storeByte;
       storeHalf   := liftStore Memory.storeHalf;
-      storeWord a v := if simple_isMMIOAddr a
-                       then logEvent (MMOutput, a, v)
-                       else liftStore Memory.storeWord a v;
+      storeWord a v :=
+        mach <- get;
+        if mach.(isMem) a then
+          liftStore Memory.storeWord a v
+        else
+          if simple_isMMIOAddr a then
+            logEvent (MMOutput, [a; uInt32ToReg v], [])
+          else
+            fail_hard;
+
       storeDouble := liftStore Memory.storeDouble;
 
       step :=
@@ -91,8 +104,6 @@ Section Riscv.
         let m' := setPc m m.(getNextPc) in
         let m'' := setNextPc m' (add m.(getNextPc) (ZToReg 4)) in
         put m'';
-
-      isPhysicalMemAddr := addrInRange;
 
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
@@ -108,7 +119,9 @@ Section Riscv.
                             valid_register, Register0,
                             get, put, fail_hard, arbitrary,
                             logEvent,
-                            addrInRange, assert, liftLoad, liftStore in *;
+                            in_range,
+                            simple_isMMIOAddr,
+                            isMemAddr, assert, liftLoad, liftStore in *;
                      subst;
                      simpl in *)
        | |- _ => intro
@@ -128,6 +141,12 @@ Section Riscv.
        | |- _ => congruence
        | |- _ => solve [exfalso; lia]
        | |- _ => solve [eauto 15]
+       | H: false = ?rhs |- _ => match rhs with
+                                 | false => fail 1
+                                 | _ => symmetry in H
+                                 end
+       | |- _ => rewrite! Z.ltb_nlt in *
+       | |- _ => omega
        | |- context [if ?x then _ else _] => let E := fresh "E" in destruct x eqn: E
        | _: context [if ?x then _ else _] |- _ => let E := fresh "E" in destruct x eqn: E
        | H: _ \/ _ |- _ => destruct H
@@ -139,63 +158,13 @@ Section Riscv.
 
 
   Instance MinimalMMIOSatisfiesAxioms:
-    AxiomaticRiscv t (MMIOEvent t) (OStateND RiscvMachineL) :=
+    AxiomaticRiscv t MMIOAction (OStateND RiscvMachineL) :=
   {|
     mcomp_sat := @OStateNDOperations.computation_satisfies RiscvMachineL;
   |}.
   (* TODO this should be possible without destructing so deeply *)
-  all: t.
-  admit.
-
- {
-  match goal with
-  | H: _ |- _ =>
-    let p1 := fresh "p1" in let o1 := fresh "o1" in
-    evar (p1: option (unit * RiscvMachineL) -> Prop);
-    evar (o1: option (unit * RiscvMachineL));
-    specialize (H (fun _ => p1) o1);
-    subst p1 o1
-  end.
-  eapply H.
-  right.
-  do 2 eexists. split.
-  - right. eauto.
-  - rewrite <- H5. instantiate (1 := fun _ => 42 = 42). reflexivity.
-}
-
- {
-  match goal with
-  | H: _ |- _ =>
-    let p1 := fresh "p1" in let o1 := fresh "o1" in
-    evar (p1: option (unit * RiscvMachineL) -> Prop);
-    evar (o1: option (unit * RiscvMachineL));
-    specialize (H (fun _ => p1) o1);
-    subst p1 o1
-  end.
-  eapply H.
-  right.
-  do 2 eexists. split.
-  - right. eauto.
-  - rewrite <- H4. assumption.
-}
-
- {
-  match goal with
-  | H: _ |- _ =>
-    let p1 := fresh "p1" in let o1 := fresh "o1" in
-    evar (p1: option (unit * RiscvMachineL) -> Prop);
-    evar (o1: option (unit * RiscvMachineL));
-    specialize (H (fun _ => p1) o1);
-    subst p1 o1
-  end.
-  eapply H. clear H.
-  right.
-  do 2 eexists. split.
-  - right. eauto.
-  - (* need additional hypothesis
-  simple_isMMIOAddr addr = true -> isPhysicalMemAddr addr = Return false,
-  maybe as an argument to the Instance? *)
-  Admitted.
+  all: abstract t.
+  Defined.
 
 End Riscv.
 

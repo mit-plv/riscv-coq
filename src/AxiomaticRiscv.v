@@ -18,9 +18,9 @@ Section Axiomatic.
   Context {MW: MachineWidth t}.
   Context {RFF: RegisterFileFunctions Register t}.
   Context {MF: MemoryFunctions t}.
-  Context {Event: Set}.
+  Context {Action: Set}.
 
-  Local Notation RiscvMachineL := (RiscvMachine Register t Event).
+  Local Notation RiscvMachineL := (RiscvMachine Register t Action).
 
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
@@ -57,6 +57,32 @@ Section Axiomatic.
       mcomp_sat (Bind (setRegister x v) f) initialL post;
 
     go_loadWord: forall initialL addr (f: word 32 -> M unit) (post: RiscvMachineL -> Prop),
+        initialL.(isMem) addr = true ->
+        mcomp_sat (f (Memory.loadWord initialL.(getMem) addr)) initialL post ->
+        mcomp_sat (Bind (Program.loadWord addr) f) initialL post;
+
+    go_storeWord: forall initialL addr v post (f: unit -> M unit),
+        initialL.(isMem) addr = true ->
+        mcomp_sat (f tt) (withMem (Memory.storeWord initialL.(getMem) addr v) initialL) post ->
+        mcomp_sat (Bind (Program.storeWord addr v) f) initialL post;
+
+    (* Physical memory is not that simple!
+
+    go_loadWord: forall initialL addr (f: word 32 -> M unit) (post: RiscvMachineL -> Prop),
+        in_range addr 4 0 initialL.(getMem).(memSize) ->
+        mcomp_sat (f (Memory.loadWord initialL.(getMem) addr)) initialL post ->
+        mcomp_sat (Bind (Program.loadWord addr) f) initialL post;
+
+    go_storeWord: forall initialL addr v post (f: unit -> M unit),
+        in_range addr 4 0 initialL.(getMem).(memSize) ->
+        mcomp_sat (f tt) (setMem initialL (Memory.storeWord initialL.(getMem) addr v)) post ->
+        mcomp_sat (Bind (Program.storeWord addr v) f) initialL post;
+    *)
+
+    (* These don't hardcode the implementation of isPhysicalMemAddr, so it's more flexible,
+       but harder to use:
+
+    go_loadWord: forall initialL addr (f: word 32 -> M unit) (post: RiscvMachineL -> Prop),
         (forall undefBehavior: M unit,
             mcomp_sat (Bind (isPhysicalMemAddr addr)
                             (fun b => if b
@@ -72,6 +98,7 @@ Section Axiomatic.
                       (setMem initialL (Memory.storeWord initialL.(getMem) addr v))
                       post) ->
         mcomp_sat (Bind (Program.storeWord addr v) f) initialL post;
+    *)
 
     go_getPC: forall initialL f (post: RiscvMachineL -> Prop),
         mcomp_sat (f initialL.(getPc)) initialL post ->
@@ -94,4 +121,4 @@ Section Axiomatic.
 
 End Axiomatic.
 
-Arguments AxiomaticRiscv t {_} {_} {_} Event M {_} {_}.
+Arguments AxiomaticRiscv t {_} {_} {_} Action M {_} {_}.
