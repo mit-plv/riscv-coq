@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.setoid_ring.Ring_theory.
-Require Export riscv.util.Word.
+Require Export coqutil.Word.Interface.
 Require Import riscv.util.Monads.
 Require Export riscv.util.ZBitOps.
 
@@ -11,8 +11,13 @@ Local Open Scope Z_scope.
    no matter whether it's a 32-bit or 64-bit machine. *)
 Definition MachineInt := Z.
 
-Class MachineWidth(t: Set) := mkMachineWidth {
-  (* arithmetic operations (inherited from Integral in Haskell) *)
+Class MachineWidth(t: Set) := {
+  w8  : Set;
+  w16 : Set;
+  w32 : Set;
+  w64 : Set;
+
+  (* arithmetic operations (inherited from wegral in Haskell) *)
   add: t -> t -> t;
   sub: t -> t -> t;
   mul: t -> t -> t;
@@ -36,20 +41,20 @@ Class MachineWidth(t: Set) := mkMachineWidth {
 
   (* operations also defined in MachineWidth in Haskell: *)
 
-  regToInt8: t -> word 8;
-  regToInt16: t -> word 16;
-  regToInt32: t -> word 32;
-  regToInt64: t -> word 64;
+  regToInt8: t -> w8;
+  regToInt16: t -> w16;
+  regToInt32: t -> w32;
+  regToInt64: t -> w64;
 
-  uInt8ToReg: word 8 -> t;
-  uInt16ToReg: word 16 -> t;
-  uInt32ToReg: word 32 -> t;
-  uInt64ToReg: word 64 -> t;
+  uInt8ToReg: w8 -> t;
+  uInt16ToReg: w16 -> t;
+  uInt32ToReg: w32 -> t;
+  uInt64ToReg: w64 -> t;
 
-  int8ToReg: word 8 -> t;
-  int16ToReg: word 16 -> t;
-  int32ToReg: word 32 -> t;
-  int64ToReg: word 64 -> t;
+  int8ToReg: w8 -> t;
+  int16ToReg: w16 -> t;
+  int32ToReg: w32 -> t;
+  int64ToReg: w64 -> t;
 
   s32: t -> t;
   u32: t -> t;

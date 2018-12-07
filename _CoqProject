@@ -1,2 +1,3 @@
 -Q ../bbv/theories bbv
+-Q ../coqutil/src coqutil
 -R ./src riscv

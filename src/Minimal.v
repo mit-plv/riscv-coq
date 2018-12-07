@@ -5,19 +5,19 @@ Require Import riscv.util.BitWidths.
 Require Import riscv.util.Monads. Import OStateOperations.
 Require Import riscv.util.MonadNotations.
 Require Import riscv.Decode.
-Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)
+(*Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)*)
 Require Import riscv.Program.
 Require Import riscv.Utility.
 Require Import riscv.AxiomaticRiscv.
 Require Export riscv.RiscvMachine.
 Require Import Coq.micromega.Lia.
-
+Require Import coqutil.Map.Interface.
 
 Section Riscv.
 
   Context {t: Set}.
   Context {MW: MachineWidth t}.
-  Context {MF: MemoryFunctions t}.
+  Context {Mem: map.map t (bbv.Word.word 8)}.
   Context {RFF: RegisterFileFunctions Register t}.
 
   Local Notation RiscvMachineL := (RiscvMachine Register t Empty_set).
