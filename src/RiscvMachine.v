@@ -1,3 +1,5 @@
+Require Import coqutil.Map.Interface.
+Require Import coqutil.Word.Interface.
 Require Import riscv.Memory.
 Require Import riscv.Utility.
 
@@ -17,7 +19,8 @@ Section Machine.
   Context {mword: Set}.
   Context {MW: MachineWidth mword}.
   Context {RFF: RegisterFileFunctions Reg mword}.
-  Context {MF: MemoryFunctions mword}.
+  Context {byte: word.word 8}.
+  Context {Mem: map.map mword byte}.
   Context {Action: Set}.
 
   (* name of the external call, list of arguments, list of return values *)
@@ -28,7 +31,7 @@ Section Machine.
     getPc: mword;
     getNextPc: mword;
     isMem: mword -> bool;
-    getMem: Mem mword;
+    getMem: Mem;
     getLog: list LogItem;
   }.
 
@@ -48,7 +51,7 @@ Section Machine.
     fun '(mkRiscvMachine regs pc nextPC im1 mem log) im2 =>
           mkRiscvMachine regs pc nextPC im2 mem log.
 
-  Definition setMem: RiscvMachine -> Mem mword -> RiscvMachine :=
+  Definition setMem: RiscvMachine -> Mem -> RiscvMachine :=
     fun '(mkRiscvMachine regs pc nextPC im mem1 log) mem2 =>
           mkRiscvMachine regs pc nextPC im mem2 log.
 
@@ -78,7 +81,7 @@ Section Machine.
     fun im2 '(mkRiscvMachine regs pc nextPC im1 mem log)  =>
               mkRiscvMachine regs pc nextPC im2 mem log.
 
-  Definition withMem: Mem mword -> RiscvMachine -> RiscvMachine :=
+  Definition withMem: Mem -> RiscvMachine -> RiscvMachine :=
     fun mem2 '(mkRiscvMachine regs pc nextPC im mem1 log)  =>
                mkRiscvMachine regs pc nextPC im mem2 log.
 
@@ -97,7 +100,7 @@ Section Machine.
   Definition putProgram(prog: list (word 32))(addr: mword)(ma: RiscvMachine): RiscvMachine :=
     (withPc addr
     (withNextPc (add addr (ZToReg 4))
-    (withMem (store_word_list prog addr ma.(getMem)) ma))).
+    (withMem (unchecked_store_byte_tuple_list 4 addr prog addr ma.(getMem)) ma))).
 
 End Machine.
 

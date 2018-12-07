@@ -1,12 +1,15 @@
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
-Require Import bbv.ZLib.
-Require Import riscv.util.Word.
+Require Import coqutil.Word.Interface.
+Require Import coqutil.Datatypes.HList.
+Require Import coqutil.Datatypes.PrimitivePair.
+Require Import coqutil.Map.Interface.
+Require Import coqutil.Tactics.Tactics.
 Require Export riscv.util.ListLib.
 Require Import riscv.util.div_mod_to_quot_rem.
-Require Import riscv.util.Tactics.
 Require Import riscv.Utility.
+Require Import coqutil.sanity.
 
 Local Open Scope Z_scope.
 
@@ -40,6 +43,50 @@ Qed.
 
 End ValidAddr.
 
+
+Section MemAccess.
+  Context {byte: word.word 8}. (* {word: word.word  {mem: map word byte}.*)
+  Context {word: Set}.
+  Context {MW: MachineWidth word}.
+  Context {mem: map.map word byte}.
+
+  Local Notation "' x <- a ; f" :=
+    (match (a: option _) with
+     | x => f
+     | _ => None
+     end)
+      (right associativity, at level 70, x pattern).
+
+  Fixpoint load(n: nat)(m: mem)(addr: word){struct n}: option (tuple byte n) :=
+      match n with
+      | O => Some tt
+      | S n =>
+        'Some b <- map.get m addr;
+        'Some bs <- load n m (add addr (ZToReg 1));
+        Some (pair.mk b bs)
+      end.
+
+  Fixpoint store_bytes(n: nat)(m: mem)(a: word): tuple byte n -> mem :=
+    match n with
+    | O => fun bs => m
+    | S n => fun bs => store_bytes n (map.put m a (pair._1 bs)) (add a (ZToReg 1)) (pair._2 bs)
+    end.
+
+  Definition store(n: nat)(m: mem)(a: word)(v: tuple byte n): option mem :=
+    'Some _ <- load n m a; (* <- checks that all addresses are valid *)
+    Some (store_bytes n m a v).
+
+  Definition store_byte_tuple_list(n: nat)(a: word)(l: list (tuple byte n))(m: mem):
+    option mem :=
+    fold_left_index (fun i om w => 'Some m <- om; store n m (add a (ZToReg i)) w) l 0 (Some m).
+
+  Definition unchecked_store_byte_tuple_list(n: nat)(a: word)(l: list (tuple byte n))(m: mem):
+    mem :=
+    fold_left_index (fun i om w => store_bytes n m (add a (ZToReg i)) w) l 0 m.
+
+End MemAccess.
+
+(*
 Class MemoryFunctions(t: Set)`{MachineWidth t} := mkMemoryFunctions {
   Mem: Type;
 
@@ -137,7 +184,7 @@ Class MemoryFunctions(t: Set)`{MachineWidth t} := mkMemoryFunctions {
 }.
 
 Arguments Mem _ {_} {_}.
-
+*)
 
 Lemma valid_addr_8_4: forall {t: Set} {MW: MachineWidth t} (addr: t) size,
     valid_addr addr 8 size ->
@@ -176,6 +223,7 @@ using omega
 : nats.
  *)
 
+(*
 Ltac pose_mem_proofs :=
   repeat match goal with
          | m: _ |- _ => unique pose proof (memSize_bound m)
@@ -251,15 +299,14 @@ Ltac mem_simpl :=
       auto
     );
   try solve [repeat ((try omega); f_equal)].
-
+*)
 
 Section MemoryHelpers.
 
   Context {t: Set}.
   Context {MW: MachineWidth t}.
-  Context {MF: MemoryFunctions t}.
 
-  Add Ring tring: (@regRing t MW).
+  Fail Add Ring tring: (@regRing t MW). (* TODO Cannot mix universe polymorphic and monomorphic declarations in sections. !! *)
 
   Lemma regToZ_unsigned_add: forall a b,
       0 <= regToZ_unsigned a + regToZ_unsigned b < 2 ^ XLEN ->
@@ -295,6 +342,7 @@ Section MemoryHelpers.
     - rewrite regToZ_ZToReg_unsigned; omega.
   Qed.
 
+  (*
   Lemma loadWord_storeDouble_ne: forall m (a1 a2: t) v,
       valid_addr a1 8 (memSize m) ->
       valid_addr a2 4 (memSize m) ->
@@ -722,5 +770,5 @@ Section MemoryHelpers.
         * rewrite store_word_list_preserves_memSize.
           mem_sideconditions.
   Qed.
-
+*)
 End MemoryHelpers.
