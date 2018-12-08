@@ -1,3 +1,5 @@
+From coqutil Require Export sanity.
+Require Import BinInt.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndian.
@@ -20,8 +22,7 @@ Section Machine.
   Context {mword: Set}.
   Context {MW: MachineWidth mword}.
   Context {RFF: RegisterFileFunctions Reg mword}.
-  Context {byte: word.word 8}.
-  Context {Mem: map.map mword byte}.
+  Context {Mem: map.map mword Utility.byte}.
   Context {Action: Set}.
 
   (* name of the external call, list of arguments, list of return values *)
@@ -102,7 +103,6 @@ Section Machine.
     (withPc addr
     (withNextPc (add addr (ZToReg 4))
     (withMem (unchecked_store_byte_tuple_list addr (List.map (split 4) prog) ma.(getMem)) ma))).
-
 End Machine.
 
 Arguments RiscvMachine _ _ {_} {_} {_} _.

@@ -1,3 +1,4 @@
+From coqutil Require Export sanity.
 Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Word.LittleEndian.
 Require Import riscv.util.BitWidths.
@@ -17,7 +18,7 @@ Section Riscv.
   Context {mword: Set}.
   Context {MW: MachineWidth mword}.
 
-  Context {M: Type -> Type}.
+  Context {M: Set -> Type}.
   Context {MM: Monad M}.
   Context {RVP: RiscvProgram M mword}.
   Context {RVS: RiscvState M mword}.
@@ -27,12 +28,6 @@ Section Riscv.
     | BW32 => RV32IM
     | BW64 => RV64IM
     end.
-
-  Definition exe: Instruction -> M unit.
-    refine execute.
-    Fail exact RVS.
-    (* TODO universe inconsistency *)
-  Abort.
 
   Definition run1:
     M unit :=

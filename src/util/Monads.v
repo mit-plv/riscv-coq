@@ -1,3 +1,4 @@
+From coqutil Require Export sanity.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.PropExtensionality.
 Require Import Coq.Lists.List.
@@ -35,7 +36,7 @@ Ltac prove_monad_law :=
          | o: option _ |- _ => destruct o
          end.
 
-Instance option_Monad: Monad option := {|
+Instance option_Monad: Monad option. refine {|
   Bind := fun {A B: Type} (o: option A) (f: A -> option B) => match o with
           | Some x => f x
           | None => None
@@ -48,7 +49,7 @@ Defined.
 
 Definition NonDet(A: Type): Type := A -> Prop.
 
-Instance NonDet_Monad: Monad NonDet := {|
+Instance NonDet_Monad: Monad NonDet. refine {|
   Bind{A B}(m: NonDet A)(f: A -> NonDet B) :=
     fun (b: B) => exists a, m a /\ f a b;
   Return{A} := eq;
@@ -59,7 +60,7 @@ Defined.
 
 Definition State(S A: Type) := S -> (A * S).
 
-Instance State_Monad(S: Type): Monad (State S) := {|
+Instance State_Monad(S: Type): Monad (State S). refine {|
   Bind := fun {A B: Type} (m: State S A) (f: A -> State S B) =>
             fun (s: S) => let (a, s') := m s in f a s' ;
   Return := fun {A: Type} (a: A) =>
@@ -77,7 +78,7 @@ End StateOperations.
 
 Definition OState(S A: Type) := S -> (option A) * S.
 
-Instance OState_Monad(S: Type): Monad (OState S) := {|
+Instance OState_Monad(S: Type): Monad (OState S). refine {|
   Bind := fun {A B: Type} (m: OState S A) (f: A -> OState S B) =>
             fun (s: S) => match m s with
             | (Some a, s') => f a s'
@@ -120,7 +121,7 @@ End OStateOperations.
    a unique set of all possible outcomes. *)
 Definition OStateND(S A: Type) := S -> option (A * S) -> Prop.
 
-Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
+Instance OStateND_Monad(S: Type): Monad (OStateND S). refine {|
   Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
     fun (s : S) (obs: option (B * S)) =>
       (m s None /\ obs = None) \/
