@@ -2,6 +2,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
+Require Import coqutil.Z.BitOps.
 Require coqutil.Word.Naive.
 Require Import coqutil.Word.LittleEndian.
 Require Import coqutil.Datatypes.HList.
@@ -25,10 +26,6 @@ Section M.
   Definition TODO{T: Type}: T. Admitted.
 
   Instance MachineWidth_XLEN: MachineWidth word_sz := {|
-    w8  := tuple byte 1;
-    w16 := tuple byte 2;
-    w32 := tuple byte 4;
-    w64 := tuple byte 8;
     add := word.add;
     sub := word.sub;
     mul := word.mul;
@@ -41,18 +38,18 @@ Section M.
     or := word.or;
     and := word.and;
     XLEN := sz;
-    regToInt8 := split 1;
-    regToInt16 := split 2;
-    regToInt32 := split 4;
-    regToInt64 := split 8;
-    uInt8ToReg  := combine 1;
-    uInt16ToReg := combine 2;
-    uInt32ToReg := combine 4;
-    uInt64ToReg := combine 8;
-    int8ToReg  a := word.sextend  8 (combine 1 a);
-    int16ToReg a := word.sextend 16 (combine 2 a);
-    int32ToReg a := word.sextend 32 (combine 4 a);
-    int64ToReg a := word.sextend 64 (combine 8 a);
+    regToInt8  a := split 1 (word.unsigned a);
+    regToInt16 a := split 2 (word.unsigned a);
+    regToInt32 a := split 4 (word.unsigned a);
+    regToInt64 a := split 8 (word.unsigned a);
+    uInt8ToReg  a := word.of_Z (combine 1 a);
+    uInt16ToReg a := word.of_Z (combine 2 a);
+    uInt32ToReg a := word.of_Z (combine 4 a);
+    uInt64ToReg a := word.of_Z (combine 8 a);
+    int8ToReg  a := word.of_Z (sextend  8 (combine 1 a));
+    int16ToReg a := word.of_Z (sextend 16 (combine 2 a));
+    int32ToReg a := word.of_Z (sextend 32 (combine 4 a));
+    int64ToReg a := word.of_Z (sextend 64 (combine 8 a));
     s32 := word.sextend 32;
     u32(x: word_sz) := word.of_Z ((word.unsigned x) mod 2 ^ 32);
     regToZ_signed := word.signed;

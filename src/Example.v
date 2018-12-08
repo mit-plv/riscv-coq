@@ -10,7 +10,6 @@ Require Import riscv.Memory.
 Require Import riscv.Minimal.
 Require Import riscv.MinimalLogging.
 Require Import riscv.Run.
-Require Import riscv.ListMemory.
 Require Import riscv.util.Monads.
 Require Import riscv.MachineWidth32.
 

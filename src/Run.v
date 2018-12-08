@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.BinInt.
+Require Import coqutil.Word.LittleEndian.
 Require Import riscv.util.BitWidths.
 Require Import riscv.util.Monads.
 Require Import riscv.util.MonadNotations.
@@ -27,11 +28,17 @@ Section Riscv.
     | BW64 => RV64IM
     end.
 
+  Definition exe: Instruction -> M unit.
+    refine execute.
+    Fail exact RVS.
+    (* TODO universe inconsistency *)
+  Abort.
+
   Definition run1:
     M unit :=
     pc <- getPC;
     inst <- loadWord pc;
-    execute (decode RV_wXLEN_IM (uwordToZ inst));;
+    execute (decode RV_wXLEN_IM (combine 4 inst));;
     step.
 
   Definition run: nat -> M unit :=

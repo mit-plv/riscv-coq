@@ -1,6 +1,5 @@
 Require Import Coq.ZArith.ZArith.
 Require Import riscv.util.Monads.
-Require Import riscv.util.Word.
 Require Import riscv.Utility.
 Require Import riscv.Decode.
 
@@ -11,15 +10,15 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   getRegister: Register -> M t;
   setRegister: Register -> t -> M unit;
 
-  loadByte: t -> M (word 8);
-  loadHalf: t -> M (word 16);
-  loadWord: t -> M (word 32);
-  loadDouble: t -> M (word 64);
+  loadByte: t -> M w8;
+  loadHalf: t -> M w16;
+  loadWord: t -> M w32;
+  loadDouble: t -> M w64;
 
-  storeByte: t -> word 8 -> M unit;
-  storeHalf: t -> word 16 -> M unit;
-  storeWord: t -> word 32 -> M unit;
-  storeDouble: t -> word 64 -> M unit;
+  storeByte: t -> w8 -> M unit;
+  storeHalf: t -> w16 -> M unit;
+  storeWord: t -> w32 -> M unit;
+  storeDouble: t -> w64 -> M unit;
 
   getPC: M t;
   setPC: t -> M unit;

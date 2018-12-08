@@ -1,5 +1,6 @@
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
+Require Import coqutil.Word.LittleEndian.
 Require Import riscv.Memory.
 Require Import riscv.Utility.
 
@@ -97,10 +98,10 @@ Section Machine.
     fun items '(mkRiscvMachine regs pc nextPC im mem log) =>
                 mkRiscvMachine regs pc nextPC im mem (items ++ log).
 
-  Definition putProgram(prog: list (word 32))(addr: mword)(ma: RiscvMachine): RiscvMachine :=
+  Definition putProgram(prog: list MachineInt)(addr: mword)(ma: RiscvMachine): RiscvMachine :=
     (withPc addr
     (withNextPc (add addr (ZToReg 4))
-    (withMem (unchecked_store_byte_tuple_list 4 addr prog addr ma.(getMem)) ma))).
+    (withMem (unchecked_store_byte_tuple_list addr (List.map (split 4) prog) ma.(getMem)) ma))).
 
 End Machine.
 

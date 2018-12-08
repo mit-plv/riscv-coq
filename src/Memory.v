@@ -45,7 +45,6 @@ End ValidAddr.
 
 
 Section MemAccess.
-  Context {byte: word.word 8}. (* {word: word.word  {mem: map word byte}.*)
   Context {word: Set}.
   Context {MW: MachineWidth word}.
   Context {mem: map.map word byte}.
@@ -76,13 +75,23 @@ Section MemAccess.
     'Some _ <- load n m a; (* <- checks that all addresses are valid *)
     Some (store_bytes n m a v).
 
-  Definition store_byte_tuple_list(n: nat)(a: word)(l: list (tuple byte n))(m: mem):
+  Definition store_byte_tuple_list{n: nat}(a: word)(l: list (tuple byte n))(m: mem):
     option mem :=
     fold_left_index (fun i om w => 'Some m <- om; store n m (add a (ZToReg i)) w) l 0 (Some m).
 
-  Definition unchecked_store_byte_tuple_list(n: nat)(a: word)(l: list (tuple byte n))(m: mem):
+  Definition unchecked_store_byte_tuple_list{n: nat}(a: word)(l: list (tuple byte n))(m: mem):
     mem :=
     fold_left_index (fun i om w => store_bytes n m (add a (ZToReg i)) w) l 0 m.
+
+  Definition loadByte:   mem -> word -> option w8  := load 1.
+  Definition loadHalf:   mem -> word -> option w16 := load 2.
+  Definition loadWord:   mem -> word -> option w32 := load 4.
+  Definition loadDouble: mem -> word -> option w64 := load 8.
+
+  Definition storeByte  : mem -> word -> w8  -> option mem := store 1.
+  Definition storeHalf  : mem -> word -> w16 -> option mem := store 2.
+  Definition storeWord  : mem -> word -> w32 -> option mem := store 4.
+  Definition storeDouble: mem -> word -> w64 -> option mem := store 8.
 
 End MemAccess.
 
@@ -301,12 +310,16 @@ Ltac mem_simpl :=
   try solve [repeat ((try omega); f_equal)].
 *)
 
+Local Unset Universe Polymorphism.
+
 Section MemoryHelpers.
 
   Context {t: Set}.
   Context {MW: MachineWidth t}.
 
-  Fail Add Ring tring: (@regRing t MW). (* TODO Cannot mix universe polymorphic and monomorphic declarations in sections. !! *)
+  Add Ring tring: (@regRing t MW).
+
+  Goal forall a, add a (ZToReg 0) = a. intros. ring. Qed.
 
   Lemma regToZ_unsigned_add: forall a b,
       0 <= regToZ_unsigned a + regToZ_unsigned b < 2 ^ XLEN ->

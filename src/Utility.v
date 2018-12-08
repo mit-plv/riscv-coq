@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.setoid_ring.Ring_theory.
 Require Export coqutil.Word.Interface.
+Require Import coqutil.Datatypes.HList.
 Require Import coqutil.sanity.
 Require Import riscv.util.Monads.
 Require Export riscv.util.ZBitOps.
@@ -13,10 +14,12 @@ Local Open Scope Z_scope.
 Definition MachineInt := Z.
 
 Class MachineWidth(t: Set) := {
-  w8  : Set;
-  w16 : Set;
-  w32 : Set;
-  w64 : Set;
+  byte: word 8;
+
+  w8  := tuple byte 1;
+  w16 := tuple byte 2;
+  w32 := tuple byte 4;
+  w64 := tuple byte 8;
 
   (* arithmetic operations (inherited from wegral in Haskell) *)
   add: t -> t -> t;
