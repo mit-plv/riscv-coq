@@ -6,7 +6,7 @@ Require Import riscv.util.Monads.
 Require Import riscv.Utility.
 
 
-Inductive TraceEvent{a: Set}: Set :=
+Inductive TraceEvent{a: Type}: Type :=
 | Trace_loadByte   : a -> word  8 -> TraceEvent
 | Trace_loadHalf   : a -> word 16 -> TraceEvent
 | Trace_loadWord   : a -> word 32 -> TraceEvent
@@ -18,16 +18,16 @@ Inductive TraceEvent{a: Set}: Set :=
 
 Arguments TraceEvent: clear implicits.
 
-Definition LoggingMemory(m a: Set) := (m * list (TraceEvent a))%type.
+Definition LoggingMemory(m a: Type) := (m * list (TraceEvent a))%type.
 
-Definition log{M A: Set}(m: LoggingMemory M A)(e: TraceEvent A): LoggingMemory M A :=
+Definition log{M A: Type}(m: LoggingMemory M A)(e: TraceEvent A): LoggingMemory M A :=
   (fst m, snd m ++ [e]).
 
 Definition myInst M A: Monad (State (LoggingMemory M A)) := State_Monad _.
 
 Existing Instance myInst.
 
-Instance StateLoggingMemory_is_MonadicMemory(M: Set)(t: Set){MW: MachineWidth t}{MM: Memory M t}:
+Instance StateLoggingMemory_is_MonadicMemory(M: Type)(t: Type){MW: MachineWidth t}{MM: Memory M t}:
   MonadicMemory (State (LoggingMemory M t)) t :=
 {|
   loadByte a :=

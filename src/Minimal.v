@@ -10,8 +10,8 @@ Require Export riscv.RiscvMachine.
 
 Section Riscv.
 
-  Context {Mem: Set}.
-  Context {mword: Set}.
+  Context {Mem: Type}.
+  Context {mword: Type}.
   Context {MW: MachineWidth mword}.
   Context {MemIsMem: Memory Mem mword}.
   Context {RF: Type}.

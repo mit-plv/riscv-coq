@@ -2,7 +2,7 @@ Require Import riscv.Memory.
 Require Import riscv.Utility.
 Require Import riscv.util.Monads.
 
-Class MonadicMemory(m: Type -> Type)(a: Set) := mkMonadicMemory {
+Class MonadicMemory(m: Type -> Type)(a: Type) := mkMonadicMemory {
   loadByte   : a -> m (word  8);
   loadHalf   : a -> m (word 16);
   loadWord   : a -> m (word 32);
@@ -13,15 +13,15 @@ Class MonadicMemory(m: Type -> Type)(a: Set) := mkMonadicMemory {
   storeDouble: a -> word 64 -> m unit;
 }.
 
-Definition wrapLoadO{M R: Set}{t: Set}{MW: MachineWidth t}{MM: Memory M t}(f: M -> t -> R)
+Definition wrapLoadO{M R: Type}{t: Type}{MW: MachineWidth t}{MM: Memory M t}(f: M -> t -> R)
   : t -> OState M R :=
   fun a => m <- get; Return (f m a).
 
-Definition wrapStoreO{M R: Set}{t: Set}{MW: MachineWidth t}{MM: Memory M t}(f: M -> t -> R -> M)
+Definition wrapStoreO{M R: Type}{t: Type}{MW: MachineWidth t}{MM: Memory M t}(f: M -> t -> R -> M)
   : t -> R -> OState M unit :=
   fun a v => m <- get; put (f m a v).
 
-Instance OStateMemory(M: Set)(t: Set){MW: MachineWidth t}{MM: Memory M t}
+Instance OStateMemory(M: Type)(t: Type){MW: MachineWidth t}{MM: Memory M t}
   : MonadicMemory (OState M) t :=
 {|
   loadByte := wrapLoadO Memory.loadByte;
@@ -35,13 +35,13 @@ Instance OStateMemory(M: Set)(t: Set){MW: MachineWidth t}{MM: Memory M t}
 |}.
 
 (*
-Definition wrapLoad{M A R: Set}{MM: Memory M A}(f: M -> A -> R): A -> State M R :=
+Definition wrapLoad{M A R: Type}{MM: Memory M A}(f: M -> A -> R): A -> State M R :=
   fun a => m <- StateM.get; Return (f m a).
 
-Definition wrapStore{M A R: Set}{MM: Memory M A}(f: M -> A -> R -> M): A -> R -> State M unit :=
+Definition wrapStore{M A R: Type}{MM: Memory M A}(f: M -> A -> R -> M): A -> R -> State M unit :=
   fun a v => m <- StateM.get; StateM.put (f m a v).
 
-Instance StateMemory(M A: Set){MM: Memory M A}: MonadicMemory (State M) A := {|
+Instance StateMemory(M A: Type){MM: Memory M A}: MonadicMemory (State M) A := {|
   loadByte := wrapLoad Memory.loadByte;
   loadHalf := wrapLoad Memory.loadHalf;
   loadWord := wrapLoad Memory.loadWord;

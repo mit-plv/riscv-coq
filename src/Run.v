@@ -12,7 +12,7 @@ Require Import riscv.Utility.
 Section Riscv.
 
   Context {B: BitWidths}.
-  Context {mword: Set}.
+  Context {mword: Type}.
   Context {MW: MachineWidth mword}.
 
   Context {M: Type -> Type}.

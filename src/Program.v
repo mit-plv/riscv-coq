@@ -5,7 +5,7 @@ Require Import riscv.Utility.
 Require Import riscv.Decode.
 
 
-Inductive AccessType: Set := Instr | Load | Store.
+Inductive AccessType: Type := Instr | Load | Store.
 
 Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   getRegister: Register -> M t;
@@ -51,7 +51,7 @@ Section Riscv.
   Context {MM: Monad M}.
 
   (* type of register values *)
-  Context {t: Set}.
+  Context {t: Type}.
 
   (* provides operations on t *)
   Context {MW: MachineWidth t}.

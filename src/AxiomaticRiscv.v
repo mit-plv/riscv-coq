@@ -15,12 +15,12 @@ Definition valid_register(r: Register): Prop := (0 < r < 32)%Z.
 
 Section AxiomaticRiscv.
 
-  Context {t: Set}.
+  Context {t: Type}.
   Context {MW: MachineWidth t}.
   Context {RF: Type}.
   Context {RFI: RegisterFile RF Register t}.
 
-  Context {Mem: Set}.
+  Context {Mem: Type}.
   Context {MemIsMem: Memory Mem t}.
 
   Local Notation RiscvMachine := (@RiscvMachine t Mem RF).

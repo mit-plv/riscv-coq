@@ -18,7 +18,7 @@ Local Open Scope Z_scope.
     Therefore, we will never have to unfold [ZToWord] or [uwordToZ] in the word library. *)
 Module Type WORD.
 
-  Parameter word: Z -> Set.
+  Parameter word: Z -> Type.
 
   Parameter ZToWord: forall (sz: Z) (x: Z), word sz.
 
@@ -630,7 +630,7 @@ Module RecordWord <: WORD.
     word_mod: word_val mod 2 ^ sz = word_val
   }.
 
-  Definition word: Z -> Set := @word_record.
+  Definition word: Z -> Type := @word_record.
 
   Definition minimize_eq_proof{A: Type}(eq_dec: forall (x y: A), {x = y} + {x <> y}){x y: A}
     (pf: x = y): x = y :=

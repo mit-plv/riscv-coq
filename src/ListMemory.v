@@ -45,7 +45,7 @@ Definition mem := ListMemoryZAddr.mem.
 
 Section Memory.
 
-  Context {mword: Set}.
+  Context {mword: Type}.
   Context {MW: MachineWidth mword}.
 
   Definition mem_size(m: mem): Z :=
@@ -113,7 +113,7 @@ Local Ltac wrap L :=
   try apply ne_regToZ_unsigned;
   (congruence || momega || idtac).
 
-Instance mem_is_Memory(mword: Set){MW: MachineWidth mword}: Memory mem mword := 
+Instance mem_is_Memory(mword: Type){MW: MachineWidth mword}: Memory mem mword := 
 {|
   memSize     := mem_size;
   loadByte    := read_byte;

@@ -15,9 +15,9 @@ Arguments RegisterFile: clear implicits.
 
 Section Riscv.
 
-  Context {mword: Set}.
+  Context {mword: Type}.
   Context {MW: MachineWidth mword}.
-  Context {Mem: Set}.
+  Context {Mem: Type}.
   Context {MemIsMem: Memory Mem mword}.
   Context {RF: Type}.
   Context {RFI: RegisterFile RF Register mword}.

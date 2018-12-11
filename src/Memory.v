@@ -11,7 +11,7 @@ Local Open Scope Z_scope.
 
 Section ValidAddr.
 
-Context {t: Set}.
+Context {t: Type}.
 Context {MW: MachineWidth t}.
 
 Definition valid_addr(addr: t)(alignment size: Z): Prop :=
@@ -39,7 +39,7 @@ Qed.
 
 End ValidAddr.
 
-Class Memory(m t: Set)`{MachineWidth t} := mkMemory {
+Class Memory(m t: Type)`{MachineWidth t} := mkMemory {
   memSize: m -> Z;
 
   loadByte   : m -> t -> word  8;
@@ -133,7 +133,7 @@ Class Memory(m t: Set)`{MachineWidth t} := mkMemory {
      which the store was done. *)
 }.
 
-Lemma valid_addr_8_4: forall {t: Set} {MW: MachineWidth t} (addr: t) size,
+Lemma valid_addr_8_4: forall {t: Type} {MW: MachineWidth t} (addr: t) size,
     valid_addr addr 8 size ->
     valid_addr addr 4 size.
 Proof.
@@ -431,7 +431,7 @@ Ltac destruct_list_length :=
   end.
 
 Section MachineWidthHelpers.
-  Context {t: Set}.
+  Context {t: Type}.
   Context {MW: MachineWidth t}.
 
   Lemma pow2_sz_4: 4 < 2 ^ XLEN.
@@ -582,8 +582,8 @@ Ltac mem_simpl :=
 
 Section MemoryHelpers.
 
-  Context {Mem: Set}.
-  Context {t: Set}.
+  Context {Mem: Type}.
+  Context {t: Type}.
   Context {MW: MachineWidth t}.
   Context {MM: Memory Mem t}.
 
