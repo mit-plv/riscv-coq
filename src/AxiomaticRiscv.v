@@ -1,5 +1,6 @@
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.BinInt.
+Require Import coqutil.Map.Interface.
 Require Import riscv.util.Monads.
 Require Import riscv.Utility.
 Require Import riscv.Decode.
@@ -18,6 +19,7 @@ Section Axiomatic.
   Context {MW: MachineWidth t}.
   Context {RFF: RegisterFileFunctions Register t}.
   Context {Action: Set}.
+  Context {mem: map.map t byte}.
 
   Local Notation RiscvMachineL := (RiscvMachine Register t Action).
 
@@ -55,49 +57,15 @@ Section Axiomatic.
       mcomp_sat (f tt) (setRegs initialL (setReg initialL.(getRegs) x v)) post ->
       mcomp_sat (Bind (setRegister x v) f) initialL post;
 
-    go_loadWord: forall initialL addr (f: w32 -> M unit) (post: RiscvMachineL -> Prop),
-        initialL.(isMem) addr = true ->
-        mcomp_sat (f (Memory.loadWord initialL.(getMem) addr)) initialL post ->
+    go_loadWord: forall initialL addr (v: w32) (f: w32 -> M unit) (post: RiscvMachineL -> Prop),
+        Memory.loadWord initialL.(getMem) addr = Some v ->
+        mcomp_sat (f v) initialL post ->
         mcomp_sat (Bind (Program.loadWord addr) f) initialL post;
 
-    go_storeWord: forall initialL addr v post (f: unit -> M unit),
-        initialL.(isMem) addr = true ->
-        mcomp_sat (f tt) (withMem (Memory.storeWord initialL.(getMem) addr v) initialL) post ->
+    go_storeWord: forall initialL addr v m' post (f: unit -> M unit),
+        Memory.storeWord initialL.(getMem) addr v = Some m' ->
+        mcomp_sat (f tt) (withMem m' initialL) post ->
         mcomp_sat (Bind (Program.storeWord addr v) f) initialL post;
-
-    (* Physical memory is not that simple!
-
-    go_loadWord: forall initialL addr (f: word 32 -> M unit) (post: RiscvMachineL -> Prop),
-        in_range addr 4 0 initialL.(getMem).(memSize) ->
-        mcomp_sat (f (Memory.loadWord initialL.(getMem) addr)) initialL post ->
-        mcomp_sat (Bind (Program.loadWord addr) f) initialL post;
-
-    go_storeWord: forall initialL addr v post (f: unit -> M unit),
-        in_range addr 4 0 initialL.(getMem).(memSize) ->
-        mcomp_sat (f tt) (setMem initialL (Memory.storeWord initialL.(getMem) addr v)) post ->
-        mcomp_sat (Bind (Program.storeWord addr v) f) initialL post;
-    *)
-
-    (* These don't hardcode the implementation of isPhysicalMemAddr, so it's more flexible,
-       but harder to use:
-
-    go_loadWord: forall initialL addr (f: word 32 -> M unit) (post: RiscvMachineL -> Prop),
-        (forall undefBehavior: M unit,
-            mcomp_sat (Bind (isPhysicalMemAddr addr)
-                            (fun b => if b
-                                      then f (Memory.loadWord initialL.(getMem) addr)
-                                      else undefBehavior))
-                      initialL post) ->
-        mcomp_sat (Bind (Program.loadWord addr) f) initialL post;
-
-    go_storeWord: forall initialL addr v post (f: unit -> M unit),
-        (forall undefBehavior: M unit,
-            mcomp_sat (Bind (isPhysicalMemAddr addr)
-                            (fun b => if b then (f tt) else undefBehavior))
-                      (setMem initialL (Memory.storeWord initialL.(getMem) addr v))
-                      post) ->
-        mcomp_sat (Bind (Program.storeWord addr v) f) initialL post;
-    *)
 
     go_getPC: forall initialL f (post: RiscvMachineL -> Prop),
         mcomp_sat (f initialL.(getPc)) initialL post ->
@@ -120,4 +88,4 @@ Section Axiomatic.
 
 End Axiomatic.
 
-Arguments AxiomaticRiscv t {_} {_} {_} Action M {_} {_}.
+Arguments AxiomaticRiscv t {_} {_} Action {_} M {_} {_}.

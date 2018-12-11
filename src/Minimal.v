@@ -5,10 +5,9 @@ Require Import riscv.util.BitWidths.
 Require Import riscv.util.Monads. Import OStateOperations.
 Require Import riscv.util.MonadNotations.
 Require Import riscv.Decode.
-(*Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)*)
 Require Import riscv.Program.
 Require Import riscv.Utility.
-(* Require Import riscv.AxiomaticRiscv. temp *)
+Require Import riscv.AxiomaticRiscv.
 Require Export riscv.RiscvMachine.
 Require Import Coq.micromega.Lia.
 Require Import coqutil.Map.Interface.
@@ -22,21 +21,19 @@ Section Riscv.
 
   Local Notation RiscvMachineL := (RiscvMachine Register t Empty_set).
 
-  Definition isMemAddr(a: t): OState RiscvMachineL bool :=
-    mach <- get; Return (mach.(isMem) a).
+  Definition fail_if_None{R}(o: option R): OState RiscvMachineL R :=
+    match o with
+    | Some x => Return x
+    | None => fail_hard
+    end.
 
-  Definition assert(cond: OState RiscvMachineL bool): OState RiscvMachineL unit :=
-    b <- cond; if b then (Return tt) else fail_hard.
+  Definition loadN(n: nat)(a: t): OState RiscvMachineL (HList.tuple byte n) :=
+    mach <- get; fail_if_None (Memory.load n mach.(getMem) a).
 
-  Definition liftLoad{R}(f: Mem -> t -> R): t -> OState RiscvMachineL R :=
-    fun a => assert (isMemAddr a);; m <- get; Return (f (m.(getMem)) a).
-
-  Definition liftStore{R}(f: Mem -> t -> R -> Mem):
-    t -> R -> OState RiscvMachineL unit :=
-    fun a v =>
-      assert (isMemAddr a);;
-      m <- get;
-      put (withMem (f m.(getMem) a v) m).
+  Definition storeN(n: nat)(a: t)(v: HList.tuple byte n): OState RiscvMachineL unit :=
+    mach <- get;
+    m <- fail_if_None (Memory.store n mach.(getMem) a v);
+    put (withMem m mach).
 
   Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) t :=  {|
       getRegister reg :=
@@ -60,15 +57,15 @@ Section Riscv.
         mach <- get;
         put (setNextPc mach newPC);
 
-      loadByte   := liftLoad Memory.loadByte;
-      loadHalf   := liftLoad Memory.loadHalf;
-      loadWord   := liftLoad Memory.loadWord;
-      loadDouble := liftLoad Memory.loadDouble;
+      loadByte   := loadN 1;
+      loadHalf   := loadN 2;
+      loadWord   := loadN 4;
+      loadDouble := loadN 8;
 
-      storeByte   := liftStore Memory.storeByte;
-      storeHalf   := liftStore Memory.storeHalf;
-      storeWord   := liftStore Memory.storeWord;
-      storeDouble := liftStore Memory.storeDouble;
+      storeByte   := storeN 1;
+      storeHalf   := storeN 2;
+      storeWord   := storeN 4;
+      storeDouble := storeN 8;
 
       step :=
         m <- get;
@@ -81,6 +78,9 @@ Section Riscv.
       raiseException{A: Type}(isInterrupt: t)(exceptionCode: t) := fail_hard;
   |}.
 
+  Arguments Memory.load: simpl never.
+  Arguments Memory.store: simpl never.
+
   Ltac t :=
     repeat match goal with
        | |- _ => reflexivity
@@ -89,8 +89,8 @@ Section Riscv.
                             IsRiscvMachineL,
                             valid_register, Register0,
                             get, put, fail_hard,
-                            in_range,
-                            isMemAddr, assert, liftLoad, liftStore in *;
+                            Memory.loadWord, Memory.storeWord,
+                            fail_if_None, loadN, storeN in *;
                      subst;
                      simpl in *)
        | |- _ => intro
@@ -113,14 +113,16 @@ Section Riscv.
        | |- _ => rewrite! Z.ltb_nlt in *; omega
        | |- context [if ?x then _ else _] => let E := fresh "E" in destruct x eqn: E
        | _: context [if ?x then _ else _] |- _ => let E := fresh "E" in destruct x eqn: E
+       | H: context[match ?x with _ => _ end], E: ?x = Some _ |- _ => rewrite E in H
        | H: _ \/ _ |- _ => destruct H
        | r: RiscvMachineL |- _ =>
          destruct r as [regs pc npc m l];
-         simpl in *;
-         rewrite @storeWord_preserves_memSize in *
-       | H: _ |- _ => refine (H (fun _ => _)) (* undef behavior of load/store outside range *)
+         simpl in *
+(*       | H: context[match ?x with _ => _ end] |- _ => let E := fresh in destruct x eqn: E*)
+       | o: option _ |- _ => destruct o
        end.
 
+  Local Set Refine Instance Mode.
   Instance MinimalSatisfiesAxioms: AxiomaticRiscv t Empty_set (OState RiscvMachineL) := {|
     mcomp_sat := @OStateOperations.computation_satisfies RiscvMachineL;
   |}.

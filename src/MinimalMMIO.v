@@ -19,7 +19,6 @@ Section Riscv.
 
   Context {t: Type}.
   Context {MW: MachineWidth t}.
-  Context {MF: MemoryFunctions t}.
   Context {RFF: RegisterFileFunctions Register t}.
 
   Local Notation RiscvMachineL := (RiscvMachine Register t MMIOAction).
