@@ -75,13 +75,12 @@ Section MemAccess.
     'Some _ <- load n m a; (* <- checks that all addresses are valid *)
     Some (store_bytes n m a v).
 
-  Definition store_byte_tuple_list{n: nat}(a: word)(l: list (tuple byte n))(m: mem):
-    option mem :=
-    fold_left_index (fun i om w => 'Some m <- om; store n m (add a (ZToReg i)) w) l 0 (Some m).
-
-  Definition unchecked_store_byte_tuple_list{n: nat}(a: word)(l: list (tuple byte n))(m: mem):
+  Fixpoint unchecked_store_byte_tuple_list{n: nat}(a: word)(l: list (tuple byte n))(m: mem):
     mem :=
-    fold_left_index (fun i om w => store_bytes n m (add a (ZToReg i)) w) l 0 m.
+    match l with
+    | w :: rest => unchecked_store_byte_tuple_list (add a (ZToReg 4)) rest (store_bytes n m a w)
+    | nil => m
+    end.
 
   Definition loadByte:   mem -> word -> option w8  := load 1.
   Definition loadHalf:   mem -> word -> option w16 := load 2.

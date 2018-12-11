@@ -21,7 +21,7 @@ Section Machine.
   Context {MW: MachineWidth mword}.
   Context {RFF: RegisterFileFunctions Reg mword}.
   Context {Mem: map.map mword byte}.
-  Context {Action: Set}.
+  Context {Action: Type}.
 
   (* name of the external call, list of arguments, list of return values *)
   Definition LogItem: Type := Action * list mword * list mword.

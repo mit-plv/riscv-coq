@@ -68,22 +68,19 @@ Section Riscv.
 
       loadByte   := loadN 1;
       loadHalf   := loadN 2;
-      loadWord   := loadN 4;
-      loadDouble := loadN 8;
-
-(*
       loadWord a :=
         mach <- get;
-        if mach.(isMem) a then
-          liftLoad Memory.loadWord a
-        else
-          if simple_isMMIOAddr a then
-            inp <- arbitrary (word 32);
-            logEvent (MMInput, [a], [uInt32ToReg inp]);;
-            Return inp
-          else
-            fail_hard;
-
+        match Memory.loadWord mach.(getMem) a with
+        | Some v => Return v
+        | None => if simple_isMMIOAddr a then
+                    inp <- arbitrary w32;
+                    logEvent (MMInput, [a], [uInt32ToReg inp]);;
+                    Return inp
+                  else
+                    fail_hard
+        end;
+      loadDouble := loadN 8;
+(*
       storeWord a v :=
         mach <- get;
         if mach.(isMem) a then
@@ -97,7 +94,15 @@ Section Riscv.
 
       storeByte   := storeN 1;
       storeHalf   := storeN 2;
-      storeWord   := storeN 4;
+      storeWord a v :=
+        mach <- get;
+        match Memory.storeWord mach.(getMem) a v with
+        | Some m => put (withMem m mach)
+        | None => if simple_isMMIOAddr a then
+                    logEvent (MMOutput, [a; uInt32ToReg v], [])
+                  else
+                    fail_hard
+        end;
       storeDouble := storeN 8;
 
       step :=
@@ -158,8 +163,6 @@ Section Riscv.
        | r: RiscvMachineL |- _ =>
          destruct r as [regs pc npc m l];
          simpl in *
-(*       | H: context[match ?x with _ => _ end] |- _ => let E := fresh in destruct x eqn: E*)
-       | o: option _ |- _ => destruct o
        end.
 
   Local Set Refine Instance Mode.

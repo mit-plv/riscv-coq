@@ -10,29 +10,29 @@ Require Import riscv.util.PowerFunc.
 Require Import riscv.Utility.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import riscv.Minimal.
+Require Import coqutil.Map.Interface.
+
 
 Section Riscv.
 
   Context {t: Type}.
 
   Context {MW: MachineWidth t}.
-
-  Context {MFMemIsMem: MemoryFunctions t}.
-
+  Context {Mem: map.map t byte}.
   Context {RFF: RegisterFileFunctions Register t}.
 
   Inductive LogEvent :=
   | EvLoadWord(addr: Z)(i: Instruction)
-  | EvStoreWord(addr: Z)(v: word 32).
+  | EvStoreWord(addr: Z)(v: w32).
 
   Local Notation RiscvMachine := (riscv.RiscvMachine.RiscvMachine Register t Empty_set).
   Local Notation RiscvMachineL := (riscv.RiscvMachine.RiscvMachine Register t LogEvent).
 
   Definition downgrade: RiscvMachineL -> RiscvMachine :=
-    fun '(mkRiscvMachine regs pc nextPC im mem log) => mkRiscvMachine regs pc nextPC im mem nil.
+    fun '(mkRiscvMachine regs pc nextPC mem log) => mkRiscvMachine regs pc nextPC mem nil.
 
   Definition upgrade: RiscvMachine -> list (LogItem t LogEvent) -> RiscvMachineL :=
-    fun '(mkRiscvMachine regs pc nextPC im mem _) log => mkRiscvMachine regs pc nextPC im mem log.
+    fun '(mkRiscvMachine regs pc nextPC mem _) log => mkRiscvMachine regs pc nextPC mem log.
 
   Definition liftL0{B: Type}(f: OState RiscvMachine B):  OState RiscvMachineL B :=
     fun s => let (ob, s') := f (downgrade s) in (ob, upgrade s' s.(getLog)).
@@ -54,7 +54,7 @@ Section Riscv.
       loadWord a :=
         m <- get;
         res <- (liftL1 loadWord a);
-        put (logCons m (EvLoadWord (regToZ_unsigned a) (decode RV64IM (uwordToZ res)), nil, nil));;
+        put (logCons m (EvLoadWord (regToZ_unsigned a) (decode RV64IM (LittleEndian.combine 4 res)), nil, nil));;
         Return res;
       loadDouble := liftL1 loadDouble;
       storeByte   := liftL2 storeByte;
