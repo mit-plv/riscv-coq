@@ -15,7 +15,7 @@ Local Open Scope Z_scope.
 
 Section ValidAddr.
 
-Context {t: Set}.
+Context {t: Type}.
 Context {MW: MachineWidth t}.
 
 Definition valid_addr(addr: t)(alignment size: Z): Prop :=
@@ -45,7 +45,7 @@ End ValidAddr.
 
 
 Section MemAccess.
-  Context {word: Set}.
+  Context {word: Type}.
   Context {MW: MachineWidth word}.
   Context {mem: map.map word byte}.
 
@@ -195,7 +195,7 @@ Class MemoryFunctions(t: Set)`{MachineWidth t} := mkMemoryFunctions {
 Arguments Mem _ {_} {_}.
 *)
 
-Lemma valid_addr_8_4: forall {t: Set} {MW: MachineWidth t} (addr: t) size,
+Lemma valid_addr_8_4: forall {t: Type} {MW: MachineWidth t} (addr: t) size,
     valid_addr addr 8 size ->
     valid_addr addr 4 size.
 Proof.
@@ -314,7 +314,7 @@ Local Unset Universe Polymorphism.
 
 Section MemoryHelpers.
 
-  Context {t: Set}.
+  Context {t: Type}.
   Context {MW: MachineWidth t}.
 
   Add Ring tring: (@regRing t MW).

@@ -13,7 +13,7 @@ Require Import riscv.Minimal.
 
 Section Riscv.
 
-  Context {t: Set}.
+  Context {t: Type}.
 
   Context {MW: MachineWidth t}.
 

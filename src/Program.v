@@ -46,7 +46,7 @@ Section Riscv.
   Context {MM: Monad M}.
 
   (* type of register values *)
-  Context {t: Set}.
+  Context {t: Type}.
 
   (* provides operations on t *)
   Context {MW: MachineWidth t}.

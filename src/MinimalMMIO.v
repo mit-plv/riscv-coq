@@ -17,7 +17,7 @@ Require Import Coq.micromega.Lia.
 
 Section Riscv.
 
-  Context {t: Set}.
+  Context {t: Type}.
   Context {MW: MachineWidth t}.
   Context {MF: MemoryFunctions t}.
   Context {RFF: RegisterFileFunctions Register t}.

@@ -14,7 +14,7 @@ Definition valid_register(r: Register): Prop := (0 < r < 32)%Z.
 
 Section Axiomatic.
 
-  Context {t: Set}.
+  Context {t: Type}.
   Context {MW: MachineWidth t}.
   Context {RFF: RegisterFileFunctions Register t}.
   Context {Action: Set}.
@@ -55,7 +55,7 @@ Section Axiomatic.
       mcomp_sat (f tt) (setRegs initialL (setReg initialL.(getRegs) x v)) post ->
       mcomp_sat (Bind (setRegister x v) f) initialL post;
 
-    go_loadWord: forall initialL addr (f: word 32 -> M unit) (post: RiscvMachineL -> Prop),
+    go_loadWord: forall initialL addr (f: w32 -> M unit) (post: RiscvMachineL -> Prop),
         initialL.(isMem) addr = true ->
         mcomp_sat (f (Memory.loadWord initialL.(getMem) addr)) initialL post ->
         mcomp_sat (Bind (Program.loadWord addr) f) initialL post;

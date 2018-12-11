@@ -16,49 +16,43 @@ Arguments RegisterFile _ _ {_}.
 
 Section Machine.
 
-  Context {Reg: Set}.
-  Context {mword: Set}.
+  Context {Reg: Type}.
+  Context {mword: Type}.
   Context {MW: MachineWidth mword}.
   Context {RFF: RegisterFileFunctions Reg mword}.
-  Context {byte: word.word 8}.
   Context {Mem: map.map mword byte}.
   Context {Action: Set}.
 
   (* name of the external call, list of arguments, list of return values *)
-  Definition LogItem: Set := Action * list mword * list mword.
+  Definition LogItem: Type := Action * list mword * list mword.
 
   Record RiscvMachine := mkRiscvMachine {
     getRegs: RegisterFile Reg mword;
     getPc: mword;
     getNextPc: mword;
-    isMem: mword -> bool;
     getMem: Mem;
     getLog: list LogItem;
   }.
 
   Definition setRegs: RiscvMachine -> RegisterFile Reg mword -> RiscvMachine :=
-    fun '(mkRiscvMachine regs1 pc nextPC im mem log) regs2 =>
-          mkRiscvMachine regs2 pc nextPC im mem log.
+    fun '(mkRiscvMachine regs1 pc nextPC mem log) regs2 =>
+          mkRiscvMachine regs2 pc nextPC mem log.
 
   Definition setPc: RiscvMachine -> mword -> RiscvMachine :=
-    fun '(mkRiscvMachine regs pc1 nextPC im mem log) pc2 =>
-          mkRiscvMachine regs pc2 nextPC im mem log.
+    fun '(mkRiscvMachine regs pc1 nextPC mem log) pc2 =>
+          mkRiscvMachine regs pc2 nextPC mem log.
 
   Definition setNextPc: RiscvMachine -> mword -> RiscvMachine :=
-    fun '(mkRiscvMachine regs pc nextPC1 im mem log) nextPC2 =>
-          mkRiscvMachine regs pc nextPC2 im mem log.
-
-  Definition setIsMem: RiscvMachine -> (mword -> bool) -> RiscvMachine :=
-    fun '(mkRiscvMachine regs pc nextPC im1 mem log) im2 =>
-          mkRiscvMachine regs pc nextPC im2 mem log.
+    fun '(mkRiscvMachine regs pc nextPC1 mem log) nextPC2 =>
+          mkRiscvMachine regs pc nextPC2 mem log.
 
   Definition setMem: RiscvMachine -> Mem -> RiscvMachine :=
-    fun '(mkRiscvMachine regs pc nextPC im mem1 log) mem2 =>
-          mkRiscvMachine regs pc nextPC im mem2 log.
+    fun '(mkRiscvMachine regs pc nextPC mem1 log) mem2 =>
+          mkRiscvMachine regs pc nextPC mem2 log.
 
   Definition setLog: RiscvMachine -> list LogItem -> RiscvMachine :=
-    fun '(mkRiscvMachine regs pc nextPC im mem log1) log2 =>
-          mkRiscvMachine regs pc nextPC im mem log2.
+    fun '(mkRiscvMachine regs pc nextPC mem log1) log2 =>
+          mkRiscvMachine regs pc nextPC mem log2.
 
   Definition logCons(m: RiscvMachine)(i: LogItem): RiscvMachine :=
     setLog m (i :: m.(getLog)).
@@ -67,36 +61,32 @@ Section Machine.
     setLog m (items ++ m.(getLog)).
 
   Definition withRegs: RegisterFile Reg mword -> RiscvMachine -> RiscvMachine :=
-    fun regs2 '(mkRiscvMachine regs1 pc nextPC im mem log) =>
-                mkRiscvMachine regs2 pc nextPC im mem log.
+    fun regs2 '(mkRiscvMachine regs1 pc nextPC mem log) =>
+                mkRiscvMachine regs2 pc nextPC mem log.
 
   Definition withPc: mword -> RiscvMachine -> RiscvMachine :=
-    fun pc2 '(mkRiscvMachine regs pc1 nextPC im mem log) =>
-              mkRiscvMachine regs pc2 nextPC im mem log.
+    fun pc2 '(mkRiscvMachine regs pc1 nextPC mem log) =>
+              mkRiscvMachine regs pc2 nextPC mem log.
 
   Definition withNextPc: mword -> RiscvMachine -> RiscvMachine :=
-    fun nextPC2 '(mkRiscvMachine regs pc nextPC1 im mem log) =>
-                  mkRiscvMachine regs pc nextPC2 im mem log.
-
-  Definition withIsMem: (mword -> bool) -> RiscvMachine -> RiscvMachine :=
-    fun im2 '(mkRiscvMachine regs pc nextPC im1 mem log)  =>
-              mkRiscvMachine regs pc nextPC im2 mem log.
+    fun nextPC2 '(mkRiscvMachine regs pc nextPC1 mem log) =>
+                  mkRiscvMachine regs pc nextPC2 mem log.
 
   Definition withMem: Mem -> RiscvMachine -> RiscvMachine :=
-    fun mem2 '(mkRiscvMachine regs pc nextPC im mem1 log)  =>
-               mkRiscvMachine regs pc nextPC im mem2 log.
+    fun mem2 '(mkRiscvMachine regs pc nextPC mem1 log)  =>
+               mkRiscvMachine regs pc nextPC mem2 log.
 
   Definition withLog: list LogItem -> RiscvMachine -> RiscvMachine :=
-    fun log2 '(mkRiscvMachine regs pc nextPC im mem log1) =>
-               mkRiscvMachine regs pc nextPC im mem log2.
+    fun log2 '(mkRiscvMachine regs pc nextPC mem log1) =>
+               mkRiscvMachine regs pc nextPC mem log2.
 
   Definition withLogItem: LogItem -> RiscvMachine -> RiscvMachine :=
-    fun item '(mkRiscvMachine regs pc nextPC im mem log) =>
-               mkRiscvMachine regs pc nextPC im mem (item :: log).
+    fun item '(mkRiscvMachine regs pc nextPC mem log) =>
+               mkRiscvMachine regs pc nextPC mem (item :: log).
 
   Definition withLogItems: list LogItem -> RiscvMachine -> RiscvMachine :=
-    fun items '(mkRiscvMachine regs pc nextPC im mem log) =>
-                mkRiscvMachine regs pc nextPC im mem (items ++ log).
+    fun items '(mkRiscvMachine regs pc nextPC mem log) =>
+                mkRiscvMachine regs pc nextPC mem (items ++ log).
 
   Definition putProgram(prog: list MachineInt)(addr: mword)(ma: RiscvMachine): RiscvMachine :=
     (withPc addr
@@ -117,7 +107,6 @@ Module InfixUpdates.
   Notation "m 'withRegs' a" := (setRegs m a) (at level 50, left associativity, a at level 0).
   Notation "m 'withPc' a" := (setPc m a) (at level 50, left associativity, a at level 0).
   Notation "m 'withNextPc' a" := (setNextPc m a) (at level 50, left associativity, a at level 0).
-  Notation "m 'withIsMem' a" := (setIsMem m a) (at level 50, left associativity, a at level 0).
   Notation "m 'withMem' a" := (setMem m a) (at level 50, left associativity, a at level 0).
   Notation "m 'withLog' a" := (setLog m a) (at level 50, left associativity, a at level 0).
   Notation "m 'withLogItem' a" := (logCons m a) (at level 50, left associativity, a at level 0).

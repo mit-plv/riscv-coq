@@ -14,7 +14,7 @@ Require Import riscv.Utility.
 Section Riscv.
 
   Context {B: BitWidths}.
-  Context {mword: Set}.
+  Context {mword: Type}.
   Context {MW: MachineWidth mword}.
 
   Context {M: Type -> Type}.
@@ -27,12 +27,6 @@ Section Riscv.
     | BW32 => RV32IM
     | BW64 => RV64IM
     end.
-
-  Definition exe: Instruction -> M unit.
-    refine execute.
-    Fail exact RVS.
-    (* TODO universe inconsistency *)
-  Abort.
 
   Definition run1:
     M unit :=

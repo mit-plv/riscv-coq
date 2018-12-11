@@ -8,16 +8,16 @@ Require Import riscv.Decode.
 (*Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)*)
 Require Import riscv.Program.
 Require Import riscv.Utility.
-Require Import riscv.AxiomaticRiscv.
+(* Require Import riscv.AxiomaticRiscv. temp *)
 Require Export riscv.RiscvMachine.
 Require Import Coq.micromega.Lia.
 Require Import coqutil.Map.Interface.
 
 Section Riscv.
 
-  Context {t: Set}.
+  Context {t: Type}.
   Context {MW: MachineWidth t}.
-  Context {Mem: map.map t (bbv.Word.word 8)}.
+  Context {Mem: map.map t byte}.
   Context {RFF: RegisterFileFunctions Register t}.
 
   Local Notation RiscvMachineL := (RiscvMachine Register t Empty_set).
@@ -28,10 +28,10 @@ Section Riscv.
   Definition assert(cond: OState RiscvMachineL bool): OState RiscvMachineL unit :=
     b <- cond; if b then (Return tt) else fail_hard.
 
-  Definition liftLoad{R}(f: Mem t -> t -> R): t -> OState RiscvMachineL R :=
+  Definition liftLoad{R}(f: Mem -> t -> R): t -> OState RiscvMachineL R :=
     fun a => assert (isMemAddr a);; m <- get; Return (f (m.(getMem)) a).
 
-  Definition liftStore{R}(f: Mem t -> t -> R -> Mem t):
+  Definition liftStore{R}(f: Mem -> t -> R -> Mem):
     t -> R -> OState RiscvMachineL unit :=
     fun a v =>
       assert (isMemAddr a);;

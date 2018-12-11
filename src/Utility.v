@@ -6,6 +6,7 @@ Require Import coqutil.sanity.
 Require Import riscv.util.Monads.
 Require Export riscv.util.ZBitOps.
 
+Global Unset Universe Minimization ToSet.
 
 Local Open Scope Z_scope.
 
@@ -13,7 +14,7 @@ Local Open Scope Z_scope.
    no matter whether it's a 32-bit or 64-bit machine. *)
 Definition MachineInt := Z.
 
-Class MachineWidth(t: Set) := {
+Class MachineWidth(t: Type) := {
   byte: word 8;
 
   w8  := tuple byte 1;
@@ -132,7 +133,7 @@ Notation fromImm := (@ZToReg _ _) (only parsing).
 
 Section Derived.
 
-  Context {t: Set}.
+  Context {t: Type}.
   Context {MW: MachineWidth t}.
 
   Definition XLEN_in_bytes: Z := XLEN / 8.
