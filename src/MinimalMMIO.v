@@ -5,7 +5,6 @@ Require Import riscv.util.BitWidths.
 Require Import riscv.util.Monads. Import OStateNDOperations.
 Require Import riscv.util.MonadNotations.
 Require Import riscv.Decode.
-Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)
 Require Import riscv.Program.
 Require Import riscv.Utility.
 Require Import riscv.AxiomaticRiscv.
@@ -13,12 +12,13 @@ Require Import Coq.Lists.List. Import ListNotations.
 Require Export riscv.MMIOTrace.
 Require Export riscv.RiscvMachine.
 Require Import Coq.micromega.Lia.
-
+Require Import coqutil.Map.Interface.
 
 Section Riscv.
 
   Context {t: Type}.
   Context {MW: MachineWidth t}.
+  Context {Mem: map.map t byte}.
   Context {RFF: RegisterFileFunctions Register t}.
 
   Local Notation RiscvMachineL := (RiscvMachine Register t MMIOAction).
@@ -30,21 +30,19 @@ Section Riscv.
   Definition logEvent(e: LogItem t MMIOAction): OStateND RiscvMachineL unit :=
     m <- get; put (withLogItem e m).
 
-  Definition isMemAddr(a: t): OStateND RiscvMachineL bool :=
-    mach <- get; Return (mach.(isMem) a).
+  Definition fail_if_None{R}(o: option R): OStateND RiscvMachineL R :=
+    match o with
+    | Some x => Return x
+    | None => fail_hard
+    end.
 
-  Definition assert(cond: OStateND RiscvMachineL bool): OStateND RiscvMachineL unit :=
-    b <- cond; if b then (Return tt) else fail_hard.
+  Definition loadN(n: nat)(a: t): OStateND RiscvMachineL (HList.tuple byte n) :=
+    mach <- get; fail_if_None (Memory.load n mach.(getMem) a).
 
-  Definition liftLoad{R}(f: Mem t -> t -> R): t -> OStateND RiscvMachineL R :=
-    fun a => assert (isMemAddr a);; m <- get; Return (f (m.(getMem)) a).
-
-  Definition liftStore{R}(f: Mem t -> t -> R -> Mem t):
-    t -> R -> OStateND RiscvMachineL unit :=
-    fun a v =>
-      assert (isMemAddr a);;
-      m <- get;
-      put (withMem (f m.(getMem) a v) m).
+  Definition storeN(n: nat)(a: t)(v: HList.tuple byte n): OStateND RiscvMachineL unit :=
+    mach <- get;
+    m <- fail_if_None (Memory.store n mach.(getMem) a v);
+    put (withMem m mach).
 
   Instance IsRiscvMachineL: RiscvProgram (OStateND RiscvMachineL) t :=  {|
       getRegister reg :=
@@ -68,9 +66,12 @@ Section Riscv.
         mach <- get;
         put (setNextPc mach newPC);
 
-      loadByte   := liftLoad Memory.loadByte;
-      loadHalf   := liftLoad Memory.loadHalf;
+      loadByte   := loadN 1;
+      loadHalf   := loadN 2;
+      loadWord   := loadN 4;
+      loadDouble := loadN 8;
 
+(*
       loadWord a :=
         mach <- get;
         if mach.(isMem) a then
@@ -82,10 +83,7 @@ Section Riscv.
             Return inp
           else
             fail_hard;
-      loadDouble := liftLoad Memory.loadDouble;
 
-      storeByte   := liftStore Memory.storeByte;
-      storeHalf   := liftStore Memory.storeHalf;
       storeWord a v :=
         mach <- get;
         if mach.(isMem) a then
@@ -95,8 +93,12 @@ Section Riscv.
             logEvent (MMOutput, [a; uInt32ToReg v], [])
           else
             fail_hard;
+*)
 
-      storeDouble := liftStore Memory.storeDouble;
+      storeByte   := storeN 1;
+      storeHalf   := storeN 2;
+      storeWord   := storeN 4;
+      storeDouble := storeN 8;
 
       step :=
         m <- get;
@@ -109,6 +111,9 @@ Section Riscv.
       raiseException{A: Type}(isInterrupt: t)(exceptionCode: t) := fail_hard;
   |}.
 
+  Arguments Memory.load: simpl never.
+  Arguments Memory.store: simpl never.
+
   Ltac t :=
     repeat match goal with
        | |- _ => reflexivity
@@ -118,9 +123,9 @@ Section Riscv.
                             valid_register, Register0,
                             get, put, fail_hard, arbitrary,
                             logEvent,
-                            in_range,
+                            Memory.loadWord, Memory.storeWord,
                             simple_isMMIOAddr,
-                            isMemAddr, assert, liftLoad, liftStore in *;
+                            fail_if_None, loadN, storeN in *;
                      subst;
                      simpl in *)
        | |- _ => intro
@@ -148,14 +153,16 @@ Section Riscv.
        | |- _ => omega
        | |- context [if ?x then _ else _] => let E := fresh "E" in destruct x eqn: E
        | _: context [if ?x then _ else _] |- _ => let E := fresh "E" in destruct x eqn: E
+       | H: context[match ?x with _ => _ end], E: ?x = Some _ |- _ => rewrite E in H
        | H: _ \/ _ |- _ => destruct H
        | r: RiscvMachineL |- _ =>
          destruct r as [regs pc npc m l];
-         simpl in *;
-         rewrite @storeWord_preserves_memSize in *
+         simpl in *
+(*       | H: context[match ?x with _ => _ end] |- _ => let E := fresh in destruct x eqn: E*)
+       | o: option _ |- _ => destruct o
        end.
 
-
+  Local Set Refine Instance Mode.
   Instance MinimalMMIOSatisfiesAxioms:
     AxiomaticRiscv t MMIOAction (OStateND RiscvMachineL) :=
   {|
