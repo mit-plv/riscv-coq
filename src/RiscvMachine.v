@@ -1,3 +1,4 @@
+Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndian.
