@@ -18,7 +18,7 @@ Section Axiomatic.
   Context {t: Type}.
   Context {MW: MachineWidth t}.
   Context {RFF: RegisterFileFunctions Register t}.
-  Context {Action: Set}.
+  Context {Action: Type}.
   Context {mem: map.map t byte}.
 
   Local Notation RiscvMachineL := (RiscvMachine Register t Action).
