@@ -300,8 +300,8 @@ Ltac mem_simpl :=
 Local Unset Universe Polymorphism.
 
 Section MemoryHelpers.
-  Context {width: Z} {word: word width} {ok: word.ok word} {bound: 0 <= width}.
-  Add Ring wring: (word.ring_theory bound).
+  Context {width: Z} {word: word width} {ok: word.ok word}.
+  Add Ring wring: word.ring_theory.
 
   Goal forall (a: word), word.add a (word.of_Z 0) = a. intros. ring. Qed.
 
@@ -322,7 +322,7 @@ Section MemoryHelpers.
     intros.
     rewrite word.unsigned_add.
     rewrite word.unsigned_of_Z.
-    pose proof (word.unsigned_range bound b).
+    pose proof (word.unsigned_range b).
     rewrite (Z.mod_small a) by omega.
     rewrite Z.mod_small by assumption.
     reflexivity.
@@ -336,7 +336,7 @@ Section MemoryHelpers.
     intros.
     rewrite word.unsigned_add.
     rewrite word.unsigned_of_Z.
-    pose proof (word.unsigned_range bound a).
+    pose proof (word.unsigned_range a).
     rewrite (Z.mod_small b) by omega.
     rewrite Z.mod_small by assumption.
     reflexivity.
