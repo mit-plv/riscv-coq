@@ -7,7 +7,7 @@ Require Import riscv.Decode.
 Require Import riscv.Memory.
 Require Import riscv.Program.
 Require Import riscv.RiscvMachine.
-Require Import riscv.util.BitWidths.
+Require Import riscv.MkMachineWidth.
 
 
 (* Note: Register 0 is not considered valid because it cannot be written *)
@@ -15,18 +15,17 @@ Definition valid_register(r: Register): Prop := (0 < r < 32)%Z.
 
 Section Axiomatic.
 
-  Context {t: Type}.
-  Context {MW: MachineWidth t}.
-  Context {RFF: RegisterFileFunctions Register t}.
+  Context {byte: word 8} {width: Z} {word: word width}.
+  Context {RFF: RegisterFileFunctions Register word}.
   Context {Action: Type}.
-  Context {mem: map.map t byte}.
+  Context {mem: map.map word byte}.
 
-  Local Notation RiscvMachineL := (RiscvMachine Register t Action).
+  Local Notation RiscvMachineL := (RiscvMachine Register word Action).
 
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
-  Context {RVM: RiscvProgram M t}.
-  Context {RVS: @RiscvState M t _ _ RVM}.
+  Context {RVM: RiscvProgram M word}.
+  Context {RVS: @RiscvState M word _ _ RVM}.
 
   Class AxiomaticRiscv :=  mkAxiomaticRiscv {
 
@@ -39,12 +38,12 @@ Section Axiomatic.
        additional input, and before applying these lemmas in the compiler correctness
        proof (where we always have a Bind), we'd have to split up the Bind *)
 
-    go_getRegister: forall (initialL: RiscvMachineL) (x: Register) post (f: t -> M unit),
+    go_getRegister: forall (initialL: RiscvMachineL) (x: Register) post (f: word -> M unit),
       valid_register x ->
       mcomp_sat (f (getReg initialL.(getRegs) x)) initialL post ->
       mcomp_sat (Bind (getRegister x) f) initialL post;
 
-    go_getRegister0: forall (initialL: RiscvMachineL) post (f: t -> M unit),
+    go_getRegister0: forall (initialL: RiscvMachineL) post (f: word -> M unit),
       mcomp_sat (f (ZToReg 0)) initialL post ->
       mcomp_sat (Bind (getRegister Register0) f) initialL post;
 
@@ -88,4 +87,4 @@ Section Axiomatic.
 
 End Axiomatic.
 
-Arguments AxiomaticRiscv t {_} {_} Action {_} M {_} {_}.
+Arguments AxiomaticRiscv {byte} {width} word {_} Action {_} M {_} {_}.

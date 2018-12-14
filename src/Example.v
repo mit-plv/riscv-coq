@@ -1,5 +1,7 @@
 Require Import Coq.Lists.List.
+Require Import Coq.micromega.Lia.
 Import ListNotations.
+Require Import coqutil.Word.Naive.
 Require Import riscv.Program.
 Require Import riscv.Decode.
 Require Import riscv.util.BitWidth32.
@@ -11,16 +13,25 @@ Require Import riscv.Minimal.
 Require Import riscv.MinimalLogging.
 Require Import riscv.Run.
 Require Import riscv.util.Monads.
-Require Import riscv.MachineWidth32.
+Require Import riscv.MkMachineWidth.
+Require Import coqutil.Map.Interface.
+Require coqutil.Map.SortedList.
 
 Existing Instance DefaultRiscvState.
+
+Lemma bound32: 0 < 32. lia. Qed.
+Instance word32: word 32 := Naive.word 32 bound32.
+
+Lemma bound8: 0 < 8. lia. Qed.
+Instance word8: word 8 := Naive.word 8 bound8.
+
 
 Instance FunctionRegisterFile: RegisterFileFunctions Register word32 := {|
   RegisterFile := Register -> word32;
   getReg(rf: Register -> word32) := rf;
   setReg(rf: Register -> word32)(r: Register)(v: word32) :=
     fun r' => if (Z.eqb r' r) then v else rf r';
-  initialRegs := fun r => ZToReg 0;
+  initialRegs := fun r => word.of_Z 0;
 |}.
 
 Definition fib6_riscv: list MachineInt := [ (* TODO should be "word32", not MachineInt *)
@@ -48,96 +59,27 @@ Notation s5 := (WO~1~0~1~0~1)%word.
 Open Scope Z_scope.
 
 Goal False.
-  set (l := map (decode RV32IM) fib6_riscv).
+  set (l := List.map (decode RV32IM) fib6_riscv).
   cbv in l.
   (* decoder seems to work :) *)
 Abort.
 
-Local Set Primitive Projections.
-Require Import coqutil.Macros.subst coqutil.Macros.unique coqutil.Map.Interface.
-Require Coq.Lists.List.
-Require Coq.Logic.Eqdep_dec.
+Instance params: SortedList.parameters := {|
+  SortedList.parameters.key := word32;
+  SortedList.parameters.value := byte;
+  SortedList.parameters.ltb := word.ltu;
+|}.
 
-(* TODO: move me? *)
-Definition minimize_eq_proof{A: Type}(eq_dec: forall (x y: A), {x = y} + {x <> y}){x y: A}    (pf: x = y): x = y :=
-  match eq_dec x y with
-  | left p => p
-  | right n => match n pf: False with end
-  end.
+Instance strictorder: SortedList.parameters.strict_order SortedList.parameters.ltb.
+  constructor; simpl; intros; rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in *; try lia.
+  (* TODO I want word.unsigned_inj *)
+  rewrite <- (Naive.of_Z_unsigned (width_nonneg := bound32) k1).
+  rewrite <- (Naive.of_Z_unsigned (width_nonneg := bound32) k2).
+  f_equal.
+  lia.
+Qed.
 
-Module Import parameters.
-  Local Set Primitive Projections.
-  Class parameters := {
-    key : Type;
-    value : Type;
-    key_eqb : key -> key -> bool;
-    key_ltb : key -> key -> bool
-  }.
-End parameters. Notation parameters := parameters.parameters.
-
-Section SortedList.
-  Context {p : unique! parameters}.
-  Fixpoint put m (k:key) (v:value) : list (key * value) :=
-    match m with
-    | nil => cons (k, v) nil
-    | cons (k', v') m' =>
-      if key_eqb k k'
-      then cons (k, v) m'
-      else
-        if key_ltb k k'
-        then cons (k, v) m
-        else cons (k', v') (put m' k v)
-    end.
-  Fixpoint remove m (k:key) : list (key * value) :=
-    match m with
-    | nil => nil
-    | cons (k', v') m' =>
-      if key_eqb k k'
-      then m'
-      else
-        if key_ltb k k'
-        then m
-        else cons (k', v') (remove m' k)
-    end.
-  Fixpoint sorted (m : list (key * value)) :=
-    match m with
-    | cons (k1, _) ((cons (k2, _) m'') as m') => andb (key_ltb k1 k2) (sorted m')
-    | _ => true
-    end.
-  Record rep := { value : list (key * value) ; ok : sorted value = true }.
-  Lemma sorted_put m k v : sorted m = true -> sorted (put m k v) = true. Admitted.
-  Lemma sorted_remove m k : sorted m = true -> sorted (remove m k) = true. Admitted.
-  Definition map : map.map key parameters.value :=
-    let wrapped_put m k v := Build_rep (put (value m) k v) (minimize_eq_proof Bool.bool_dec (sorted_put _ _ _ (ok m))) in
-    let wrapped_remove m k := Build_rep (remove (value m) k) (minimize_eq_proof Bool.bool_dec (sorted_remove _ _ (ok m))) in
-    {|
-    map.rep := rep;
-    map.empty := Build_rep nil eq_refl;
-    map.get m k := match List.find (fun p => key_eqb k (fst p)) (value m) with
-                   | Some (_, v) => Some v
-                   | None => None
-                   end;
-    map.put := wrapped_put;
-    map.remove := wrapped_remove;
-    map.putmany m1 m2 := List.fold_right (fun '(k, v) m => wrapped_put m k v) m1 (value m2)
-  |}.
-End SortedList.
-
-Existing Instance map.
-
-Set Refine Instance Mode.
-Instance params: parameters := {
-    key := word32;
-    value := byte;
-    key_eqb := word.eqb;
-    key_ltb := word.ltu;
-}.
-Instance bar: Interface.map.map word32 byte := @map _.
-
-Module Test.
-  Definition emp: bar := map.empty.
-  Eval cbv in (map.get (map.put (map.put emp (word.of_Z 3) (word.of_Z 33)) (word.of_Z 3) (word.of_Z 44)) (word.of_Z 3)).
-End Test.
+Instance Mem: map.map word32 byte := SortedList.map params strictorder.
 
 Definition RiscvMachine := riscv.RiscvMachine.RiscvMachine Register word32 Empty_set.
 Definition RiscvMachineL := riscv.RiscvMachine.RiscvMachine Register word32 LogEvent.
@@ -153,7 +95,7 @@ Definition zeroedRiscvMachine: RiscvMachine := {|
 |}.
 
 Definition zeroedRiscvMachineL: RiscvMachineL :=
-  upgrade zeroedRiscvMachine [(EvLoadWord 12345 (InvalidInstruction 777), [], [])].
+  upgrade zeroedRiscvMachine nil.
 
 Definition initialRiscvMachineL(imem: list MachineInt): RiscvMachineL :=
   putProgram imem (ZToReg 0) zeroedRiscvMachineL.

@@ -14,24 +14,25 @@ Require Import coqutil.Map.Interface.
 
 
 Section Riscv.
-
-  Context {t: Type}.
-
-  Context {MW: MachineWidth t}.
-  Context {Mem: map.map t byte}.
-  Context {RFF: RegisterFileFunctions Register t}.
+  Context {byte: word 8} {width: Z} {word: word width}.
+  Context {Mem: map.map word byte}.
+  Context {RFF: RegisterFileFunctions Register word}.
 
   Inductive LogEvent :=
   | EvLoadWord(addr: Z)(i: Instruction)
   | EvStoreWord(addr: Z)(v: w32).
 
-  Local Notation RiscvMachine := (riscv.RiscvMachine.RiscvMachine Register t Empty_set).
-  Local Notation RiscvMachineL := (riscv.RiscvMachine.RiscvMachine Register t LogEvent).
+  Definition mkLogItem(e: LogEvent): LogItem word LogEvent :=
+    (* we don't log the memory because that would be too big to read *)
+    ((map.empty, e, nil), (map.empty, nil)).
+
+  Local Notation RiscvMachine := (riscv.RiscvMachine.RiscvMachine Register word Empty_set).
+  Local Notation RiscvMachineL := (riscv.RiscvMachine.RiscvMachine Register word LogEvent).
 
   Definition downgrade: RiscvMachineL -> RiscvMachine :=
     fun '(mkRiscvMachine regs pc nextPC mem log) => mkRiscvMachine regs pc nextPC mem nil.
 
-  Definition upgrade: RiscvMachine -> list (LogItem t LogEvent) -> RiscvMachineL :=
+  Definition upgrade: RiscvMachine -> list (LogItem word LogEvent) -> RiscvMachineL :=
     fun '(mkRiscvMachine regs pc nextPC mem _) log => mkRiscvMachine regs pc nextPC mem log.
 
   Definition liftL0{B: Type}(f: OState RiscvMachine B):  OState RiscvMachineL B :=
@@ -44,7 +45,7 @@ Section Riscv.
     A1 -> A2 -> OState RiscvMachineL B :=
     fun a1 a2 s => let (ob, s') := f a1 a2 (downgrade s) in (ob, upgrade s' s.(getLog)).
 
-  Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) t :=  {|
+  Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) word := {|
       getRegister := liftL1 getRegister;
       setRegister := liftL2 setRegister;
       getPC := liftL0 getPC;
@@ -54,15 +55,20 @@ Section Riscv.
       loadWord a :=
         m <- get;
         res <- (liftL1 loadWord a);
-        put (logCons m (EvLoadWord (regToZ_unsigned a) (decode RV64IM (LittleEndian.combine 4 res)), nil, nil));;
+        put (logCons m (mkLogItem (EvLoadWord (regToZ_unsigned a) (decode RV64IM (LittleEndian.combine 4 res)))));;
         Return res;
       loadDouble := liftL1 loadDouble;
       storeByte   := liftL2 storeByte;
       storeHalf   := liftL2 storeHalf;
+
       storeWord a v :=
-        m <- get;
-        put (logCons m (EvStoreWord (regToZ_unsigned a) v, nil, nil));;
-        liftL2 storeWord a v;
+        Bind get
+             (fun m =>
+                Bind (Monad := (OState_Monad _)) (* why does Coq infer OStateND_Monad?? *)
+                     (put (logCons m (mkLogItem (EvStoreWord (regToZ_unsigned a) v))))
+                     (fun (_: unit) =>
+                        liftL2 storeWord a v));
+
       storeDouble := liftL2 storeDouble;
       step := liftL0 step;
       raiseException{A} := liftL2 (raiseException (A := A));

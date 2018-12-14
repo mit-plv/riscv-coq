@@ -2,6 +2,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import coqutil.Word.Interface.
+Require Import coqutil.Word.Properties.
 Require Import coqutil.Datatypes.HList.
 Require Import coqutil.Datatypes.PrimitivePair.
 Require Import coqutil.Map.Interface.
@@ -14,40 +15,35 @@ Require Import coqutil.sanity.
 Local Open Scope Z_scope.
 
 Section ValidAddr.
+  Context {width: Z} {word: word width}.
 
-Context {t: Type}.
-Context {MW: MachineWidth t}.
+  Definition valid_addr(addr: word)(alignment size: Z): Prop :=
+    word.unsigned addr + alignment <= size /\ (word.unsigned addr) mod alignment = 0.
 
-Definition valid_addr(addr: t)(alignment size: Z): Prop :=
-  regToZ_unsigned addr + alignment <= size /\ (regToZ_unsigned addr) mod alignment = 0.
+  (* Note: alignment refers to addr, not to the range *)
+  Definition in_range(addr: word)(alignment start size: Z): Prop :=
+    start <= word.unsigned addr /\
+    word.unsigned addr + alignment <= start + size /\
+    word.unsigned addr mod alignment = 0.
 
-(* Note: alignment refers to addr, not to the range *)
-Definition in_range(addr: t)(alignment start size: Z): Prop :=
-  start <= regToZ_unsigned addr /\
-  regToZ_unsigned addr + alignment <= start + size /\
-  regToZ_unsigned addr mod alignment = 0.
+  Definition not_in_range(addr: word)(alignment start size: Z): Prop :=
+    word.unsigned addr + alignment <= start \/ start + size <= word.unsigned addr.
 
-Definition not_in_range(addr: t)(alignment start size: Z): Prop :=
-  regToZ_unsigned addr + alignment <= start \/ start + size <= regToZ_unsigned addr.
-
-Definition valid_addr'(addr: t)(alignment size: Z): Prop :=
-  in_range addr alignment 0 size.
-
-Lemma valid_addr_alt: forall (addr: t) alignment size,
-    valid_addr addr alignment size <-> valid_addr' addr alignment size.
-Proof.
-  intros. unfold valid_addr, valid_addr', in_range.
-  pose proof (regToZ_unsigned_bounds addr).
-  intuition omega.
-Qed.
+  Lemma valid_addr_8_4: forall (addr: word) size,
+      valid_addr addr 8 size ->
+      valid_addr addr 4 size.
+  Proof.
+    intros. unfold valid_addr in *.
+    intuition (try omega).
+    div_mod_to_quot_rem.
+    nia.
+  Qed.
 
 End ValidAddr.
 
 
 Section MemAccess.
-  Context {word: Type}.
-  Context {MW: MachineWidth word}.
-  Context {mem: map.map word byte}.
+  Context {byte: word 8} {width: Z} {word: word width} {mem: map.map word byte}.
 
   Local Notation "' x <- a ; f" :=
     (match (a: option _) with
@@ -61,14 +57,15 @@ Section MemAccess.
       | O => Some tt
       | S n =>
         'Some b <- map.get m addr;
-        'Some bs <- load n m (add addr (ZToReg 1));
+        'Some bs <- load n m (word.add addr (word.of_Z 1));
         Some (pair.mk b bs)
       end.
 
   Fixpoint store_bytes(n: nat)(m: mem)(a: word): tuple byte n -> mem :=
     match n with
     | O => fun bs => m
-    | S n => fun bs => store_bytes n (map.put m a (pair._1 bs)) (add a (ZToReg 1)) (pair._2 bs)
+    | S n => fun bs => store_bytes n (map.put m a (pair._1 bs))
+                                   (word.add a (word.of_Z 1)) (pair._2 bs)
     end.
 
   Definition store(n: nat)(m: mem)(a: word)(v: tuple byte n): option mem :=
@@ -78,7 +75,8 @@ Section MemAccess.
   Fixpoint unchecked_store_byte_tuple_list{n: nat}(a: word)(l: list (tuple byte n))(m: mem):
     mem :=
     match l with
-    | w :: rest => unchecked_store_byte_tuple_list (add a (ZToReg 4)) rest (store_bytes n m a w)
+    | w :: rest => unchecked_store_byte_tuple_list (word.add a (word.of_Z 4))
+                                                   rest (store_bytes n m a w)
     | nil => m
     end.
 
@@ -194,16 +192,6 @@ Class MemoryFunctions(t: Set)`{MachineWidth t} := mkMemoryFunctions {
 Arguments Mem _ {_} {_}.
 *)
 
-Lemma valid_addr_8_4: forall {t: Type} {MW: MachineWidth t} (addr: t) size,
-    valid_addr addr 8 size ->
-    valid_addr addr 4 size.
-Proof.
-  intros. unfold valid_addr in *.
-  intuition (try omega).
-  div_mod_to_quot_rem.
-  nia.
-Qed.
-
 Ltac demod :=
   repeat match goal with
          | H: _ mod _ = 0 |- _ => apply Nat.mod_divides in H; [destruct H | congruence]
@@ -216,11 +204,11 @@ Ltac destruct_list_length :=
        destruct (destruct_list_length _ L) as [ ? | ? ]; [ subst L | ]
   end.
 
-Ltac regOmega_pre := apply regToZ_unsigned_eq || apply regToZ_unsigned_ne.
+(*
+Ltac regOmega_pre := apply word.unsigned_eq || apply word.unsigned_ne.
 
 Ltac regOmega := regOmega_pre; omega.
 
-(*
 Hint Rewrite
      Nat.succ_inj_wd
      Nat.mul_0_r
@@ -312,46 +300,46 @@ Ltac mem_simpl :=
 Local Unset Universe Polymorphism.
 
 Section MemoryHelpers.
+  Context {width: Z} {word: word width} {ok: word.ok word} {bound: 0 <= width}.
+  Add Ring wring: (word.ring_theory bound).
 
-  Context {t: Type}.
-  Context {MW: MachineWidth t}.
-
-  Add Ring tring: (@regRing t MW).
-
-  Goal forall a, add a (ZToReg 0) = a. intros. ring. Qed.
+  Goal forall (a: word), word.add a (word.of_Z 0) = a. intros. ring. Qed.
 
   Lemma regToZ_unsigned_add: forall a b,
-      0 <= regToZ_unsigned a + regToZ_unsigned b < 2 ^ XLEN ->
-      regToZ_unsigned (add a b) = regToZ_unsigned a + regToZ_unsigned b.
+      0 <= word.unsigned a + word.unsigned b < 2 ^ width ->
+      word.unsigned (word.add a b) = word.unsigned a + word.unsigned b.
   Proof.
     intros.
-    rewrite add_def_unsigned.
-    apply regToZ_ZToReg_unsigned in H.
-    exact H.
+    rewrite word.unsigned_add.
+    apply Z.mod_small. assumption.
   Qed.
 
-  Lemma regToZ_unsigned_add_l: forall (a: Z) (b: t),
+  Lemma regToZ_unsigned_add_l: forall (a: Z) (b: word),
       0 <= a ->
-      0 <= a + regToZ_unsigned b < 2 ^ XLEN ->
-      regToZ_unsigned (add (ZToReg a) b) = a + regToZ_unsigned b.
+      0 <= a + word.unsigned b < 2 ^ width ->
+      word.unsigned (word.add (word.of_Z a) b) = a + word.unsigned b.
   Proof.
     intros.
-    pose proof (regToZ_unsigned_bounds b).
-    rewrite regToZ_unsigned_add.
-    - rewrite regToZ_ZToReg_unsigned by omega. reflexivity.
-    - rewrite regToZ_ZToReg_unsigned; omega.
+    rewrite word.unsigned_add.
+    rewrite word.unsigned_of_Z.
+    pose proof (word.unsigned_range bound b).
+    rewrite (Z.mod_small a) by omega.
+    rewrite Z.mod_small by assumption.
+    reflexivity.
   Qed.
 
-  Lemma regToZ_unsigned_add_r: forall (a: t) (b: Z),
+  Lemma regToZ_unsigned_add_r: forall (a: word) (b: Z),
       0 <= b ->
-      0 <= regToZ_unsigned a + b < 2 ^ XLEN ->
-      regToZ_unsigned (add a (ZToReg b)) = regToZ_unsigned a + b.
+      0 <= word.unsigned a + b < 2 ^ width ->
+      word.unsigned (word.add a (word.of_Z b)) = word.unsigned a + b.
   Proof.
     intros.
-    pose proof (regToZ_unsigned_bounds a).
-    rewrite regToZ_unsigned_add.
-    - rewrite regToZ_ZToReg_unsigned by omega. reflexivity.
-    - rewrite regToZ_ZToReg_unsigned; omega.
+    rewrite word.unsigned_add.
+    rewrite word.unsigned_of_Z.
+    pose proof (word.unsigned_range bound a).
+    rewrite (Z.mod_small b) by omega.
+    rewrite Z.mod_small by assumption.
+    reflexivity.
   Qed.
 
   (*

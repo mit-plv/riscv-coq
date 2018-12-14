@@ -14,12 +14,11 @@ Require Import coqutil.Map.Interface.
 
 Section Riscv.
 
-  Context {t: Type}.
-  Context {MW: MachineWidth t}.
-  Context {Mem: map.map t byte}.
-  Context {RFF: RegisterFileFunctions Register t}.
+  Context {byte: word 8} {width: Z} {word: word width}.
+  Context {Mem: map.map word byte}.
+  Context {RFF: RegisterFileFunctions Register word}.
 
-  Local Notation RiscvMachineL := (RiscvMachine Register t Empty_set).
+  Local Notation RiscvMachineL := (RiscvMachine Register word Empty_set).
 
   Definition fail_if_None{R}(o: option R): OState RiscvMachineL R :=
     match o with
@@ -27,15 +26,15 @@ Section Riscv.
     | None => fail_hard
     end.
 
-  Definition loadN(n: nat)(a: t): OState RiscvMachineL (HList.tuple byte n) :=
+  Definition loadN(n: nat)(a: word): OState RiscvMachineL (HList.tuple byte n) :=
     mach <- get; fail_if_None (Memory.load n mach.(getMem) a).
 
-  Definition storeN(n: nat)(a: t)(v: HList.tuple byte n): OState RiscvMachineL unit :=
+  Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OState RiscvMachineL unit :=
     mach <- get;
     m <- fail_if_None (Memory.store n mach.(getMem) a v);
     put (withMem m mach).
 
-  Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) t :=  {|
+  Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) word :=  {|
       getRegister reg :=
         if Z.eq_dec reg Register0 then
           Return (ZToReg 0)
@@ -75,7 +74,7 @@ Section Riscv.
 
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
-      raiseException{A: Type}(isInterrupt: t)(exceptionCode: t) := fail_hard;
+      raiseException{A: Type}(isInterrupt: word)(exceptionCode: word) := fail_hard;
   |}.
 
   Arguments Memory.load: simpl never.
@@ -123,7 +122,7 @@ Section Riscv.
        end.
 
   Local Set Refine Instance Mode.
-  Instance MinimalSatisfiesAxioms: AxiomaticRiscv t Empty_set (OState RiscvMachineL) := {|
+  Instance MinimalSatisfiesAxioms: AxiomaticRiscv word Empty_set (OState RiscvMachineL) := {|
     mcomp_sat := @OStateOperations.computation_satisfies RiscvMachineL;
   |}.
   (* TODO this should be possible without destructing so deeply *)

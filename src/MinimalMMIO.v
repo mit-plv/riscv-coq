@@ -16,18 +16,17 @@ Require Import coqutil.Map.Interface.
 
 Section Riscv.
 
-  Context {t: Type}.
-  Context {MW: MachineWidth t}.
-  Context {Mem: map.map t byte}.
-  Context {RFF: RegisterFileFunctions Register t}.
+  Context {byte: word 8} {width: Z} {word: word width}.
+  Context {Mem: map.map word byte}.
+  Context {RFF: RegisterFileFunctions Register word}.
 
-  Local Notation RiscvMachineL := (RiscvMachine Register t MMIOAction).
+  Local Notation RiscvMachineL := (RiscvMachine Register word MMIOAction).
 
-  Definition theMMIOAddr: t := (ZToReg 65524). (* maybe like spike *)
+  Definition theMMIOAddr: word := (ZToReg 65524). (* maybe like spike *)
 
-  Definition simple_isMMIOAddr: t -> bool := reg_eqb theMMIOAddr.
+  Definition simple_isMMIOAddr: word -> bool := reg_eqb theMMIOAddr.
 
-  Definition logEvent(e: LogItem t MMIOAction): OStateND RiscvMachineL unit :=
+  Definition logEvent(e: LogItem word MMIOAction): OStateND RiscvMachineL unit :=
     m <- get; put (withLogItem e m).
 
   Definition fail_if_None{R}(o: option R): OStateND RiscvMachineL R :=
@@ -36,15 +35,15 @@ Section Riscv.
     | None => fail_hard
     end.
 
-  Definition loadN(n: nat)(a: t): OStateND RiscvMachineL (HList.tuple byte n) :=
+  Definition loadN(n: nat)(a: word): OStateND RiscvMachineL (HList.tuple byte n) :=
     mach <- get; fail_if_None (Memory.load n mach.(getMem) a).
 
-  Definition storeN(n: nat)(a: t)(v: HList.tuple byte n): OStateND RiscvMachineL unit :=
+  Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OStateND RiscvMachineL unit :=
     mach <- get;
     m <- fail_if_None (Memory.store n mach.(getMem) a v);
     put (withMem m mach).
 
-  Instance IsRiscvMachineL: RiscvProgram (OStateND RiscvMachineL) t :=  {|
+  Instance IsRiscvMachineL: RiscvProgram (OStateND RiscvMachineL) word :=  {|
       getRegister reg :=
         if Z.eq_dec reg Register0 then
           Return (ZToReg 0)
@@ -74,7 +73,7 @@ Section Riscv.
         | Some v => Return v
         | None => if simple_isMMIOAddr a then
                     inp <- arbitrary w32;
-                    logEvent (MMInput, [a], [uInt32ToReg inp]);;
+                    logEvent ((mach.(getMem), MMInput, [a]), (mach.(getMem), [uInt32ToReg inp]));;
                     Return inp
                   else
                     fail_hard
@@ -99,7 +98,7 @@ Section Riscv.
         match Memory.storeWord mach.(getMem) a v with
         | Some m => put (withMem m mach)
         | None => if simple_isMMIOAddr a then
-                    logEvent (MMOutput, [a; uInt32ToReg v], [])
+                    logEvent ((mach.(getMem), MMOutput, [a; uInt32ToReg v]), (mach.(getMem), []))
                   else
                     fail_hard
         end;
@@ -113,7 +112,7 @@ Section Riscv.
 
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
-      raiseException{A: Type}(isInterrupt: t)(exceptionCode: t) := fail_hard;
+      raiseException{A: Type}(isInterrupt: word)(exceptionCode: word) := fail_hard;
   |}.
 
   Arguments Memory.load: simpl never.
@@ -167,7 +166,7 @@ Section Riscv.
 
   Local Set Refine Instance Mode.
   Instance MinimalMMIOSatisfiesAxioms:
-    AxiomaticRiscv t MMIOAction (OStateND RiscvMachineL) :=
+    AxiomaticRiscv word MMIOAction (OStateND RiscvMachineL) :=
   {|
     mcomp_sat := @OStateNDOperations.computation_satisfies RiscvMachineL;
   |}.

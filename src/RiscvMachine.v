@@ -18,14 +18,13 @@ Arguments RegisterFile _ _ {_}.
 Section Machine.
 
   Context {Reg: Type}.
-  Context {mword: Type}.
-  Context {MW: MachineWidth mword}.
+  Context {byte: word 8} {width: Z} {mword: word width}.
   Context {RFF: RegisterFileFunctions Reg mword}.
   Context {Mem: map.map mword byte}.
   Context {Action: Type}.
 
-  (* name of the external call, list of arguments, list of return values *)
-  Definition LogItem: Type := Action * list mword * list mword.
+  (* (memory before call, call name, arg values) and (memory after call, return values) *)
+  Definition LogItem: Type := (Mem * Action * list mword) * (Mem * list mword).
 
   Record RiscvMachine := mkRiscvMachine {
     getRegs: RegisterFile Reg mword;
@@ -91,13 +90,13 @@ Section Machine.
 
   Definition putProgram(prog: list MachineInt)(addr: mword)(ma: RiscvMachine): RiscvMachine :=
     (withPc addr
-    (withNextPc (add addr (ZToReg 4))
+    (withNextPc (word.add addr (word.of_Z 4))
     (withMem (unchecked_store_byte_tuple_list addr (List.map (split 4) prog) ma.(getMem)) ma))).
 
 End Machine.
 
-Arguments RiscvMachine _ _ {_} {_} {_} _.
-Arguments LogItem _ _ : clear implicits.
+Arguments RiscvMachine Reg {byte} {width} mword {RFF} {Mem} Action.
+Arguments LogItem {byte} {width} mword {Mem} Action.
 
 (* Using techniques such as
    https://gist.github.com/JasonGross/9608584f872149ec6f1115835cbb2c48
