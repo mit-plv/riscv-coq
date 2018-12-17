@@ -14,7 +14,7 @@ Require Import coqutil.Map.Interface.
 
 
 Section Riscv.
-  Context {byte: word 8} {width: Z} {word: word width}.
+  Context {W: Words}.
   Context {Mem: map.map word byte}.
   Context {RFF: RegisterFileFunctions Register word}.
 
@@ -22,17 +22,17 @@ Section Riscv.
   | EvLoadWord(addr: Z)(i: Instruction)
   | EvStoreWord(addr: Z)(v: w32).
 
-  Definition mkLogItem(e: LogEvent): LogItem word LogEvent :=
+  Definition mkLogItem(e: LogEvent): LogItem LogEvent :=
     (* we don't log the memory because that would be too big to read *)
     ((map.empty, e, nil), (map.empty, nil)).
 
-  Local Notation RiscvMachine := (riscv.RiscvMachine.RiscvMachine Register word Empty_set).
-  Local Notation RiscvMachineL := (riscv.RiscvMachine.RiscvMachine Register word LogEvent).
+  Local Notation RiscvMachine := (riscv.RiscvMachine.RiscvMachine Register Empty_set).
+  Local Notation RiscvMachineL := (riscv.RiscvMachine.RiscvMachine Register LogEvent).
 
   Definition downgrade: RiscvMachineL -> RiscvMachine :=
     fun '(mkRiscvMachine regs pc nextPC mem log) => mkRiscvMachine regs pc nextPC mem nil.
 
-  Definition upgrade: RiscvMachine -> list (LogItem word LogEvent) -> RiscvMachineL :=
+  Definition upgrade: RiscvMachine -> list (LogItem LogEvent) -> RiscvMachineL :=
     fun '(mkRiscvMachine regs pc nextPC mem _) log => mkRiscvMachine regs pc nextPC mem log.
 
   Definition liftL0{B: Type}(f: OState RiscvMachine B):  OState RiscvMachineL B :=

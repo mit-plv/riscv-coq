@@ -20,12 +20,21 @@ Section ByteTuples.
   Definition w64 := tuple byte 8.
 End ByteTuples.
 
+Class Words := {
+  byte :> word 8;
+  byte_ok :> word.ok byte;
+  width : Z;
+  word: word width;
+  word_ok :> word.ok word;
+}.
+
 (* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
    no matter whether it's a 32-bit or 64-bit machine. *)
 Definition MachineInt := Z.
 
+(* t is a parameter rather than a field for Haskell compatibility *)
 Class MachineWidth(t: Type) := {
-  byte :> word 8;
+  byte_Inst :> word.word 8;
 
   (* arithmetic operations (inherited from wegral in Haskell) *)
   add: t -> t -> t;

@@ -14,11 +14,11 @@ Require Import coqutil.Map.Interface.
 
 Section Riscv.
 
-  Context {byte: word 8} {width: Z} {word: word width}.
+  Context {W: Words}.
   Context {Mem: map.map word byte}.
   Context {RFF: RegisterFileFunctions Register word}.
 
-  Local Notation RiscvMachineL := (RiscvMachine Register word Empty_set).
+  Local Notation RiscvMachineL := (RiscvMachine Register Empty_set).
 
   Definition fail_if_None{R}(o: option R): OState RiscvMachineL R :=
     match o with
@@ -122,7 +122,7 @@ Section Riscv.
        end.
 
   Local Set Refine Instance Mode.
-  Instance MinimalSatisfiesAxioms: AxiomaticRiscv word Empty_set (OState RiscvMachineL) := {|
+  Instance MinimalSatisfiesAxioms: AxiomaticRiscv Empty_set (OState RiscvMachineL) := {|
     mcomp_sat := @OStateOperations.computation_satisfies RiscvMachineL;
   |}.
   (* TODO this should be possible without destructing so deeply *)

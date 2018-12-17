@@ -6,7 +6,7 @@ Require Import coqutil.Datatypes.HList.
 Require Import riscv.Utility.
 Local Open Scope Z_scope.
 
-Instance MachineWidth_XLEN{byte: word 8} {width: Z} {word: word width}: MachineWidth word := {|
+Instance MachineWidth_XLEN{W: Words}: MachineWidth word := {|
   add := word.add;
   sub := word.sub;
   mul := word.mul;
@@ -35,9 +35,9 @@ Instance MachineWidth_XLEN{byte: word 8} {width: Z} {word: word width}: MachineW
   u32(x: word) := word.of_Z ((word.unsigned x) mod 2 ^ 32);
   regToZ_signed := word.signed;
   regToZ_unsigned := word.unsigned;
-  sll w n := word.of_Z (Z.shiftl (word.unsigned w) n);
-  srl w n := word.of_Z (Z.shiftr (word.unsigned w) n);
-  sra w n := word.of_Z (Z.shiftr (word.signed   w) n);
+  sll w n := word.slu w (word.of_Z n);
+  srl w n := word.sru w (word.of_Z n);
+  sra w n := word.srs w (word.of_Z n);
   ltu := word.ltu;
   divu := word.divu;
   remu := word.modu;

@@ -16,17 +16,17 @@ Require Import coqutil.Map.Interface.
 
 Section Riscv.
 
-  Context {byte: word 8} {width: Z} {word: word width}.
+  Context {W: Words}.
   Context {Mem: map.map word byte}.
   Context {RFF: RegisterFileFunctions Register word}.
 
-  Local Notation RiscvMachineL := (RiscvMachine Register word MMIOAction).
+  Local Notation RiscvMachineL := (RiscvMachine Register MMIOAction).
 
   Definition theMMIOAddr: word := (ZToReg 65524). (* maybe like spike *)
 
   Definition simple_isMMIOAddr: word -> bool := reg_eqb theMMIOAddr.
 
-  Definition logEvent(e: LogItem word MMIOAction): OStateND RiscvMachineL unit :=
+  Definition logEvent(e: LogItem MMIOAction): OStateND RiscvMachineL unit :=
     m <- get; put (withLogItem e m).
 
   Definition fail_if_None{R}(o: option R): OStateND RiscvMachineL R :=
@@ -166,7 +166,7 @@ Section Riscv.
 
   Local Set Refine Instance Mode.
   Instance MinimalMMIOSatisfiesAxioms:
-    AxiomaticRiscv word MMIOAction (OStateND RiscvMachineL) :=
+    AxiomaticRiscv MMIOAction (OStateND RiscvMachineL) :=
   {|
     mcomp_sat := @OStateNDOperations.computation_satisfies RiscvMachineL;
   |}.

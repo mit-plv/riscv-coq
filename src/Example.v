@@ -2,6 +2,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
 Import ListNotations.
 Require Import coqutil.Word.Naive.
+Require Import coqutil.Word.Properties.
 Require Import riscv.Program.
 Require Import riscv.Decode.
 Require Import riscv.util.BitWidth32.
@@ -20,10 +21,12 @@ Require coqutil.Map.SortedList.
 Existing Instance DefaultRiscvState.
 
 Lemma bound32: 0 < 32. lia. Qed.
-Instance word32: word 32 := Naive.word 32 bound32.
+Instance word32: word.word 32 := Naive.word 32 bound32.
+Instance word32ok: word.ok word32 := Naive.ok 32 bound32.
 
 Lemma bound8: 0 < 8. lia. Qed.
-Instance word8: word 8 := Naive.word 8 bound8.
+Instance word8: word.word 8 := Naive.word 8 bound8.
+Instance word8ok: word.ok word8 := Naive.ok 8 bound8.
 
 
 Instance FunctionRegisterFile: RegisterFileFunctions Register word32 := {|
@@ -66,23 +69,29 @@ Abort.
 
 Instance params: SortedList.parameters := {|
   SortedList.parameters.key := word32;
-  SortedList.parameters.value := byte;
+  SortedList.parameters.value := word8;
   SortedList.parameters.ltb := word.ltu;
 |}.
 
 Instance strictorder: SortedList.parameters.strict_order SortedList.parameters.ltb.
-  constructor; simpl; intros; rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in *; try lia.
-  (* TODO I want word.unsigned_inj *)
-  rewrite <- (Naive.of_Z_unsigned (width_nonneg := bound32) k1).
-  rewrite <- (Naive.of_Z_unsigned (width_nonneg := bound32) k2).
-  f_equal.
-  lia.
+constructor; simpl; intros; rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in *; try lia.
+apply (@word.unsigned_inj 32 word32 word32ok). (* TODO can we make this work without @ ? *)
+(* TODO how can we normalize this so that lia will recognize the terms as being the same? *)
+match goal with
+| H: ~ ?x < ?y |- ?x' = ?y' => change x' with x; change y' with y
+end.
+lia.
 Qed.
 
-Instance Mem: map.map word32 byte := SortedList.map params strictorder.
+Instance Mem: map.map word32 word8 := SortedList.map params strictorder.
 
-Definition RiscvMachine := riscv.RiscvMachine.RiscvMachine Register word32 Empty_set.
-Definition RiscvMachineL := riscv.RiscvMachine.RiscvMachine Register word32 LogEvent.
+Instance W: Words := {|
+  byte := word8;
+  word := word32;
+|}.
+
+Definition RiscvMachine := riscv.RiscvMachine.RiscvMachine Register Empty_set.
+Definition RiscvMachineL := riscv.RiscvMachine.RiscvMachine Register LogEvent.
 
 (* This example uses the memory only as instruction memory
    TODO make an example which uses memory to store data *)
@@ -111,7 +120,7 @@ Definition fib6_L_final(fuel: nat): RiscvMachineL :=
 Definition fib6_L_res(fuel: nat): word32 :=
   (fib6_L_final fuel).(getRegs) 18.
 
-Definition fib6_L_trace(fuel: nat): list (LogItem word32 LogEvent) :=
+Definition fib6_L_trace(fuel: nat): list (LogItem LogEvent) :=
   (fib6_L_final fuel).(getLog).
 
 (* only uncomment this if you're sure there are no admits in the computational parts,
@@ -119,7 +128,7 @@ Definition fib6_L_trace(fuel: nat): list (LogItem word32 LogEvent) :=
 
 Eval vm_compute in (fib6_L_trace 50).
 
-Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_L_res fuel = ZToReg 13.
+Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_L_res fuel = word.of_Z 13.
   exists 50%nat.
   reflexivity.
 Qed.

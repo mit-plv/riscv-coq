@@ -18,31 +18,31 @@ Arguments RegisterFile _ _ {_}.
 Section Machine.
 
   Context {Reg: Type}.
-  Context {byte: word 8} {width: Z} {mword: word width}.
-  Context {RFF: RegisterFileFunctions Reg mword}.
-  Context {Mem: map.map mword byte}.
+  Context {W: Words}.
+  Context {RFF: RegisterFileFunctions Reg word}.
+  Context {Mem: map.map word byte}.
   Context {Action: Type}.
 
   (* (memory before call, call name, arg values) and (memory after call, return values) *)
-  Definition LogItem: Type := (Mem * Action * list mword) * (Mem * list mword).
+  Definition LogItem: Type := (Mem * Action * list word) * (Mem * list word).
 
   Record RiscvMachine := mkRiscvMachine {
-    getRegs: RegisterFile Reg mword;
-    getPc: mword;
-    getNextPc: mword;
+    getRegs: RegisterFile Reg word;
+    getPc: word;
+    getNextPc: word;
     getMem: Mem;
     getLog: list LogItem;
   }.
 
-  Definition setRegs: RiscvMachine -> RegisterFile Reg mword -> RiscvMachine :=
+  Definition setRegs: RiscvMachine -> RegisterFile Reg word -> RiscvMachine :=
     fun '(mkRiscvMachine regs1 pc nextPC mem log) regs2 =>
           mkRiscvMachine regs2 pc nextPC mem log.
 
-  Definition setPc: RiscvMachine -> mword -> RiscvMachine :=
+  Definition setPc: RiscvMachine -> word -> RiscvMachine :=
     fun '(mkRiscvMachine regs pc1 nextPC mem log) pc2 =>
           mkRiscvMachine regs pc2 nextPC mem log.
 
-  Definition setNextPc: RiscvMachine -> mword -> RiscvMachine :=
+  Definition setNextPc: RiscvMachine -> word -> RiscvMachine :=
     fun '(mkRiscvMachine regs pc nextPC1 mem log) nextPC2 =>
           mkRiscvMachine regs pc nextPC2 mem log.
 
@@ -60,15 +60,15 @@ Section Machine.
   Definition logAppend(m: RiscvMachine)(items: list LogItem): RiscvMachine :=
     setLog m (items ++ m.(getLog)).
 
-  Definition withRegs: RegisterFile Reg mword -> RiscvMachine -> RiscvMachine :=
+  Definition withRegs: RegisterFile Reg word -> RiscvMachine -> RiscvMachine :=
     fun regs2 '(mkRiscvMachine regs1 pc nextPC mem log) =>
                 mkRiscvMachine regs2 pc nextPC mem log.
 
-  Definition withPc: mword -> RiscvMachine -> RiscvMachine :=
+  Definition withPc: word -> RiscvMachine -> RiscvMachine :=
     fun pc2 '(mkRiscvMachine regs pc1 nextPC mem log) =>
               mkRiscvMachine regs pc2 nextPC mem log.
 
-  Definition withNextPc: mword -> RiscvMachine -> RiscvMachine :=
+  Definition withNextPc: word -> RiscvMachine -> RiscvMachine :=
     fun nextPC2 '(mkRiscvMachine regs pc nextPC1 mem log) =>
                   mkRiscvMachine regs pc nextPC2 mem log.
 
@@ -88,15 +88,15 @@ Section Machine.
     fun items '(mkRiscvMachine regs pc nextPC mem log) =>
                 mkRiscvMachine regs pc nextPC mem (items ++ log).
 
-  Definition putProgram(prog: list MachineInt)(addr: mword)(ma: RiscvMachine): RiscvMachine :=
+  Definition putProgram(prog: list MachineInt)(addr: word)(ma: RiscvMachine): RiscvMachine :=
     (withPc addr
     (withNextPc (word.add addr (word.of_Z 4))
     (withMem (unchecked_store_byte_tuple_list addr (List.map (split 4) prog) ma.(getMem)) ma))).
 
 End Machine.
 
-Arguments RiscvMachine Reg {byte} {width} mword {RFF} {Mem} Action.
-Arguments LogItem {byte} {width} mword {Mem} Action.
+Arguments RiscvMachine Reg {W} {RFF} {Mem} Action.
+Arguments LogItem {W} {Mem} Action.
 
 (* Using techniques such as
    https://gist.github.com/JasonGross/9608584f872149ec6f1115835cbb2c48

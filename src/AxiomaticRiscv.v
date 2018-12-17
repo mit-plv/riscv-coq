@@ -15,12 +15,12 @@ Definition valid_register(r: Register): Prop := (0 < r < 32)%Z.
 
 Section Axiomatic.
 
-  Context {byte: word 8} {width: Z} {word: word width}.
+  Context {W: Words}.
   Context {RFF: RegisterFileFunctions Register word}.
   Context {Action: Type}.
   Context {mem: map.map word byte}.
 
-  Local Notation RiscvMachineL := (RiscvMachine Register word Action).
+  Local Notation RiscvMachineL := (RiscvMachine Register Action).
 
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
@@ -87,4 +87,4 @@ Section Axiomatic.
 
 End Axiomatic.
 
-Arguments AxiomaticRiscv {byte} {width} word {_} Action {_} M {_} {_}.
+Arguments AxiomaticRiscv {_} {_} Action {_} M {_} {_}.

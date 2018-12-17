@@ -15,7 +15,7 @@ Require Import coqutil.sanity.
 Local Open Scope Z_scope.
 
 Section ValidAddr.
-  Context {width: Z} {word: word width}.
+  Context {width: Z} {word: word.word width}.
 
   Definition valid_addr(addr: word)(alignment size: Z): Prop :=
     word.unsigned addr + alignment <= size /\ (word.unsigned addr) mod alignment = 0.
@@ -43,7 +43,7 @@ End ValidAddr.
 
 
 Section MemAccess.
-  Context {byte: word 8} {width: Z} {word: word width} {mem: map.map word byte}.
+  Context {W: Words} {mem: map.map word byte}.
 
   Local Notation "' x <- a ; f" :=
     (match (a: option _) with
@@ -300,12 +300,12 @@ Ltac mem_simpl :=
 Local Unset Universe Polymorphism.
 
 Section MemoryHelpers.
-  Context {width: Z} {word: word width} {ok: word.ok word}.
-  Add Ring wring: word.ring_theory.
+  Context {W: Words}.
+  Add Ring wring: (@word.ring_theory width word word_ok).
 
   Goal forall (a: word), word.add a (word.of_Z 0) = a. intros. ring. Qed.
 
-  Lemma regToZ_unsigned_add: forall a b,
+  Lemma regToZ_unsigned_add: forall (a b: word),
       0 <= word.unsigned a + word.unsigned b < 2 ^ width ->
       word.unsigned (word.add a b) = word.unsigned a + word.unsigned b.
   Proof.
