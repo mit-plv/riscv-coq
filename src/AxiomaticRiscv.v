@@ -31,50 +31,58 @@ Section Axiomatic.
 
     (* Abstract predicate specifying when a monadic computation satisfies a
        postcondition when run on given initial machine *)
-    mcomp_sat: forall {A: Type}, M A -> RiscvMachineL -> (A -> RiscvMachineL -> Prop) -> Prop;
+    mcomp_sat: M unit -> RiscvMachineL -> (RiscvMachineL -> Prop) -> Prop;
 
-    go_getRegister: forall (initialL: RiscvMachineL) (x: Register)
-                             (post: word -> RiscvMachineL -> Prop),
-        valid_register x ->
-        post (getReg initialL.(getRegs) x) initialL ->
-        mcomp_sat (getRegister x) initialL post;
+    (* Note: These lemmas could be simplified by not wrapping each operation inside
+       a Bind, but then the postcondition would have to take a return value as an
+       additional input, and before applying these lemmas in the compiler correctness
+       proof (where we always have a Bind), we'd have to split up the Bind *)
 
-    go_getRegister0: forall (initialL: RiscvMachineL) (post: word -> RiscvMachineL -> Prop),
-        post (word.of_Z 0) initialL ->
-        mcomp_sat (getRegister Register0) initialL post;
-
-    go_setRegister0: forall initialL v (post: unit -> RiscvMachineL -> Prop),
-      post tt initialL ->
-      mcomp_sat (setRegister Register0 v) initialL post;
-
-    go_setRegister: forall initialL x v (post: unit -> RiscvMachineL -> Prop),
+    go_getRegister: forall (initialL: RiscvMachineL) (x: Register) post (f: word -> M unit),
       valid_register x ->
-      post tt (setRegs initialL (setReg initialL.(getRegs) x v)) ->
-      mcomp_sat (setRegister x v) initialL post;
+      mcomp_sat (f (getReg initialL.(getRegs) x)) initialL post ->
+      mcomp_sat (Bind (getRegister x) f) initialL post;
 
-    go_loadWord: forall initialL addr (v: w32) (post: w32 -> RiscvMachineL -> Prop),
+    go_getRegister0: forall (initialL: RiscvMachineL) post (f: word -> M unit),
+      mcomp_sat (f (ZToReg 0)) initialL post ->
+      mcomp_sat (Bind (getRegister Register0) f) initialL post;
+
+    go_setRegister0: forall initialL v post (f: unit -> M unit),
+      mcomp_sat (f tt) initialL post ->
+      mcomp_sat (Bind (setRegister Register0 v) f) initialL post;
+
+    go_setRegister: forall initialL x v post (f: unit -> M unit),
+      valid_register x ->
+      mcomp_sat (f tt) (setRegs initialL (setReg initialL.(getRegs) x v)) post ->
+      mcomp_sat (Bind (setRegister x v) f) initialL post;
+
+    go_loadWord: forall initialL addr (v: w32) (f: w32 -> M unit) (post: RiscvMachineL -> Prop),
         Memory.loadWord initialL.(getMem) addr = Some v ->
-        post v initialL ->
-        mcomp_sat (Program.loadWord (RiscvProgram := RVM) addr) initialL post;
+        mcomp_sat (f v) initialL post ->
+        mcomp_sat (Bind (Program.loadWord addr) f) initialL post;
 
-    go_storeWord: forall initialL addr v m' (post: unit -> RiscvMachineL -> Prop),
+    go_storeWord: forall initialL addr v m' post (f: unit -> M unit),
         Memory.storeWord initialL.(getMem) addr v = Some m' ->
-        post tt (withMem m' initialL) ->
-        mcomp_sat (Program.storeWord addr v) initialL post;
+        mcomp_sat (f tt) (withMem m' initialL) post ->
+        mcomp_sat (Bind (Program.storeWord addr v) f) initialL post;
 
-    go_getPC: forall initialL (post: word -> RiscvMachineL -> Prop),
-        post initialL.(getPc) initialL ->
-        mcomp_sat getPC initialL post;
+    go_getPC: forall initialL f (post: RiscvMachineL -> Prop),
+        mcomp_sat (f initialL.(getPc)) initialL post ->
+        mcomp_sat (Bind getPC f) initialL post;
 
-    go_setPC: forall initialL v (post: unit -> RiscvMachineL -> Prop),
-        post tt (withNextPc v initialL) ->
-        mcomp_sat (setPC v) initialL post;
+    go_setPC: forall initialL v post (f: unit -> M unit),
+        mcomp_sat (f tt) (setNextPc initialL v) post ->
+        mcomp_sat (Bind (setPC v) f) initialL post;
 
-    go_step: forall initialL (post: unit -> RiscvMachineL -> Prop),
-        post tt (withNextPc (word.add initialL.(getNextPc) (word.of_Z 4))
-                            (withPc (word.add initialL.(getPc) (word.of_Z 4))
-                                    initialL)) ->
+    go_step: forall initialL (post: RiscvMachineL -> Prop),
+        mcomp_sat
+          (Return tt)
+          (setNextPc (setPc initialL
+                            initialL.(getNextPc))
+                     (add initialL.(getNextPc) (ZToReg 4)))
+          post ->
         mcomp_sat step initialL post;
+
   }.
 
 End Axiomatic.
