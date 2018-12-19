@@ -155,6 +155,7 @@ Section Riscv.
                                  end
        | |- _ => rewrite! Z.ltb_nlt in *
        | |- _ => omega
+       | H1: _, H2: _ |- _ => specialize H1 with (1 := H2)
        | |- context [if ?x then _ else _] => let E := fresh "E" in destruct x eqn: E
        | _: context [if ?x then _ else _] |- _ => let E := fresh "E" in destruct x eqn: E
        | H: context[match ?x with _ => _ end], E: ?x = Some _ |- _ => rewrite E in H

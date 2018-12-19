@@ -113,6 +113,7 @@ Section Riscv.
        | |- context [if ?x then _ else _] => let E := fresh "E" in destruct x eqn: E
        | _: context [if ?x then _ else _] |- _ => let E := fresh "E" in destruct x eqn: E
        | H: context[match ?x with _ => _ end], E: ?x = Some _ |- _ => rewrite E in H
+       | E: ?x = Some _ |- context[match ?x with _ => _ end] => rewrite E
        | H: _ \/ _ |- _ => destruct H
        | r: RiscvMachineL |- _ =>
          destruct r as [regs pc npc m l];

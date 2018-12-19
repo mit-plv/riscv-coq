@@ -108,9 +108,9 @@ Module OStateOperations.
       Bind (put s1) f s0 = f tt s1.
   Proof. prove_monad_law. Qed.
 
-  (* provides the link between "S -> option A * S" and "S -> (S -> Prop) -> Prop" *)
-  Definition computation_satisfies{S: Type}(m: OState S unit)(s: S)(post: S -> Prop): Prop :=
-    exists s', m s = (Some tt, s') /\ post s'.
+  (* provides the link between "S -> option A * S" and "S -> (A -> S -> Prop) -> Prop" *)
+  Definition computation_satisfies{S A: Type}(m: OState S A)(s: S)(post: A -> S -> Prop): Prop :=
+    exists a s', m s = (Some a, s') /\ post a s'.
 
 End OStateOperations.
 
@@ -155,9 +155,9 @@ Module OStateNDOperations.
       Bind (put s1) f s0 = f tt s1.
   Proof. prove_monad_law. Qed.
 
-  (* provides the link between "S -> option (A * S) -> Prop" and "S -> (S -> Prop) -> Prop" *)
-  Definition computation_satisfies{S: Type}(m: OStateND S unit)(s: S)(post: S -> Prop): Prop :=
-    forall (o: option (unit * S)), m s o -> exists s', o = Some (tt, s') /\ post s'.
+  (* provides the link between "S -> option (A * S) -> Prop" and "S -> (A -> S -> Prop) -> Prop" *)
+  Definition computation_satisfies{S A: Type}(m: OStateND S A)(s: S)(post: A -> S -> Prop): Prop :=
+    forall (o: option (A * S)), m s o -> exists a s', o = Some (a, s') /\ post a s'.
 
 End OStateNDOperations.
 
