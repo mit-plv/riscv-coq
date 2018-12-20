@@ -75,12 +75,8 @@ Section Axiomatic.
         mcomp_sat (Bind (setPC v) f) initialL post;
 
     go_step: forall initialL (post: RiscvMachineL -> Prop),
-        mcomp_sat
-          (Return tt)
-          (setNextPc (setPc initialL
-                            initialL.(getNextPc))
-                     (add initialL.(getNextPc) (ZToReg 4)))
-          post ->
+        post (withNextPc (word.add initialL.(getNextPc) (word.of_Z 4))
+                         (withPc initialL.(getNextPc) initialL)) ->
         mcomp_sat step initialL post;
 
   }.

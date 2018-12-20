@@ -7,6 +7,7 @@ Require Import riscv.util.MonadNotations.
 Require Import riscv.Decode.
 Require Import riscv.Program.
 Require Import riscv.Utility.
+Require Import riscv.AxiomaticRiscvMMIO.
 Require Import riscv.AxiomaticRiscv.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Export riscv.MMIOTrace.
@@ -127,9 +128,11 @@ Section Riscv.
                             valid_register, Register0,
                             get, put, fail_hard, arbitrary,
                             logEvent,
-                            Memory.loadWord, Memory.storeWord,
-                            simple_isMMIOAddr,
-                            fail_if_None, loadN, storeN in *;
+                            Memory.loadWord, Memory.storeWord, Memory.store,
+                            simple_isMMIOAddr, theMMIOAddr,
+                            fail_if_None, loadN, storeN,
+                            ZToReg, MkMachineWidth.MachineWidth_XLEN
+                        in *;
                      subst;
                      simpl in *)
        | |- _ => intro
@@ -158,6 +161,7 @@ Section Riscv.
        | |- context [if ?x then _ else _] => let E := fresh "E" in destruct x eqn: E
        | _: context [if ?x then _ else _] |- _ => let E := fresh "E" in destruct x eqn: E
        | H: context[match ?x with _ => _ end], E: ?x = Some _ |- _ => rewrite E in H
+       | H: context[match ?x with _ => _ end], E: ?x = None   |- _ => rewrite E in H
        | H: _ \/ _ |- _ => destruct H
        | r: RiscvMachineL |- _ =>
          destruct r as [regs pc npc m l];
@@ -170,12 +174,22 @@ Section Riscv.
   {|
     mcomp_sat := @OStateNDOperations.computation_satisfies RiscvMachineL;
   |}.
-  (* TODO this should be possible without destructing so deeply *)
-  all: abstract t.
+  Proof.
+    (* TODO this should be possible without destructing so deeply *)
+    all: abstract t.
   Defined.
+
+  Arguments LittleEndian.combine: simpl never.
+
+  Instance MinimalMMIOSatisfiesMMIOAxioms:
+    AxiomaticRiscvMMIO (OStateND RiscvMachineL).
+  Proof.
+    constructor. all: t.
+  Qed.
 
 End Riscv.
 
 (* needed because defined inside a Section *)
 Existing Instance IsRiscvMachineL.
 Existing Instance MinimalMMIOSatisfiesAxioms.
+Existing Instance MinimalMMIOSatisfiesMMIOAxioms.
