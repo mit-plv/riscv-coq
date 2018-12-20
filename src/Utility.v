@@ -4,7 +4,6 @@ Require Import Coq.setoid_ring.Ring_theory.
 Require Export coqutil.Word.Interface.
 Require Import coqutil.Datatypes.HList.
 Require Import coqutil.sanity.
-Require Import riscv.util.Monads.
 Require Export riscv.util.ZBitOps.
 
 Global Unset Universe Minimization ToSet.
@@ -124,7 +123,5 @@ Notation "a /= b" := (negb (reg_eqb a b))        (at level 38, no associativity)
 Notation "a == b" := (reg_eqb a b)               (at level 38, no associativity) : alu_scope.
 Notation "a < b"  := (signed_less_than a b)         (at level 70, no associativity) : alu_scope.
 Notation "a >= b" := (negb (signed_less_than a b))  (at level 70, no associativity) : alu_scope.
-Notation "'when' a b" := (if a then b else Return tt)
-  (at level 60, a at level 0, b at level 0) : alu_scope.
 
 Definition machineIntToShamt: MachineInt -> Z := id.

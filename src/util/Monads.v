@@ -14,6 +14,8 @@ Class Monad(M: Type -> Type) := mkMonad {
     Bind (Bind m f) g = Bind m (fun x => Bind (f x) g)
 }.
 
+Definition when{M: Type -> Type}{MM: Monad M}(a: bool)(b: M unit): M unit :=
+  if a then b else Return tt.
 
 Create HintDb unf_monad_ops.
 
