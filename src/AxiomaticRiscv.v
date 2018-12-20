@@ -79,6 +79,14 @@ Section Axiomatic.
                          (withPc initialL.(getNextPc) initialL)) ->
         mcomp_sat step initialL post;
 
+    go_done: forall initialL (post: RiscvMachineL -> Prop),
+        post initialL ->
+        mcomp_sat (Return tt) initialL post;
+
+    go_seq: forall initialL (m1 m2: M unit) (mid post: RiscvMachineL -> Prop),
+        mcomp_sat m1 initialL mid ->
+        (forall middleL, mid middleL -> mcomp_sat m2 middleL post) ->
+        mcomp_sat (Bind m1 (fun _ => m2)) initialL post;
   }.
 
 End Axiomatic.

@@ -166,6 +166,7 @@ Section Riscv.
        | r: RiscvMachineL |- _ =>
          destruct r as [regs pc npc m l];
          simpl in *
+       | H1: _, H2: _ |- _ => specialize H1 with (1 := H2)
        end.
 
   Local Set Refine Instance Mode.
