@@ -8,9 +8,13 @@ Require Import riscv.Decode.
 Require Import riscv.Program.
 Require Import riscv.Utility.
 Require Import riscv.AxiomaticRiscv.
+Require Import riscv.Primitives.
 Require Export riscv.RiscvMachine.
 Require Import Coq.micromega.Lia.
 Require Import coqutil.Map.Interface.
+
+Local Open Scope Z_scope.
+Local Open Scope bool_scope.
 
 Section Riscv.
 
@@ -39,16 +43,22 @@ Section Riscv.
         if Z.eq_dec reg Register0 then
           Return (ZToReg 0)
         else
-          mach <- get;
-          Return (getReg mach.(getRegs) reg);
+          if (0 <? reg) && (reg <? 32) then
+            mach <- get;
+            Return (getReg mach.(getRegs) reg)
+          else
+            fail_hard;
 
       setRegister reg v :=
         if Z.eq_dec reg Register0 then
           Return tt
         else
-          mach <- get;
-          let newRegs := setReg mach.(getRegs) reg v in
-          put (setRegs mach newRegs);
+          if (0 <? reg) && (reg <? 32) then
+            mach <- get;
+            let newRegs := setReg mach.(getRegs) reg v in
+            put (setRegs mach newRegs)
+          else
+            fail_hard;
 
       getPC := mach <- get; Return mach.(getPc);
 
@@ -84,15 +94,16 @@ Section Riscv.
     repeat match goal with
        | |- _ => reflexivity
        | |- _ => progress (
-                     unfold computation_satisfies,
+                     unfold computation_satisfies, computation_with_answer_satisfies,
                             IsRiscvMachineL,
-                            valid_register, Register0,
+                            Primitives.valid_register, AxiomaticRiscv.valid_register, Register0,
                             get, put, fail_hard,
                             Memory.loadWord, Memory.storeWord,
                             fail_if_None, loadN, storeN in *;
                      subst;
                      simpl in *)
        | |- _ => intro
+       | |- _ => split
        | |- _ => apply functional_extensionality
        | |- _ => apply propositional_extensionality; split; intros
        | u: unit |- _ => destruct u
@@ -103,28 +114,49 @@ Section Riscv.
        | |- context [ let (_, _) := ?p in _ ] => let E := fresh "E" in destruct p eqn: E
        | H: Some _ = Some _ |- _ => inversion H; clear H; subst
        | H: (_, _) = (_, _) |- _ => inversion H; clear H; subst
+       | H: _ && _ = true |- _ => apply andb_prop in H
+       | H: _ && _ = false |- _ => apply Bool.andb_false_iff in H
        | |- _ * _ => constructor
        | |- option _ => exact None
        | |- _ => discriminate
        | |- _ => congruence
        | |- _ => solve [exfalso; lia]
        | |- _ => solve [eauto 15]
-       | |- _ => rewrite! Z.ltb_nlt in *; omega
-       | |- context [if ?x then _ else _] => let E := fresh "E" in destruct x eqn: E
-       | _: context [if ?x then _ else _] |- _ => let E := fresh "E" in destruct x eqn: E
-       | H: context[match ?x with _ => _ end], E: ?x = Some _ |- _ => rewrite E in H
+       | |- _ => progress (rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in *)
+       | |- _ => omega
+       | H: context[let (_, _) := ?y in _] |- _ => let E := fresh "E" in destruct y eqn: E
+       | E: ?x = Some _, H: context[match ?x with _ => _ end] |- _ => rewrite E in H
+       | E: ?x = Some _  |- context[match ?x with _ => _ end]      => rewrite E
+       | H: context[match ?x with _ => _ end] |- _ => let E := fresh "E" in destruct x eqn: E
+       | |- context[match ?x with _ => _ end]      => let E := fresh "E" in destruct x eqn: E
        | H: _ \/ _ |- _ => destruct H
        | r: RiscvMachineL |- _ =>
          destruct r as [regs pc npc m l];
          simpl in *
 (*       | H: context[match ?x with _ => _ end] |- _ => let E := fresh in destruct x eqn: E*)
        | o: option _ |- _ => destruct o
+       (* introduce evars as late as possible (after all destructs), to make sure everything
+          is in their scope*)
+       | |- exists (P: ?A -> ?S -> Prop), _ =>
+            let a := fresh "a" in evar (a: A);
+            let s := fresh "s" in evar (s: S);
+            exists (fun a0 s0 => a0 = a /\ s0 = s);
+            subst a s
        end.
 
   Local Set Refine Instance Mode.
-  Instance MinimalSatisfiesAxioms: AxiomaticRiscv Empty_set (OState RiscvMachineL) := {|
-    mcomp_sat := @OStateOperations.computation_satisfies RiscvMachineL;
+
+  Instance MinimalSatisfiesPrimitives: Primitives Empty_set (OState RiscvMachineL) := {|
+    Primitives.mcomp_sat := @OStateOperations.computation_with_answer_satisfies RiscvMachineL;
   |}.
+  Proof.
+    all: abstract t.
+  Defined.
+
+  Instance MinimalSatisfiesAxioms: AxiomaticRiscv Empty_set (OState RiscvMachineL) := {|
+    AxiomaticRiscv.mcomp_sat := @OStateOperations.computation_satisfies RiscvMachineL;
+  |}.
+  Proof.
   (* TODO this should be possible without destructing so deeply *)
   all: abstract t.
   Defined.
@@ -133,4 +165,5 @@ End Riscv.
 
 (* needed because defined inside a Section *)
 Existing Instance IsRiscvMachineL.
+Existing Instance MinimalSatisfiesPrimitives.
 Existing Instance MinimalSatisfiesAxioms.

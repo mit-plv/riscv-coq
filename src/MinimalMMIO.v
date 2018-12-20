@@ -9,11 +9,15 @@ Require Import riscv.Program.
 Require Import riscv.Utility.
 Require Import riscv.AxiomaticRiscvMMIO.
 Require Import riscv.AxiomaticRiscv.
+Require Import riscv.Primitives.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Export riscv.MMIOTrace.
 Require Export riscv.RiscvMachine.
 Require Import Coq.micromega.Lia.
 Require Import coqutil.Map.Interface.
+
+Local Open Scope Z_scope.
+Local Open Scope bool_scope.
 
 Section Riscv.
 
@@ -49,16 +53,22 @@ Section Riscv.
         if Z.eq_dec reg Register0 then
           Return (ZToReg 0)
         else
-          mach <- get;
-          Return (getReg mach.(getRegs) reg);
+          if (0 <? reg) && (reg <? 32) then
+            mach <- get;
+            Return (getReg mach.(getRegs) reg)
+          else
+            fail_hard;
 
       setRegister reg v :=
         if Z.eq_dec reg Register0 then
           Return tt
         else
-          mach <- get;
-          let newRegs := setReg mach.(getRegs) reg v in
-          put (setRegs mach newRegs);
+          if (0 <? reg) && (reg <? 32) then
+            mach <- get;
+            let newRegs := setReg mach.(getRegs) reg v in
+            put (setRegs mach newRegs)
+          else
+            fail_hard;
 
       getPC := mach <- get; Return mach.(getPc);
 
@@ -119,23 +129,33 @@ Section Riscv.
   Arguments Memory.load: simpl never.
   Arguments Memory.store: simpl never.
 
-  Ltac t :=
-    repeat match goal with
+  Lemma not_loadWord_fails_but_storeWord_succeeds: forall {m addr v m'},
+      Memory.loadWord m addr = None ->
+      Memory.storeWord m addr v = Some m' ->
+      False.
+  Proof.
+    intros. unfold Memory.loadWord, Memory.storeWord, Memory.store in *.
+    rewrite H in H0.
+    discriminate.
+  Qed.
+
+  Ltac t0 :=
+    match goal with
        | |- _ => reflexivity
        | |- _ => progress (
-                     unfold computation_satisfies,
+                     unfold computation_satisfies, computation_with_answer_satisfies,
                             IsRiscvMachineL,
-                            valid_register, Register0,
-                            get, put, fail_hard, arbitrary,
+                            Primitives.valid_register, AxiomaticRiscv.valid_register, Register0,
+                            get, put, fail_hard,
+                            arbitrary,
                             logEvent,
-                            Memory.loadWord, Memory.storeWord, Memory.store,
                             simple_isMMIOAddr, theMMIOAddr,
-                            fail_if_None, loadN, storeN,
-                            ZToReg, MkMachineWidth.MachineWidth_XLEN
-                        in *;
+                            ZToReg, MkMachineWidth.MachineWidth_XLEN,
+                            fail_if_None, loadN, storeN in *;
                      subst;
                      simpl in *)
        | |- _ => intro
+       | |- _ => split
        | |- _ => apply functional_extensionality
        | |- _ => apply propositional_extensionality; split; intros
        | u: unit |- _ => destruct u
@@ -146,6 +166,9 @@ Section Riscv.
        | |- context [ let (_, _) := ?p in _ ] => let E := fresh "E" in destruct p eqn: E
        | H: Some _ = Some _ |- _ => inversion H; clear H; subst
        | H: (_, _) = (_, _) |- _ => inversion H; clear H; subst
+       | H: forall x, x = _ -> _ |- _ => specialize (H _ eq_refl)
+       | H: _ && _ = true |- _ => apply andb_prop in H
+       | H: _ && _ = false |- _ => apply Bool.andb_false_iff in H
        | |- _ * _ => constructor
        | |- option _ => exact None
        | |- _ => discriminate
@@ -156,27 +179,83 @@ Section Riscv.
                                  | false => fail 1
                                  | _ => symmetry in H
                                  end
-       | |- _ => rewrite! Z.ltb_nlt in *
+       | |- _ => progress (rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in *)
        | |- _ => omega
-       | |- context [if ?x then _ else _] => let E := fresh "E" in destruct x eqn: E
-       | _: context [if ?x then _ else _] |- _ => let E := fresh "E" in destruct x eqn: E
-       | H: context[match ?x with _ => _ end], E: ?x = Some _ |- _ => rewrite E in H
-       | H: context[match ?x with _ => _ end], E: ?x = None   |- _ => rewrite E in H
+       | H: context[let (_, _) := ?y in _] |- _ => let E := fresh "E" in destruct y eqn: E
+       | E: ?x = Some _, H: context[match ?x with _ => _ end] |- _ => rewrite E in H
+       | E: ?x = Some _  |- context[match ?x with _ => _ end]      => rewrite E
+       | E: ?x = None, H: context[match ?x with _ => _ end] |- _ => rewrite E in H
+       | E: ?x = None  |- context[match ?x with _ => _ end]      => rewrite E
+       | H: context[match ?x with _ => _ end] |- _ => let E := fresh "E" in destruct x eqn: E
+       | |- context[match ?x with _ => _ end]      => let E := fresh "E" in destruct x eqn: E
+       | H1: _, H2: _ |- _ => exfalso; apply (not_loadWord_fails_but_storeWord_succeeds H1 H2)
        | H: _ \/ _ |- _ => destruct H
        | r: RiscvMachineL |- _ =>
          destruct r as [regs pc npc m l];
          simpl in *
+       | o: option _ |- _ => destruct o
+       (* introduce evars as late as possible (after all destructs), to make sure everything
+          is in their scope*)
+(*       | |- exists (P: ?A -> ?S -> Prop), _ =>
+            let a := fresh "a" in evar (a: A);
+            let s := fresh "s" in evar (s: S);
+            exists (fun a0 s0 => a0 = a /\ s0 = s);
+            subst a s*)
        | H1: _, H2: _ |- _ => specialize H1 with (1 := H2)
        end.
 
+  Ltac t := repeat t0.
+
   Local Set Refine Instance Mode.
+
+  Arguments LittleEndian.combine: simpl never.
+
+  Instance MinimalMMIOSatisfiesPrimitives: Primitives MMIOAction (OStateND RiscvMachineL) := {|
+    Primitives.mcomp_sat := @OStateNDOperations.computation_with_answer_satisfies RiscvMachineL;
+  |}.
+  Proof.
+    all: split; [t|].
+    - t.
+      unfold OStateND in m.
+      exists (fun (a: A) (middleL: RiscvMachineL) => m initialL (Some (a, middleL))).
+      t.
+      edestruct H as [b [? ?]]; [eauto|]. t.
+    - t.
+    - t.
+      (edestruct H as [b [? ?]]; [eauto|]); t.
+    - t.
+      (edestruct H as [b [? ?]]; [eauto|]); t.
+    - intros. unfold computation_with_answer_satisfies in *.
+      destruct (Memory.loadWord (getMem initialL) addr) eqn: E.
+      + eexists; split; eauto.
+        specialize (H (Some (w, initialL))).
+        destruct H as [b [? ?]]; [|t].
+        simpl. right. unfold OStateNDOperations.get.
+        do 2 eexists; split; [reflexivity|].
+        t.
+      + exfalso.
+        specialize (H None).
+        destruct H as [b [? ?]]; [|t].
+        simpl. right.
+        do 2 eexists; split; [reflexivity|].
+        rewrite E.
+        (* if the loadWord was an MMIO, spec_loadWord doesn't hold! *)
+        admit.
+    - (* if the storeWord was an MMIO, spec_storeWord doesn't hold! *) admit.
+    - t.
+      (edestruct H as [b [? ?]]; [eauto|]); t.
+    - t.
+      (edestruct H as [b [? ?]]; [eauto|]); t.
+    - t.
+      (edestruct H as [b [? ?]]; [eauto|]); t.
+  Admitted.
+
   Instance MinimalMMIOSatisfiesAxioms:
     AxiomaticRiscv MMIOAction (OStateND RiscvMachineL) :=
   {|
-    mcomp_sat := @OStateNDOperations.computation_satisfies RiscvMachineL;
+    AxiomaticRiscv.mcomp_sat := @OStateNDOperations.computation_satisfies RiscvMachineL;
   |}.
   Proof.
-    (* TODO this should be possible without destructing so deeply *)
     all: abstract t.
   Defined.
 
@@ -192,5 +271,6 @@ End Riscv.
 
 (* needed because defined inside a Section *)
 Existing Instance IsRiscvMachineL.
+Existing Instance MinimalMMIOSatisfiesPrimitives.
 Existing Instance MinimalMMIOSatisfiesAxioms.
 Existing Instance MinimalMMIOSatisfiesMMIOAxioms.
