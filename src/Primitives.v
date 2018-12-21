@@ -33,6 +33,16 @@ Section Primitives.
        postcondition when run on given initial machine *)
     mcomp_sat: forall {A: Type}, M A -> RiscvMachineL -> (A -> RiscvMachineL -> Prop) -> Prop;
 
+    (* Given an initial RiscvMachine state, an address, and a postcondition on
+       (4-byte word input, final state), tells if this postcondition is a safe approximation
+       of the behavior of the machine *)
+    nonmem_loadWord_sat:  RiscvMachineL -> word -> (w32 -> RiscvMachineL -> Prop) -> Prop;
+
+    (* Given an initial RiscvMachine state, an address, a 4-byte word to store,
+       and a postcondition on final states, tells if this postcondition is a safe approximation
+       of the behavior of the machine *)
+    nonmem_storeWord_sat: RiscvMachineL -> word -> w32 -> (RiscvMachineL -> Prop) -> Prop;
+
     spec_Bind{A B: Type}: forall (initialL: RiscvMachineL) (post: B -> RiscvMachineL -> Prop)
                                  (m: M A) (f : A -> M B),
         (exists mid: A -> RiscvMachineL -> Prop,
@@ -57,14 +67,18 @@ Section Primitives.
       mcomp_sat (setRegister x v) initialL post;
 
     spec_loadWord: forall initialL addr (post: w32 -> RiscvMachineL -> Prop),
-        (exists v: w32,
-            Memory.loadWord initialL.(getMem) addr = Some v /\ post v initialL) <->
+        (exists v: w32, Memory.loadWord initialL.(getMem) addr = Some v /\
+                        post v initialL) \/
+        (Memory.loadWord initialL.(getMem) addr = None /\
+         nonmem_loadWord_sat initialL addr post) <->
         mcomp_sat (Program.loadWord (RiscvProgram := RVM) addr) initialL post;
 
     spec_storeWord: forall initialL addr v (post: unit -> RiscvMachineL -> Prop),
         (exists m',
             Memory.storeWord initialL.(getMem) addr v = Some m' /\
-            post tt (withMem m' initialL)) <->
+            post tt (withMem m' initialL)) \/
+        (Memory.loadWord initialL.(getMem) addr = None /\
+         nonmem_storeWord_sat initialL addr v (post tt)) <->
         mcomp_sat (Program.storeWord addr v) initialL post;
 
     spec_getPC: forall initialL (post: word -> RiscvMachineL -> Prop),

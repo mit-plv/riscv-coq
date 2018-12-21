@@ -148,6 +148,8 @@ Section Riscv.
 
   Instance MinimalSatisfiesPrimitives: Primitives Empty_set (OState RiscvMachineL) := {|
     Primitives.mcomp_sat := @OStateOperations.computation_with_answer_satisfies RiscvMachineL;
+    Primitives.nonmem_loadWord_sat  initialL addr post := False;
+    Primitives.nonmem_storeWord_sat initialL addr v post := False;
   |}.
   Proof.
     all: abstract t.
