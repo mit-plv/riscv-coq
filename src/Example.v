@@ -16,18 +16,11 @@ Require Import riscv.Run.
 Require Import riscv.util.Monads.
 Require Import riscv.MkMachineWidth.
 Require Import coqutil.Map.Interface.
+Require Import riscv.Words32Naive.
+Require Import riscv.DefaultMemImpl32.
 Require coqutil.Map.SortedList.
 
 Existing Instance DefaultRiscvState.
-
-Lemma bound32: 0 < 32. lia. Qed.
-Instance word32: word.word 32 := Naive.word 32 bound32.
-Instance word32ok: word.ok word32 := Naive.ok 32 bound32.
-
-Lemma bound8: 0 < 8. lia. Qed.
-Instance word8: word.word 8 := Naive.word 8 bound8.
-Instance word8ok: word.ok word8 := Naive.ok 8 bound8.
-
 
 Instance FunctionRegisterFile: RegisterFileFunctions Register word32 := {|
   RegisterFile := Register -> word32;
@@ -59,36 +52,11 @@ Notation s4 := (WO~1~0~1~0~0)%word.
 Notation s5 := (WO~1~0~1~0~1)%word.
 *)
 
-Open Scope Z_scope.
-
 Goal False.
   set (l := List.map (decode RV32IM) fib6_riscv).
   cbv in l.
   (* decoder seems to work :) *)
 Abort.
-
-Instance params: SortedList.parameters := {|
-  SortedList.parameters.key := word32;
-  SortedList.parameters.value := word8;
-  SortedList.parameters.ltb := word.ltu;
-|}.
-
-Instance strictorder: SortedList.parameters.strict_order SortedList.parameters.ltb.
-constructor; simpl; intros; rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in *; try lia.
-apply (@word.unsigned_inj 32 word32 word32ok). (* TODO can we make this work without @ ? *)
-(* TODO how can we normalize this so that lia will recognize the terms as being the same? *)
-match goal with
-| H: ~ ?x < ?y |- ?x' = ?y' => change x' with x; change y' with y
-end.
-lia.
-Qed.
-
-Instance Mem: map.map word32 word8 := SortedList.map params strictorder.
-
-Instance W: Words := {|
-  byte := word8;
-  word := word32;
-|}.
 
 Definition RiscvMachine := riscv.RiscvMachine.RiscvMachine Register Empty_set.
 Definition RiscvMachineL := riscv.RiscvMachine.RiscvMachine Register LogEvent.
