@@ -43,11 +43,11 @@ Section Riscv.
     end.
 
   Definition loadN(n: nat)(a: word): OStateND RiscvMachineL (HList.tuple byte n) :=
-    mach <- get; fail_if_None (Memory.load n mach.(getMem) a).
+    mach <- get; fail_if_None (Memory.load_bytes n mach.(getMem) a).
 
   Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OStateND RiscvMachineL unit :=
     mach <- get;
-    m <- fail_if_None (Memory.store n mach.(getMem) a v);
+    m <- fail_if_None (Memory.store_bytes n mach.(getMem) a v);
     put (withMem m mach).
 
   Instance IsRiscvMachineL: RiscvProgram (OStateND RiscvMachineL) word :=  {|
@@ -128,15 +128,15 @@ Section Riscv.
       raiseException{A: Type}(isInterrupt: word)(exceptionCode: word) := fail_hard;
   |}.
 
-  Arguments Memory.load: simpl never.
-  Arguments Memory.store: simpl never.
+  Arguments Memory.load_bytes: simpl never.
+  Arguments Memory.store_bytes: simpl never.
 
   Lemma not_loadWord_fails_but_storeWord_succeeds: forall {m addr v m'},
       Memory.loadWord m addr = None ->
       Memory.storeWord m addr v = Some m' ->
       False.
   Proof.
-    intros. unfold Memory.loadWord, Memory.storeWord, Memory.store in *.
+    intros. unfold Memory.loadWord, Memory.storeWord, Memory.store_bytes in *.
     rewrite H in H0.
     discriminate.
   Qed.
@@ -146,7 +146,7 @@ Section Riscv.
       Memory.storeWord m addr v1 = None ->
       False.
   Proof.
-    intros. unfold Memory.loadWord, Memory.storeWord, Memory.store in *.
+    intros. unfold Memory.loadWord, Memory.storeWord, Memory.store_bytes in *.
     rewrite H in H0.
     discriminate.
   Qed.

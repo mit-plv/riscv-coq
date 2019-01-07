@@ -31,11 +31,11 @@ Section Riscv.
     end.
 
   Definition loadN(n: nat)(a: word): OState RiscvMachineL (HList.tuple byte n) :=
-    mach <- get; fail_if_None (Memory.load n mach.(getMem) a).
+    mach <- get; fail_if_None (Memory.load_bytes n mach.(getMem) a).
 
   Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OState RiscvMachineL unit :=
     mach <- get;
-    m <- fail_if_None (Memory.store n mach.(getMem) a v);
+    m <- fail_if_None (Memory.store_bytes n mach.(getMem) a v);
     put (withMem m mach).
 
   Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) word :=  {|
@@ -87,8 +87,8 @@ Section Riscv.
       raiseException{A: Type}(isInterrupt: word)(exceptionCode: word) := fail_hard;
   |}.
 
-  Arguments Memory.load: simpl never.
-  Arguments Memory.store: simpl never.
+  Arguments Memory.load_bytes: simpl never.
+  Arguments Memory.store_bytes: simpl never.
 
   Ltac t :=
     repeat match goal with

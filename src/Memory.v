@@ -14,37 +14,25 @@ Local Open Scope Z_scope.
 Section MemAccess.
   Context {byte: word 8} {width: Z} {word: word width} {mem: map.map word byte}.
 
-  Local Notation "' x <- a ; f" :=
-    (match (a: option _) with
-     | x => f
-     | _ => None
-     end)
-      (right associativity, at level 70, x pattern).
+  Definition footprint(a: word)(sz: nat): tuple word sz :=
+    tuple.unfoldn (fun w => word.add w (word.of_Z 1)) sz a.
 
-  Fixpoint load(n: nat)(m: mem)(addr: word){struct n}: option (tuple byte n) :=
-      match n with
-      | O => Some tt
-      | S n =>
-        'Some b <- map.get m addr;
-        'Some bs <- load n m (word.add addr (word.of_Z 1));
-        Some (pair.mk b bs)
-      end.
+  Definition load_bytes(sz: nat)(m: mem)(addr: word): option (tuple byte sz) :=
+    map.getmany_of_tuple m (footprint addr sz).
 
-  Fixpoint unchecked_store(n: nat)(m: mem)(a: word): tuple byte n -> mem :=
-    match n with
-    | O => fun bs => m
-    | S n => fun bs =>
-         unchecked_store n (map.put m a (pair._1 bs)) (word.add a (word.of_Z 1)) (pair._2 bs)
+  Definition unchecked_store_bytes(sz: nat)(m: mem)(a: word)(bs: tuple byte sz): mem :=
+    map.putmany_of_tuple (footprint a sz) bs m.
+
+  Definition store_bytes(sz: nat)(m: mem)(a: word)(v: tuple byte sz): option mem :=
+    match load_bytes sz m a with
+    | Some _ => Some (unchecked_store_bytes sz m a v)
+    | None => None (* some addresses were invalid *)
     end.
-
-  Definition store(n: nat)(m: mem)(a: word)(v: tuple byte n): option mem :=
-    'Some _ <- load n m a; (* <- checks that all addresses are valid *)
-    Some (unchecked_store n m a v).
 
   Fixpoint unchecked_store_byte_tuple_list{n: nat}(a: word)(l: list (tuple byte n))(m: mem): mem :=
     match l with
     | w :: rest => unchecked_store_byte_tuple_list
-                     (word.add a (word.of_Z (Z.of_nat n))) rest (unchecked_store n m a w)
+                     (word.add a (word.of_Z (Z.of_nat n))) rest (unchecked_store_bytes n m a w)
     | nil => m
     end.
 
@@ -56,15 +44,15 @@ Require Import riscv.Utility.
 Section MemAccess2.
   Context {W: Words} {mem: map.map word byte}.
 
-  Definition loadByte:   mem -> word -> option w8  := load 1.
-  Definition loadHalf:   mem -> word -> option w16 := load 2.
-  Definition loadWord:   mem -> word -> option w32 := load 4.
-  Definition loadDouble: mem -> word -> option w64 := load 8.
+  Definition loadByte:   mem -> word -> option w8  := load_bytes 1.
+  Definition loadHalf:   mem -> word -> option w16 := load_bytes 2.
+  Definition loadWord:   mem -> word -> option w32 := load_bytes 4.
+  Definition loadDouble: mem -> word -> option w64 := load_bytes 8.
 
-  Definition storeByte  : mem -> word -> w8  -> option mem := store 1.
-  Definition storeHalf  : mem -> word -> w16 -> option mem := store 2.
-  Definition storeWord  : mem -> word -> w32 -> option mem := store 4.
-  Definition storeDouble: mem -> word -> w64 -> option mem := store 8.
+  Definition storeByte  : mem -> word -> w8  -> option mem := store_bytes 1.
+  Definition storeHalf  : mem -> word -> w16 -> option mem := store_bytes 2.
+  Definition storeWord  : mem -> word -> w32 -> option mem := store_bytes 4.
+  Definition storeDouble: mem -> word -> w64 -> option mem := store_bytes 8.
 End MemAccess2.
 
 
