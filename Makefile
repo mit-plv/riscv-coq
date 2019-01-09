@@ -2,8 +2,11 @@ default_target: spec
 
 .PHONY: clean force spec all convert
 
-SPEC_VS := $(wildcard src/*.v src/util/*.v)
-ALL_VS := $(shell find src -type f -name '*.v')
+# absolute paths so that emacs compile mode knows where to find error
+SRCDIR := $(shell pwd)/src
+
+SPEC_VS := $(wildcard $(SRCDIR)/*.v $(SRCDIR)/util/*.v)
+ALL_VS := $(shell find $(SRCDIR) -type f -name '*.v')
 
 SPEC_VOS := $(patsubst %.v,%.vo,$(SPEC_VS))
 ALL_VOS := $(patsubst %.v,%.vo,$(ALL_VOS))
