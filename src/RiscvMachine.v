@@ -20,7 +20,7 @@ Section Machine.
   Context {Reg: Type}.
   Context {W: Words}.
   Context {RFF: RegisterFileFunctions Reg word}.
-  Context {Mem: map.map word byte}.
+  Context {Mem: map.map word (option byte)}.
   Context {Action: Type}.
 
   (* (memory before call, call name, arg values) and (memory after call, return values) *)

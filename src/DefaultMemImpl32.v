@@ -7,7 +7,7 @@ Require coqutil.Map.SortedList.
 
 Instance params: SortedList.parameters := {|
   SortedList.parameters.key := word32;
-  SortedList.parameters.value := word8;
+  SortedList.parameters.value := option word8;
   SortedList.parameters.ltb := word.ltu;
 |}.
 
@@ -21,4 +21,4 @@ end.
 lia.
 Qed.
 
-Instance Mem: map.map word32 word8 := SortedList.map params strictorder.
+Instance Mem: map.map word32 (option word8) := SortedList.map params strictorder.

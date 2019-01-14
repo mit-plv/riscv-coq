@@ -19,7 +19,7 @@ Local Open Scope bool_scope.
 Section Riscv.
 
   Context {W: Words}.
-  Context {Mem: map.map word byte}.
+  Context {Mem: map.map word (option byte)}.
   Context {RFF: RegisterFileFunctions Register word}.
 
   Local Notation RiscvMachineL := (RiscvMachine Register Empty_set).

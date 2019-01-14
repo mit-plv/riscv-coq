@@ -1,6 +1,7 @@
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Map.Interface.
+Require Import coqutil.Datatypes.HList.
 Require Import riscv.util.Monads.
 Require Import riscv.Utility.
 Require Import riscv.Decode.
@@ -12,21 +13,15 @@ Require Export riscv.AxiomaticRiscv.
 Require Import riscv.MMIOTrace.
 Require Import coqutil.Word.LittleEndian.
 
+Definition Nones{A: Type}(n: nat): tuple (option A) n := tuple.unfoldn (fun _ => None) n None.
 
 Section Axiomatic.
 
   Class AxiomaticRiscvMMIO`{AxiomaticRiscv (Action := MMIOAction)} := {
 
-    theMMIOAddr: word := (word.of_Z 65524); (* maybe like spike *)
-
-    simple_isMMIOAddr: word -> bool := word.eqb theMMIOAddr;
-
     go_loadWord_MMIO: forall initialL (addr: word) (f: w32 -> M unit)
                              (post: RiscvMachine Register MMIOAction -> Prop),
-        (* map.get initialL.(getMem) addr = None -> *)
-        (* TODO exists vs forall in the 4byte range *)
-        Memory.loadWord initialL.(getMem) addr = None ->
-        simple_isMMIOAddr addr = true ->
+        map.getmany_of_tuple initialL.(getMem) (footprint addr 4) = Some (Nones 4) ->
         (forall (inp: w32),
             mcomp_sat
               (f inp)
@@ -37,10 +32,7 @@ Section Axiomatic.
         mcomp_sat (Bind (Program.loadWord addr) f) initialL post;
 
     go_storeWord_MMIO: forall initialL addr v post (f: unit -> M unit),
-        (* map.get initialL.(getMem) addr = None -> *)
-        (* TODO exists vs forall in the 4byte range *)
-        Memory.loadWord initialL.(getMem) addr = None ->
-        simple_isMMIOAddr addr = true ->
+        map.getmany_of_tuple initialL.(getMem) (footprint addr 4) = Some (Nones 4) ->
         mcomp_sat
           (f tt)
           (withLogItem ((initialL.(getMem),MMOutput,[addr; word.of_Z (LittleEndian.combine 4 v)]),

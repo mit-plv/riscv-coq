@@ -18,7 +18,7 @@ Section Primitives.
   Context {W: Words}.
   Context {RFF: RegisterFileFunctions Register word}.
   Context {Action: Type}.
-  Context {mem: map.map word byte}.
+  Context {mem: map.map word (option byte)}.
 
   Local Notation RiscvMachineL := (RiscvMachine Register Action).
 
