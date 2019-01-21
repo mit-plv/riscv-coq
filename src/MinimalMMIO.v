@@ -16,10 +16,19 @@ Require Export riscv.RiscvMachine.
 Require Import Coq.micromega.Lia.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Tactics.Tactics.
+Require Import coqutil.Datatypes.HList.
 
 
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
+
+Definition all_None{A: Type}{n: nat}(t: tuple (option A) n): bool :=
+  List.fold_right (fun o b => match o with
+                              | Some _ => false
+                              | None => true
+                              end)
+                  true
+                  (tuple.to_list t).
 
 Section Riscv.
 
@@ -82,38 +91,26 @@ Section Riscv.
       loadHalf   := loadN 2;
       loadWord a :=
         mach <- get;
-        match Memory.loadWord mach.(getMem) a with
-        | Some v => Return v
-        | None => if simple_isMMIOAddr a then
-                    inp <- arbitrary w32;
-                    logEvent ((mach.(getMem), MMInput, [a]), (mach.(getMem), [uInt32ToReg inp]));;
-                    Return inp
-                  else
-                    fail_hard
+        match Memory.loadWord mach.(getMem) a, simple_isMMIOAddr a with
+        | Some v, false => Return v
+        | None, true =>
+          inp <- arbitrary w32;
+          logEvent ((mach.(getMem), MMInput, [a]), (mach.(getMem), [uInt32ToReg inp]));;
+          Return inp
+        | _, _ => fail_hard
         end;
       loadDouble := loadN 8;
-(*
-      storeWord a v :=
-        mach <- get;
-        if mach.(isMem) a then
-          liftStore Memory.storeWord a v
-        else
-          if simple_isMMIOAddr a then
-            logEvent (MMOutput, [a; uInt32ToReg v], [])
-          else
-            fail_hard;
-*)
 
       storeByte   := storeN 1;
       storeHalf   := storeN 2;
       storeWord a v :=
         mach <- get;
-        match Memory.storeWord mach.(getMem) a v with
-        | Some m => put (withMem m mach)
-        | None => if simple_isMMIOAddr a then
-                    logEvent ((mach.(getMem), MMOutput, [a; uInt32ToReg v]), (mach.(getMem), []))
-                  else
-                    fail_hard
+        match Memory.storeWord mach.(getMem) a v, simple_isMMIOAddr a with
+        | Some m, false =>
+          put (withMem m mach)
+        | None, true =>
+          logEvent ((mach.(getMem), MMOutput, [a; uInt32ToReg v]), (mach.(getMem), []))
+        | _, _ => fail_hard
         end;
       storeDouble := storeN 8;
 
