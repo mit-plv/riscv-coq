@@ -52,4 +52,4 @@ Section Axiomatic.
 
 End Axiomatic.
 
-Arguments AxiomaticRiscvMMIO {W} {RFF} {mem} M {MM} {RVM} {H}.
+Arguments AxiomaticRiscvMMIO {W} {Registers} {mem} M {MM} {RVM} {H}.

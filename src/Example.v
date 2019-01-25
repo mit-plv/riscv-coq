@@ -18,17 +18,10 @@ Require Import riscv.MkMachineWidth.
 Require Import coqutil.Map.Interface.
 Require Import riscv.Words32Naive.
 Require Import riscv.DefaultMemImpl32.
+Require Import coqutil.Map.Z_keyed_SortedListMap.
 Require coqutil.Map.SortedList.
 
 Existing Instance DefaultRiscvState.
-
-Instance FunctionRegisterFile: RegisterFileFunctions Register word32 := {|
-  RegisterFile := Register -> word32;
-  getReg(rf: Register -> word32) := rf;
-  setReg(rf: Register -> word32)(r: Register)(v: word32) :=
-    fun r' => if (Z.eqb r' r) then v else rf r';
-  initialRegs := fun r => word.of_Z 0;
-|}.
 
 Definition fib6_riscv: list MachineInt := [ (* TODO should be "word32", not MachineInt *)
   Ox"00600993";         (* li s3,6 *)
@@ -64,7 +57,7 @@ Definition RiscvMachineL := riscv.RiscvMachine.RiscvMachine Register LogEvent.
 (* This example uses the memory only as instruction memory
    TODO make an example which uses memory to store data *)
 Definition zeroedRiscvMachine: RiscvMachine := {|
-  getRegs := initialRegs;
+  getRegs := map.empty;
   getPc := ZToReg 0;
   getNextPc := ZToReg 4;
   getMem := map.empty;
@@ -86,7 +79,10 @@ Definition fib6_L_final(fuel: nat): RiscvMachineL :=
   end.
 
 Definition fib6_L_res(fuel: nat): word32 :=
-  (fib6_L_final fuel).(getRegs) 18.
+  match map.get (fib6_L_final fuel).(getRegs) 18 with
+  | Some v => v
+  | None => word.of_Z 0
+  end.
 
 Definition fib6_L_trace(fuel: nat): list (LogItem LogEvent) :=
   (fib6_L_final fuel).(getLog).

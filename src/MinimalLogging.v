@@ -16,7 +16,7 @@ Require Import coqutil.Map.Interface.
 Section Riscv.
   Context {W: Words}.
   Context {Mem: map.map word byte}.
-  Context {RFF: RegisterFileFunctions Register word}.
+  Context {Registers: map.map Register word}.
 
   Inductive LogEvent :=
   | EvLoadWord(addr: Z)(i: Instruction)

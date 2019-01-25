@@ -16,7 +16,7 @@ Definition valid_register(r: Register): Prop := (0 < r < 32)%Z.
 Section Axiomatic.
 
   Context {W: Words}.
-  Context {RFF: RegisterFileFunctions Register word}.
+  Context {Registers: map.map Register word}.
   Context {Action: Type}.
   Context {mem: map.map word byte}.
 
@@ -38,9 +38,10 @@ Section Axiomatic.
        additional input, and before applying these lemmas in the compiler correctness
        proof (where we always have a Bind), we'd have to split up the Bind *)
 
-    go_getRegister: forall (initialL: RiscvMachineL) (x: Register) post (f: word -> M unit),
+    go_getRegister: forall (initialL: RiscvMachineL) (x: Register) v post (f: word -> M unit),
       valid_register x ->
-      mcomp_sat (f (getReg initialL.(getRegs) x)) initialL post ->
+      map.get initialL.(getRegs) x = Some v ->
+      mcomp_sat (f v) initialL post ->
       mcomp_sat (Bind (getRegister x) f) initialL post;
 
     go_getRegister0: forall (initialL: RiscvMachineL) post (f: word -> M unit),
@@ -53,7 +54,7 @@ Section Axiomatic.
 
     go_setRegister: forall initialL x v post (f: unit -> M unit),
       valid_register x ->
-      mcomp_sat (f tt) (setRegs initialL (setReg initialL.(getRegs) x v)) post ->
+      mcomp_sat (f tt) (setRegs initialL (map.put initialL.(getRegs) x v)) post ->
       mcomp_sat (Bind (setRegister x v) f) initialL post;
 
     go_loadWord: forall initialL addr (v: w32) (f: w32 -> M unit) (post: RiscvMachineL -> Prop),

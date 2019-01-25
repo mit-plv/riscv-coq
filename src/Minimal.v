@@ -20,7 +20,7 @@ Section Riscv.
 
   Context {W: Words}.
   Context {Mem: map.map word byte}.
-  Context {RFF: RegisterFileFunctions Register word}.
+  Context {Registers: map.map Register word}.
 
   Local Notation RiscvMachineL := (RiscvMachine Register Empty_set).
 
@@ -45,7 +45,10 @@ Section Riscv.
         else
           if (0 <? reg) && (reg <? 32) then
             mach <- get;
-            Return (getReg mach.(getRegs) reg)
+            match map.get mach.(getRegs) reg with
+            | Some v => Return v
+            | None => Return (word.of_Z 0)
+            end
           else
             fail_hard;
 
@@ -55,7 +58,7 @@ Section Riscv.
         else
           if (0 <? reg) && (reg <? 32) then
             mach <- get;
-            let newRegs := setReg mach.(getRegs) reg v in
+            let newRegs := map.put mach.(getRegs) reg v in
             put (setRegs mach newRegs)
           else
             fail_hard;
@@ -97,6 +100,7 @@ Section Riscv.
                      unfold computation_satisfies, computation_with_answer_satisfies,
                             IsRiscvMachineL,
                             Primitives.valid_register, AxiomaticRiscv.valid_register, Register0,
+                            Primitives.is_initial_register_value,
                             get, put, fail_hard,
                             Memory.loadWord, Memory.storeWord,
                             fail_if_None, loadN, storeN in *;
@@ -142,17 +146,20 @@ Section Riscv.
             let s := fresh "s" in evar (s: S);
             exists (fun a0 s0 => a0 = a /\ s0 = s);
             subst a s
+       | |- _ \/ _ => left; solve [t]
+       | |- _ \/ _ => right; solve [t]
        end.
 
   Local Set Refine Instance Mode.
 
   Instance MinimalSatisfiesPrimitives: Primitives Empty_set (OState RiscvMachineL) := {|
     Primitives.mcomp_sat := @OStateOperations.computation_with_answer_satisfies RiscvMachineL;
+    Primitives.is_initial_register_value := eq (word.of_Z 0);
     Primitives.nonmem_loadWord_sat  initialL addr post := False;
     Primitives.nonmem_storeWord_sat initialL addr v post := False;
   |}.
   Proof.
-    all: abstract t.
+    all: try abstract t.
   Defined.
 
   Instance MinimalSatisfiesAxioms: AxiomaticRiscv Empty_set (OState RiscvMachineL) := {|

@@ -5,21 +5,12 @@ Require Import coqutil.Word.LittleEndian.
 Require Import riscv.Memory.
 Require Import riscv.Utility.
 
-Class RegisterFileFunctions(R V: Type) := mkRegisterFileFunctions {
-  RegisterFile: Type;
-  getReg: RegisterFile -> R -> V;
-  setReg: RegisterFile -> R -> V -> RegisterFile;
-  initialRegs: RegisterFile;
-}.
-
-Arguments RegisterFile _ _ {_}.
-
 
 Section Machine.
 
   Context {Reg: Type}.
   Context {W: Words}.
-  Context {RFF: RegisterFileFunctions Reg word}.
+  Context {Registers: map.map Reg word}.
   Context {Mem: map.map word byte}.
   Context {Action: Type}.
 
@@ -27,14 +18,14 @@ Section Machine.
   Definition LogItem: Type := (Mem * Action * list word) * (Mem * list word).
 
   Record RiscvMachine := mkRiscvMachine {
-    getRegs: RegisterFile Reg word;
+    getRegs: Registers;
     getPc: word;
     getNextPc: word;
     getMem: Mem;
     getLog: list LogItem;
   }.
 
-  Definition setRegs: RiscvMachine -> RegisterFile Reg word -> RiscvMachine :=
+  Definition setRegs: RiscvMachine -> Registers -> RiscvMachine :=
     fun '(mkRiscvMachine regs1 pc nextPC mem log) regs2 =>
           mkRiscvMachine regs2 pc nextPC mem log.
 
@@ -60,7 +51,7 @@ Section Machine.
   Definition logAppend(m: RiscvMachine)(items: list LogItem): RiscvMachine :=
     setLog m (items ++ m.(getLog)).
 
-  Definition withRegs: RegisterFile Reg word -> RiscvMachine -> RiscvMachine :=
+  Definition withRegs: Registers -> RiscvMachine -> RiscvMachine :=
     fun regs2 '(mkRiscvMachine regs1 pc nextPC mem log) =>
                 mkRiscvMachine regs2 pc nextPC mem log.
 
@@ -95,7 +86,7 @@ Section Machine.
 
 End Machine.
 
-Arguments RiscvMachine Reg {W} {RFF} {Mem} Action.
+Arguments RiscvMachine Reg {W} {Registers} {Mem} Action.
 Arguments LogItem {W} {Mem} Action.
 
 (* Using techniques such as

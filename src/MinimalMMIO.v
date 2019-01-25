@@ -25,7 +25,7 @@ Section Riscv.
 
   Context {W: Words}.
   Context {Mem: map.map word byte}.
-  Context {RFF: RegisterFileFunctions Register word}.
+  Context {Registers: map.map Register word}.
 
   Local Notation RiscvMachineL := (RiscvMachine Register MMIOAction).
 
@@ -57,7 +57,10 @@ Section Riscv.
         else
           if (0 <? reg) && (reg <? 32) then
             mach <- get;
-            Return (getReg mach.(getRegs) reg)
+            match map.get mach.(getRegs) reg with
+            | Some v => Return v
+            | None => arbitrary word
+            end
           else
             fail_hard;
 
@@ -67,7 +70,7 @@ Section Riscv.
         else
           if (0 <? reg) && (reg <? 32) then
             mach <- get;
-            let newRegs := setReg mach.(getRegs) reg v in
+            let newRegs := map.put mach.(getRegs) reg v in
             put (setRegs mach newRegs)
           else
             fail_hard;
@@ -92,17 +95,6 @@ Section Riscv.
                     fail_hard
         end;
       loadDouble := loadN 8;
-(*
-      storeWord a v :=
-        mach <- get;
-        if mach.(isMem) a then
-          liftStore Memory.storeWord a v
-        else
-          if simple_isMMIOAddr a then
-            logEvent (MMOutput, [a; uInt32ToReg v], [])
-          else
-            fail_hard;
-*)
 
       storeByte   := storeN 1;
       storeHalf   := storeN 2;
@@ -158,6 +150,7 @@ Section Riscv.
                      unfold computation_satisfies, computation_with_answer_satisfies,
                             IsRiscvMachineL,
                             Primitives.valid_register, AxiomaticRiscv.valid_register, Register0,
+                            Primitives.is_initial_register_value,
                             get, put, fail_hard,
                             arbitrary,
                             logEvent,
@@ -202,6 +195,7 @@ Section Riscv.
        | |- context[match ?x with _ => _ end]      => let E := fresh "E" in destruct x eqn: E
        | H1: _, H2: _ |- _ => exfalso; apply (not_loadWord_fails_but_storeWord_succeeds H1 H2)
        | H1: _, H2: _ |- _ => exfalso; apply (not_storeWord_fails_but_loadWord_succeeds H1 H2)
+       | |- exists a b, Some (a, b) = _ /\ _ => do 2 eexists; split; [reflexivity|]
        | H: _ \/ _ |- _ => destruct H
        | r: RiscvMachineL |- _ =>
          destruct r as [regs pc npc m l];
@@ -215,6 +209,8 @@ Section Riscv.
             exists (fun a0 s0 => a0 = a /\ s0 = s);
             subst a s*)
        | H1: _, H2: _ |- _ => specialize H1 with (1 := H2)
+       | |- _ \/ _ => left; solve [repeat t0]
+       | |- _ \/ _ => right; solve [repeat t0]
        end.
 
   Ltac t := repeat t0.
@@ -225,11 +221,16 @@ Section Riscv.
 
   Instance MinimalMMIOSatisfiesPrimitives: Primitives MMIOAction (OStateND RiscvMachineL) := {|
     Primitives.mcomp_sat := @OStateNDOperations.computation_with_answer_satisfies RiscvMachineL;
+
+    (* any value can be found in an uninitialized register *)
+    Primitives.is_initial_register_value x := True;
+
     Primitives.nonmem_loadWord_sat initialL addr post :=
       simple_isMMIOAddr addr = true /\
       forall v, post v (withLogItem ((initialL.(getMem), MMInput, [addr]),
                                      (initialL.(getMem), [word.of_Z (LittleEndian.combine 4 v)]))
                                     initialL);
+
     Primitives.nonmem_storeWord_sat initialL addr v post :=
       simple_isMMIOAddr addr = true /\
       post (withLogItem
@@ -246,7 +247,8 @@ Section Riscv.
       edestruct H as [b [? ?]]; [eauto|]. t.
     - t.
     - t.
-      (edestruct H as [b [? ?]]; [eauto|]); t.
+      + (edestruct H as [b [? ?]]; [eauto|]); t.
+      + left. t. edestruct H as [b [? ?]]; t.
     - t.
       (edestruct H as [b [? ?]]; [eauto|]); t.
     - intros. unfold computation_with_answer_satisfies in *.
@@ -288,14 +290,6 @@ Section Riscv.
         end.
         destruct H; [|solve [t]].
         t.
-        * right.
-          do 2 eexists; split; [reflexivity|]. simpl.
-          rewrite F.
-          reflexivity.
-        * right.
-          do 2 eexists; split; [reflexivity|]. simpl.
-          rewrite F.
-          reflexivity.
       + destruct (Memory.loadWord (getMem initialL) addr) eqn: G; [ exfalso; t | ].
         right.
         destruct (simple_isMMIOAddr addr) eqn: A.

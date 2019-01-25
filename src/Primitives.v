@@ -16,7 +16,7 @@ Definition valid_register(r: Register): Prop := (0 < r < 32)%Z.
 Section Primitives.
 
   Context {W: Words}.
-  Context {RFF: RegisterFileFunctions Register word}.
+  Context {Registers: map.map Register word}.
   Context {Action: Type}.
   Context {mem: map.map word byte}.
 
@@ -32,6 +32,11 @@ Section Primitives.
     (* Abstract predicate specifying when a monadic computation satisfies a
        postcondition when run on given initial machine *)
     mcomp_sat: forall {A: Type}, M A -> RiscvMachineL -> (A -> RiscvMachineL -> Prop) -> Prop;
+
+    (* Tells whether the given value can be found in an uninitialized register.
+       On instances supporting non-determinism, it returns True for all values.
+       On instances without non-determinism, it only accepts a default value, eg 0 *)
+    is_initial_register_value: word -> Prop;
 
     (* Given an initial RiscvMachine state, an address, and a postcondition on
        (4-byte word input, final state), tells if this postcondition is a safe approximation
@@ -57,12 +62,16 @@ Section Primitives.
 
     spec_getRegister: forall (initialL: RiscvMachineL) (x: Register)
                              (post: word -> RiscvMachineL -> Prop),
-        (valid_register x /\ post (getReg initialL.(getRegs) x) initialL \/
-         x = Register0 /\ post (word.of_Z 0) initialL) <->
+        (valid_register x /\
+         match map.get initialL.(getRegs) x with
+         | Some v => post v initialL
+         | None => forall v, is_initial_register_value v -> post v initialL
+         end) \/
+        (x = Register0 /\ post (word.of_Z 0) initialL) <->
         mcomp_sat (getRegister x) initialL post;
 
     spec_setRegister: forall initialL x v (post: unit -> RiscvMachineL -> Prop),
-      (valid_register x /\ post tt (setRegs initialL (setReg initialL.(getRegs) x v)) \/
+      (valid_register x /\ post tt (setRegs initialL (map.put initialL.(getRegs) x v)) \/
        x = Register0 /\ post tt initialL) <->
       mcomp_sat (setRegister x v) initialL post;
 
