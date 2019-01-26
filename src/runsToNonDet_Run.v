@@ -7,7 +7,6 @@ Require Import riscv.runsToNonDet.
 Require Import riscv.AxiomaticRiscv.
 Require Import riscv.RiscvMachine.
 Require Import riscv.Decode.
-Require Import riscv.util.BitWidths.
 Require Import riscv.MkMachineWidth.
 Require Import riscv.Program.
 Require Import riscv.Utility.
@@ -17,15 +16,13 @@ Section Equiv.
 
   Context `{AxiomaticRiscv}.
   Context {RVS: RiscvState M word}.
-  Variable BW: BitWidths.
-
-  Definition run: nat -> M unit := run. (* just to make sure all implicit arguments are there *)
+  Variable iset: InstructionSet.
 
   Lemma runsToNonDet_to_Run_aux: forall (initial: RiscvMachine Register Action)
                                     (P: RiscvMachine Register Action -> Prop),
-      runsTo (mcomp_sat run1) initial P ->
-      runsTo (mcomp_sat run1) initial (fun final =>
-         P final /\ exists (n: nat), mcomp_sat (run n) initial P).
+      runsTo (mcomp_sat (run1 iset)) initial P ->
+      runsTo (mcomp_sat (run1 iset)) initial (fun final =>
+         P final /\ exists (n: nat), mcomp_sat (run iset n) initial P).
   Proof.
     induction 1.
     - apply runsToDone.
@@ -73,8 +70,8 @@ eassumption.
 
   Lemma runsToNonDet_to_Run: forall (initial: RiscvMachine Register Action)
                                     (P: RiscvMachine Register Action -> Prop),
-      runsTo (mcomp_sat run1) initial P ->
-      exists (n: nat), mcomp_sat (run n) initial P.
+      runsTo (mcomp_sat (run1 iset)) initial P ->
+      exists (n: nat), mcomp_sat (run iset n) initial P.
   Proof.
     induction 1.
     - exists O.
@@ -88,8 +85,8 @@ eassumption.
 
   Lemma Run_to_runsToNonDet: forall (n: nat) (initial: RiscvMachine Register Action)
                                     (P: RiscvMachine Register Action -> Prop),
-      mcomp_sat (run n) initial P ->
-      runsTo (mcomp_sat run1) initial P.
+      mcomp_sat (run iset n) initial P ->
+      runsTo (mcomp_sat (run1 iset)) initial P.
   Proof.
     induction n; intros.
     - unfold run, Run.run in H0. simpl in H0.

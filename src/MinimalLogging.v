@@ -1,5 +1,4 @@
 Require Import Coq.ZArith.BinInt.
-Require Import riscv.util.BitWidths.
 Require Import riscv.util.Monads. Import OStateOperations.
 Require Import riscv.util.MonadNotations.
 Require Import riscv.Decode.

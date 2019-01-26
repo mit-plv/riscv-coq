@@ -5,7 +5,6 @@ Require Import coqutil.Word.Naive.
 Require Import coqutil.Word.Properties.
 Require Import riscv.Program.
 Require Import riscv.Decode.
-Require Import riscv.util.BitWidth32.
 Require Import bbv.HexNotationZ.
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.Utility.
@@ -70,7 +69,7 @@ Definition zeroedRiscvMachineL: RiscvMachineL :=
 Definition initialRiscvMachineL(imem: list MachineInt): RiscvMachineL :=
   putProgram imem (ZToReg 0) zeroedRiscvMachineL.
 
-Definition run: nat -> RiscvMachineL -> (option unit) * RiscvMachineL := run.
+Definition run: nat -> RiscvMachineL -> (option unit) * RiscvMachineL := run RV32IM.
  (* @run BitWidths32 MachineWidth32 (OState RiscvMachineL) (OState_Monad _) _ _ _ *)
 
 Definition fib6_L_final(fuel: nat): RiscvMachineL :=
