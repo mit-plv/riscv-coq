@@ -23,6 +23,7 @@ Class Words := {
   byte :> word 8;
   byte_ok :> word.ok byte;
   width : Z;
+  width_cases: width = 32 \/ width = 64;
   word: word width;
   word_ok :> word.ok word;
 }.
