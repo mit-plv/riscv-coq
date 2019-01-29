@@ -56,14 +56,18 @@ Section Riscv.
 
   (* in a system with virtual memory, this would also do the translation, but in our
      case, we only verify the alignment *)
-  Definition default_translate{MP: RiscvProgram}
+  Definition translate_with_alignment_check{MP: RiscvProgram}
     (accessType: AccessType)(alignment: t)(addr: t): M t :=
     if remu addr alignment /= ZToReg 0
     then raiseException (ZToReg 0) (ZToReg 4)
     else Return addr.
 
   Instance DefaultRiscvState{MP: RiscvProgram}: RiscvState := {|
-    translate := default_translate;
+    (* riscv does allow misaligned memory access (but might emulate them in software),
+       so for the compiler-facing side, we don't do alignment checks, but might add
+       another riscv machine layer below to emulate turn misaligned accesses into two
+       aligned accesses *)
+    translate accessType alignment := @Return M MM t;
   |}.
 
 End Riscv.
@@ -74,3 +78,5 @@ Arguments RiscvProgram: clear implicits.
 Arguments RiscvProgram (M) (t) {_} {_}.
 Arguments RiscvState: clear implicits.
 Arguments RiscvState (M) (t) {_} {_} {_}.
+
+Existing Instance DefaultRiscvState.
