@@ -6,8 +6,6 @@ Require Import riscv.util.MonadNotations.
 Require Import riscv.Decode.
 Require Import riscv.Program.
 Require Import riscv.Utility.
-Require Import riscv.AxiomaticRiscvMMIO.
-Require Import riscv.AxiomaticRiscv.
 Require Import riscv.Primitives.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Export riscv.MMIOTrace.
@@ -32,13 +30,15 @@ Section Riscv.
 
   Definition simple_isMMIOAddr: word -> bool := reg_eqb theMMIOAddr.
 
+  Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
+    word.of_Z (BitOps.sextend (8 * Z.of_nat n) (LittleEndian.combine n v)).
+
   Definition mmioLoadEvent(m: Mem)(addr: word){n: nat}(v: HList.tuple byte n):
-    LogItem MMIOAction :=
-    ((m, MMInput, [addr]), (m, [word.of_Z (LittleEndian.combine n v)])).
+    LogItem MMIOAction := ((m, MMInput, [addr]), (m, [signedByteTupleToReg v])).
 
   Definition mmioStoreEvent(m: Mem)(addr: word){n: nat}(v: HList.tuple byte n):
     LogItem MMIOAction :=
-    ((m, MMOutput, [addr; word.of_Z (LittleEndian.combine n v)]), (m, [])).
+    ((m, MMOutput, [addr; signedByteTupleToReg v]), (m, [])).
 
   Definition logEvent(e: LogItem MMIOAction): OStateND RiscvMachineL unit :=
     m <- get; put (withLogItem e m).
@@ -152,8 +152,8 @@ Section Riscv.
        | |- _ => progress (
                      unfold computation_satisfies, computation_with_answer_satisfies,
                             IsRiscvMachineL,
-                            Primitives.valid_register, AxiomaticRiscv.valid_register, Register0,
-                            Primitives.is_initial_register_value,
+                            valid_register, Register0,
+                            is_initial_register_value,
                             get, put, fail_hard,
                             arbitrary,
                             logEvent,
@@ -383,29 +383,8 @@ Section Riscv.
       (edestruct H as [b [? ?]]; [eauto|]); t.
   Defined.
 
-  Local Set Refine Instance Mode.
-
-  Instance MinimalMMIOSatisfiesAxioms:
-    AxiomaticRiscv MMIOAction (OStateND RiscvMachineL) :=
-  {|
-    AxiomaticRiscv.mcomp_sat := @OStateNDOperations.computation_satisfies RiscvMachineL;
-  |}.
-  Proof.
-    all: abstract t.
-  Defined.
-
-  Arguments LittleEndian.combine: simpl never.
-
-  Instance MinimalMMIOSatisfiesMMIOAxioms:
-    AxiomaticRiscvMMIO (OStateND RiscvMachineL).
-  Proof.
-    constructor. all: t.
-  Qed.
-
 End Riscv.
 
 (* needed because defined inside a Section *)
 Existing Instance IsRiscvMachineL.
 Existing Instance MinimalMMIOSatisfiesPrimitives.
-Existing Instance MinimalMMIOSatisfiesAxioms.
-Existing Instance MinimalMMIOSatisfiesMMIOAxioms.

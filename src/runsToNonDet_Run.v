@@ -4,7 +4,7 @@
 Require Import coqutil.Word.Interface.
 Require Import riscv.Run.
 Require Import riscv.runsToNonDet.
-Require Import riscv.AxiomaticRiscv.
+Require Import riscv.Primitives.
 Require Import riscv.RiscvMachine.
 Require Import riscv.Decode.
 Require Import riscv.MkMachineWidth.
@@ -14,9 +14,13 @@ Require Import riscv.Utility.
 
 Section Equiv.
 
-  Context `{AxiomaticRiscv}.
-  Context {RVS: RiscvState M word}.
+  Context `{Primitives}.
   Variable iset: InstructionSet.
+
+  (* redefine mcomp_sat to simplify for the case where no answer is returned *)
+  Definition mcomp_sat(m: M unit)(initialL: RiscvMachine Register Action)
+             (post: RiscvMachine Register Action -> Prop): Prop :=
+    mcomp_sat m initialL (fun (_: unit) => post).
 
   Lemma runsToNonDet_to_Run_aux: forall (initial: RiscvMachine Register Action)
                                     (P: RiscvMachine Register Action -> Prop),
@@ -30,7 +34,7 @@ Section Equiv.
       exists O.
       unfold run, Run.run.
       simpl.
-      apply go_done.
+      apply spec_Return.
       assumption.
     - eapply runsToStep; [eassumption|].
       intros.
@@ -77,7 +81,7 @@ eassumption.
     - exists O.
       unfold run, Run.run.
       simpl.
-      apply go_done.
+      apply spec_Return.
       assumption.
     -
   Abort.

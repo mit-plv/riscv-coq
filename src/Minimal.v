@@ -6,7 +6,6 @@ Require Import riscv.util.MonadNotations.
 Require Import riscv.Decode.
 Require Import riscv.Program.
 Require Import riscv.Utility.
-Require Import riscv.AxiomaticRiscv.
 Require Import riscv.Primitives.
 Require Export riscv.RiscvMachine.
 Require Import Coq.micromega.Lia.
@@ -98,8 +97,8 @@ Section Riscv.
        | |- _ => progress (
                      unfold computation_satisfies, computation_with_answer_satisfies,
                             IsRiscvMachineL,
-                            Primitives.valid_register, AxiomaticRiscv.valid_register, Register0,
-                            Primitives.is_initial_register_value,
+                            valid_register, Register0,
+                            is_initial_register_value,
                             get, put, fail_hard,
                             Memory.loadByte, Memory.storeByte,
                             Memory.loadHalf, Memory.storeHalf,
@@ -171,19 +170,8 @@ Section Riscv.
     all: try t.
   Qed.
 
-  Local Set Refine Instance Mode.
-
-  Instance MinimalSatisfiesAxioms: AxiomaticRiscv Empty_set (OState RiscvMachineL) := {|
-    AxiomaticRiscv.mcomp_sat := @OStateOperations.computation_satisfies RiscvMachineL;
-  |}.
-  Proof.
-  (* TODO this should be possible without destructing so deeply *)
-  all: abstract t.
-  Defined.
-
 End Riscv.
 
 (* needed because defined inside a Section *)
 Existing Instance IsRiscvMachineL.
 Existing Instance MinimalSatisfiesPrimitives.
-Existing Instance MinimalSatisfiesAxioms.
