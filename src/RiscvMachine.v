@@ -1,56 +1,105 @@
 Require Import Coq.ZArith.BinInt.
-Require Import riscv.util.BitWidths.
-Require Import riscv.Decode.
+Require Import coqutil.Map.Interface.
+Require Import coqutil.Word.Interface.
+Require Import coqutil.Word.LittleEndian.
 Require Import riscv.Memory.
 Require Import riscv.Utility.
 
 
-Class RegisterFile{RF R V: Type} := mkRegisterFile {
-  getReg: RF -> R -> V;
-  setReg: RF -> R -> V -> RF;
-  initialRegs: RF;
-}.
+Section Machine.
 
-Arguments RegisterFile: clear implicits.
+  Context {Reg: Type}.
+  Context {W: Words}.
+  Context {Registers: map.map Reg word}.
+  Context {Mem: map.map word byte}.
+  Context {Action: Type}.
 
-Section Riscv.
-
-  Context {mword: Type}.
-  Context {MW: MachineWidth mword}.
-  Context {Mem: Type}.
-  Context {MemIsMem: Memory Mem mword}.
-  Context {RF: Type}.
-  Context {RFI: RegisterFile RF Register mword}.
-  
-  Record RiscvMachineCore := mkRiscvMachineCore {
-    registers: RF;
-    pc: mword;
-    nextPC: mword;
-    exceptionHandlerAddr: MachineInt;
-  }.
+  (* (memory before call, call name, arg values) and (memory after call, return values) *)
+  Definition LogItem: Type := (Mem * Action * list word) * (Mem * list word).
 
   Record RiscvMachine := mkRiscvMachine {
-    core: RiscvMachineCore;
-    machineMem: Mem;
+    getRegs: Registers;
+    getPc: word;
+    getNextPc: word;
+    getMem: Mem;
+    getLog: list LogItem;
   }.
 
-  Definition with_registers r ma :=
-    mkRiscvMachine (mkRiscvMachineCore
-        r ma.(core).(pc) ma.(core).(nextPC) ma.(core).(exceptionHandlerAddr))
-        ma.(machineMem).
-  Definition with_pc p ma :=
-    mkRiscvMachine (mkRiscvMachineCore
-        ma.(core).(registers) p ma.(core).(nextPC) ma.(core).(exceptionHandlerAddr))
-        ma.(machineMem).
-  Definition with_nextPC npc ma :=
-    mkRiscvMachine (mkRiscvMachineCore
-        ma.(core).(registers) ma.(core).(pc) npc ma.(core).(exceptionHandlerAddr))
-        ma.(machineMem).
-  Definition with_exceptionHandlerAddr eh ma :=
-    mkRiscvMachine (mkRiscvMachineCore
-        ma.(core).(registers) ma.(core).(pc) ma.(core).(nextPC) eh)
-        ma.(machineMem).
-  Definition with_machineMem m ma :=
-    mkRiscvMachine ma.(core) m.
+  Definition setRegs: RiscvMachine -> Registers -> RiscvMachine :=
+    fun '(mkRiscvMachine regs1 pc nextPC mem log) regs2 =>
+          mkRiscvMachine regs2 pc nextPC mem log.
 
-End Riscv.
+  Definition setPc: RiscvMachine -> word -> RiscvMachine :=
+    fun '(mkRiscvMachine regs pc1 nextPC mem log) pc2 =>
+          mkRiscvMachine regs pc2 nextPC mem log.
+
+  Definition setNextPc: RiscvMachine -> word -> RiscvMachine :=
+    fun '(mkRiscvMachine regs pc nextPC1 mem log) nextPC2 =>
+          mkRiscvMachine regs pc nextPC2 mem log.
+
+  Definition setMem: RiscvMachine -> Mem -> RiscvMachine :=
+    fun '(mkRiscvMachine regs pc nextPC mem1 log) mem2 =>
+          mkRiscvMachine regs pc nextPC mem2 log.
+
+  Definition setLog: RiscvMachine -> list LogItem -> RiscvMachine :=
+    fun '(mkRiscvMachine regs pc nextPC mem log1) log2 =>
+          mkRiscvMachine regs pc nextPC mem log2.
+
+  Definition logCons(m: RiscvMachine)(i: LogItem): RiscvMachine :=
+    setLog m (i :: m.(getLog)).
+
+  Definition logAppend(m: RiscvMachine)(items: list LogItem): RiscvMachine :=
+    setLog m (items ++ m.(getLog)).
+
+  Definition withRegs: Registers -> RiscvMachine -> RiscvMachine :=
+    fun regs2 '(mkRiscvMachine regs1 pc nextPC mem log) =>
+                mkRiscvMachine regs2 pc nextPC mem log.
+
+  Definition withPc: word -> RiscvMachine -> RiscvMachine :=
+    fun pc2 '(mkRiscvMachine regs pc1 nextPC mem log) =>
+              mkRiscvMachine regs pc2 nextPC mem log.
+
+  Definition withNextPc: word -> RiscvMachine -> RiscvMachine :=
+    fun nextPC2 '(mkRiscvMachine regs pc nextPC1 mem log) =>
+                  mkRiscvMachine regs pc nextPC2 mem log.
+
+  Definition withMem: Mem -> RiscvMachine -> RiscvMachine :=
+    fun mem2 '(mkRiscvMachine regs pc nextPC mem1 log)  =>
+               mkRiscvMachine regs pc nextPC mem2 log.
+
+  Definition withLog: list LogItem -> RiscvMachine -> RiscvMachine :=
+    fun log2 '(mkRiscvMachine regs pc nextPC mem log1) =>
+               mkRiscvMachine regs pc nextPC mem log2.
+
+  Definition withLogItem: LogItem -> RiscvMachine -> RiscvMachine :=
+    fun item '(mkRiscvMachine regs pc nextPC mem log) =>
+               mkRiscvMachine regs pc nextPC mem (item :: log).
+
+  Definition withLogItems: list LogItem -> RiscvMachine -> RiscvMachine :=
+    fun items '(mkRiscvMachine regs pc nextPC mem log) =>
+                mkRiscvMachine regs pc nextPC mem (items ++ log).
+
+  Definition putProgram(prog: list MachineInt)(addr: word)(ma: RiscvMachine): RiscvMachine :=
+    (withPc addr
+    (withNextPc (word.add addr (word.of_Z 4))
+    (withMem (unchecked_store_byte_tuple_list addr (List.map (split 4) prog) ma.(getMem)) ma))).
+
+End Machine.
+
+Arguments RiscvMachine Reg {W} {Registers} {Mem} Action.
+Arguments LogItem {W} {Mem} Action.
+
+(* Using techniques such as
+   https://gist.github.com/JasonGross/9608584f872149ec6f1115835cbb2c48
+   https://github.com/coq/coq/issues/4728
+   we could get notations without requiring one notation for each field and each record type,
+   but would trade our sanity for it *)
+Module InfixUpdates.
+  Notation "m 'withRegs' a" := (setRegs m a) (at level 50, left associativity, a at level 0).
+  Notation "m 'withPc' a" := (setPc m a) (at level 50, left associativity, a at level 0).
+  Notation "m 'withNextPc' a" := (setNextPc m a) (at level 50, left associativity, a at level 0).
+  Notation "m 'withMem' a" := (setMem m a) (at level 50, left associativity, a at level 0).
+  Notation "m 'withLog' a" := (setLog m a) (at level 50, left associativity, a at level 0).
+  Notation "m 'withLogItem' a" := (logCons m a) (at level 50, left associativity, a at level 0).
+  Notation "m 'withLogItems' a" := (logAppend m a) (at level 50, left associativity, a at level 0).
+End InfixUpdates.

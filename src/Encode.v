@@ -1,7 +1,6 @@
 (* Need to define Register *)
 Require Import Coq.ZArith.ZArith.
 Require Import bbv.BinNotationZ.
-Require Import riscv.util.BitWidths.
 Require Import riscv.Decode.
 Require Import riscv.Utility.
 
@@ -130,29 +129,29 @@ Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)(inst: I
   | CSRInstruction (Csrrci rd zimm csr12) => mapper.(map_I_system) opcode_SYSTEM rd zimm funct3_CSRRCI csr12
 
   | AInstruction   (Lr_w      rd rs1     aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 0   funct3_AMOW aqrl funct5_LR
-  | AInstruction   (Sc_w      rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_SC         
-  | AInstruction   (Amoswap_w rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOSWAP    
-  | AInstruction   (Amoadd_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOADD     
-  | AInstruction   (Amoxor_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOXOR     
-  | AInstruction   (Amoand_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOAND     
-  | AInstruction   (Amoor_w   rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOOR      
-  | AInstruction   (Amomin_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOMIN     
-  | AInstruction   (Amomax_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOMAX     
-  | AInstruction   (Amominu_w rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOMINU    
-  | AInstruction   (Amomaxu_w rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOMAXU    
+  | AInstruction   (Sc_w      rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_SC
+  | AInstruction   (Amoswap_w rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOSWAP
+  | AInstruction   (Amoadd_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOADD
+  | AInstruction   (Amoxor_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOXOR
+  | AInstruction   (Amoand_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOAND
+  | AInstruction   (Amoor_w   rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOOR
+  | AInstruction   (Amomin_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOMIN
+  | AInstruction   (Amomax_w  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOMAX
+  | AInstruction   (Amominu_w rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOMINU
+  | AInstruction   (Amomaxu_w rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOW aqrl funct5_AMOMAXU
   | A64Instruction (Lr_d      rd rs1     aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 0   funct3_AMOD aqrl funct5_LR
-  | A64Instruction (Sc_d      rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_SC         
-  | A64Instruction (Amoswap_d rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOSWAP    
-  | A64Instruction (Amoadd_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOADD     
-  | A64Instruction (Amoxor_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOXOR     
-  | A64Instruction (Amoand_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOAND     
-  | A64Instruction (Amoor_d   rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOOR      
-  | A64Instruction (Amomin_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOMIN     
-  | A64Instruction (Amomax_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOMAX     
-  | A64Instruction (Amominu_d rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOMINU    
+  | A64Instruction (Sc_d      rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_SC
+  | A64Instruction (Amoswap_d rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOSWAP
+  | A64Instruction (Amoadd_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOADD
+  | A64Instruction (Amoxor_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOXOR
+  | A64Instruction (Amoand_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOAND
+  | A64Instruction (Amoor_d   rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOOR
+  | A64Instruction (Amomin_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOMIN
+  | A64Instruction (Amomax_d  rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOMAX
+  | A64Instruction (Amominu_d rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOMINU
   | A64Instruction (Amomaxu_d rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOMAXU
   end.
-                                                                                               
+
 Notation "a <|> b" := (Z.lor a b) (at level 50, left associativity).
 
 Definition encode_Invalid(z: Z) := bitSlice z 0 32.
@@ -181,7 +180,7 @@ Definition encode_I(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(oi
     Z.shiftl (bitSlice rs1    0  5) 15 <|>
     Z.shiftl (bitSlice oimm12 0 12) 20.
 
-Definition encode_I_shift_57(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt) := 
+Definition encode_I_shift_57(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt) :=
              (bitSlice opcode 0 7)    <|>
     Z.shiftl (bitSlice rd     0 5)  7 <|>
     Z.shiftl (bitSlice funct3 0 3) 12 <|>
@@ -189,7 +188,7 @@ Definition encode_I_shift_57(opcode: MachineInt)(rd rs1: Register)(shamt5 funct3
     Z.shiftl (bitSlice shamt5 0 5) 20 <|>
     Z.shiftl (bitSlice funct7 0 7) 25.
 
-Definition encode_I_shift_66(opcode: MachineInt)(rd rs1: Register)(shamt6 funct3 funct6: MachineInt) := 
+Definition encode_I_shift_66(opcode: MachineInt)(rd rs1: Register)(shamt6 funct3 funct6: MachineInt) :=
              (bitSlice opcode 0 7)    <|>
     Z.shiftl (bitSlice rd     0 5)  7 <|>
     Z.shiftl (bitSlice funct3 0 3) 12 <|>
@@ -384,7 +383,7 @@ Definition respects_bounds(bitwidth: Z): Instruction -> Prop :=
 Definition verify_iset(inst: Instruction)(iset: InstructionSet): Prop :=
   match inst with
   | IInstruction i => True
-  | MInstruction i => iset = RV32IM \/ iset = RV32IMA \/ iset = RV64IM \/ iset = RV64IMA 
+  | MInstruction i => iset = RV32IM \/ iset = RV32IMA \/ iset = RV64IM \/ iset = RV64IMA
   | AInstruction i => iset = RV32IA \/ iset = RV32IMA \/ iset = RV64IA \/ iset = RV64IMA
   | I64Instruction i => iset = RV64I \/ iset = RV64IM \/ iset = RV64IA \/ iset = RV64IMA
   | M64Instruction i =>                 iset = RV64IM \/                  iset = RV64IMA
@@ -435,4 +434,3 @@ Example invalid_Jal_encode_example: encode (IInstruction (Jal 0 3)) = Ox"20006F"
 (* Note: The least significant bit of the jump target is not encoded, because even
    in compressed instructions, jump targets are always a multiple of 2. *)
 Example Jal_encode_loses_lsb: decode RV64IM (Ox"20006F") = IInstruction (Jal 0 2). reflexivity. Qed.
-

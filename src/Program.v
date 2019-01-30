@@ -1,6 +1,5 @@
 Require Import Coq.ZArith.ZArith.
 Require Import riscv.util.Monads.
-Require Import riscv.util.Word.
 Require Import riscv.Utility.
 Require Import riscv.Decode.
 
@@ -11,34 +10,30 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   getRegister: Register -> M t;
   setRegister: Register -> t -> M unit;
 
-  loadByte: t -> M (word 8);
-  loadHalf: t -> M (word 16);
-  loadWord: t -> M (word 32);
-  loadDouble: t -> M (word 64);
+  loadByte: t -> M w8;
+  loadHalf: t -> M w16;
+  loadWord: t -> M w32;
+  loadDouble: t -> M w64;
 
-  storeByte: t -> word 8 -> M unit;
-  storeHalf: t -> word 16 -> M unit;
-  storeWord: t -> word 32 -> M unit;
-  storeDouble: t -> word 64 -> M unit;
+  storeByte: t -> w8 -> M unit;
+  storeHalf: t -> w16 -> M unit;
+  storeWord: t -> w32 -> M unit;
+  storeDouble: t -> w64 -> M unit;
 
   getPC: M t;
   setPC: t -> M unit;
 
-  (* TODO support all get/setCSRField, this ZToReg 1 is just for the exception handler address *)
-  getCSRField_MTVecBase: M MachineInt;
-
   step: M unit; (* updates PC *)
 
-  endCycle: forall {A}, M A;
+  (* Returns false on out of range addresses, on MMIO addresses, device addresses, etc
+  isPhysicalMemAddr: t -> M bool;
+     not needed at the moment because we expose state record *)
+
+  raiseException{A: Type}(isInterrupt: t)(exceptionCode: t): M A;
 }.
 
 
-(* The Haskell spec defines concrete implementations for raiseException and translate,
-   but we prefer to leave them abstract, so that we can prove more general theorems *)
 Class RiscvState`{MP: RiscvProgram} := mkRiscvState {
-  (* ends current cycle, sets exception flag, and sets PC to exception handler address *)
-  raiseException{A: Type}(isInterrupt: t)(exceptionCode: t): M A;
-
   (* checks that addr is aligned, and translates the (possibly virtual) addr to a physical
      address, raising an exception if the address is invalid *)
   translate(accessType: AccessType)(alignment: t)(addr: t): M t;
@@ -56,28 +51,23 @@ Section Riscv.
   (* provides operations on t *)
   Context {MW: MachineWidth t}.
 
-  Definition default_raiseException{A: Type}{MP: RiscvProgram}
-    (isInterrupt: t)(exceptionCode: t): M A :=
-    pc <- getPC;
-    addr <- getCSRField_MTVecBase;
-    setPC (fromImm (addr * 4)%Z);;
-    endCycle.
-
-
   Local Open Scope alu_scope.
   Local Open Scope Z_scope.
 
   (* in a system with virtual memory, this would also do the translation, but in our
      case, we only verify the alignment *)
-  Definition default_translate{MP: RiscvProgram}
+  Definition translate_with_alignment_check{MP: RiscvProgram}
     (accessType: AccessType)(alignment: t)(addr: t): M t :=
     if remu addr alignment /= ZToReg 0
-    then default_raiseException (ZToReg 0) (ZToReg 4)
+    then raiseException (ZToReg 0) (ZToReg 4)
     else Return addr.
 
   Instance DefaultRiscvState{MP: RiscvProgram}: RiscvState := {|
-    raiseException A := default_raiseException;
-    translate := default_translate;
+    (* riscv does allow misaligned memory access (but might emulate them in software),
+       so for the compiler-facing side, we don't do alignment checks, but might add
+       another riscv machine layer below to emulate turn misaligned accesses into two
+       aligned accesses *)
+    translate accessType alignment := @Return M MM t;
   |}.
 
 End Riscv.
@@ -88,3 +78,5 @@ Arguments RiscvProgram: clear implicits.
 Arguments RiscvProgram (M) (t) {_} {_}.
 Arguments RiscvState: clear implicits.
 Arguments RiscvState (M) (t) {_} {_} {_}.
+
+Existing Instance DefaultRiscvState.

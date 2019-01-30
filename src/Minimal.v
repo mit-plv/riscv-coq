@@ -1,100 +1,177 @@
 Require Import Coq.ZArith.ZArith.
-Require Import riscv.util.BitWidths.
-Require Import riscv.util.Monads.
+Require Import Coq.Logic.FunctionalExtensionality.
+Require Import Coq.Logic.PropExtensionality.
+Require Import riscv.util.Monads. Import OStateOperations.
+Require Import riscv.util.MonadNotations.
 Require Import riscv.Decode.
-Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)
 Require Import riscv.Program.
 Require Import riscv.Utility.
-Require Import riscv.AxiomaticRiscv.
+Require Import riscv.Primitives.
 Require Export riscv.RiscvMachine.
+Require Import Coq.micromega.Lia.
+Require Import coqutil.Map.Interface.
+
+Local Open Scope Z_scope.
+Local Open Scope bool_scope.
 
 Section Riscv.
 
-  Context {Mem: Type}.
-  Context {mword: Type}.
-  Context {MW: MachineWidth mword}.
-  Context {MemIsMem: Memory Mem mword}.
-  Context {RF: Type}.
-  Context {RFI: RegisterFile RF Register mword}.
+  Context {W: Words}.
+  Context {Mem: map.map word byte}.
+  Context {Registers: map.map Register word}.
 
-  Local Notation RiscvMachine := (@RiscvMachine mword Mem RF).
+  Local Notation RiscvMachineL := (RiscvMachine Register Empty_set).
 
-  Definition liftLoad{R}(f: Mem -> mword -> R): mword -> OState RiscvMachine R :=
-    fun a => m <- gets machineMem; Return (f m a).
+  Definition fail_if_None{R}(o: option R): OState RiscvMachineL R :=
+    match o with
+    | Some x => Return x
+    | None => fail_hard
+    end.
 
-  Definition liftStore{R}(f: Mem -> mword -> R -> Mem):
-    mword -> R -> OState RiscvMachine unit :=
-    fun a v => m <- get; put (with_machineMem (f m.(machineMem) a v) m).
-  
-  Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) mword :=
-  {|
+  Definition loadN(n: nat)(a: word): OState RiscvMachineL (HList.tuple byte n) :=
+    mach <- get; fail_if_None (Memory.load_bytes n mach.(getMem) a).
+
+  Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OState RiscvMachineL unit :=
+    mach <- get;
+    m <- fail_if_None (Memory.store_bytes n mach.(getMem) a v);
+    put (withMem m mach).
+
+  Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) word :=  {|
       getRegister reg :=
         if Z.eq_dec reg Register0 then
           Return (ZToReg 0)
         else
-          machine <- get;
-          Return (getReg machine.(core).(registers) reg);
+          if (0 <? reg) && (reg <? 32) then
+            mach <- get;
+            match map.get mach.(getRegs) reg with
+            | Some v => Return v
+            | None => Return (word.of_Z 0)
+            end
+          else
+            fail_hard;
 
       setRegister reg v :=
         if Z.eq_dec reg Register0 then
           Return tt
         else
-          machine <- get;
-          let newRegs := setReg machine.(core).(registers) reg v in
-          put (with_registers newRegs machine);
+          if (0 <? reg) && (reg <? 32) then
+            mach <- get;
+            let newRegs := map.put mach.(getRegs) reg v in
+            put (setRegs mach newRegs)
+          else
+            fail_hard;
 
-      getPC := machine <- get; Return machine.(core).(pc);
+      getPC := mach <- get; Return mach.(getPc);
 
       setPC newPC :=
-        machine <- get;
-        put (with_nextPC newPC machine);
+        mach <- get;
+        put (setNextPc mach newPC);
 
-      loadByte   := liftLoad Memory.loadByte;
-      loadHalf   := liftLoad Memory.loadHalf;
-      loadWord   := liftLoad Memory.loadWord;
-      loadDouble := liftLoad Memory.loadDouble;
+      loadByte   := loadN 1;
+      loadHalf   := loadN 2;
+      loadWord   := loadN 4;
+      loadDouble := loadN 8;
 
-      storeByte   := liftStore Memory.storeByte;
-      storeHalf   := liftStore Memory.storeHalf;
-      storeWord   := liftStore Memory.storeWord;
-      storeDouble := liftStore Memory.storeDouble;
+      storeByte   := storeN 1;
+      storeHalf   := storeN 2;
+      storeWord   := storeN 4;
+      storeDouble := storeN 8;
 
       step :=
         m <- get;
-        put (with_nextPC (add m.(core).(nextPC) (ZToReg 4)) (with_pc m.(core).(nextPC) m));
+        let m' := setPc m m.(getNextPc) in
+        let m'' := setNextPc m' (add m.(getNextPc) (ZToReg 4)) in
+        put m'';
 
-      getCSRField_MTVecBase :=
-        machine <- get;
-        Return machine.(core).(exceptionHandlerAddr);
-
-      endCycle A := Return None;
+      (* fail hard if exception is thrown because at the moment, we want to prove that
+         code output by the compiler never throws exceptions *)
+      raiseException{A: Type}(isInterrupt: word)(exceptionCode: word) := fail_hard;
   |}.
 
-  (* Puts given program at address 0, and makes pc point to beginning of program, i.e. 0.
-     TODO maybe later allow any address?
-     Note: Keeps the original exceptionHandlerAddr, and the values of the registers,
-     which might contain any undefined garbage values, so the compiler correctness proof
-     will show that the program is correct even then, i.e. no initialisation of the registers
-     is needed. *)
-  Definition putProgram(prog: list (word 32))(addr: mword)(ma: RiscvMachine): RiscvMachine :=
-    (with_pc addr
-    (with_nextPC (add addr (ZToReg 4))
-    (with_machineMem (store_word_list prog addr ma.(machineMem)) ma))).
+  Arguments Memory.load_bytes: simpl never.
+  Arguments Memory.store_bytes: simpl never.
 
-  Ltac destruct_if :=
-    match goal with
-    | |- context [if ?x then _ else _] => destruct x
-    end.
+  Ltac t :=
+    repeat match goal with
+       | |- _ => reflexivity
+       | |- _ => progress (
+                     unfold computation_satisfies, computation_with_answer_satisfies,
+                            IsRiscvMachineL,
+                            valid_register, Register0,
+                            is_initial_register_value,
+                            get, put, fail_hard,
+                            Memory.loadByte, Memory.storeByte,
+                            Memory.loadHalf, Memory.storeHalf,
+                            Memory.loadWord, Memory.storeWord,
+                            Memory.loadDouble, Memory.storeDouble,
+                            fail_if_None, loadN, storeN in *;
+                     subst;
+                     simpl in *)
+       | |- _ => intro
+       | |- _ => split
+       | |- _ => apply functional_extensionality
+       | |- _ => apply propositional_extensionality; split; intros
+       | u: unit |- _ => destruct u
+       | H: exists x, _ |- _ => destruct H
+       | H: {_ : _ | _} |- _ => destruct H
+       | H: _ /\ _ |- _ => destruct H
+       | p: _ * _ |- _ => destruct p
+       | |- context [ let (_, _) := ?p in _ ] => let E := fresh "E" in destruct p eqn: E
+       | H: Some _ = Some _ |- _ => inversion H; clear H; subst
+       | H: (_, _) = (_, _) |- _ => inversion H; clear H; subst
+       | H: _ && _ = true |- _ => apply andb_prop in H
+       | H: _ && _ = false |- _ => apply Bool.andb_false_iff in H
+       | |- _ * _ => constructor
+       | |- option _ => exact None
+       | |- _ => discriminate
+       | |- _ => congruence
+       | |- _ => solve [exfalso; lia]
+       | |- _ => solve [eauto 15]
+       | |- _ => progress (rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in *)
+       | |- _ => omega
+       | H: context[let (_, _) := ?y in _] |- _ => let E := fresh "E" in destruct y eqn: E
+       | E: ?x = Some _, H: context[match ?x with _ => _ end] |- _ => rewrite E in H
+       | E: ?x = Some _  |- context[match ?x with _ => _ end]      => rewrite E
+       | H: context[match ?x with _ => _ end] |- _ => let E := fresh "E" in destruct x eqn: E
+       | |- context[match ?x with _ => _ end]      => let E := fresh "E" in destruct x eqn: E
+       | H: _ \/ _ |- _ => destruct H
+       | r: RiscvMachineL |- _ =>
+         destruct r as [regs pc npc m l];
+         simpl in *
+(*       | H: context[match ?x with _ => _ end] |- _ => let E := fresh in destruct x eqn: E*)
+       | o: option _ |- _ => destruct o
+       (* introduce evars as late as possible (after all destructs), to make sure everything
+          is in their scope*)
+       | |- exists (P: ?A -> ?S -> Prop), _ =>
+            let a := fresh "a" in evar (a: A);
+            let s := fresh "s" in evar (s: S);
+            exists (fun a0 s0 => a0 = a /\ s0 = s);
+            subst a s
+       | |- _ \/ _ => left; solve [t]
+       | |- _ \/ _ => right; solve [t]
+       end.
 
-  Instance MinimalRiscvSatisfiesAxioms:
-    @AxiomaticRiscv mword MW RF RFI Mem MemIsMem IsRiscvMachine.
+  Instance MinimalPrimitivesParams: PrimitivesParams Empty_set (OState RiscvMachineL) := {|
+    Primitives.mcomp_sat := @OStateOperations.computation_with_answer_satisfies RiscvMachineL;
+    Primitives.is_initial_register_value := eq (word.of_Z 0);
+    Primitives.nonmem_loadByte_sat   initialL addr post := False;
+    Primitives.nonmem_loadHalf_sat   initialL addr post := False;
+    Primitives.nonmem_loadWord_sat   initialL addr post := False;
+    Primitives.nonmem_loadDouble_sat initialL addr post := False;
+    Primitives.nonmem_storeByte_sat   initialL addr v post := False;
+    Primitives.nonmem_storeHalf_sat   initialL addr v post := False;
+    Primitives.nonmem_storeWord_sat   initialL addr v post := False;
+    Primitives.nonmem_storeDouble_sat initialL addr v post := False;
+  |}.
+
+  Instance MinimalSatisfiesPrimitives: Primitives Empty_set (OState RiscvMachineL).
   Proof.
-    constructor; intros; simpl; try reflexivity; destruct_if; try reflexivity;
-      subst; unfold valid_register, Register0 in *; omega.
+    econstructor.
+    all: try t.
   Qed.
-  
+
 End Riscv.
 
-(* needed because it was defined inside a Section *)
-Existing Instance IsRiscvMachine.
-Existing Instance MinimalRiscvSatisfiesAxioms.
+(* needed because defined inside a Section *)
+Existing Instance IsRiscvMachineL.
+Existing Instance MinimalSatisfiesPrimitives.
