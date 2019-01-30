@@ -101,7 +101,10 @@ Section Riscv.
                             Primitives.valid_register, AxiomaticRiscv.valid_register, Register0,
                             Primitives.is_initial_register_value,
                             get, put, fail_hard,
+                            Memory.loadByte, Memory.storeByte,
+                            Memory.loadHalf, Memory.storeHalf,
                             Memory.loadWord, Memory.storeWord,
+                            Memory.loadDouble, Memory.storeDouble,
                             fail_if_None, loadN, storeN in *;
                      subst;
                      simpl in *)
@@ -149,17 +152,26 @@ Section Riscv.
        | |- _ \/ _ => right; solve [t]
        end.
 
-  Local Set Refine Instance Mode.
-
-  Instance MinimalSatisfiesPrimitives: Primitives Empty_set (OState RiscvMachineL) := {|
+  Instance MinimalPrimitivesParams: PrimitivesParams Empty_set (OState RiscvMachineL) := {|
     Primitives.mcomp_sat := @OStateOperations.computation_with_answer_satisfies RiscvMachineL;
     Primitives.is_initial_register_value := eq (word.of_Z 0);
-    Primitives.nonmem_loadWord_sat  initialL addr post := False;
-    Primitives.nonmem_storeWord_sat initialL addr v post := False;
+    Primitives.nonmem_loadByte_sat   initialL addr post := False;
+    Primitives.nonmem_loadHalf_sat   initialL addr post := False;
+    Primitives.nonmem_loadWord_sat   initialL addr post := False;
+    Primitives.nonmem_loadDouble_sat initialL addr post := False;
+    Primitives.nonmem_storeByte_sat   initialL addr v post := False;
+    Primitives.nonmem_storeHalf_sat   initialL addr v post := False;
+    Primitives.nonmem_storeWord_sat   initialL addr v post := False;
+    Primitives.nonmem_storeDouble_sat initialL addr v post := False;
   |}.
+
+  Instance MinimalSatisfiesPrimitives: Primitives Empty_set (OState RiscvMachineL).
   Proof.
-    all: try abstract t.
-  Defined.
+    econstructor.
+    all: try t.
+  Qed.
+
+  Local Set Refine Instance Mode.
 
   Instance MinimalSatisfiesAxioms: AxiomaticRiscv Empty_set (OState RiscvMachineL) := {|
     AxiomaticRiscv.mcomp_sat := @OStateOperations.computation_satisfies RiscvMachineL;
