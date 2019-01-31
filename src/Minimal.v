@@ -57,7 +57,7 @@ Section Riscv.
           if (0 <? reg) && (reg <? 32) then
             mach <- get;
             let newRegs := map.put mach.(getRegs) reg v in
-            put (setRegs mach newRegs)
+            put (withRegs newRegs mach)
           else
             fail_hard;
 
@@ -65,7 +65,7 @@ Section Riscv.
 
       setPC newPC :=
         mach <- get;
-        put (setNextPc mach newPC);
+        put (withNextPc newPC mach);
 
       loadByte   := loadN 1;
       loadHalf   := loadN 2;
@@ -79,8 +79,8 @@ Section Riscv.
 
       step :=
         m <- get;
-        let m' := setPc m m.(getNextPc) in
-        let m'' := setNextPc m' (add m.(getNextPc) (ZToReg 4)) in
+        let m' := withPc m.(getNextPc) m in
+        let m'' := withNextPc (add m.(getNextPc) (ZToReg 4)) m' in
         put m'';
 
       (* fail hard if exception is thrown because at the moment, we want to prove that

@@ -101,7 +101,7 @@ Section Primitives.
         mcomp_sat (getRegister x) initialL post;
 
     spec_setRegister: forall initialL x v (post: unit -> RiscvMachineL -> Prop),
-      (valid_register x /\ post tt (setRegs initialL (map.put initialL.(getRegs) x v)) \/
+      (valid_register x /\ post tt (withRegs (map.put initialL.(getRegs) x v) initialL) \/
        x = Register0 /\ post tt initialL) <->
       mcomp_sat (setRegister x v) initialL post;
 

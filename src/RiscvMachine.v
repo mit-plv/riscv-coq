@@ -25,32 +25,6 @@ Section Machine.
     getLog: list LogItem;
   }.
 
-  Definition setRegs: RiscvMachine -> Registers -> RiscvMachine :=
-    fun '(mkRiscvMachine regs1 pc nextPC mem log) regs2 =>
-          mkRiscvMachine regs2 pc nextPC mem log.
-
-  Definition setPc: RiscvMachine -> word -> RiscvMachine :=
-    fun '(mkRiscvMachine regs pc1 nextPC mem log) pc2 =>
-          mkRiscvMachine regs pc2 nextPC mem log.
-
-  Definition setNextPc: RiscvMachine -> word -> RiscvMachine :=
-    fun '(mkRiscvMachine regs pc nextPC1 mem log) nextPC2 =>
-          mkRiscvMachine regs pc nextPC2 mem log.
-
-  Definition setMem: RiscvMachine -> Mem -> RiscvMachine :=
-    fun '(mkRiscvMachine regs pc nextPC mem1 log) mem2 =>
-          mkRiscvMachine regs pc nextPC mem2 log.
-
-  Definition setLog: RiscvMachine -> list LogItem -> RiscvMachine :=
-    fun '(mkRiscvMachine regs pc nextPC mem log1) log2 =>
-          mkRiscvMachine regs pc nextPC mem log2.
-
-  Definition logCons(m: RiscvMachine)(i: LogItem): RiscvMachine :=
-    setLog m (i :: m.(getLog)).
-
-  Definition logAppend(m: RiscvMachine)(items: list LogItem): RiscvMachine :=
-    setLog m (items ++ m.(getLog)).
-
   Definition withRegs: Registers -> RiscvMachine -> RiscvMachine :=
     fun regs2 '(mkRiscvMachine regs1 pc nextPC mem log) =>
                 mkRiscvMachine regs2 pc nextPC mem log.
@@ -88,18 +62,3 @@ End Machine.
 
 Arguments RiscvMachine Reg {W} {Registers} {Mem} Action.
 Arguments LogItem {W} {Mem} Action.
-
-(* Using techniques such as
-   https://gist.github.com/JasonGross/9608584f872149ec6f1115835cbb2c48
-   https://github.com/coq/coq/issues/4728
-   we could get notations without requiring one notation for each field and each record type,
-   but would trade our sanity for it *)
-Module InfixUpdates.
-  Notation "m 'withRegs' a" := (setRegs m a) (at level 50, left associativity, a at level 0).
-  Notation "m 'withPc' a" := (setPc m a) (at level 50, left associativity, a at level 0).
-  Notation "m 'withNextPc' a" := (setNextPc m a) (at level 50, left associativity, a at level 0).
-  Notation "m 'withMem' a" := (setMem m a) (at level 50, left associativity, a at level 0).
-  Notation "m 'withLog' a" := (setLog m a) (at level 50, left associativity, a at level 0).
-  Notation "m 'withLogItem' a" := (logCons m a) (at level 50, left associativity, a at level 0).
-  Notation "m 'withLogItems' a" := (logAppend m a) (at level 50, left associativity, a at level 0).
-End InfixUpdates.

@@ -54,7 +54,7 @@ Section Riscv.
       loadWord a :=
         m <- get;
         res <- (liftL1 loadWord a);
-        put (logCons m (mkLogItem (EvLoadWord (regToZ_unsigned a) (decode RV64IM (LittleEndian.combine 4 res)))));;
+        put (withLogItem (mkLogItem (EvLoadWord (regToZ_unsigned a) (decode RV64IM (LittleEndian.combine 4 res)))) m);;
         Return res;
       loadDouble := liftL1 loadDouble;
       storeByte   := liftL2 storeByte;
@@ -64,7 +64,7 @@ Section Riscv.
         Bind get
              (fun m =>
                 Bind (Monad := (OState_Monad _)) (* why does Coq infer OStateND_Monad?? *)
-                     (put (logCons m (mkLogItem (EvStoreWord (regToZ_unsigned a) v))))
+                     (put (withLogItem (mkLogItem (EvStoreWord (regToZ_unsigned a) v)) m))
                      (fun (_: unit) =>
                         liftL2 storeWord a v));
 
