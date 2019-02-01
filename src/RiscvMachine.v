@@ -4,6 +4,7 @@ Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndian.
 Require Import riscv.Memory.
 Require Import riscv.Utility.
+Require Import riscv.MetricLogging.
 
 
 Section Machine.
@@ -23,35 +24,40 @@ Section Machine.
     getNextPc: word;
     getMem: Mem;
     getLog: list LogItem;
+    getMetrics: MetricLog;
   }.
 
   Definition withRegs: Registers -> RiscvMachine -> RiscvMachine :=
-    fun regs2 '(mkRiscvMachine regs1 pc nextPC mem log) =>
-                mkRiscvMachine regs2 pc nextPC mem log.
+    fun regs2 '(mkRiscvMachine regs1 pc nextPC mem log metrics) =>
+                mkRiscvMachine regs2 pc nextPC mem log metrics.
 
   Definition withPc: word -> RiscvMachine -> RiscvMachine :=
-    fun pc2 '(mkRiscvMachine regs pc1 nextPC mem log) =>
-              mkRiscvMachine regs pc2 nextPC mem log.
+    fun pc2 '(mkRiscvMachine regs pc1 nextPC mem log metrics) =>
+              mkRiscvMachine regs pc2 nextPC mem log metrics.
 
   Definition withNextPc: word -> RiscvMachine -> RiscvMachine :=
-    fun nextPC2 '(mkRiscvMachine regs pc nextPC1 mem log) =>
-                  mkRiscvMachine regs pc nextPC2 mem log.
+    fun nextPC2 '(mkRiscvMachine regs pc nextPC1 mem log metrics) =>
+                  mkRiscvMachine regs pc nextPC2 mem log metrics.
 
   Definition withMem: Mem -> RiscvMachine -> RiscvMachine :=
-    fun mem2 '(mkRiscvMachine regs pc nextPC mem1 log)  =>
-               mkRiscvMachine regs pc nextPC mem2 log.
+    fun mem2 '(mkRiscvMachine regs pc nextPC mem1 log metrics)  =>
+               mkRiscvMachine regs pc nextPC mem2 log metrics.
 
   Definition withLog: list LogItem -> RiscvMachine -> RiscvMachine :=
-    fun log2 '(mkRiscvMachine regs pc nextPC mem log1) =>
-               mkRiscvMachine regs pc nextPC mem log2.
+    fun log2 '(mkRiscvMachine regs pc nextPC mem log1 metrics) =>
+               mkRiscvMachine regs pc nextPC mem log2 metrics.
 
   Definition withLogItem: LogItem -> RiscvMachine -> RiscvMachine :=
-    fun item '(mkRiscvMachine regs pc nextPC mem log) =>
-               mkRiscvMachine regs pc nextPC mem (item :: log).
+    fun item '(mkRiscvMachine regs pc nextPC mem log metrics) =>
+               mkRiscvMachine regs pc nextPC mem (item :: log) metrics.
 
   Definition withLogItems: list LogItem -> RiscvMachine -> RiscvMachine :=
-    fun items '(mkRiscvMachine regs pc nextPC mem log) =>
-                mkRiscvMachine regs pc nextPC mem (items ++ log).
+    fun items '(mkRiscvMachine regs pc nextPC mem log metrics) =>
+                mkRiscvMachine regs pc nextPC mem (items ++ log) metrics.
+
+  Definition withMetrics : MetricLog -> RiscvMachine -> RiscvMachine :=
+    fun metrics2 '(mkRiscvMachine regs pc nextPc mem log metrics1) =>
+                   mkRiscvMachine regs pc nextPc mem log metrics2.
 
   Definition putProgram(prog: list MachineInt)(addr: word)(ma: RiscvMachine): RiscvMachine :=
     (withPc addr

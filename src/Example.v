@@ -10,6 +10,7 @@ Require Import riscv.Utility.
 Require Import riscv.Memory.
 Require Import riscv.Minimal.
 Require Import riscv.MinimalLogging.
+Require Import riscv.MetricLogging.
 Require Import riscv.Run.
 Require Import riscv.util.Monads.
 Require Import riscv.MkMachineWidth.
@@ -61,6 +62,7 @@ Definition zeroedRiscvMachine: RiscvMachine := {|
   getNextPc := ZToReg 4;
   getMem := map.empty;
   getLog := nil;
+  getMetrics := EmptyMetricLog;
 |}.
 
 Definition zeroedRiscvMachineL: RiscvMachineL :=

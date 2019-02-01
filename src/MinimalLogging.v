@@ -29,10 +29,10 @@ Section Riscv.
   Local Notation RiscvMachineL := (riscv.RiscvMachine.RiscvMachine Register LogEvent).
 
   Definition downgrade: RiscvMachineL -> RiscvMachine :=
-    fun '(mkRiscvMachine regs pc nextPC mem log) => mkRiscvMachine regs pc nextPC mem nil.
+    fun '(mkRiscvMachine regs pc nextPC mem log metrics) => mkRiscvMachine regs pc nextPC mem nil metrics.
 
   Definition upgrade: RiscvMachine -> list (LogItem LogEvent) -> RiscvMachineL :=
-    fun '(mkRiscvMachine regs pc nextPC mem _) log => mkRiscvMachine regs pc nextPC mem log.
+    fun '(mkRiscvMachine regs pc nextPC mem _ metrics) log => mkRiscvMachine regs pc nextPC mem log metrics.
 
   Definition liftL0{B: Type}(f: OState RiscvMachine B):  OState RiscvMachineL B :=
     fun s => let (ob, s') := f (downgrade s) in (ob, upgrade s' s.(getLog)).
