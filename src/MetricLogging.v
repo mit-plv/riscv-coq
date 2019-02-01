@@ -1,6 +1,14 @@
 Require Import Coq.ZArith.BinInt.
+Require Import riscv.util.Monads. Import OStateOperations.
+Require Import riscv.util.MonadNotations.
 Require Import Coq.omega.Omega.
 Require Import Coq.micromega.Lia.
+Require Import riscv.Decode.
+Require Import riscv.Utility.
+Require Import riscv.Memory.
+Require Import riscv.Program.
+Require Import riscv.MinimalLogging.
+Require Import coqutil.Map.Interface.
 
 Section Riscv.
   
@@ -77,5 +85,51 @@ Section Riscv.
     repeat simpl_MetricLog;
     try_equality_MetricLog;
     lia || fold_MetricLog.
+
+  Context {W: Words}.
+  Context {Mem: map.map word byte}.
+  Context {Registers: map.map Register word}.
+
+  Local Notation RiscvMachine := (riscv.RiscvMachine.RiscvMachine Register LogEvent).
+
+  Record RiscvMachineLog{Log : Type} := mkRiscvMachineLog {
+    machine:> RiscvMachine;
+    log: Log;
+  }.
+
+  Definition with_machine{Log: Type} m (ml : @RiscvMachineLog Log) :=
+    mkRiscvMachineLog Log m ml.(log).
+  Definition with_log{Log: Type} (l : Log) (ml : @RiscvMachineLog Log) :=
+    mkRiscvMachineLog Log ml.(machine) l.
+
+  Definition RiscvMachineMetricLog := @RiscvMachineLog MetricLog.
+
+  Definition liftL0{B: Type} (fl: MetricLog -> MetricLog) (f: OState RiscvMachine B):
+    OState RiscvMachineMetricLog B :=
+    fun s => let (ob, s') := f s.(machine) in
+             (ob, mkRiscvMachineLog MetricLog s' (fl s.(log))).
+
+  Definition liftL1{A B: Type} fl (f: A -> OState RiscvMachine B) :=
+    fun a => liftL0 fl (f a).
+
+  Definition liftL2{A1 A2 B: Type} fl (f: A1 -> A2 -> OState RiscvMachine B) :=
+    fun a1 a2 => liftL0 fl (f a1 a2).
+
+  Instance IsRiscvMachineMetricLog: RiscvProgram (OState RiscvMachineMetricLog) word := {|
+    getRegister := liftL1 id getRegister;
+    setRegister := liftL2 id setRegister;
+    getPC := liftL0 id getPC;
+    setPC := liftL1 (addMetricJumps 1) setPC;
+    loadByte   := liftL1 (addMetricLoads 1) loadByte;
+    loadHalf   := liftL1 (addMetricLoads 1) loadHalf;
+    loadWord := liftL1 (addMetricLoads 1) loadWord;
+    loadDouble := liftL1 (addMetricLoads 1) loadDouble;
+    storeByte   := liftL2 (addMetricStores 1) storeByte;
+    storeHalf   := liftL2 (addMetricStores 1) storeHalf;
+    storeWord := liftL2 (addMetricStores 1) storeWord;
+    storeDouble := liftL2 (addMetricStores 1) storeDouble;
+    step := liftL0 (addMetricInstructions 1) step;
+    raiseException{A} := liftL2 id (raiseException (A := A));
+  |}.
 
 End Riscv.
