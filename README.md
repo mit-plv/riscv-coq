@@ -11,8 +11,10 @@ You will need Coq 8.7, 8.8, or master.
 
 ```
 git clone https://github.com/mit-plv/bbv.git
+git clone https://github.com/mit-plv/coqutil.git
 git clone https://github.com/mit-plv/riscv-coq.git
 make -C bbv
+make -C coqutil
 cd riscv-coq/
 make
 ```
