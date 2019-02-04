@@ -72,7 +72,8 @@ Section Primitives.
              (nonmem_store: RiscvMachineL -> word -> V -> (RiscvMachineL -> Prop) -> Prop)
              : Prop :=
     forall initialL addr v (post: unit -> RiscvMachineL -> Prop),
-      (exists m', mem_store initialL.(getMem) addr v = Some m' /\ post tt (withMem m' initialL)) \/
+      let initialLMetrics := updateMetrics (addMetricStores 1) initialL in
+      (exists m', mem_store initialL.(getMem) addr v = Some m' /\ post tt (withMem m' initialLMetrics)) \/
       (mem_store initialL.(getMem) addr v = None /\ nonmem_store initialL addr v (post tt)) <->
       mcomp_sat (riscv_store addr v) initialL post.
 

@@ -35,7 +35,8 @@ Section Riscv.
   Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OState RiscvMachineL unit :=
     mach <- get;
     m <- fail_if_None (Memory.store_bytes n mach.(getMem) a v);
-    put (withMem m mach).
+    let mach' := updateMetrics (addMetricStores 1) mach in
+    put (withMem m mach').
 
   Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) word :=  {|
       getRegister reg :=
