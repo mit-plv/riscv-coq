@@ -62,7 +62,8 @@ Section Primitives.
              (nonmem_load: RiscvMachineL -> word -> (V  -> RiscvMachineL -> Prop) -> Prop)
              : Prop :=
     forall initialL addr (post: V -> RiscvMachineL -> Prop),
-        (exists v: V, mem_load initialL.(getMem) addr = Some v /\ post v initialL) \/
+        let initialLMetrics := updateMetrics (addMetricLoads 1) initialL in
+        (exists v: V, mem_load initialL.(getMem) addr = Some v /\ post v initialLMetrics) \/
         (mem_load initialL.(getMem) addr = None /\ nonmem_load initialL addr post) <->
         mcomp_sat (riscv_load addr) initialL post.
 

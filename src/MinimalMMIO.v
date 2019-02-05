@@ -53,7 +53,10 @@ Section Riscv.
   Definition loadN(n: nat)(a: word): OStateND RiscvMachineL (HList.tuple byte n) :=
     mach <- get;
     match Memory.load_bytes n mach.(getMem) a with
-    | Some v => Return v
+    | Some v =>
+      fun m =>
+          let m' := updateMetrics (addMetricLoads 1) m in
+          Return v m'
     | None => if simple_isMMIOAddr a then
                 inp <- arbitrary (HList.tuple byte n);
                 logEvent (mmioLoadEvent mach.(getMem) a inp);;

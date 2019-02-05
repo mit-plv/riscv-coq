@@ -30,7 +30,10 @@ Section Riscv.
     end.
 
   Definition loadN(n: nat)(a: word): OState RiscvMachineL (HList.tuple byte n) :=
-    mach <- get; fail_if_None (Memory.load_bytes n mach.(getMem) a).
+    mach <- get;
+    fun m =>
+      let m' := updateMetrics (addMetricLoads 1) m in 
+      fail_if_None (Memory.load_bytes n mach.(getMem) a) m'.
 
   Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OState RiscvMachineL unit :=
     mach <- get;
