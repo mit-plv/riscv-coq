@@ -283,8 +283,8 @@ Section Riscv.
       + t; match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
-      + destruct (simple_isMMIOAddr addr) eqn: G. t.
-        * match goal with
+      + destruct (simple_isMMIOAddr addr) eqn: G.
+        * t. match goal with
           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
           end; t.
         * exfalso. t. specialize (H None). t.
@@ -293,8 +293,8 @@ Section Riscv.
       + t; match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
-      + destruct (simple_isMMIOAddr addr) eqn: G. t.
-        * match goal with
+      + destruct (simple_isMMIOAddr addr) eqn: G.
+        * t. match goal with
           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
           end; t.
         * exfalso. t. specialize (H None). t.
@@ -303,8 +303,8 @@ Section Riscv.
       + t; match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
-      + destruct (simple_isMMIOAddr addr) eqn: G. t.
-        * match goal with
+      + destruct (simple_isMMIOAddr addr) eqn: G.
+        * t. match goal with
           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
           end; t.
         * exfalso. t. specialize (H None). t.
@@ -313,8 +313,8 @@ Section Riscv.
       + t; match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
-      + destruct (simple_isMMIOAddr addr) eqn: G. t.
-        * match goal with
+      + destruct (simple_isMMIOAddr addr) eqn: G.
+        * t. match goal with
           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
           end; t.
         * exfalso. t. specialize (H None). t.
