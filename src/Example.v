@@ -5,7 +5,6 @@ Require Import coqutil.Word.Naive.
 Require Import coqutil.Word.Properties.
 Require Import riscv.Program.
 Require Import riscv.Decode.
-Require Import bbv.HexNotationZ.
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.Utility.
 Require Import riscv.Memory.
@@ -18,6 +17,7 @@ Require Import coqutil.Map.Interface.
 Require Import riscv.Words32Naive.
 Require Import riscv.DefaultMemImpl32.
 Require Import coqutil.Map.Z_keyed_SortedListMap.
+Require Import coqutil.Z.HexNotation.
 Require coqutil.Map.SortedList.
 
 Existing Instance DefaultRiscvState.

@@ -1,13 +1,12 @@
 (* Need to define Register *)
 Require Import Coq.ZArith.ZArith.
-Require Import bbv.BinNotationZ.
+Require Import coqutil.Z.HexNotation.
 Require Import riscv.Decode.
 Require Import riscv.Utility.
 
-
-Definition funct3_JALR := Ob"000". (* TODO why does Decode not define & check this? *)
-
 Local Open Scope Z_scope.
+
+Definition funct3_JALR: MachineInt := 0. (* TODO why does Decode not define & check this? *)
 
 Record InstructionMapper{T: Type} := mkInstructionMapper {
   map_Invalid: Z -> T;
@@ -424,8 +423,6 @@ Goal (respects_bounds 32 (IInstruction (Jal 0 4))).
   cbn.
   omega.
 Qed.
-
-Require Import bbv.HexNotationZ.
 
 (* This expression will generate a runtime exception, because the jump target is not
    a multiple of 4 *)
