@@ -68,7 +68,7 @@ convert: riscv-semantics_version_check hs-to-coq_version_check $(HS_SOURCES) $(P
 .SECONDARY:
 
 export/extract.vo: export/extract.v spec
-	$(COQBIN)coqc -Q ../bbv/theories bbv -R ./src riscv export/extract.v
+	$(COQBIN)coqc -R ./src riscv export/extract.v
 
 export/json/%.json: export/extract.vo src/%.vo
 	find . -maxdepth 1 -name '*.json' -type f -exec mv -t export/json -- {} +
