@@ -17,7 +17,7 @@ spec: Makefile.coq.spec $(SPEC_VS)
 all: Makefile.coq.all $(ALL_VS)
 	$(MAKE) -f Makefile.coq.all
 
-COQ_MAKEFILE := $(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = riscv
+COQ_MAKEFILE := $(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = riscv $(COQMF_ARGS)
 
 Makefile.coq.spec: force
 	 $(COQ_MAKEFILE) $(SPEC_VS) -o Makefile.coq.spec
