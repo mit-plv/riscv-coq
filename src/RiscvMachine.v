@@ -64,6 +64,9 @@ Section Machine.
     (withNextPc (word.add addr (word.of_Z 4))
     (withMem (unchecked_store_byte_tuple_list addr (List.map (split 4) prog) ma.(getMem)) ma))).
 
+  Definition updateMetrics(fm: MetricLog -> MetricLog)(ma: RiscvMachine): RiscvMachine :=
+    withMetrics (fm ma.(getMetrics)) ma.
+
 End Machine.
 
 Arguments RiscvMachine Reg {W} {Registers} {Mem} Action.
