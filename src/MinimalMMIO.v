@@ -65,9 +65,7 @@ Section Riscv.
   Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OStateND RiscvMachineL unit :=
     mach <- get;
     match Memory.store_bytes n mach.(getMem) a v with
-    | Some m =>
-      let mach' := updateMetrics (addMetricStores 1) mach in
-      put (withMem m mach')
+    | Some m => put (withMem m mach)
     | None => if simple_isMMIOAddr a then
                 logEvent (mmioStoreEvent mach.(getMem) a v)
               else
