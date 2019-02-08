@@ -8,7 +8,6 @@ Require Import riscv.Memory.
 Require Import riscv.Program.
 Require Import riscv.RiscvMachine.
 Require Import riscv.MkMachineWidth.
-Require Import riscv.MetricLogging.
 
 
 (* Note: Register 0 is not considered valid because it cannot be written *)
@@ -143,16 +142,13 @@ Section Primitives.
         mcomp_sat getPC initialL post;
 
     spec_setPC: forall initialL v (post: unit -> RiscvMachineL -> Prop),
-        post tt (withNextPc v
-                (updateMetrics (addMetricJumps 1)
-                               initialL)) <->
+        post tt (withNextPc v initialL) <->
         mcomp_sat (setPC v) initialL post;
 
     spec_step: forall initialL (post: unit -> RiscvMachineL -> Prop),
         post tt (withNextPc (word.add initialL.(getNextPc) (word.of_Z 4))
                 (withPc     initialL.(getNextPc)
-                (updateMetrics (addMetricInstructions 1)
-                               initialL))) <->
+                            initialL)) <->
         mcomp_sat step initialL post;
   }.
 

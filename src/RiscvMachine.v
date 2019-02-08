@@ -59,9 +59,6 @@ Section Machine.
     fun metrics2 '(mkRiscvMachine regs pc nextPc mem log metrics1) =>
                    mkRiscvMachine regs pc nextPc mem log metrics2.
 
-  Definition updateMetrics(fm: MetricLog -> MetricLog)(ma: RiscvMachine): RiscvMachine :=
-    withMetrics (fm ma.(getMetrics)) ma.
-
   Definition putProgram(prog: list MachineInt)(addr: word)(ma: RiscvMachine): RiscvMachine :=
     (withPc addr
     (withNextPc (word.add addr (word.of_Z 4))

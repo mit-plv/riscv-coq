@@ -7,7 +7,6 @@ Require Import riscv.Decode.
 Require Import riscv.Program.
 Require Import riscv.Utility.
 Require Import riscv.Primitives.
-Require Import riscv.MetricLogging.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Export riscv.MMIOTrace.
 Require Export riscv.RiscvMachine.
@@ -101,8 +100,7 @@ Section Riscv.
 
       setPC newPC :=
         mach <- get;
-        let mach' := updateMetrics (addMetricJumps 1) mach in
-        put (withNextPc newPC mach');
+        put (withNextPc newPC mach);
 
       loadByte   := loadN 1;
       loadHalf   := loadN 2;
@@ -118,8 +116,7 @@ Section Riscv.
         m <- get;
         let m' := withPc m.(getNextPc) m in
         let m'' := withNextPc (add m.(getNextPc) (ZToReg 4)) m' in
-        let m''' := updateMetrics (addMetricInstructions 1) m'' in
-        put m''';
+        put m'';
 
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
