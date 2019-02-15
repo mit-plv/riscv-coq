@@ -124,6 +124,55 @@ Module OStateOperations.
 End OStateOperations.
 
 
+(* We can think of it as "S -> ((A * S) -> Prop)", i.e. a function returning
+   a unique set of all possible outcomes. *)
+Definition StateND(S A: Type) := S -> (A * S) -> Prop.
+
+Instance StateND_Monad(S: Type): Monad (StateND S) := {|
+  Bind{A B}(m: StateND S A)(f : A -> StateND S B) :=
+    fun (s1 : S) bs3 => exists a s2, m s1 (a, s2) /\ f a s2 bs3;
+  Return{A}(a : A) :=
+    fun (s : S) '(a', s') => a' = a /\ s' = s;
+|}.
+all: prove_monad_law.
+Defined.
+
+Module StateNDOperations.
+
+  Definition get{S: Type}: StateND S S :=
+    fun (s: S) (ss: (S * S)) => ss = (s, s).
+
+  Definition put{S: Type}(new_s: S): StateND S unit :=
+    fun (s: S) (us: (unit * S)) => us = (tt, new_s).
+
+  Definition unspecified_behavior{S A: Type}: StateND S A :=
+    fun (s: S) (a_s: (A * S)) => True. (* everything's possible *)
+
+  Definition arbitrary{S: Type}(A: Type): StateND S A :=
+    fun (s: S) (a_s: (A * S)) => exists a, a_s = (a, s).
+
+  Hint Unfold get put unspecified_behavior arbitrary : unf_monad_ops.
+
+  Lemma Bind_get{S A: Type}: forall (f: S -> StateND S A) (s: S),
+      Bind get f s = f s s.
+  Proof. prove_monad_law. Qed.
+
+  Lemma Bind_put{S A: Type}: forall (f: unit -> StateND S A) (s0 s1: S),
+      Bind (put s1) f s0 = f tt s1.
+  Proof. prove_monad_law. Qed.
+
+  (* provides the link between "S -> (A * S) -> Prop" and "S -> (S -> Prop) -> Prop" *)
+  Definition computation_satisfies{S: Type}(m: StateND S unit)(s: S)(post: S -> Prop): Prop :=
+    forall (o: (unit * S)), m s o -> exists s', o = (tt, s') /\ post s'.
+
+  (* provides the link between "S -> (A * S) -> Prop" and "S -> (A -> S -> Prop) -> Prop" *)
+  Definition computation_with_answer_satisfies
+             {S A: Type}(m: StateND S A)(s: S)(post: A -> S -> Prop): Prop :=
+    forall (o: (A * S)), m s o -> exists a s', o = (a, s') /\ post a s'.
+
+End StateNDOperations.
+
+
 (* option is for failure, Prop is for non-determinism.
    We can think of it as "S -> (option (A * S) -> Prop)", i.e. a function returning
    a unique set of all possible outcomes. *)
