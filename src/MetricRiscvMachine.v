@@ -48,6 +48,10 @@ Section Machine.
   Definition withLog := liftWith withLog.
   Definition withLogItem := liftWith withLogItem.
   Definition withLogItems := liftWith withLogItems.
+
+  Definition forgetMetrics(m: MetricRiscvMachine): RiscvMachineL := m.(getMachine).
+  Definition addMetrics(m: RiscvMachineL)(mc: MetricLog): MetricRiscvMachine :=
+    mkMetricRiscvMachine m mc.
   
 End Machine.
 

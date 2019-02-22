@@ -7,16 +7,15 @@ Require Import riscv.Program.
 Require Import riscv.Execute.
 Require Import riscv.util.PowerFunc.
 Require Import riscv.Utility.
-Require Import riscv.Minimal.
 Require Import riscv.Primitives.
-Require Import riscv.MetricPrimitives.
 Require Import coqutil.Map.Interface.
 Require Import riscv.RiscvMachine.
+Require Import riscv.Minimal.
 Require Import riscv.MetricRiscvMachine.
 Require Import riscv.MetricLogging.
-Require Import Coq.omega.Omega.
+Require Import riscv.MetricPrimitives.
 Require Import Coq.micromega.Lia.
-Require Import coqutil.Map.Interface.
+Require Import Coq.omega.Omega.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.PropExtensionality.
 
@@ -58,7 +57,93 @@ Section Riscv.
     step := liftL0 (addMetricInstructions 1) step;
     raiseException{A} := liftL2 id (raiseException (A := A));
   |}.
+  
+  Arguments Memory.load_bytes: simpl never.
+  Arguments Memory.store_bytes: simpl never.
 
+  Ltac t :=
+    repeat match goal with
+       | |- _ => reflexivity
+       | |- _ => progress (
+                     unfold computation_satisfies, computation_with_answer_satisfies,
+                            IsRiscvMachineL,
+                            valid_register, Register0,
+                            is_initial_register_value,
+                            get, put, fail_hard,
+                            Memory.loadByte, Memory.storeByte,
+                            Memory.loadHalf, Memory.storeHalf,
+                            Memory.loadWord, Memory.storeWord,
+                            Memory.loadDouble, Memory.storeDouble,
+                            fail_if_None, loadN, storeN,
+                            liftL0, liftL1, liftL2, id,
+                            getRegs, getMem, liftGet in *;
+                     subst;
+                     simpl in *)
+       | |- _ => intro
+       | |- _ => split
+       | |- _ => apply functional_extensionality
+       | |- _ => apply propositional_extensionality; split; intros
+       | u: unit |- _ => destruct u
+       | H: exists x, _ |- _ => destruct H
+       | H: {_ : _ | _} |- _ => destruct H
+       | H: _ /\ _ |- _ => destruct H
+       | p: _ * _ |- _ => destruct p
+       | |- context [ let (_, _) := ?p in _ ] => let E := fresh "E" in destruct p eqn: E
+       | H: Some _ = Some _ |- _ => inversion H; clear H; subst
+       | H: (_, _) = (_, _) |- _ => inversion H; clear H; subst
+       | H: _ && _ = true |- _ => apply andb_prop in H
+       | H: _ && _ = false |- _ => apply Bool.andb_false_iff in H
+       | |- _ * _ => constructor
+       | |- option _ => exact None
+       | |- _ => discriminate
+       | |- _ => congruence
+       | |- _ => solve [exfalso; lia]
+       | |- _ => solve [eauto 15]
+       | |- _ => progress (rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in *)
+       | |- _ => omega
+       | H: context[let (_, _) := ?y in _] |- _ => let E := fresh "E" in destruct y eqn: E
+       | E: ?x = Some _, H: context[match ?x with _ => _ end] |- _ => rewrite E in H
+       | E: ?x = Some _  |- context[match ?x with _ => _ end]      => rewrite E
+       | H: context[match ?x with _ => _ end] |- _ => let E := fresh "E" in destruct x eqn: E
+       | |- context[match ?x with _ => _ end]      => let E := fresh "E" in destruct x eqn: E
+       | H0: ?l = Some ?r0, H1:?l = Some ?r1 |- _ =>
+         assert (r0 = r1) by (rewrite H1 in H0; inversion H0; reflexivity)
+       | H: _ \/ _ |- _ => destruct H
+       | r: MetricRiscvMachineL |- _ =>
+         destruct r as [[regs pc npc m l] mc];
+         simpl in *
+(*       | H: context[match ?x with _ => _ end] |- _ => let E := fresh in destruct x eqn: E*)
+       | o: option _ |- _ => destruct o
+       (* introduce evars as late as possible (after all destructs), to make sure everything
+          is in their scope*)
+       | |- exists (P: ?A -> ?S -> Prop), _ =>
+            let a := fresh "a" in evar (a: A);
+            let s := fresh "s" in evar (s: S);
+            exists (fun a0 s0 => a0 = a /\ s0 = s);
+            subst a s
+       | |- _ \/ _ => left; solve [t]
+       | |- _ \/ _ => right; solve [t]
+       end.
+
+  Instance MetricMinimalMetricPrimitivesParams: MetricPrimitivesParams Empty_set (OState MetricRiscvMachineL) := {|
+    MetricPrimitives.mcomp_sat := @computation_with_answer_satisfies MetricRiscvMachineL;
+    MetricPrimitives.is_initial_register_value := eq (word.of_Z 0);
+    MetricPrimitives.nonmem_loadByte_sat   initialL addr post := False;
+    MetricPrimitives.nonmem_loadHalf_sat   initialL addr post := False;
+    MetricPrimitives.nonmem_loadWord_sat   initialL addr post := False;
+    MetricPrimitives.nonmem_loadDouble_sat initialL addr post := False;
+    MetricPrimitives.nonmem_storeByte_sat   initialL addr v post := False;
+    MetricPrimitives.nonmem_storeHalf_sat   initialL addr v post := False;
+    MetricPrimitives.nonmem_storeWord_sat   initialL addr v post := False;
+    MetricPrimitives.nonmem_storeDouble_sat initialL addr v post := False;
+  |}.
+
+  Instance MetricMinimalSatisfiesMetricPrimitives: MetricPrimitives Empty_set (OState MetricRiscvMachineL).
+  Proof.
+    econstructor.
+    all: try t.
+  Qed.
+  
 End Riscv.
-
+  
 Existing Instance IsMetricRiscvMachineL.
