@@ -25,10 +25,10 @@ Section Primitives.
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
 
-  Class PrimitivesParams := {
+  Class PrimitivesParams(Machine: Type) := {
     (* Abstract predicate specifying when a monadic computation satisfies a
        postcondition when run on given initial machine *)
-    mcomp_sat: forall {A: Type}, M A -> RiscvMachineL -> (A -> RiscvMachineL -> Prop) -> Prop;
+    mcomp_sat: forall {A: Type}, M A -> Machine -> (A -> Machine -> Prop) -> Prop;
 
     (* Tells whether the given value can be found in an uninitialized register.
        On instances supporting non-determinism, it returns True for all values.
@@ -38,24 +38,24 @@ Section Primitives.
     (* Given an initial RiscvMachine state, an address, and a postcondition on
        (input, final state), tells if this postcondition characterizes the
        behavior of the machine *)
-    nonmem_loadByte_sat  :  RiscvMachineL -> word -> (w8  -> RiscvMachineL -> Prop) -> Prop;
-    nonmem_loadHalf_sat  :  RiscvMachineL -> word -> (w16 -> RiscvMachineL -> Prop) -> Prop;
-    nonmem_loadWord_sat  :  RiscvMachineL -> word -> (w32 -> RiscvMachineL -> Prop) -> Prop;
-    nonmem_loadDouble_sat:  RiscvMachineL -> word -> (w64 -> RiscvMachineL -> Prop) -> Prop;
+    nonmem_loadByte_sat  :  Machine -> word -> (w8  -> Machine -> Prop) -> Prop;
+    nonmem_loadHalf_sat  :  Machine -> word -> (w16 -> Machine -> Prop) -> Prop;
+    nonmem_loadWord_sat  :  Machine -> word -> (w32 -> Machine -> Prop) -> Prop;
+    nonmem_loadDouble_sat:  Machine -> word -> (w64 -> Machine -> Prop) -> Prop;
 
     (* Given an initial RiscvMachine state, an address, a value to write,
        and a postcondition on final states, tells if this postcondition characterizes the
        behavior of the machine *)
-    nonmem_storeByte_sat  : RiscvMachineL -> word -> w8  -> (RiscvMachineL -> Prop) -> Prop;
-    nonmem_storeHalf_sat  : RiscvMachineL -> word -> w16 -> (RiscvMachineL -> Prop) -> Prop;
-    nonmem_storeWord_sat  : RiscvMachineL -> word -> w32 -> (RiscvMachineL -> Prop) -> Prop;
-    nonmem_storeDouble_sat: RiscvMachineL -> word -> w64 -> (RiscvMachineL -> Prop) -> Prop;
+    nonmem_storeByte_sat  : Machine -> word -> w8  -> (Machine -> Prop) -> Prop;
+    nonmem_storeHalf_sat  : Machine -> word -> w16 -> (Machine -> Prop) -> Prop;
+    nonmem_storeWord_sat  : Machine -> word -> w32 -> (Machine -> Prop) -> Prop;
+    nonmem_storeDouble_sat: Machine -> word -> w64 -> (Machine -> Prop) -> Prop;
   }.
 
   Context {RVM: RiscvProgram M word}.
   Context {RVS: @RiscvState M word _ _ RVM}.
 
-  Definition spec_load{p: PrimitivesParams}(V: Type)
+  Definition spec_load{p: PrimitivesParams RiscvMachineL}(V: Type)
              (riscv_load: word -> M V)
              (mem_load: mem -> word -> option V)
              (nonmem_load: RiscvMachineL -> word -> (V  -> RiscvMachineL -> Prop) -> Prop)
@@ -65,7 +65,7 @@ Section Primitives.
         (mem_load initialL.(getMem) addr = None /\ nonmem_load initialL addr post) <->
         mcomp_sat (riscv_load addr) initialL post.
 
-  Definition spec_store{p: PrimitivesParams}(V: Type)
+  Definition spec_store{p: PrimitivesParams RiscvMachineL}(V: Type)
              (riscv_store: word -> V -> M unit)
              (mem_store: mem -> word -> V -> option mem)
              (nonmem_store: RiscvMachineL -> word -> V -> (RiscvMachineL -> Prop) -> Prop)
@@ -76,7 +76,7 @@ Section Primitives.
       mcomp_sat (riscv_store addr v) initialL post.
 
   Class Primitives :=  {
-    primitives_params :> PrimitivesParams;
+    primitives_params :> PrimitivesParams RiscvMachineL;
 
     spec_Bind{A B: Type}: forall (initialL: RiscvMachineL) (post: B -> RiscvMachineL -> Prop)
                                  (m: M A) (f : A -> M B),
@@ -154,5 +154,5 @@ Section Primitives.
 
 End Primitives.
 
-Arguments PrimitivesParams {_} {_} Action {_} M.
+Arguments PrimitivesParams {_} M Machine.
 Arguments Primitives {_} {_} Action {_} M {_} {_}.

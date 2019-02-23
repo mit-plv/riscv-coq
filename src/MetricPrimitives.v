@@ -22,38 +22,10 @@ Section MetricPrimitives.
 
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
-
-  Class MetricPrimitivesParams := {
-    (* Abstract predicate specifying when a monadic computation satisfies a
-       postcondition when run on given initial machine *)
-    mcomp_sat: forall {A: Type}, M A -> RiscvMachineL -> (A -> RiscvMachineL -> Prop) -> Prop;
-
-    (* Tells whether the given value can be found in an uninitialized register.
-       On instances supporting non-determinism, it returns True for all values.
-       On instances without non-determinism, it only accepts a default value, eg 0 *)
-    is_initial_register_value: word -> Prop;
-
-    (* Given an initial RiscvMachine state, an address, and a postcondition on
-       (input, final state), tells if this postcondition characterizes the
-       behavior of the machine *)
-    nonmem_loadByte_sat  :  RiscvMachineL -> word -> (w8  -> RiscvMachineL -> Prop) -> Prop;
-    nonmem_loadHalf_sat  :  RiscvMachineL -> word -> (w16 -> RiscvMachineL -> Prop) -> Prop;
-    nonmem_loadWord_sat  :  RiscvMachineL -> word -> (w32 -> RiscvMachineL -> Prop) -> Prop;
-    nonmem_loadDouble_sat:  RiscvMachineL -> word -> (w64 -> RiscvMachineL -> Prop) -> Prop;
-
-    (* Given an initial RiscvMachine state, an address, a value to write,
-       and a postcondition on final states, tells if this postcondition characterizes the
-       behavior of the machine *)
-    nonmem_storeByte_sat  : RiscvMachineL -> word -> w8  -> (RiscvMachineL -> Prop) -> Prop;
-    nonmem_storeHalf_sat  : RiscvMachineL -> word -> w16 -> (RiscvMachineL -> Prop) -> Prop;
-    nonmem_storeWord_sat  : RiscvMachineL -> word -> w32 -> (RiscvMachineL -> Prop) -> Prop;
-    nonmem_storeDouble_sat: RiscvMachineL -> word -> w64 -> (RiscvMachineL -> Prop) -> Prop;
-  }.
-
   Context {RVM: RiscvProgram M word}.
   Context {RVS: @RiscvState M word _ _ RVM}.
 
-  Definition spec_load{p: MetricPrimitivesParams}(V: Type)
+  Definition spec_load{p: PrimitivesParams M RiscvMachineL}(V: Type)
              (riscv_load: word -> M V)
              (mem_load: mem -> word -> option V)
              (nonmem_load: RiscvMachineL -> word -> (V  -> RiscvMachineL -> Prop) -> Prop)
@@ -64,7 +36,7 @@ Section MetricPrimitives.
         (mem_load initialL.(getMem) addr = None /\ nonmem_load initialL addr post) <->
         mcomp_sat (riscv_load addr) initialL post.
 
-  Definition spec_store{p: MetricPrimitivesParams}(V: Type)
+  Definition spec_store{p: PrimitivesParams M RiscvMachineL}(V: Type)
              (riscv_store: word -> V -> M unit)
              (mem_store: mem -> word -> V -> option mem)
              (nonmem_store: RiscvMachineL -> word -> V -> (RiscvMachineL -> Prop) -> Prop)
@@ -76,7 +48,7 @@ Section MetricPrimitives.
       mcomp_sat (riscv_store addr v) initialL post.
 
   Class MetricPrimitives := {
-    primitives_params :> MetricPrimitivesParams;
+    primitives_params :> PrimitivesParams M RiscvMachineL;
 
     spec_Bind{A B: Type}: forall (initialL: RiscvMachineL) (post: B -> RiscvMachineL -> Prop)
                                  (m: M A) (f : A -> M B),
@@ -157,5 +129,4 @@ Section MetricPrimitives.
 
 End MetricPrimitives.
 
-Arguments MetricPrimitivesParams {_} {_} Action {_} M.
 Arguments MetricPrimitives {_} {_} Action {_} M {_} {_}.

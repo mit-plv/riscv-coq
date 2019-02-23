@@ -57,7 +57,7 @@ Section Riscv.
     step := liftL0 (addMetricInstructions 1) step;
     raiseException{A} := liftL2 id (raiseException (A := A));
   |}.
-  
+
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
 
@@ -125,17 +125,17 @@ Section Riscv.
        | |- _ \/ _ => right; solve [t]
        end.
 
-  Instance MetricMinimalMetricPrimitivesParams: MetricPrimitivesParams Empty_set (OState MetricRiscvMachineL) := {|
-    MetricPrimitives.mcomp_sat := @computation_with_answer_satisfies MetricRiscvMachineL;
-    MetricPrimitives.is_initial_register_value := eq (word.of_Z 0);
-    MetricPrimitives.nonmem_loadByte_sat   initialL addr post := False;
-    MetricPrimitives.nonmem_loadHalf_sat   initialL addr post := False;
-    MetricPrimitives.nonmem_loadWord_sat   initialL addr post := False;
-    MetricPrimitives.nonmem_loadDouble_sat initialL addr post := False;
-    MetricPrimitives.nonmem_storeByte_sat   initialL addr v post := False;
-    MetricPrimitives.nonmem_storeHalf_sat   initialL addr v post := False;
-    MetricPrimitives.nonmem_storeWord_sat   initialL addr v post := False;
-    MetricPrimitives.nonmem_storeDouble_sat initialL addr v post := False;
+  Instance MetricMinimalMetricPrimitivesParams: PrimitivesParams (OState MetricRiscvMachineL) MetricRiscvMachineL := {|
+    Primitives.mcomp_sat := @computation_with_answer_satisfies MetricRiscvMachineL;
+    Primitives.is_initial_register_value := eq (word.of_Z 0);
+    Primitives.nonmem_loadByte_sat   initialL addr post := False;
+    Primitives.nonmem_loadHalf_sat   initialL addr post := False;
+    Primitives.nonmem_loadWord_sat   initialL addr post := False;
+    Primitives.nonmem_loadDouble_sat initialL addr post := False;
+    Primitives.nonmem_storeByte_sat   initialL addr v post := False;
+    Primitives.nonmem_storeHalf_sat   initialL addr v post := False;
+    Primitives.nonmem_storeWord_sat   initialL addr v post := False;
+    Primitives.nonmem_storeDouble_sat initialL addr v post := False;
   |}.
 
   Instance MetricMinimalSatisfiesMetricPrimitives: MetricPrimitives Empty_set (OState MetricRiscvMachineL).
@@ -143,7 +143,7 @@ Section Riscv.
     econstructor.
     all: try t.
   Qed.
-  
+
 End Riscv.
-  
+
 Existing Instance IsMetricRiscvMachineL.

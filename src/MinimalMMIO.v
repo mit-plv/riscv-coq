@@ -230,7 +230,7 @@ Section Riscv.
 
   Arguments LittleEndian.combine: simpl never.
 
-  Instance MinimalMMIOPrimitivesParams: PrimitivesParams MMIOAction (OStateND RiscvMachineL) := {|
+  Instance MinimalMMIOPrimitivesParams: PrimitivesParams (OStateND RiscvMachineL) RiscvMachineL := {|
     Primitives.mcomp_sat := @OStateNDOperations.computation_with_answer_satisfies RiscvMachineL;
 
     (* any value can be found in an uninitialized register *)

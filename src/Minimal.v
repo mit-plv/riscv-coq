@@ -151,7 +151,7 @@ Section Riscv.
        | |- _ \/ _ => right; solve [t]
        end.
 
-  Instance MinimalPrimitivesParams: PrimitivesParams Empty_set (OState RiscvMachineL) := {|
+  Instance MinimalPrimitivesParams: PrimitivesParams (OState RiscvMachineL) RiscvMachineL := {|
     Primitives.mcomp_sat := @OStateOperations.computation_with_answer_satisfies RiscvMachineL;
     Primitives.is_initial_register_value := eq (word.of_Z 0);
     Primitives.nonmem_loadByte_sat   initialL addr post := False;
