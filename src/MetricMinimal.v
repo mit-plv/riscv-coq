@@ -138,9 +138,9 @@ Section Riscv.
     Primitives.nonmem_storeDouble_sat initialL addr v post := False;
   |}.
 
-  Instance MetricMinimalSatisfiesMetricPrimitives: MetricPrimitives Empty_set (OState MetricRiscvMachineL).
+  Instance MetricMinimalSatisfiesMetricPrimitives: MetricPrimitives MetricMinimalMetricPrimitivesParams.
   Proof.
-    econstructor.
+    constructor.
     all: try t.
   Qed.
 

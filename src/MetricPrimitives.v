@@ -47,8 +47,9 @@ Section MetricPrimitives.
       (mem_store initialL.(getMem) addr v = None /\ nonmem_store initialL addr v (post tt)) <->
       mcomp_sat (riscv_store addr v) initialL post.
 
-  Class MetricPrimitives := {
-    primitives_params :> PrimitivesParams M RiscvMachineL;
+  (* primitives_params is a paramater rather than a field because Primitives lives in Prop and
+     is opaque, but the fields of primitives_params need to be visible *)
+  Class MetricPrimitives(primitives_params: PrimitivesParams M RiscvMachineL): Prop := {
 
     spec_Bind{A B: Type}: forall (initialL: RiscvMachineL) (post: B -> RiscvMachineL -> Prop)
                                  (m: M A) (f : A -> M B),
@@ -128,5 +129,3 @@ Section MetricPrimitives.
   }.
 
 End MetricPrimitives.
-
-Arguments MetricPrimitives {_} {_} Action {_} M {_} {_}.

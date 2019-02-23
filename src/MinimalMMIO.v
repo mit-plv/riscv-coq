@@ -263,9 +263,9 @@ Section Riscv.
       post (withLogItem (mmioStoreEvent initialL.(getMem) addr v) initialL);
   |}.
 
-  Instance MinimalMMIOSatisfiesPrimitives: Primitives MMIOAction (OStateND RiscvMachineL).
+  Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
   Proof.
-    econstructor.
+    constructor.
     all: split; [solve [t]|].
     - t.
       unfold OStateND in m.
@@ -381,7 +381,7 @@ Section Riscv.
       (edestruct H as [b [? ?]]; [eauto|]); t.
     - t.
       (edestruct H as [b [? ?]]; [eauto|]); t.
-  Defined.
+  Qed.
 
 End Riscv.
 

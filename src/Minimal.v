@@ -164,9 +164,9 @@ Section Riscv.
     Primitives.nonmem_storeDouble_sat initialL addr v post := False;
   |}.
 
-  Instance MinimalSatisfiesPrimitives: Primitives Empty_set (OState RiscvMachineL).
+  Instance MinimalSatisfiesPrimitives: Primitives MinimalPrimitivesParams.
   Proof.
-    econstructor.
+    constructor.
     all: try t.
   Qed.
 
