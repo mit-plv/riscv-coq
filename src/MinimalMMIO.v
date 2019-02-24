@@ -26,10 +26,6 @@ Section Riscv.
 
   Local Notation RiscvMachineL := (RiscvMachine Register MMIOAction).
 
-  Definition theMMIOAddr: word := (ZToReg 65524). (* maybe like spike *)
-
-  Definition simple_isMMIOAddr: word -> bool := reg_eqb theMMIOAddr.
-
   Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
     word.of_Z (BitOps.sextend (8 * Z.of_nat n) (LittleEndian.combine n v)).
 
@@ -53,22 +49,20 @@ Section Riscv.
     mach <- get;
     match Memory.load_bytes n mach.(getMem) a with
     | Some v => Return v
-    | None => if simple_isMMIOAddr a then
-                inp <- arbitrary (HList.tuple byte n);
-                logEvent (mmioLoadEvent mach.(getMem) a inp);;
-                Return inp
-              else
-                fail_hard
+    | None =>
+      (* if any of the n addresses is not present in the memory, we perform an MMIO load event: *)
+      inp <- arbitrary (HList.tuple byte n);
+      logEvent (mmioLoadEvent mach.(getMem) a inp);;
+      Return inp
     end.
 
   Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OStateND RiscvMachineL unit :=
     mach <- get;
     match Memory.store_bytes n mach.(getMem) a v with
     | Some m => put (withMem m mach)
-    | None => if simple_isMMIOAddr a then
-                logEvent (mmioStoreEvent mach.(getMem) a v)
-              else
-                fail_hard
+    | None =>
+      (* if any of the n addresses is not present in the memory, we perform an MMIO store event: *)
+      logEvent (mmioStoreEvent mach.(getMem) a v)
     end.
 
   Instance IsRiscvMachineL: RiscvProgram (OStateND RiscvMachineL) word :=  {|
@@ -157,7 +151,6 @@ Section Riscv.
                             get, put, fail_hard,
                             arbitrary,
                             logEvent,
-                            simple_isMMIOAddr, theMMIOAddr,
                             ZToReg, MkMachineWidth.MachineWidth_XLEN,
                             Memory.loadByte, Memory.storeByte,
                             Memory.loadHalf, Memory.storeHalf,
@@ -237,29 +230,21 @@ Section Riscv.
     Primitives.is_initial_register_value x := True;
 
     Primitives.nonmem_loadByte_sat initialL addr post :=
-      simple_isMMIOAddr addr = true /\
       forall (v: w8), post v (withLogItem (mmioLoadEvent initialL.(getMem) addr v) initialL);
     Primitives.nonmem_loadHalf_sat initialL addr post :=
-      simple_isMMIOAddr addr = true /\
       forall (v: w16), post v (withLogItem (mmioLoadEvent initialL.(getMem) addr v) initialL);
     Primitives.nonmem_loadWord_sat initialL addr post :=
-      simple_isMMIOAddr addr = true /\
       forall (v: w32), post v (withLogItem (mmioLoadEvent initialL.(getMem) addr v) initialL);
     Primitives.nonmem_loadDouble_sat initialL addr post :=
-      simple_isMMIOAddr addr = true /\
       forall (v: w64), post v (withLogItem (mmioLoadEvent initialL.(getMem) addr v) initialL);
 
     Primitives.nonmem_storeByte_sat initialL addr v post :=
-      simple_isMMIOAddr addr = true /\
       post (withLogItem (mmioStoreEvent initialL.(getMem) addr v) initialL);
     Primitives.nonmem_storeHalf_sat initialL addr v post :=
-      simple_isMMIOAddr addr = true /\
       post (withLogItem (mmioStoreEvent initialL.(getMem) addr v) initialL);
     Primitives.nonmem_storeWord_sat initialL addr v post :=
-      simple_isMMIOAddr addr = true /\
       post (withLogItem (mmioStoreEvent initialL.(getMem) addr v) initialL);
     Primitives.nonmem_storeDouble_sat initialL addr v post :=
-      simple_isMMIOAddr addr = true /\
       post (withLogItem (mmioStoreEvent initialL.(getMem) addr v) initialL);
   |}.
 
@@ -283,41 +268,33 @@ Section Riscv.
       + t; match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
-      + destruct (simple_isMMIOAddr addr) eqn: G.
-        * t. match goal with
-          | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-          end; t.
-        * exfalso. t. specialize (H None). t.
+      + t. match goal with
+           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
+           end; t.
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.loadHalf (getMem initialL) addr) eqn: F; [left|right].
       + t; match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
-      + destruct (simple_isMMIOAddr addr) eqn: G.
-        * t. match goal with
-          | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-          end; t.
-        * exfalso. t. specialize (H None). t.
+      + t. match goal with
+           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
+           end; t.
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.loadWord (getMem initialL) addr) eqn: F; [left|right].
       + t; match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
-      + destruct (simple_isMMIOAddr addr) eqn: G.
-        * t. match goal with
-          | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-          end; t.
-        * exfalso. t. specialize (H None). t.
+      + t. match goal with
+           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
+           end; t.
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.loadDouble (getMem initialL) addr) eqn: F; [left|right].
       + t; match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
-      + destruct (simple_isMMIOAddr addr) eqn: G.
-        * t. match goal with
-          | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-          end; t.
-        * exfalso. t. specialize (H None). t.
+      + t. match goal with
+           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
+           end; t.
 
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.storeByte (getMem initialL) addr v) eqn: F.
@@ -328,11 +305,9 @@ Section Riscv.
         end; t.
       + destruct (Memory.loadByte (getMem initialL) addr) eqn: G; [ exfalso; t | ].
         right.
-        destruct (simple_isMMIOAddr addr) eqn: A.
-        * t; match goal with
-          | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-          end; t.
-        * exfalso. t. specialize (H None). t.
+        t; match goal with
+           | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
+           end; t.
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.storeHalf (getMem initialL) addr v) eqn: F.
       + destruct (Memory.loadHalf (getMem initialL) addr) eqn: G; [ | exfalso; t ].
@@ -342,11 +317,9 @@ Section Riscv.
         end; t.
       + destruct (Memory.loadHalf (getMem initialL) addr) eqn: G; [ exfalso; t | ].
         right.
-        destruct (simple_isMMIOAddr addr) eqn: A.
-        * t; match goal with
-          | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-          end; t.
-        * exfalso. t. specialize (H None). t.
+        t; match goal with
+           | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
+           end; t.
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.storeWord (getMem initialL) addr v) eqn: F.
       + destruct (Memory.loadWord (getMem initialL) addr) eqn: G; [ | exfalso; t ].
@@ -356,11 +329,9 @@ Section Riscv.
         end; t.
       + destruct (Memory.loadWord (getMem initialL) addr) eqn: G; [ exfalso; t | ].
         right.
-        destruct (simple_isMMIOAddr addr) eqn: A.
-        * t; match goal with
-          | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-          end; t.
-        * exfalso. t. specialize (H None). t.
+        t; match goal with
+           | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
+           end; t.
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.storeDouble (getMem initialL) addr v) eqn: F.
       + destruct (Memory.loadDouble (getMem initialL) addr) eqn: G; [ | exfalso; t ].
@@ -370,11 +341,9 @@ Section Riscv.
         end; t.
       + destruct (Memory.loadDouble (getMem initialL) addr) eqn: G; [ exfalso; t | ].
         right.
-        destruct (simple_isMMIOAddr addr) eqn: A.
-        * t; match goal with
-          | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-          end; t.
-        * exfalso. t. specialize (H None). t.
+        t; match goal with
+           | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
+           end; t.
     - t.
       (edestruct H as [b [? ?]]; [eauto|]); t.
     - t.
