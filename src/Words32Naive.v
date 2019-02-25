@@ -14,10 +14,8 @@ Lemma bound8: 0 < 8. lia. Qed.
 Instance word8: word.word 8 := Naive.word 8 bound8.
 Instance word8ok: word.ok word8 := Naive.ok 8 bound8.
 
-Lemma cases32: 32 = 32 \/ 32 = 64. lia. Qed.
-
 Instance Words32Naive: Words := {|
   byte := word8;
   word := word32;
-  width_cases := cases32;
+  width_cases := or_introl eq_refl;
 |}.
