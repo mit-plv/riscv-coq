@@ -22,3 +22,4 @@ lia.
 Qed.
 
 Instance Mem: map.map word32 word8 := SortedList.map params strictorder.
+Instance MemOk: map.ok Mem := SortedList.map_ok.
