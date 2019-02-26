@@ -31,10 +31,19 @@ Section MemAccess.
 
   Fixpoint unchecked_store_byte_tuple_list{n: nat}(a: word)(l: list (tuple byte n))(m: mem): mem :=
     match l with
-    | w :: rest => unchecked_store_byte_tuple_list
-                     (word.add a (word.of_Z (Z.of_nat n))) rest (unchecked_store_bytes n m a w)
+    | w :: rest =>
+      let m' := unchecked_store_byte_tuple_list (word.add a (word.of_Z (Z.of_nat n))) rest m in
+      unchecked_store_bytes n m' a w
     | nil => m
     end.
+
+  Lemma unchecked_store_byte_tuple_list_cons: forall n a x (l: list (tuple byte n)) m,
+      unchecked_store_byte_tuple_list a (x :: l) m =
+      unchecked_store_bytes n
+          (unchecked_store_byte_tuple_list (word.add a (word.of_Z (Z.of_nat n))) l m) a x.
+  Proof.
+    intros. reflexivity.
+  Qed.
 
 End MemAccess.
 

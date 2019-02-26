@@ -95,7 +95,6 @@ eassumption.
     induction n; intros.
     - unfold run, Run.run in H0. simpl in H0.
       apply runsToDone.
-      About go_done.
       (* needs inverse direction *)
       admit.
     - unfold run, Run.run in H0. simpl in H0.
