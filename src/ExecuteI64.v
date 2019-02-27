@@ -19,62 +19,93 @@ Local Open Scope alu_scope.
 
 (* Converted imports: *)
 
-Require Decode.
 Require Import Monads.
-Require Import Program.
-Require Import Utility.
+Require Spec.Decode.
+Require Spec.Machine.
+Require Spec.VirtualMemory.
+Require Utility.Utility.
 
 (* No type declarations to convert. *)
+
 (* Converted value declarations: *)
 
-Definition execute {p} {t} `{(RiscvState p t)}
-   : Decode.InstructionI64 -> p unit :=
+Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
+   : Spec.Decode.InstructionI64 -> p unit :=
   fun arg_0__ =>
     match arg_0__ with
-    | Decode.Lwu rd rs1 oimm12 =>
-        Bind (getRegister rs1) (fun a =>
-                Bind (translate Load (ZToReg 4) (a + fromImm oimm12)) (fun addr =>
-                        Bind (loadWord addr) (fun x => setRegister rd (uInt32ToReg x))))
-    | Decode.Ld rd rs1 oimm12 =>
-        Bind (getRegister rs1) (fun a =>
-                Bind (translate Load (ZToReg 8) (a + fromImm oimm12)) (fun addr =>
-                        Bind (loadDouble addr) (fun x => setRegister rd (int64ToReg x))))
-    | Decode.Sd rs1 rs2 simm12 =>
-        Bind (getRegister rs1) (fun a =>
-                Bind (translate Store (ZToReg 8) (a + fromImm simm12)) (fun addr =>
-                        Bind (getRegister rs2) (fun x => storeDouble addr (regToInt64 x))))
-    | Decode.Addiw rd rs1 imm12 =>
-        Bind (getRegister rs1) (fun x => setRegister rd (s32 (x + fromImm imm12)))
-    | Decode.Slliw rd rs1 shamt5 =>
-        Bind (getRegister rs1) (fun x => setRegister rd (s32 (sll x shamt5)))
-    | Decode.Srliw rd rs1 shamt5 =>
-        Bind (getRegister rs1) (fun x => setRegister rd (s32 (srl (u32 x) shamt5)))
-    | Decode.Sraiw rd rs1 shamt5 =>
-        Bind (getRegister rs1) (fun x => setRegister rd (s32 (sra (s32 x) shamt5)))
-    | Decode.Addw rd rs1 rs2 =>
-        Bind (getRegister rs1) (fun x =>
-                Bind (getRegister rs2) (fun y => setRegister rd (s32 (x + y))))
-    | Decode.Subw rd rs1 rs2 =>
-        Bind (getRegister rs1) (fun x =>
-                Bind (getRegister rs2) (fun y => setRegister rd (s32 (x - y))))
-    | Decode.Sllw rd rs1 rs2 =>
-        Bind (getRegister rs1) (fun x =>
-                Bind (getRegister rs2) (fun y => setRegister rd (s32 (sll x (regToShamt5 y)))))
-    | Decode.Srlw rd rs1 rs2 =>
-        Bind (getRegister rs1) (fun x =>
-                Bind (getRegister rs2) (fun y =>
-                        setRegister rd (s32 (srl (u32 x) (regToShamt5 y)))))
-    | Decode.Sraw rd rs1 rs2 =>
-        Bind (getRegister rs1) (fun x =>
-                Bind (getRegister rs2) (fun y =>
-                        setRegister rd (s32 (sra (s32 x) (regToShamt5 y)))))
+    | Spec.Decode.Lwu rd rs1 oimm12 =>
+        Bind (Spec.Machine.getRegister rs1) (fun a =>
+                Bind (Spec.VirtualMemory.translate Spec.Machine.Load (ZToReg 4) (a +
+                                                    Utility.Utility.fromImm oimm12)) (fun addr =>
+                        Bind (Spec.Machine.loadWord Spec.Machine.Execute addr) (fun x =>
+                                Spec.Machine.setRegister rd (Utility.Utility.uInt32ToReg x))))
+    | Spec.Decode.Ld rd rs1 oimm12 =>
+        Bind (Spec.Machine.getRegister rs1) (fun a =>
+                Bind (Spec.VirtualMemory.translate Spec.Machine.Load (ZToReg 8) (a +
+                                                    Utility.Utility.fromImm oimm12)) (fun addr =>
+                        Bind (Spec.Machine.loadDouble Spec.Machine.Execute addr) (fun x =>
+                                Spec.Machine.setRegister rd (Utility.Utility.int64ToReg x))))
+    | Spec.Decode.Sd rs1 rs2 simm12 =>
+        Bind (Spec.Machine.getRegister rs1) (fun a =>
+                Bind (Spec.VirtualMemory.translate Spec.Machine.Store (ZToReg 8) (a +
+                                                    Utility.Utility.fromImm simm12)) (fun addr =>
+                        Bind (Spec.Machine.getRegister rs2) (fun x =>
+                                Spec.Machine.storeDouble Spec.Machine.Execute addr (Utility.Utility.regToInt64
+                                                                                    x))))
+    | Spec.Decode.Addiw rd rs1 imm12 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Spec.Machine.setRegister rd (Utility.Utility.s32 (x +
+                                                                  Utility.Utility.fromImm imm12)))
+    | Spec.Decode.Slliw rd rs1 shamt5 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Spec.Machine.setRegister rd (Utility.Utility.s32 (Utility.Utility.sll x
+                                                                  shamt5)))
+    | Spec.Decode.Srliw rd rs1 shamt5 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Spec.Machine.setRegister rd (Utility.Utility.s32 (Utility.Utility.srl
+                                                                  (Utility.Utility.u32 x) shamt5)))
+    | Spec.Decode.Sraiw rd rs1 shamt5 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Spec.Machine.setRegister rd (Utility.Utility.s32 (Utility.Utility.sra
+                                                                  (Utility.Utility.s32 x) shamt5)))
+    | Spec.Decode.Addw rd rs1 rs2 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Bind (Spec.Machine.getRegister rs2) (fun y =>
+                        Spec.Machine.setRegister rd (Utility.Utility.s32 (x + y))))
+    | Spec.Decode.Subw rd rs1 rs2 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Bind (Spec.Machine.getRegister rs2) (fun y =>
+                        Spec.Machine.setRegister rd (Utility.Utility.s32 (x - y))))
+    | Spec.Decode.Sllw rd rs1 rs2 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Bind (Spec.Machine.getRegister rs2) (fun y =>
+                        Spec.Machine.setRegister rd (Utility.Utility.s32 (Utility.Utility.sll x
+                                                                          (Utility.Utility.regToShamt5 y)))))
+    | Spec.Decode.Srlw rd rs1 rs2 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Bind (Spec.Machine.getRegister rs2) (fun y =>
+                        Spec.Machine.setRegister rd (Utility.Utility.s32 (Utility.Utility.srl
+                                                                          (Utility.Utility.u32 x)
+                                                                          (Utility.Utility.regToShamt5 y)))))
+    | Spec.Decode.Sraw rd rs1 rs2 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Bind (Spec.Machine.getRegister rs2) (fun y =>
+                        Spec.Machine.setRegister rd (Utility.Utility.s32 (Utility.Utility.sra
+                                                                          (Utility.Utility.s32 x)
+                                                                          (Utility.Utility.regToShamt5 y)))))
     | inst => Return tt
     end.
 
 (* External variables:
-     Bind Load Return RiscvState Store ZToReg fromImm getRegister int64ToReg
-     loadDouble loadWord op_zm__ op_zp__ regToInt64 regToShamt5 s32 setRegister sll
-     sra srl storeDouble translate tt u32 uInt32ToReg unit Decode.Addiw Decode.Addw
-     Decode.InstructionI64 Decode.Ld Decode.Lwu Decode.Sd Decode.Slliw Decode.Sllw
-     Decode.Sraiw Decode.Sraw Decode.Srliw Decode.Srlw Decode.Subw
+     Bind Return ZToReg op_zm__ op_zp__ tt unit Spec.Decode.Addiw Spec.Decode.Addw
+     Spec.Decode.InstructionI64 Spec.Decode.Ld Spec.Decode.Lwu Spec.Decode.Sd
+     Spec.Decode.Slliw Spec.Decode.Sllw Spec.Decode.Sraiw Spec.Decode.Sraw
+     Spec.Decode.Srliw Spec.Decode.Srlw Spec.Decode.Subw Spec.Machine.Execute
+     Spec.Machine.Load Spec.Machine.RiscvMachine Spec.Machine.Store
+     Spec.Machine.getRegister Spec.Machine.loadDouble Spec.Machine.loadWord
+     Spec.Machine.setRegister Spec.Machine.storeDouble Spec.VirtualMemory.translate
+     Utility.Utility.fromImm Utility.Utility.int64ToReg Utility.Utility.regToInt64
+     Utility.Utility.regToShamt5 Utility.Utility.s32 Utility.Utility.sll
+     Utility.Utility.sra Utility.Utility.srl Utility.Utility.u32
+     Utility.Utility.uInt32ToReg
 *)

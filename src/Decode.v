@@ -21,100 +21,137 @@ Local Open Scope Z_scope.
 Require Coq.Init.Datatypes.
 Require Coq.Lists.List.
 Require Import Coq.ZArith.BinInt.
-Require Import Utility.
+Require Utility.Utility.
 
 (* Converted type declarations: *)
 
+Definition RoundMode :=
+  Utility.Utility.MachineInt%type.
+
 Definition Register :=
-  Z%type.
+  Utility.Utility.MachineInt%type.
 
 Definition Opcode :=
-  Z%type.
+  Utility.Utility.MachineInt%type.
 
 Inductive InstructionSet : Type
   := RV32I : InstructionSet
   |  RV32IM : InstructionSet
   |  RV32IA : InstructionSet
   |  RV32IMA : InstructionSet
+  |  RV32IF : InstructionSet
+  |  RV32IMF : InstructionSet
+  |  RV32IAF : InstructionSet
+  |  RV32IMAF : InstructionSet
   |  RV64I : InstructionSet
   |  RV64IM : InstructionSet
   |  RV64IA : InstructionSet
-  |  RV64IMA : InstructionSet.
+  |  RV64IMA : InstructionSet
+  |  RV64IF : InstructionSet
+  |  RV64IMF : InstructionSet
+  |  RV64IAF : InstructionSet
+  |  RV64IMAF : InstructionSet.
 
 Inductive InstructionM64 : Type
-  := Mulw : Register -> Register -> Register -> InstructionM64
-  |  Divw : Register -> Register -> Register -> InstructionM64
-  |  Divuw : Register -> Register -> Register -> InstructionM64
-  |  Remw : Register -> Register -> Register -> InstructionM64
-  |  Remuw : Register -> Register -> Register -> InstructionM64
+  := Mulw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM64
+  |  Divw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM64
+  |  Divuw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM64
+  |  Remw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM64
+  |  Remuw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM64
   |  InvalidM64 : InstructionM64.
 
 Inductive InstructionM : Type
-  := Mul : Register -> Register -> Register -> InstructionM
-  |  Mulh : Register -> Register -> Register -> InstructionM
-  |  Mulhsu : Register -> Register -> Register -> InstructionM
-  |  Mulhu : Register -> Register -> Register -> InstructionM
-  |  Div : Register -> Register -> Register -> InstructionM
-  |  Divu : Register -> Register -> Register -> InstructionM
-  |  Rem : Register -> Register -> Register -> InstructionM
-  |  Remu : Register -> Register -> Register -> InstructionM
+  := Mul (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
+  |  Mulh (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
+  |  Mulhsu (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
+  |  Mulhu (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
+  |  Div (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
+  |  Divu (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
+  |  Rem (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
+  |  Remu (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
   |  InvalidM : InstructionM.
 
 Inductive InstructionI64 : Type
-  := Ld : Register -> Register -> Z -> InstructionI64
-  |  Lwu : Register -> Register -> Z -> InstructionI64
-  |  Addiw : Register -> Register -> Z -> InstructionI64
-  |  Slliw : Register -> Register -> Z -> InstructionI64
-  |  Srliw : Register -> Register -> Z -> InstructionI64
-  |  Sraiw : Register -> Register -> Z -> InstructionI64
-  |  Sd : Register -> Register -> Z -> InstructionI64
-  |  Addw : Register -> Register -> Register -> InstructionI64
-  |  Subw : Register -> Register -> Register -> InstructionI64
-  |  Sllw : Register -> Register -> Register -> InstructionI64
-  |  Srlw : Register -> Register -> Register -> InstructionI64
-  |  Sraw : Register -> Register -> Register -> InstructionI64
+  := Ld (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
+   : InstructionI64
+  |  Lwu (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
+   : InstructionI64
+  |  Addiw (rd : Register) (rs1 : Register) (imm12 : Utility.Utility.MachineInt)
+   : InstructionI64
+  |  Slliw (rd : Register) (rs1 : Register) (shamt5 : Z) : InstructionI64
+  |  Srliw (rd : Register) (rs1 : Register) (shamt5 : Z) : InstructionI64
+  |  Sraiw (rd : Register) (rs1 : Register) (shamt5 : Z) : InstructionI64
+  |  Sd (rs1 : Register) (rs2 : Register) (simm12 : Utility.Utility.MachineInt)
+   : InstructionI64
+  |  Addw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI64
+  |  Subw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI64
+  |  Sllw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI64
+  |  Srlw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI64
+  |  Sraw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI64
   |  InvalidI64 : InstructionI64.
 
 Inductive InstructionI : Type
-  := Lb : Register -> Register -> Z -> InstructionI
-  |  Lh : Register -> Register -> Z -> InstructionI
-  |  Lw : Register -> Register -> Z -> InstructionI
-  |  Lbu : Register -> Register -> Z -> InstructionI
-  |  Lhu : Register -> Register -> Z -> InstructionI
-  |  Fence : Z -> Z -> InstructionI
+  := Lb (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Lh (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Lw (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Lbu (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Lhu (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Fence (pred : Utility.Utility.MachineInt) (succ : Utility.Utility.MachineInt)
+   : InstructionI
   |  Fence_i : InstructionI
-  |  Addi : Register -> Register -> Z -> InstructionI
-  |  Slli : Register -> Register -> Z -> InstructionI
-  |  Slti : Register -> Register -> Z -> InstructionI
-  |  Sltiu : Register -> Register -> Z -> InstructionI
-  |  Xori : Register -> Register -> Z -> InstructionI
-  |  Ori : Register -> Register -> Z -> InstructionI
-  |  Andi : Register -> Register -> Z -> InstructionI
-  |  Srli : Register -> Register -> Z -> InstructionI
-  |  Srai : Register -> Register -> Z -> InstructionI
-  |  Auipc : Register -> Z -> InstructionI
-  |  Sb : Register -> Register -> Z -> InstructionI
-  |  Sh : Register -> Register -> Z -> InstructionI
-  |  Sw : Register -> Register -> Z -> InstructionI
-  |  Add : Register -> Register -> Register -> InstructionI
-  |  Sub : Register -> Register -> Register -> InstructionI
-  |  Sll : Register -> Register -> Register -> InstructionI
-  |  Slt : Register -> Register -> Register -> InstructionI
-  |  Sltu : Register -> Register -> Register -> InstructionI
-  |  Xor : Register -> Register -> Register -> InstructionI
-  |  Srl : Register -> Register -> Register -> InstructionI
-  |  Sra : Register -> Register -> Register -> InstructionI
-  |  Or : Register -> Register -> Register -> InstructionI
-  |  And : Register -> Register -> Register -> InstructionI
-  |  Lui : Register -> Z -> InstructionI
-  |  Beq : Register -> Register -> Z -> InstructionI
-  |  Bne : Register -> Register -> Z -> InstructionI
-  |  Blt : Register -> Register -> Z -> InstructionI
-  |  Bge : Register -> Register -> Z -> InstructionI
-  |  Bltu : Register -> Register -> Z -> InstructionI
-  |  Bgeu : Register -> Register -> Z -> InstructionI
-  |  Jalr : Register -> Register -> Z -> InstructionI
-  |  Jal : Register -> Z -> InstructionI
+  |  Addi (rd : Register) (rs1 : Register) (imm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Slli (rd : Register) (rs1 : Register) (shamt6 : Z) : InstructionI
+  |  Slti (rd : Register) (rs1 : Register) (imm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Sltiu (rd : Register) (rs1 : Register) (imm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Xori (rd : Register) (rs1 : Register) (imm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Ori (rd : Register) (rs1 : Register) (imm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Andi (rd : Register) (rs1 : Register) (imm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Srli (rd : Register) (rs1 : Register) (shamt6 : Z) : InstructionI
+  |  Srai (rd : Register) (rs1 : Register) (shamt6 : Z) : InstructionI
+  |  Auipc (rd : Register) (oimm20 : Utility.Utility.MachineInt) : InstructionI
+  |  Sb (rs1 : Register) (rs2 : Register) (simm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Sh (rs1 : Register) (rs2 : Register) (simm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Sw (rs1 : Register) (rs2 : Register) (simm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Add (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI
+  |  Sub (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI
+  |  Sll (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI
+  |  Slt (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI
+  |  Sltu (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI
+  |  Xor (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI
+  |  Srl (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI
+  |  Sra (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI
+  |  Or (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI
+  |  And (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI
+  |  Lui (rd : Register) (imm20 : Utility.Utility.MachineInt) : InstructionI
+  |  Beq (rs1 : Register) (rs2 : Register) (sbimm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Bne (rs1 : Register) (rs2 : Register) (sbimm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Blt (rs1 : Register) (rs2 : Register) (sbimm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Bge (rs1 : Register) (rs2 : Register) (sbimm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Bltu (rs1 : Register) (rs2 : Register) (sbimm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Bgeu (rs1 : Register) (rs2 : Register) (sbimm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Jalr (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
+   : InstructionI
+  |  Jal (rd : Register) (jimm20 : Utility.Utility.MachineInt) : InstructionI
   |  InvalidI : InstructionI.
 
 Inductive InstructionCSR : Type
@@ -124,122 +161,754 @@ Inductive InstructionCSR : Type
   |  Sret : InstructionCSR
   |  Mret : InstructionCSR
   |  Wfi : InstructionCSR
-  |  Sfence_vma : Register -> Register -> InstructionCSR
-  |  Csrrw : Register -> Register -> Z -> InstructionCSR
-  |  Csrrs : Register -> Register -> Z -> InstructionCSR
-  |  Csrrc : Register -> Register -> Z -> InstructionCSR
-  |  Csrrwi : Register -> Z -> Z -> InstructionCSR
-  |  Csrrsi : Register -> Z -> Z -> InstructionCSR
-  |  Csrrci : Register -> Z -> Z -> InstructionCSR
+  |  Sfence_vma (rs1 : Register) (rs2 : Register) : InstructionCSR
+  |  Csrrw (rd : Register) (rs1 : Register) (csr12 : Utility.Utility.MachineInt)
+   : InstructionCSR
+  |  Csrrs (rd : Register) (rs1 : Register) (csr12 : Utility.Utility.MachineInt)
+   : InstructionCSR
+  |  Csrrc (rd : Register) (rs1 : Register) (csr12 : Utility.Utility.MachineInt)
+   : InstructionCSR
+  |  Csrrwi (rd : Register) (zimm : Utility.Utility.MachineInt) (csr12
+    : Utility.Utility.MachineInt)
+   : InstructionCSR
+  |  Csrrsi (rd : Register) (zimm : Utility.Utility.MachineInt) (csr12
+    : Utility.Utility.MachineInt)
+   : InstructionCSR
+  |  Csrrci (rd : Register) (zimm : Utility.Utility.MachineInt) (csr12
+    : Utility.Utility.MachineInt)
+   : InstructionCSR
   |  InvalidCSR : InstructionCSR.
 
 Inductive InstructionA64 : Type
-  := Lr_d : Register -> Register -> Z -> InstructionA64
-  |  Sc_d : Register -> Register -> Register -> Z -> InstructionA64
-  |  Amoswap_d : Register -> Register -> Register -> Z -> InstructionA64
-  |  Amoadd_d : Register -> Register -> Register -> Z -> InstructionA64
-  |  Amoand_d : Register -> Register -> Register -> Z -> InstructionA64
-  |  Amoor_d : Register -> Register -> Register -> Z -> InstructionA64
-  |  Amoxor_d : Register -> Register -> Register -> Z -> InstructionA64
-  |  Amomax_d : Register -> Register -> Register -> Z -> InstructionA64
-  |  Amomaxu_d : Register -> Register -> Register -> Z -> InstructionA64
-  |  Amomin_d : Register -> Register -> Register -> Z -> InstructionA64
-  |  Amominu_d : Register -> Register -> Register -> Z -> InstructionA64
+  := Lr_d (rd : Register) (rs1 : Register) (aqrl : Utility.Utility.MachineInt)
+   : InstructionA64
+  |  Sc_d (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA64
+  |  Amoswap_d (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA64
+  |  Amoadd_d (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA64
+  |  Amoand_d (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA64
+  |  Amoor_d (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA64
+  |  Amoxor_d (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA64
+  |  Amomax_d (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA64
+  |  Amomaxu_d (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA64
+  |  Amomin_d (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA64
+  |  Amominu_d (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA64
   |  InvalidA64 : InstructionA64.
 
 Inductive InstructionA : Type
-  := Lr_w : Register -> Register -> Z -> InstructionA
-  |  Sc_w : Register -> Register -> Register -> Z -> InstructionA
-  |  Amoswap_w : Register -> Register -> Register -> Z -> InstructionA
-  |  Amoadd_w : Register -> Register -> Register -> Z -> InstructionA
-  |  Amoand_w : Register -> Register -> Register -> Z -> InstructionA
-  |  Amoor_w : Register -> Register -> Register -> Z -> InstructionA
-  |  Amoxor_w : Register -> Register -> Register -> Z -> InstructionA
-  |  Amomax_w : Register -> Register -> Register -> Z -> InstructionA
-  |  Amomaxu_w : Register -> Register -> Register -> Z -> InstructionA
-  |  Amomin_w : Register -> Register -> Register -> Z -> InstructionA
-  |  Amominu_w : Register -> Register -> Register -> Z -> InstructionA
+  := Lr_w (rd : Register) (rs1 : Register) (aqrl : Utility.Utility.MachineInt)
+   : InstructionA
+  |  Sc_w (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA
+  |  Amoswap_w (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA
+  |  Amoadd_w (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA
+  |  Amoand_w (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA
+  |  Amoor_w (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA
+  |  Amoxor_w (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA
+  |  Amomax_w (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA
+  |  Amomaxu_w (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA
+  |  Amomin_w (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA
+  |  Amominu_w (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
+    : Utility.Utility.MachineInt)
+   : InstructionA
   |  InvalidA : InstructionA.
 
+Definition FPRegister :=
+  Utility.Utility.MachineInt%type.
+
+Inductive InstructionF : Type
+  := Flw (rd : FPRegister) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
+   : InstructionF
+  |  Fsw (rs1 : Register) (rs2 : FPRegister) (simm12 : Utility.Utility.MachineInt)
+   : InstructionF
+  |  Fmadd_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rs3
+    : FPRegister) (rm : RoundMode)
+   : InstructionF
+  |  Fmsub_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rs3
+    : FPRegister) (rm : RoundMode)
+   : InstructionF
+  |  Fnmsub_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rs3
+    : FPRegister) (rm : RoundMode)
+   : InstructionF
+  |  Fnmadd_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rs3
+    : FPRegister) (rm : RoundMode)
+   : InstructionF
+  |  Fadd_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rm
+    : RoundMode)
+   : InstructionF
+  |  Fsub_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rm
+    : RoundMode)
+   : InstructionF
+  |  Fmul_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rm
+    : RoundMode)
+   : InstructionF
+  |  Fdiv_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rm
+    : RoundMode)
+   : InstructionF
+  |  Fsqrt_s (rd : FPRegister) (rs1 : FPRegister) (rm : RoundMode) : InstructionF
+  |  Fsgnj_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister)
+   : InstructionF
+  |  Fsgnjn_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister)
+   : InstructionF
+  |  Fsgnjx_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister)
+   : InstructionF
+  |  Fmin_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
+  |  Fmax_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
+  |  Fcvt_w_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode) : InstructionF
+  |  Fcvt_wu_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode) : InstructionF
+  |  Fmv_x_w (rd : Register) (rs1 : FPRegister) : InstructionF
+  |  Feq_s (rd : Register) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
+  |  Flt_s (rd : Register) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
+  |  Fle_s (rd : Register) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
+  |  Fclass_s (rd : Register) (rs1 : FPRegister) : InstructionF
+  |  Fcvt_s_w (rd : FPRegister) (rs1 : Register) (rm : RoundMode) : InstructionF
+  |  Fcvt_s_wu (rd : FPRegister) (rs1 : Register) (rm : RoundMode) : InstructionF
+  |  Fmv_w_x (rd : FPRegister) (rs1 : Register) : InstructionF
+  |  InvalidF : InstructionF.
+
+Inductive InstructionF64 : Type
+  := Fcvt_l_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode) : InstructionF64
+  |  Fcvt_lu_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode)
+   : InstructionF64
+  |  Fcvt_s_l (rd : FPRegister) (rs1 : Register) (rm : RoundMode) : InstructionF64
+  |  Fcvt_s_lu (rd : FPRegister) (rs1 : Register) (rm : RoundMode)
+   : InstructionF64
+  |  InvalidF64 : InstructionF64.
+
 Inductive Instruction : Type
-  := IInstruction : InstructionI -> Instruction
-  |  MInstruction : InstructionM -> Instruction
-  |  AInstruction : InstructionA -> Instruction
-  |  I64Instruction : InstructionI64 -> Instruction
-  |  M64Instruction : InstructionM64 -> Instruction
-  |  A64Instruction : InstructionA64 -> Instruction
-  |  CSRInstruction : InstructionCSR -> Instruction
-  |  InvalidInstruction : Z -> Instruction.
+  := IInstruction (iInstruction : InstructionI) : Instruction
+  |  MInstruction (mInstruction : InstructionM) : Instruction
+  |  AInstruction (aInstruction : InstructionA) : Instruction
+  |  FInstruction (fInstruction : InstructionF) : Instruction
+  |  I64Instruction (i64Instruction : InstructionI64) : Instruction
+  |  M64Instruction (m64Instruction : InstructionM64) : Instruction
+  |  A64Instruction (a64Instruction : InstructionA64) : Instruction
+  |  F64Instruction (f64Instruction : InstructionF64) : Instruction
+  |  CSRInstruction (csrInstruction : InstructionCSR) : Instruction
+  |  InvalidInstruction (inst : Utility.Utility.MachineInt) : Instruction.
+
 (* Converted value declarations: *)
 
-(* Translating `instance Show__Instruction' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Show" "Show" unsupported *)
+Definition supportsM : InstructionSet -> bool :=
+  fun arg_0__ =>
+    match arg_0__ with
+    | RV32IM => true
+    | RV32IMA => true
+    | RV32IMF => true
+    | RV32IMAF => true
+    | RV64IM => true
+    | RV64IMA => true
+    | RV64IMF => true
+    | RV64IMAF => true
+    | _ => false
+    end.
 
-(* Translating `instance Read__Instruction' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Read" "Read" unsupported *)
+Definition supportsF : InstructionSet -> bool :=
+  fun arg_0__ =>
+    match arg_0__ with
+    | RV32IF => true
+    | RV32IMF => true
+    | RV32IAF => true
+    | RV32IMAF => true
+    | RV64IF => true
+    | RV64IMF => true
+    | RV64IAF => true
+    | RV64IMAF => true
+    | _ => false
+    end.
 
-(* Skipping instance Eq___Instruction *)
+Definition supportsA : InstructionSet -> bool :=
+  fun arg_0__ =>
+    match arg_0__ with
+    | RV32IA => true
+    | RV32IMA => true
+    | RV32IAF => true
+    | RV32IMAF => true
+    | RV64IA => true
+    | RV64IMA => true
+    | RV64IAF => true
+    | RV64IMAF => true
+    | _ => false
+    end.
 
-(* Translating `instance Show__InstructionI' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Show" "Show" unsupported *)
+Definition rs2_FCVT_W_S :=
+  0 : Utility.Utility.MachineInt.
 
-(* Translating `instance Read__InstructionI' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Read" "Read" unsupported *)
+Definition rs2_FCVT_WU_S :=
+  1 : Utility.Utility.MachineInt.
 
-(* Skipping instance Eq___InstructionI *)
+Definition rs2_FCVT_L_S :=
+  2 : Utility.Utility.MachineInt.
 
-(* Translating `instance Show__InstructionM' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Show" "Show" unsupported *)
+Definition rs2_FCVT_LU_S :=
+  3 : Utility.Utility.MachineInt.
 
-(* Translating `instance Read__InstructionM' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Read" "Read" unsupported *)
+Definition opcode_SYSTEM : Opcode :=
+  115.
 
-(* Skipping instance Eq___InstructionM *)
+Definition opcode_STORE_FP : Opcode :=
+  39.
 
-(* Translating `instance Show__InstructionA' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Show" "Show" unsupported *)
+Definition opcode_STORE : Opcode :=
+  35.
 
-(* Translating `instance Read__InstructionA' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Read" "Read" unsupported *)
+Definition opcode_OP_IMM_32 : Opcode :=
+  27.
 
-(* Skipping instance Eq___InstructionA *)
+Definition opcode_OP_IMM : Opcode :=
+  19.
 
-(* Translating `instance Show__InstructionI64' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Show" "Show" unsupported *)
+Definition opcode_OP_FP : Opcode :=
+  83.
 
-(* Translating `instance Read__InstructionI64' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Read" "Read" unsupported *)
+Definition opcode_OP_32 : Opcode :=
+  59.
 
-(* Skipping instance Eq___InstructionI64 *)
+Definition opcode_OP : Opcode :=
+  51.
 
-(* Translating `instance Show__InstructionM64' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Show" "Show" unsupported *)
+Definition opcode_NMSUB : Opcode :=
+  75.
 
-(* Translating `instance Read__InstructionM64' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Read" "Read" unsupported *)
+Definition opcode_NMADD : Opcode :=
+  79.
 
-(* Skipping instance Eq___InstructionM64 *)
+Definition opcode_MSUB : Opcode :=
+  71.
 
-(* Translating `instance Show__InstructionA64' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Show" "Show" unsupported *)
+Definition opcode_MISC_MEM : Opcode :=
+  15.
 
-(* Translating `instance Read__InstructionA64' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Read" "Read" unsupported *)
+Definition opcode_MADD : Opcode :=
+  67.
 
-(* Skipping instance Eq___InstructionA64 *)
+Definition opcode_LUI : Opcode :=
+  55.
 
-(* Translating `instance Show__InstructionCSR' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Show" "Show" unsupported *)
+Definition opcode_LOAD_FP : Opcode :=
+  7.
 
-(* Translating `instance Read__InstructionCSR' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Read" "Read" unsupported *)
+Definition opcode_LOAD : Opcode :=
+  3.
 
-(* Skipping instance Eq___InstructionCSR *)
+Definition opcode_JALR : Opcode :=
+  103.
 
-(* Translating `instance Show__InstructionSet' failed: OOPS! Cannot find
-   information for class Qualified "GHC.Show" "Show" unsupported *)
+Definition opcode_JAL : Opcode :=
+  111.
 
-(* Skipping instance Eq___InstructionSet *)
+Definition opcode_BRANCH : Opcode :=
+  99.
+
+Definition opcode_AUIPC : Opcode :=
+  23.
+
+Definition opcode_AMO : Opcode :=
+  47.
+
+Definition isValidM64 :=
+  fun inst => match inst with | InvalidM64 => false | _ => true end.
+
+Definition isValidM :=
+  fun inst => match inst with | InvalidM => false | _ => true end.
+
+Definition isValidI64 :=
+  fun inst => match inst with | InvalidI64 => false | _ => true end.
+
+Definition isValidI :=
+  fun inst => match inst with | InvalidI => false | _ => true end.
+
+Definition isValidF64 :=
+  fun inst => match inst with | InvalidF64 => false | _ => true end.
+
+Definition isValidF :=
+  fun inst => match inst with | InvalidF => false | _ => true end.
+
+Definition isValidCSR :=
+  fun inst => match inst with | InvalidCSR => false | _ => true end.
+
+Definition isValidA64 :=
+  fun inst => match inst with | InvalidA64 => false | _ => true end.
+
+Definition isValidA :=
+  fun inst => match inst with | InvalidA => false | _ => true end.
+
+Definition funct7_XOR : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct7_SUBW : Utility.Utility.MachineInt :=
+  32.
+
+Definition funct7_SUB : Utility.Utility.MachineInt :=
+  32.
+
+Definition funct7_SRLW : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct7_SRLIW : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct7_SRL : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct7_SRAW : Utility.Utility.MachineInt :=
+  32.
+
+Definition funct7_SRAIW : Utility.Utility.MachineInt :=
+  32.
+
+Definition funct7_SRA : Utility.Utility.MachineInt :=
+  32.
+
+Definition funct7_SLTU : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct7_SLT : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct7_SLLW : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct7_SLLIW : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct7_SLL : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct7_SFENCE_VMA : Utility.Utility.MachineInt :=
+  9.
+
+Definition funct7_REMW : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct7_REMUW : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct7_REMU : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct7_REM : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct7_OR : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct7_MULW : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct7_MULHU : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct7_MULHSU : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct7_MULH : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct7_MUL : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct7_FSUB_S :=
+  4 : Utility.Utility.MachineInt.
+
+Definition funct7_FSQRT_S :=
+  44 : Utility.Utility.MachineInt.
+
+Definition funct7_FSGNJ_S :=
+  16 : Utility.Utility.MachineInt.
+
+Definition funct7_FMV_X_W :=
+  112 : Utility.Utility.MachineInt.
+
+Definition funct7_FMV_W_X :=
+  120 : Utility.Utility.MachineInt.
+
+Definition funct7_FMUL_S :=
+  8 : Utility.Utility.MachineInt.
+
+Definition funct7_FMIN_S :=
+  20 : Utility.Utility.MachineInt.
+
+Definition funct7_FEQ_S :=
+  80 : Utility.Utility.MachineInt.
+
+Definition funct7_FDIV_S :=
+  12 : Utility.Utility.MachineInt.
+
+Definition funct7_FCVT_W_S :=
+  96 : Utility.Utility.MachineInt.
+
+Definition funct7_FCVT_S_W :=
+  104 : Utility.Utility.MachineInt.
+
+Definition funct7_FCLASS_S :=
+  112 : Utility.Utility.MachineInt.
+
+Definition funct7_FADD_S :=
+  0 : Utility.Utility.MachineInt.
+
+Definition funct7_DIVW : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct7_DIVUW : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct7_DIVU : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct7_DIV : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct7_AND : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct7_ADDW : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct7_ADD : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct6_SRLI : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct6_SRAI : Utility.Utility.MachineInt :=
+  16.
+
+Definition funct6_SLLI : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct5_SC : Utility.Utility.MachineInt :=
+  3.
+
+Definition funct5_LR : Utility.Utility.MachineInt :=
+  2.
+
+Definition funct5_AMOXOR : Utility.Utility.MachineInt :=
+  4.
+
+Definition funct5_AMOSWAP : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct5_AMOOR : Utility.Utility.MachineInt :=
+  8.
+
+Definition funct5_AMOMINU : Utility.Utility.MachineInt :=
+  24.
+
+Definition funct5_AMOMIN : Utility.Utility.MachineInt :=
+  16.
+
+Definition funct5_AMOMAXU : Utility.Utility.MachineInt :=
+  28.
+
+Definition funct5_AMOMAX : Utility.Utility.MachineInt :=
+  20.
+
+Definition funct5_AMOAND : Utility.Utility.MachineInt :=
+  12.
+
+Definition funct5_AMOADD : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct3_XORI : Utility.Utility.MachineInt :=
+  4.
+
+Definition funct3_XOR : Utility.Utility.MachineInt :=
+  4.
+
+Definition funct3_SW : Utility.Utility.MachineInt :=
+  2.
+
+Definition funct3_SUBW : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct3_SUB : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct3_SRLW : Utility.Utility.MachineInt :=
+  5.
+
+Definition funct3_SRLIW : Utility.Utility.MachineInt :=
+  5.
+
+Definition funct3_SRLI : Utility.Utility.MachineInt :=
+  5.
+
+Definition funct3_SRL : Utility.Utility.MachineInt :=
+  5.
+
+Definition funct3_SRAW : Utility.Utility.MachineInt :=
+  5.
+
+Definition funct3_SRAIW : Utility.Utility.MachineInt :=
+  5.
+
+Definition funct3_SRAI : Utility.Utility.MachineInt :=
+  5.
+
+Definition funct3_SRA : Utility.Utility.MachineInt :=
+  5.
+
+Definition funct3_SLTU : Utility.Utility.MachineInt :=
+  3.
+
+Definition funct3_SLTIU : Utility.Utility.MachineInt :=
+  3.
+
+Definition funct3_SLTI : Utility.Utility.MachineInt :=
+  2.
+
+Definition funct3_SLT : Utility.Utility.MachineInt :=
+  2.
+
+Definition funct3_SLLW : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct3_SLLIW : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct3_SLLI : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct3_SLL : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct3_SH : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct3_SD : Utility.Utility.MachineInt :=
+  3.
+
+Definition funct3_SB : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct3_REMW : Utility.Utility.MachineInt :=
+  6.
+
+Definition funct3_REMUW : Utility.Utility.MachineInt :=
+  7.
+
+Definition funct3_REMU : Utility.Utility.MachineInt :=
+  7.
+
+Definition funct3_REM : Utility.Utility.MachineInt :=
+  6.
+
+Definition funct3_PRIV : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct3_ORI : Utility.Utility.MachineInt :=
+  6.
+
+Definition funct3_OR : Utility.Utility.MachineInt :=
+  6.
+
+Definition funct3_MULW : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct3_MULHU : Utility.Utility.MachineInt :=
+  3.
+
+Definition funct3_MULHSU : Utility.Utility.MachineInt :=
+  2.
+
+Definition funct3_MULH : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct3_MUL : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct3_LWU : Utility.Utility.MachineInt :=
+  6.
+
+Definition funct3_LW : Utility.Utility.MachineInt :=
+  2.
+
+Definition funct3_LHU : Utility.Utility.MachineInt :=
+  5.
+
+Definition funct3_LH : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct3_LD : Utility.Utility.MachineInt :=
+  3.
+
+Definition funct3_LBU : Utility.Utility.MachineInt :=
+  4.
+
+Definition funct3_LB : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct3_FSW :=
+  2 : Utility.Utility.MachineInt.
+
+Definition funct3_FSGNJ_S :=
+  0 : Utility.Utility.MachineInt.
+
+Definition funct3_FSGNJX_S :=
+  2 : Utility.Utility.MachineInt.
+
+Definition funct3_FSGNJN_S :=
+  1 : Utility.Utility.MachineInt.
+
+Definition funct3_FMV_X_W :=
+  0 : Utility.Utility.MachineInt.
+
+Definition funct3_FMIN_S :=
+  0 : Utility.Utility.MachineInt.
+
+Definition funct3_FMAX_S :=
+  1 : Utility.Utility.MachineInt.
+
+Definition funct3_FLW :=
+  2 : Utility.Utility.MachineInt.
+
+Definition funct3_FLT_S :=
+  1 : Utility.Utility.MachineInt.
+
+Definition funct3_FLE_S :=
+  0 : Utility.Utility.MachineInt.
+
+Definition funct3_FEQ_S :=
+  2 : Utility.Utility.MachineInt.
+
+Definition funct3_FENCE_I : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct3_FENCE : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct3_FCLASS_S :=
+  1 : Utility.Utility.MachineInt.
+
+Definition funct3_DIVW : Utility.Utility.MachineInt :=
+  4.
+
+Definition funct3_DIVUW : Utility.Utility.MachineInt :=
+  5.
+
+Definition funct3_DIVU : Utility.Utility.MachineInt :=
+  5.
+
+Definition funct3_DIV : Utility.Utility.MachineInt :=
+  4.
+
+Definition funct3_CSRRWI : Utility.Utility.MachineInt :=
+  5.
+
+Definition funct3_CSRRW : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct3_CSRRSI : Utility.Utility.MachineInt :=
+  6.
+
+Definition funct3_CSRRS : Utility.Utility.MachineInt :=
+  2.
+
+Definition funct3_CSRRCI : Utility.Utility.MachineInt :=
+  7.
+
+Definition funct3_CSRRC : Utility.Utility.MachineInt :=
+  3.
+
+Definition funct3_BNE : Utility.Utility.MachineInt :=
+  1.
+
+Definition funct3_BLTU : Utility.Utility.MachineInt :=
+  6.
+
+Definition funct3_BLT : Utility.Utility.MachineInt :=
+  4.
+
+Definition funct3_BGEU : Utility.Utility.MachineInt :=
+  7.
+
+Definition funct3_BGE : Utility.Utility.MachineInt :=
+  5.
+
+Definition funct3_BEQ : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct3_ANDI : Utility.Utility.MachineInt :=
+  7.
+
+Definition funct3_AND : Utility.Utility.MachineInt :=
+  7.
+
+Definition funct3_AMOW : Utility.Utility.MachineInt :=
+  2.
+
+Definition funct3_AMOD : Utility.Utility.MachineInt :=
+  3.
+
+Definition funct3_ADDW : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct3_ADDIW : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct3_ADDI : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct3_ADD : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct2_FMADD_S :=
+  0.
+
+Definition funct12_WFI : Utility.Utility.MachineInt :=
+  261.
+
+Definition funct12_URET : Utility.Utility.MachineInt :=
+  2.
+
+Definition funct12_SRET : Utility.Utility.MachineInt :=
+  258.
+
+Definition funct12_MRET : Utility.Utility.MachineInt :=
+  770.
+
+Definition funct12_ECALL : Utility.Utility.MachineInt :=
+  0.
+
+Definition funct12_EBREAK : Utility.Utility.MachineInt :=
+  1.
 
 Definition bitwidth : InstructionSet -> Z :=
   fun arg_0__ =>
@@ -248,516 +917,75 @@ Definition bitwidth : InstructionSet -> Z :=
     | RV32IM => 32
     | RV32IA => 32
     | RV32IMA => 32
+    | RV32IF => 32
+    | RV32IMF => 32
+    | RV32IAF => 32
+    | RV32IMAF => 32
     | RV64I => 64
     | RV64IM => 64
     | RV64IA => 64
     | RV64IMA => 64
+    | RV64IF => 64
+    | RV64IMF => 64
+    | RV64IAF => 64
+    | RV64IMAF => 64
     end.
 
-Definition funct12_EBREAK : Z :=
-  1.
-
-Definition funct12_ECALL : Z :=
-  0.
-
-Definition funct12_MRET : Z :=
-  770.
-
-Definition funct12_SRET : Z :=
-  258.
-
-Definition funct12_URET : Z :=
-  2.
-
-Definition funct12_WFI : Z :=
-  261.
-
-Definition funct3_ADD : Z :=
-  0.
-
-Definition funct3_ADDI : Z :=
-  0.
-
-Definition funct3_ADDIW : Z :=
-  0.
-
-Definition funct3_ADDW : Z :=
-  0.
-
-Definition funct3_AMOD : Z :=
-  3.
-
-Definition funct3_AMOW : Z :=
-  2.
-
-Definition funct3_AND : Z :=
-  7.
-
-Definition funct3_ANDI : Z :=
-  7.
-
-Definition funct3_BEQ : Z :=
-  0.
-
-Definition funct3_BGE : Z :=
-  5.
-
-Definition funct3_BGEU : Z :=
-  7.
-
-Definition funct3_BLT : Z :=
-  4.
-
-Definition funct3_BLTU : Z :=
-  6.
-
-Definition funct3_BNE : Z :=
-  1.
-
-Definition funct3_CSRRC : Z :=
-  3.
-
-Definition funct3_CSRRCI : Z :=
-  7.
-
-Definition funct3_CSRRS : Z :=
-  2.
-
-Definition funct3_CSRRSI : Z :=
-  6.
-
-Definition funct3_CSRRW : Z :=
-  1.
-
-Definition funct3_CSRRWI : Z :=
-  5.
-
-Definition funct3_DIV : Z :=
-  4.
-
-Definition funct3_DIVU : Z :=
-  5.
-
-Definition funct3_DIVUW : Z :=
-  5.
-
-Definition funct3_DIVW : Z :=
-  4.
-
-Definition funct3_FENCE : Z :=
-  0.
-
-Definition funct3_FENCE_I : Z :=
-  1.
-
-Definition funct3_LB : Z :=
-  0.
-
-Definition funct3_LBU : Z :=
-  4.
-
-Definition funct3_LD : Z :=
-  3.
-
-Definition funct3_LH : Z :=
-  1.
-
-Definition funct3_LHU : Z :=
-  5.
-
-Definition funct3_LW : Z :=
-  2.
-
-Definition funct3_LWU : Z :=
-  6.
-
-Definition funct3_MUL : Z :=
-  0.
-
-Definition funct3_MULH : Z :=
-  1.
-
-Definition funct3_MULHSU : Z :=
-  2.
-
-Definition funct3_MULHU : Z :=
-  3.
-
-Definition funct3_MULW : Z :=
-  0.
-
-Definition funct3_OR : Z :=
-  6.
-
-Definition funct3_ORI : Z :=
-  6.
-
-Definition funct3_PRIV : Z :=
-  0.
-
-Definition funct3_REM : Z :=
-  6.
-
-Definition funct3_REMU : Z :=
-  7.
-
-Definition funct3_REMUW : Z :=
-  7.
-
-Definition funct3_REMW : Z :=
-  6.
-
-Definition funct3_SB : Z :=
-  0.
-
-Definition funct3_SD : Z :=
-  3.
-
-Definition funct3_SH : Z :=
-  1.
-
-Definition funct3_SLL : Z :=
-  1.
-
-Definition funct3_SLLI : Z :=
-  1.
-
-Definition funct3_SLLIW : Z :=
-  1.
-
-Definition funct3_SLLW : Z :=
-  1.
-
-Definition funct3_SLT : Z :=
-  2.
-
-Definition funct3_SLTI : Z :=
-  2.
-
-Definition funct3_SLTIU : Z :=
-  3.
-
-Definition funct3_SLTU : Z :=
-  3.
-
-Definition funct3_SRA : Z :=
-  5.
-
-Definition funct3_SRAI : Z :=
-  5.
-
-Definition funct3_SRAIW : Z :=
-  5.
-
-Definition funct3_SRAW : Z :=
-  5.
-
-Definition funct3_SRL : Z :=
-  5.
-
-Definition funct3_SRLI : Z :=
-  5.
-
-Definition funct3_SRLIW : Z :=
-  5.
-
-Definition funct3_SRLW : Z :=
-  5.
-
-Definition funct3_SUB : Z :=
-  0.
-
-Definition funct3_SUBW : Z :=
-  0.
-
-Definition funct3_SW : Z :=
-  2.
-
-Definition funct3_XOR : Z :=
-  4.
-
-Definition funct3_XORI : Z :=
-  4.
-
-Definition funct5_AMOADD : Z :=
-  0.
-
-Definition funct5_AMOAND : Z :=
-  12.
-
-Definition funct5_AMOMAX : Z :=
-  20.
-
-Definition funct5_AMOMAXU : Z :=
-  28.
-
-Definition funct5_AMOMIN : Z :=
-  16.
-
-Definition funct5_AMOMINU : Z :=
-  24.
-
-Definition funct5_AMOOR : Z :=
-  8.
-
-Definition funct5_AMOSWAP : Z :=
-  1.
-
-Definition funct5_AMOXOR : Z :=
-  4.
-
-Definition funct5_LR : Z :=
-  2.
-
-Definition funct5_SC : Z :=
-  3.
-
-Definition funct6_SLLI : Z :=
-  0.
-
-Definition funct6_SRAI : Z :=
-  16.
-
-Definition funct6_SRLI : Z :=
-  0.
-
-Definition funct7_ADD : Z :=
-  0.
-
-Definition funct7_ADDW : Z :=
-  0.
-
-Definition funct7_AND : Z :=
-  0.
-
-Definition funct7_DIV : Z :=
-  1.
-
-Definition funct7_DIVU : Z :=
-  1.
-
-Definition funct7_DIVUW : Z :=
-  1.
-
-Definition funct7_DIVW : Z :=
-  1.
-
-Definition funct7_MUL : Z :=
-  1.
-
-Definition funct7_MULH : Z :=
-  1.
-
-Definition funct7_MULHSU : Z :=
-  1.
-
-Definition funct7_MULHU : Z :=
-  1.
-
-Definition funct7_MULW : Z :=
-  1.
-
-Definition funct7_OR : Z :=
-  0.
-
-Definition funct7_REM : Z :=
-  1.
-
-Definition funct7_REMU : Z :=
-  1.
-
-Definition funct7_REMUW : Z :=
-  1.
-
-Definition funct7_REMW : Z :=
-  1.
-
-Definition funct7_SFENCE_VMA : Z :=
-  9.
-
-Definition funct7_SLL : Z :=
-  0.
-
-Definition funct7_SLLIW : Z :=
-  0.
-
-Definition funct7_SLLW : Z :=
-  0.
-
-Definition funct7_SLT : Z :=
-  0.
-
-Definition funct7_SLTU : Z :=
-  0.
-
-Definition funct7_SRA : Z :=
-  32.
-
-Definition funct7_SRAIW : Z :=
-  32.
-
-Definition funct7_SRAW : Z :=
-  32.
-
-Definition funct7_SRL : Z :=
-  0.
-
-Definition funct7_SRLIW : Z :=
-  0.
-
-Definition funct7_SRLW : Z :=
-  0.
-
-Definition funct7_SUB : Z :=
-  32.
-
-Definition funct7_SUBW : Z :=
-  32.
-
-Definition funct7_XOR : Z :=
-  0.
-
-Definition isValidA :=
-  fun inst => match inst with | InvalidA => false | _ => true end.
-
-Definition isValidA64 :=
-  fun inst => match inst with | InvalidA64 => false | _ => true end.
-
-Definition isValidCSR :=
-  fun inst => match inst with | InvalidCSR => false | _ => true end.
-
-Definition isValidI :=
-  fun inst => match inst with | InvalidI => false | _ => true end.
-
-Definition isValidI64 :=
-  fun inst => match inst with | InvalidI64 => false | _ => true end.
-
-Definition isValidM :=
-  fun inst => match inst with | InvalidM => false | _ => true end.
-
-Definition isValidM64 :=
-  fun inst => match inst with | InvalidM64 => false | _ => true end.
-
-Definition opcode_AMO : Opcode :=
-  47.
-
-Definition opcode_AUIPC : Opcode :=
-  23.
-
-Definition opcode_BRANCH : Opcode :=
-  99.
-
-Definition opcode_JAL : Opcode :=
-  111.
-
-Definition opcode_JALR : Opcode :=
-  103.
-
-Definition opcode_LOAD : Opcode :=
-  3.
-
-Definition opcode_LOAD_FP : Opcode :=
-  7.
-
-Definition opcode_LUI : Opcode :=
-  55.
-
-Definition opcode_MADD : Opcode :=
-  67.
-
-Definition opcode_MISC_MEM : Opcode :=
-  15.
-
-Definition opcode_MSUB : Opcode :=
-  71.
-
-Definition opcode_NMADD : Opcode :=
-  79.
-
-Definition opcode_NMSUB : Opcode :=
-  75.
-
-Definition opcode_OP : Opcode :=
-  51.
-
-Definition opcode_OP_32 : Opcode :=
-  59.
-
-Definition opcode_OP_FP : Opcode :=
-  83.
-
-Definition opcode_OP_IMM : Opcode :=
-  19.
-
-Definition opcode_OP_IMM_32 : Opcode :=
-  27.
-
-Definition opcode_STORE : Opcode :=
-  35.
-
-Definition opcode_STORE_FP : Opcode :=
-  39.
-
-Definition opcode_SYSTEM : Opcode :=
-  115.
-
-Definition supportsA : InstructionSet -> bool :=
-  fun arg_0__ =>
-    match arg_0__ with
-    | RV32IA => true
-    | RV32IMA => true
-    | RV64IA => true
-    | RV64IMA => true
-    | _ => false
-    end.
-
-Definition supportsM : InstructionSet -> bool :=
-  fun arg_0__ =>
-    match arg_0__ with
-    | RV32IM => true
-    | RV32IMA => true
-    | RV64IM => true
-    | RV64IMA => true
-    | _ => false
-    end.
-
-Definition decode : InstructionSet -> Z -> Instruction :=
+Definition decode
+   : InstructionSet -> Utility.Utility.MachineInt -> Instruction :=
   fun iset inst =>
-    let aqrl := bitSlice inst 25 27 in
-    let funct5 := bitSlice inst 27 32 in
-    let zimm := bitSlice inst 15 20 in
-    let funct6 := bitSlice inst 26 32 in
-    let shamtHi := bitSlice inst 25 26 in
+    let aqrl := Utility.Utility.bitSlice inst 25 27 in
+    let funct5 := Utility.Utility.bitSlice inst 27 32 in
+    let zimm := Utility.Utility.bitSlice inst 15 20 in
+    let funct6 := Utility.Utility.bitSlice inst 26 32 in
+    let shamtHi := Utility.Utility.bitSlice inst 25 26 in
     let shamtHiTest := orb (Z.eqb shamtHi 0) (Z.eqb (bitwidth iset) 64) in
-    let shamt6 := machineIntToShamt (bitSlice inst 20 26) in
-    let shamt5 := machineIntToShamt (bitSlice inst 20 25) in
+    let shamt6 :=
+      Utility.Utility.machineIntToShamt (Utility.Utility.bitSlice inst 20 26) in
+    let shamt5 :=
+      Utility.Utility.machineIntToShamt (Utility.Utility.bitSlice inst 20 25) in
     let sbimm12 :=
-      signExtend 13 (Z.lor (Z.lor (Z.lor (Z.shiftl (bitSlice inst 31 32) 12) (Z.shiftl
-                                          (bitSlice inst 25 31) 5)) (Z.shiftl (bitSlice inst 8 12) 1)) (Z.shiftl
-                            (bitSlice inst 7 8) 11)) in
+      Utility.Utility.signExtend 13 (Z.lor (Z.lor (Z.lor (Z.shiftl
+                                                          (Utility.Utility.bitSlice inst 31 32) 12) (Z.shiftl
+                                                          (Utility.Utility.bitSlice inst 25 31) 5)) (Z.shiftl
+                                                   (Utility.Utility.bitSlice inst 8 12) 1)) (Z.shiftl
+                                            (Utility.Utility.bitSlice inst 7 8) 11)) in
     let simm12 :=
-      signExtend 12 (Z.lor (Z.shiftl (bitSlice inst 25 32) 5) (bitSlice inst 7 12)) in
-    let csr12 := bitSlice inst 20 32 in
-    let oimm12 := signExtend 12 (bitSlice inst 20 32) in
-    let imm12 := signExtend 12 (bitSlice inst 20 32) in
+      Utility.Utility.signExtend 12 (Z.lor (Z.shiftl (Utility.Utility.bitSlice inst 25
+                                                      32) 5) (Utility.Utility.bitSlice inst 7 12)) in
+    let csr12 := Utility.Utility.bitSlice inst 20 32 in
+    let oimm12 :=
+      Utility.Utility.signExtend 12 (Utility.Utility.bitSlice inst 20 32) in
+    let imm12 :=
+      Utility.Utility.signExtend 12 (Utility.Utility.bitSlice inst 20 32) in
     let jimm20 :=
-      signExtend 21 (Z.lor (Z.lor (Z.lor (Z.shiftl (bitSlice inst 31 32) 20) (Z.shiftl
-                                          (bitSlice inst 21 31) 1)) (Z.shiftl (bitSlice inst 20 21) 11)) (Z.shiftl
-                            (bitSlice inst 12 20) 12)) in
-    let oimm20 := signExtend 32 (Z.shiftl (bitSlice inst 12 32) 12) in
-    let imm20 := signExtend 32 (Z.shiftl (bitSlice inst 12 32) 12) in
-    let msb4 := bitSlice inst 28 32 in
-    let pred := bitSlice inst 24 28 in
-    let succ := bitSlice inst 20 24 in
-    let rs3 := bitSlice inst 27 32 in
-    let rs2 := bitSlice inst 20 25 in
-    let rs1 := bitSlice inst 15 20 in
-    let rd := bitSlice inst 7 12 in
-    let funct12 := bitSlice inst 20 32 in
-    let funct10 := Z.lor (Z.shiftl (bitSlice inst 25 32) 3) (bitSlice inst 12 15) in
-    let funct7 := bitSlice inst 25 32 in
-    let funct3 := bitSlice inst 12 15 in
-    let opcode := bitSlice inst 0 7 in
+      Utility.Utility.signExtend 21 (Z.lor (Z.lor (Z.lor (Z.shiftl
+                                                          (Utility.Utility.bitSlice inst 31 32) 20) (Z.shiftl
+                                                          (Utility.Utility.bitSlice inst 21 31) 1)) (Z.shiftl
+                                                   (Utility.Utility.bitSlice inst 20 21) 11)) (Z.shiftl
+                                            (Utility.Utility.bitSlice inst 12 20) 12)) in
+    let oimm20 :=
+      Utility.Utility.signExtend 32 (Z.shiftl (Utility.Utility.bitSlice inst 12 32)
+                                              12) in
+    let imm20 :=
+      Utility.Utility.signExtend 32 (Z.shiftl (Utility.Utility.bitSlice inst 12 32)
+                                              12) in
+    let msb4 := Utility.Utility.bitSlice inst 28 32 in
+    let pred := Utility.Utility.bitSlice inst 24 28 in
+    let succ := Utility.Utility.bitSlice inst 20 24 in
+    let funct2 := Utility.Utility.bitSlice inst 25 27 in
+    let rs3 := Utility.Utility.bitSlice inst 27 32 in
+    let rs2 := Utility.Utility.bitSlice inst 20 25 in
+    let rs1 := Utility.Utility.bitSlice inst 15 20 in
+    let rd := Utility.Utility.bitSlice inst 7 12 in
+    let funct12 := Utility.Utility.bitSlice inst 20 32 in
+    let funct10 :=
+      Z.lor (Z.shiftl (Utility.Utility.bitSlice inst 25 32) 3)
+            (Utility.Utility.bitSlice inst 12 15) in
+    let funct7 := Utility.Utility.bitSlice inst 25 32 in
+    let funct3 := Utility.Utility.bitSlice inst 12 15 in
+    let rm := funct3 in
+    let opcode := Utility.Utility.bitSlice inst 0 7 in
     let decodeI :=
       if andb (Z.eqb opcode opcode_LOAD) (Z.eqb funct3 funct3_LB) : bool
       then Lb rd rs1 oimm12 else
@@ -912,6 +1140,76 @@ Definition decode : InstructionSet -> Z -> Instruction :=
                                                                                 funct5_AMOMAXU)) : bool
       then Amomaxu_w rd rs1 rs2 aqrl else
       InvalidA in
+    let decodeF :=
+      if andb (Z.eqb opcode opcode_LOAD_FP) (Z.eqb funct3 funct3_FLW) : bool
+      then Flw rd rs1 oimm12 else
+      if andb (Z.eqb opcode opcode_STORE_FP) (Z.eqb funct3 funct3_FSW) : bool
+      then Fsw rs1 rs2 simm12 else
+      if andb (Z.eqb opcode opcode_MADD) (Z.eqb funct2 funct2_FMADD_S) : bool
+      then Fmadd_s rd rs1 rs2 rs3 rm else
+      if andb (Z.eqb opcode opcode_MSUB) (Z.eqb funct2 funct2_FMADD_S) : bool
+      then Fmsub_s rd rs1 rs2 rs3 rm else
+      if andb (Z.eqb opcode opcode_NMSUB) (Z.eqb funct2 funct2_FMADD_S) : bool
+      then Fnmsub_s rd rs1 rs2 rs3 rm else
+      if andb (Z.eqb opcode opcode_NMADD) (Z.eqb funct2 funct2_FMADD_S) : bool
+      then Fnmadd_s rd rs1 rs2 rs3 rm else
+      if andb (Z.eqb opcode opcode_OP_FP) (Z.eqb funct7 funct7_FADD_S) : bool
+      then Fadd_s rd rs1 rs2 rm else
+      if andb (Z.eqb opcode opcode_OP_FP) (Z.eqb funct7 funct7_FSUB_S) : bool
+      then Fsub_s rd rs1 rs2 rm else
+      if andb (Z.eqb opcode opcode_OP_FP) (Z.eqb funct7 funct7_FMUL_S) : bool
+      then Fmul_s rd rs1 rs2 rm else
+      if andb (Z.eqb opcode opcode_OP_FP) (Z.eqb funct7 funct7_FDIV_S) : bool
+      then Fdiv_s rd rs1 rs2 rm else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FSQRT_S) (Z.eqb
+                                                 rs2 0)) : bool
+      then Fsqrt_s rd rs1 rm else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FSGNJ_S) (Z.eqb
+                                                 funct3 funct3_FSGNJ_S)) : bool
+      then Fsgnj_s rd rs1 rs2 else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FSGNJ_S) (Z.eqb
+                                                 funct3 funct3_FSGNJN_S)) : bool
+      then Fsgnjn_s rd rs1 rs2 else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FSGNJ_S) (Z.eqb
+                                                 funct3 funct3_FSGNJX_S)) : bool
+      then Fsgnjx_s rd rs1 rs2 else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FMIN_S) (Z.eqb
+                                                 funct3 funct3_FMIN_S)) : bool
+      then Fmin_s rd rs1 rs2 else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FMIN_S) (Z.eqb
+                                                 funct3 funct3_FMAX_S)) : bool
+      then Fmax_s rd rs1 rs2 else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FCVT_W_S) (Z.eqb
+                                                 rs2 rs2_FCVT_W_S)) : bool
+      then Fcvt_w_s rd rs1 rm else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FCVT_W_S) (Z.eqb
+                                                 rs2 rs2_FCVT_WU_S)) : bool
+      then Fcvt_wu_s rd rs1 rm else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FMV_X_W) (andb
+                                                 (Z.eqb rs2 0) (Z.eqb funct3 0))) : bool
+      then Fmv_x_w rd rs1 else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FEQ_S) (Z.eqb
+                                                 funct3 funct3_FEQ_S)) : bool
+      then Feq_s rd rs1 rs2 else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FEQ_S) (Z.eqb
+                                                 funct3 funct3_FLT_S)) : bool
+      then Flt_s rd rs1 rs2 else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FEQ_S) (Z.eqb
+                                                 funct3 funct3_FLE_S)) : bool
+      then Fle_s rd rs1 rs2 else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FCLASS_S) (andb
+                                                 (Z.eqb rs2 0) (Z.eqb funct3 funct3_FCLASS_S))) : bool
+      then Fclass_s rd rs1 else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FCVT_S_W) (Z.eqb
+                                                 rs2 rs2_FCVT_W_S)) : bool
+      then Fcvt_s_w rd rs1 rm else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FCVT_S_W) (Z.eqb
+                                                 rs2 rs2_FCVT_WU_S)) : bool
+      then Fcvt_s_wu rd rs1 rm else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FMV_W_X) (andb
+                                                 (Z.eqb rs2 0) (Z.eqb funct3 0))) : bool
+      then Fmv_w_x rd rs1 else
+      InvalidF in
     let decodeI64 :=
       if andb (Z.eqb opcode opcode_LOAD) (Z.eqb funct3 funct3_LD) : bool
       then Ld rd rs1 oimm12 else
@@ -998,6 +1296,20 @@ Definition decode : InstructionSet -> Z -> Instruction :=
                                                                                 funct5_AMOMAXU)) : bool
       then Amomaxu_d rd rs1 rs2 aqrl else
       InvalidA64 in
+    let decodeF64 :=
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FCVT_W_S) (Z.eqb
+                                                 rs2 rs2_FCVT_L_S)) : bool
+      then Fcvt_l_s rd rs1 rm else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FCVT_W_S) (Z.eqb
+                                                 rs2 rs2_FCVT_LU_S)) : bool
+      then Fcvt_lu_s rd rs1 rm else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FCVT_S_W) (Z.eqb
+                                                 rs2 rs2_FCVT_L_S)) : bool
+      then Fcvt_s_l rd rs1 rm else
+      if andb (Z.eqb opcode opcode_OP_FP) (andb (Z.eqb funct7 funct7_FCVT_S_W) (Z.eqb
+                                                 rs2 rs2_FCVT_LU_S)) : bool
+      then Fcvt_s_lu rd rs1 rm else
+      InvalidF64 in
     let decodeCSR :=
       if andb (Z.eqb opcode opcode_SYSTEM) (andb (Z.eqb rd 0) (andb (Z.eqb funct3
                                                                            funct3_PRIV) (Z.eqb funct7
@@ -1050,6 +1362,10 @@ Definition decode : InstructionSet -> Z -> Instruction :=
       if isValidCSR decodeCSR : bool
       then cons (CSRInstruction decodeCSR) nil
       else nil in
+    let resultF64 :=
+      if isValidF64 decodeF64 : bool
+      then cons (F64Instruction decodeF64) nil
+      else nil in
     let resultA64 :=
       if isValidA64 decodeA64 : bool
       then cons (A64Instruction decodeA64) nil
@@ -1061,6 +1377,10 @@ Definition decode : InstructionSet -> Z -> Instruction :=
     let resultI64 :=
       if isValidI64 decodeI64 : bool
       then cons (I64Instruction decodeI64) nil
+      else nil in
+    let resultF :=
+      if isValidF decodeF : bool
+      then cons (FInstruction decodeF) nil
       else nil in
     let resultA :=
       if isValidA decodeA : bool
@@ -1082,34 +1402,138 @@ Definition decode : InstructionSet -> Z -> Instruction :=
                                                                                                  then resultA
                                                                                                  else nil)
                                                                                                 (Coq.Init.Datatypes.app
-                                                                                                 (if Z.eqb (bitwidth
-                                                                                                            iset)
-                                                                                                           64 : bool
-                                                                                                  then resultI64
+                                                                                                 (if supportsF
+                                                                                                     iset : bool
+                                                                                                  then resultF
                                                                                                   else nil)
                                                                                                  (Coq.Init.Datatypes.app
-                                                                                                  (if andb (Z.eqb
-                                                                                                            (bitwidth
-                                                                                                             iset) 64)
-                                                                                                           (supportsM
-                                                                                                            iset) : bool
-                                                                                                   then resultM64
+                                                                                                  (if Z.eqb (bitwidth
+                                                                                                             iset)
+                                                                                                            64 : bool
+                                                                                                   then resultI64
                                                                                                    else nil)
                                                                                                   (Coq.Init.Datatypes.app
                                                                                                    (if andb (Z.eqb
                                                                                                              (bitwidth
                                                                                                               iset) 64)
-                                                                                                            (supportsA
+                                                                                                            (supportsM
                                                                                                              iset) : bool
-                                                                                                    then resultA64
+                                                                                                    then resultM64
                                                                                                     else nil)
-                                                                                                   resultCSR))))) in
+                                                                                                   (Coq.Init.Datatypes.app
+                                                                                                    (if andb (Z.eqb
+                                                                                                              (bitwidth
+                                                                                                               iset) 64)
+                                                                                                             (supportsA
+                                                                                                              iset) : bool
+                                                                                                     then resultA64
+                                                                                                     else nil)
+                                                                                                    (Coq.Init.Datatypes.app
+                                                                                                     (if andb (Z.eqb
+                                                                                                               (bitwidth
+                                                                                                                iset)
+                                                                                                               64)
+                                                                                                              (supportsF
+                                                                                                               iset) : bool
+                                                                                                      then resultF64
+                                                                                                      else nil)
+                                                                                                     resultCSR))))))) in
     if Z.gtb (Z.of_nat (Coq.Lists.List.length results)) 1 : bool
     then InvalidInstruction inst
     else Coq.Lists.List.nth O results (InvalidInstruction inst).
 
+(* Skipping instance `Spec.Decode.Eq___InstructionSet' of class
+   `GHC.Base.Eq_' *)
+
+(* Skipping instance `Spec.Decode.Show__InstructionSet' of class
+   `GHC.Show.Show' *)
+
+(* Skipping instance `Spec.Decode.Eq___InstructionCSR' of class
+   `GHC.Base.Eq_' *)
+
+(* Skipping instance `Spec.Decode.Read__InstructionCSR' of class
+   `GHC.Read.Read' *)
+
+(* Skipping instance `Spec.Decode.Show__InstructionCSR' of class
+   `GHC.Show.Show' *)
+
+(* Skipping instance `Spec.Decode.Eq___InstructionA64' of class
+   `GHC.Base.Eq_' *)
+
+(* Skipping instance `Spec.Decode.Read__InstructionA64' of class
+   `GHC.Read.Read' *)
+
+(* Skipping instance `Spec.Decode.Show__InstructionA64' of class
+   `GHC.Show.Show' *)
+
+(* Skipping instance `Spec.Decode.Eq___InstructionM64' of class
+   `GHC.Base.Eq_' *)
+
+(* Skipping instance `Spec.Decode.Read__InstructionM64' of class
+   `GHC.Read.Read' *)
+
+(* Skipping instance `Spec.Decode.Show__InstructionM64' of class
+   `GHC.Show.Show' *)
+
+(* Skipping instance `Spec.Decode.Eq___InstructionI64' of class
+   `GHC.Base.Eq_' *)
+
+(* Skipping instance `Spec.Decode.Read__InstructionI64' of class
+   `GHC.Read.Read' *)
+
+(* Skipping instance `Spec.Decode.Show__InstructionI64' of class
+   `GHC.Show.Show' *)
+
+(* Skipping instance `Spec.Decode.Eq___InstructionA' of class `GHC.Base.Eq_' *)
+
+(* Skipping instance `Spec.Decode.Read__InstructionA' of class
+   `GHC.Read.Read' *)
+
+(* Skipping instance `Spec.Decode.Show__InstructionA' of class
+   `GHC.Show.Show' *)
+
+(* Skipping instance `Spec.Decode.Eq___InstructionM' of class `GHC.Base.Eq_' *)
+
+(* Skipping instance `Spec.Decode.Read__InstructionM' of class
+   `GHC.Read.Read' *)
+
+(* Skipping instance `Spec.Decode.Show__InstructionM' of class
+   `GHC.Show.Show' *)
+
+(* Skipping instance `Spec.Decode.Eq___InstructionI' of class `GHC.Base.Eq_' *)
+
+(* Skipping instance `Spec.Decode.Read__InstructionI' of class
+   `GHC.Read.Read' *)
+
+(* Skipping instance `Spec.Decode.Show__InstructionI' of class
+   `GHC.Show.Show' *)
+
+(* Skipping instance `Spec.Decode.Eq___InstructionF64' of class
+   `GHC.Base.Eq_' *)
+
+(* Skipping instance `Spec.Decode.Read__InstructionF64' of class
+   `GHC.Read.Read' *)
+
+(* Skipping instance `Spec.Decode.Show__InstructionF64' of class
+   `GHC.Show.Show' *)
+
+(* Skipping instance `Spec.Decode.Eq___InstructionF' of class `GHC.Base.Eq_' *)
+
+(* Skipping instance `Spec.Decode.Read__InstructionF' of class
+   `GHC.Read.Read' *)
+
+(* Skipping instance `Spec.Decode.Show__InstructionF' of class
+   `GHC.Show.Show' *)
+
+(* Skipping instance `Spec.Decode.Eq___Instruction' of class `GHC.Base.Eq_' *)
+
+(* Skipping instance `Spec.Decode.Read__Instruction' of class `GHC.Read.Read' *)
+
+(* Skipping instance `Spec.Decode.Show__Instruction' of class `GHC.Show.Show' *)
+
 (* External variables:
-     O Z Z.eqb Z.gtb Z.lor Z.of_nat Z.shiftl andb bitSlice bool cons false list
-     machineIntToShamt nil orb signExtend true Coq.Init.Datatypes.app
-     Coq.Lists.List.length Coq.Lists.List.nth
+     O Z Z.eqb Z.gtb Z.lor Z.of_nat Z.shiftl andb bool cons false list nil orb true
+     Coq.Init.Datatypes.app Coq.Lists.List.length Coq.Lists.List.nth
+     Utility.Utility.MachineInt Utility.Utility.bitSlice
+     Utility.Utility.machineIntToShamt Utility.Utility.signExtend
 *)

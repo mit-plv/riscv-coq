@@ -19,66 +19,84 @@ Local Open Scope alu_scope.
 
 (* Converted imports: *)
 
-Require Decode.
 Require Import Monads.
-Require Import Program.
+Require Spec.Decode.
+Require Spec.Machine.
 Require Import Utility.
+Require Utility.Utility.
 
 (* No type declarations to convert. *)
+
 (* Converted value declarations: *)
 
-Definition execute {p} {t} `{(RiscvState p t)}
-   : Decode.InstructionM -> p unit :=
+Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
+   : Spec.Decode.InstructionM -> p unit :=
   fun arg_0__ =>
     match arg_0__ with
-    | Decode.Mul rd rs1 rs2 =>
-        Bind (getRegister rs1) (fun x =>
-                Bind (getRegister rs2) (fun y => setRegister rd (x * y)))
-    | Decode.Mulh rd rs1 rs2 =>
-        Bind (getRegister rs1) (fun x =>
-                Bind (getRegister rs2) (fun y =>
-                        setRegister rd (highBits (regToZ_signed x * regToZ_signed y) : t)))
-    | Decode.Mulhsu rd rs1 rs2 =>
-        Bind (getRegister rs1) (fun x =>
-                Bind (getRegister rs2) (fun y =>
-                        setRegister rd (highBits (regToZ_signed x * regToZ_unsigned y) : t)))
-    | Decode.Mulhu rd rs1 rs2 =>
-        Bind (getRegister rs1) (fun x =>
-                Bind (getRegister rs2) (fun y =>
-                        setRegister rd (highBits (regToZ_unsigned x * regToZ_unsigned y) : t)))
-    | Decode.Div rd rs1 rs2 =>
-        Bind (getRegister rs1) (fun x =>
-                Bind (getRegister rs2) (fun y =>
+    | Spec.Decode.Mul rd rs1 rs2 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Bind (Spec.Machine.getRegister rs2) (fun y =>
+                        Spec.Machine.setRegister rd (x * y)))
+    | Spec.Decode.Mulh rd rs1 rs2 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Bind (Spec.Machine.getRegister rs2) (fun y =>
+                        Spec.Machine.setRegister rd (Utility.Utility.highBits
+                                                     (Utility.Utility.regToZ_signed x *
+                                                      Utility.Utility.regToZ_signed y) : t)))
+    | Spec.Decode.Mulhsu rd rs1 rs2 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Bind (Spec.Machine.getRegister rs2) (fun y =>
+                        Spec.Machine.setRegister rd (Utility.Utility.highBits
+                                                     (Utility.Utility.regToZ_signed x *
+                                                      Utility.Utility.regToZ_unsigned y) : t)))
+    | Spec.Decode.Mulhu rd rs1 rs2 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Bind (Spec.Machine.getRegister rs2) (fun y =>
+                        Spec.Machine.setRegister rd (Utility.Utility.highBits
+                                                     (Utility.Utility.regToZ_unsigned x *
+                                                      Utility.Utility.regToZ_unsigned y) : t)))
+    | Spec.Decode.Div rd rs1 rs2 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Bind (Spec.Machine.getRegister rs2) (fun y =>
                         let q :=
-                          if andb (reg_eqb x minSigned) (reg_eqb y (negate (ZToReg 1))) : bool then x else
+                          if andb (reg_eqb x Utility.Utility.minSigned) (reg_eqb y (negate (ZToReg
+                                                                                            1))) : bool
+                          then x else
                           if reg_eqb y (ZToReg 0) : bool then negate (ZToReg 1) else
                           div x y in
-                        setRegister rd q))
-    | Decode.Divu rd rs1 rs2 =>
-        Bind (getRegister rs1) (fun x =>
-                Bind (getRegister rs2) (fun y =>
-                        let q := if reg_eqb y (ZToReg 0) : bool then maxUnsigned else divu x y in
-                        setRegister rd q))
-    | Decode.Rem rd rs1 rs2 =>
-        Bind (getRegister rs1) (fun x =>
-                Bind (getRegister rs2) (fun y =>
+                        Spec.Machine.setRegister rd q))
+    | Spec.Decode.Divu rd rs1 rs2 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Bind (Spec.Machine.getRegister rs2) (fun y =>
+                        let q :=
+                          if reg_eqb y (ZToReg 0) : bool then Utility.Utility.maxUnsigned else
+                          Utility.Utility.divu x y in
+                        Spec.Machine.setRegister rd q))
+    | Spec.Decode.Rem rd rs1 rs2 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Bind (Spec.Machine.getRegister rs2) (fun y =>
                         let r :=
-                          if andb (reg_eqb x minSigned) (reg_eqb y (negate (ZToReg 1))) : bool
+                          if andb (reg_eqb x Utility.Utility.minSigned) (reg_eqb y (negate (ZToReg
+                                                                                            1))) : bool
                           then ZToReg 0 else
                           if reg_eqb y (ZToReg 0) : bool then x else
                           rem x y in
-                        setRegister rd r))
-    | Decode.Remu rd rs1 rs2 =>
-        Bind (getRegister rs1) (fun x =>
-                Bind (getRegister rs2) (fun y =>
-                        let r := if reg_eqb y (ZToReg 0) : bool then x else remu x y in
-                        setRegister rd r))
+                        Spec.Machine.setRegister rd r))
+    | Spec.Decode.Remu rd rs1 rs2 =>
+        Bind (Spec.Machine.getRegister rs1) (fun x =>
+                Bind (Spec.Machine.getRegister rs2) (fun y =>
+                        let r := if reg_eqb y (ZToReg 0) : bool then x else Utility.Utility.remu x y in
+                        Spec.Machine.setRegister rd r))
     | inst => Return tt
     end.
 
 (* External variables:
-     Bind Return RiscvState ZToReg andb bool div divu getRegister highBits
-     maxUnsigned minSigned negate op_zt__ regToZ_signed regToZ_unsigned reg_eqb rem
-     remu setRegister tt unit Decode.Div Decode.Divu Decode.InstructionM Decode.Mul
-     Decode.Mulh Decode.Mulhsu Decode.Mulhu Decode.Rem Decode.Remu
+     Bind Return ZToReg andb bool div negate op_zt__ reg_eqb rem tt unit
+     Spec.Decode.Div Spec.Decode.Divu Spec.Decode.InstructionM Spec.Decode.Mul
+     Spec.Decode.Mulh Spec.Decode.Mulhsu Spec.Decode.Mulhu Spec.Decode.Rem
+     Spec.Decode.Remu Spec.Machine.RiscvMachine Spec.Machine.getRegister
+     Spec.Machine.setRegister Utility.Utility.divu Utility.Utility.highBits
+     Utility.Utility.maxUnsigned Utility.Utility.minSigned
+     Utility.Utility.regToZ_signed Utility.Utility.regToZ_unsigned
+     Utility.Utility.remu
 *)
