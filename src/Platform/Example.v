@@ -3,19 +3,19 @@ Require Import Coq.micromega.Lia.
 Import ListNotations.
 Require Import coqutil.Word.Naive.
 Require Import coqutil.Word.Properties.
-Require Import riscv.Program.
-Require Import riscv.Decode.
+Require Import riscv.Spec.Machine.
+Require Import riscv.Spec.Decode.
 Require Import Coq.ZArith.BinInt.
-Require Import riscv.Utility.
-Require Import riscv.Memory.
-Require Import riscv.Minimal.
-Require Import riscv.MinimalLogging.
-Require Import riscv.Run.
-Require Import riscv.util.Monads.
-Require Import riscv.MkMachineWidth.
+Require Import riscv.Utility.Utility.
+Require Import riscv.Platform.Memory.
+Require Import riscv.Platform.Minimal.
+Require Import riscv.Platform.MinimalLogging.
+Require Import riscv.Platform.Run.
+Require Import riscv.Utility.Monads.
+Require Import riscv.Utility.MkMachineWidth.
 Require Import coqutil.Map.Interface.
-Require Import riscv.Words32Naive.
-Require Import riscv.DefaultMemImpl32.
+Require Import riscv.Utility.Words32Naive.
+Require Import riscv.Utility.DefaultMemImpl32.
 Require Import coqutil.Map.Z_keyed_SortedListMap.
 Require Import coqutil.Z.HexNotation.
 Require coqutil.Map.SortedList.
@@ -50,8 +50,8 @@ Goal False.
   (* decoder seems to work :) *)
 Abort.
 
-Definition RiscvMachine := riscv.RiscvMachine.RiscvMachine Register Empty_set.
-Definition RiscvMachineL := riscv.RiscvMachine.RiscvMachine Register LogEvent.
+Definition RiscvMachine := riscv.Platform.RiscvMachine.RiscvMachine Register Empty_set.
+Definition RiscvMachineL := riscv.Platform.RiscvMachine.RiscvMachine Register LogEvent.
 
 (* This example uses the memory only as instruction memory
    TODO make an example which uses memory to store data *)

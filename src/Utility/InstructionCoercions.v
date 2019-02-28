@@ -1,4 +1,4 @@
-Require Import riscv.Decode.
+Require Import riscv.Spec.Decode.
 
 Coercion IInstruction: InstructionI >-> Instruction.
 Coercion MInstruction: InstructionM >-> Instruction.

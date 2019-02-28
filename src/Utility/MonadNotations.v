@@ -1,4 +1,4 @@
-Require Import riscv.util.Monads.
+Require Import riscv.Utility.Monads.
 
 Notation "x <- m1 ; m2" := (Bind m1 (fun x => m2))
   (right associativity, at level 60) : monad_scope.

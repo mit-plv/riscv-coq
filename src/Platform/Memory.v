@@ -48,7 +48,7 @@ Section MemAccess.
 End MemAccess.
 
 
-Require Import riscv.Utility.
+Require Import riscv.Utility.Utility.
 
 Section MemAccess2.
   Context {W: Words} {mem: map.map word byte}.

@@ -3,7 +3,7 @@ Require Import coqutil.Word.Interface.
 Require Import coqutil.Z.BitOps.
 Require Import coqutil.Word.LittleEndian.
 Require Import coqutil.Datatypes.HList.
-Require Import riscv.Utility.
+Require Import riscv.Utility.Utility.
 Local Open Scope Z_scope.
 
 Instance MachineWidth_XLEN{W: Words}: MachineWidth word := {|

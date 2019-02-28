@@ -1,5 +1,5 @@
 Require Import Coq.ZArith.ZArith.
-Require Import riscv.util.Tactics.
+Require Import riscv.Utility.Tactics.
 
 Local Open Scope Z_scope.
 

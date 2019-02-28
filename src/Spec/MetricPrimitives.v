@@ -1,15 +1,15 @@
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Map.Interface.
-Require Import riscv.util.Monads.
-Require Import riscv.Utility.
-Require Import riscv.Decode.
-Require Import riscv.Memory.
-Require Import riscv.Program.
-Require Import riscv.MetricRiscvMachine.
-Require Import riscv.MkMachineWidth.
-Require Import riscv.MetricLogging.
-Require Import riscv.Primitives.
+Require Import riscv.Utility.Monads.
+Require Import riscv.Utility.Utility.
+Require Import riscv.Spec.Decode.
+Require Import riscv.Platform.Memory.
+Require Import riscv.Spec.Machine.
+Require Import riscv.Platform.MetricRiscvMachine.
+Require Import riscv.Utility.MkMachineWidth.
+Require Import riscv.Platform.MetricLogging.
+Require Import riscv.Spec.Primitives.
 
 Section MetricPrimitives.
 

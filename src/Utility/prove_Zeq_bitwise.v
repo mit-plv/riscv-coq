@@ -1,8 +1,8 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
-Require Import riscv.util.Tactics.
-Require Import riscv.util.div_mod_to_quot_rem.
-Require Import riscv.util.ZBitOps.
+Require Import riscv.Utility.Tactics.
+Require Import riscv.Utility.div_mod_to_quot_rem.
+Require Import riscv.Utility.ZBitOps.
 Require Export Coq.setoid_ring.ZArithRing.
 
 Local Open Scope bool_scope.

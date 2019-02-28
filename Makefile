@@ -6,8 +6,8 @@ default_target: spec
 # use cygpath -m because Coq on Windows cannot handle cygwin paths
 SRCDIR := $(shell cygpath -m "$$(pwd)" 2>/dev/null || pwd)/src
 
-SPEC_VS := $(wildcard $(SRCDIR)/*.v $(SRCDIR)/util/*.v)
-ALL_VS := $(shell find $(SRCDIR) -type f -name '*.v')
+SPEC_VS := $(wildcard $(SRCDIR)/Spec/*.v $(SRCDIR)/Utility/*.v $(SRCDIR)/Platform/*.v)
+ALL_VS := $(SPEC_VS) $(wildcard $(SRCDIR)/Proofs/*.v)
 
 SPEC_VOS := $(patsubst %.v,%.vo,$(SPEC_VS))
 ALL_VOS := $(patsubst %.v,%.vo,$(ALL_VOS))

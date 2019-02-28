@@ -1,5 +1,5 @@
-Require Import riscv.Decode.
-Require Import riscv.Program.
+Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.Machine.
 Require Import Coq.ZArith.BinInt.
 
 (* Table 20.2 in the standard *)

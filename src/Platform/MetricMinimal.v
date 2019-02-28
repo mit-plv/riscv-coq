@@ -1,19 +1,19 @@
 Require Import Coq.ZArith.BinInt.
-Require Import riscv.util.Monads. Import OStateOperations.
-Require Import riscv.util.MonadNotations.
-Require Import riscv.Decode.
-Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)
-Require Import riscv.Program.
-Require Import riscv.Execute.
-Require Import riscv.util.PowerFunc.
-Require Import riscv.Utility.
-Require Import riscv.Primitives.
+Require Import riscv.Utility.Monads. Import OStateOperations.
+Require Import riscv.Utility.MonadNotations.
+Require Import riscv.Spec.Decode.
+Require Import riscv.Platform.Memory. (* should go before Program because both define loadByte etc *)
+Require Import riscv.Spec.Machine.
+Require Import riscv.Spec.Execute.
+Require Import riscv.Utility.PowerFunc.
+Require Import riscv.Utility.Utility.
+Require Import riscv.Spec.Primitives.
 Require Import coqutil.Map.Interface.
-Require Import riscv.RiscvMachine.
-Require Import riscv.Minimal.
-Require Import riscv.MetricRiscvMachine.
-Require Import riscv.MetricLogging.
-Require Import riscv.MetricPrimitives.
+Require Import riscv.Platform.RiscvMachine.
+Require Import riscv.Platform.Minimal.
+Require Import riscv.Platform.MetricRiscvMachine.
+Require Import riscv.Platform.MetricLogging.
+Require Import riscv.Spec.MetricPrimitives.
 Require Import Coq.micromega.Lia.
 Require Import Coq.omega.Omega.
 Require Import Coq.Logic.FunctionalExtensionality.

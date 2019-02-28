@@ -1,13 +1,13 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.PropExtensionality.
-Require Import riscv.util.Monads. Import OStateOperations.
-Require Import riscv.util.MonadNotations.
-Require Import riscv.Decode.
-Require Import riscv.Program.
-Require Import riscv.Utility.
-Require Import riscv.Primitives.
-Require Export riscv.RiscvMachine.
+Require Import riscv.Utility.Monads. Import OStateOperations.
+Require Import riscv.Utility.MonadNotations.
+Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.Machine.
+Require Import riscv.Utility.Utility.
+Require Import riscv.Spec.Primitives.
+Require Export riscv.Platform.RiscvMachine.
 Require Import Coq.micromega.Lia.
 Require Import coqutil.Map.Interface.
 

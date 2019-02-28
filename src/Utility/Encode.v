@@ -1,8 +1,8 @@
 (* Need to define Register *)
 Require Import Coq.ZArith.ZArith.
 Require Import coqutil.Z.HexNotation.
-Require Import riscv.Decode.
-Require Import riscv.Utility.
+Require Import riscv.Spec.Decode.
+Require Import riscv.Utility.Utility.
 
 Local Open Scope Z_scope.
 

@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.Encode.
-Require Import riscv.util.ZBitOps.
-Require Import riscv.util.prove_Zeq_bitwise.
+Require Import riscv.Utility.ZBitOps.
+Require Import riscv.Utility.prove_Zeq_bitwise.
 
 Local Open Scope bool_scope.
 

@@ -1,10 +1,10 @@
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndian.
-Require Import riscv.Memory.
-Require Import riscv.Utility.
-Require Import riscv.RiscvMachine.
-Require Import riscv.MetricLogging.
+Require Import riscv.Platform.Memory.
+Require Import riscv.Utility.Utility.
+Require Import riscv.Platform.RiscvMachine.
+Require Import riscv.Platform.MetricLogging.
 
 Section Machine.
 

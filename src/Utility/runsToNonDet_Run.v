@@ -2,14 +2,14 @@
    using monadic bind, and runsToNonDet.runsTo, where the composition of several
    steps is done by the Inductive *)
 Require Import coqutil.Word.Interface.
-Require Import riscv.Run.
-Require Import riscv.runsToNonDet.
-Require Import riscv.Primitives.
-Require Import riscv.RiscvMachine.
-Require Import riscv.Decode.
-Require Import riscv.MkMachineWidth.
-Require Import riscv.Program.
-Require Import riscv.Utility.
+Require Import riscv.Platform.Run.
+Require Import riscv.Utility.runsToNonDet.
+Require Import riscv.Spec.Primitives.
+Require Import riscv.Platform.RiscvMachine.
+Require Import riscv.Spec.Decode.
+Require Import riscv.Utility.MkMachineWidth.
+Require Import riscv.Spec.Machine.
+Require Import riscv.Utility.Utility.
 
 
 Section Equiv.

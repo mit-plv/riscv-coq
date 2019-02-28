@@ -1,9 +1,9 @@
 Require Import Coq.ZArith.ZArith.
-Require Import riscv.Decode.
+Require Import riscv.Spec.Decode.
 Require Import riscv.Encode.
-Require Import riscv.Utility.
-Require Import riscv.util.Tactics.
-Require Import riscv.util.div_mod_to_quot_rem.
+Require Import riscv.Utility.Utility.
+Require Import riscv.Utility.Tactics.
+Require Import riscv.Utility.div_mod_to_quot_rem.
 Require Import riscv.proofs.invert_encode_R.
 Require Import riscv.proofs.invert_encode_R_atomic.
 Require Import riscv.proofs.invert_encode_I.

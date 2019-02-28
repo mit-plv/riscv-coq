@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.Encode.
-Require Import riscv.util.ZBitOps.
-Require Import riscv.util.prove_Zeq_bitwise.
+Require Import riscv.Utility.ZBitOps.
+Require Import riscv.Utility.prove_Zeq_bitwise.
 
 Lemma invert_encode_I_shift_57: forall {opcode rd rs1 shamt5 funct3 funct7},
   verify_I_shift_57 opcode rd rs1 shamt5 funct3 funct7 ->

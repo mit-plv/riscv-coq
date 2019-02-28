@@ -1,14 +1,14 @@
 Require Import Coq.ZArith.BinInt.
-Require Import riscv.util.Monads. Import OStateOperations.
-Require Import riscv.util.MonadNotations.
-Require Import riscv.Decode.
-Require Import riscv.Memory. (* should go before Program because both define loadByte etc *)
-Require Import riscv.Program.
-Require Import riscv.Execute.
-Require Import riscv.util.PowerFunc.
-Require Import riscv.Utility.
+Require Import riscv.Utility.Monads. Import OStateOperations.
+Require Import riscv.Utility.MonadNotations.
+Require Import riscv.Spec.Decode.
+Require Import riscv.Platform.Memory. (* should go before Program because both define loadByte etc *)
+Require Import riscv.Spec.Machine.
+Require Import riscv.Spec.Execute.
+Require Import riscv.Utility.PowerFunc.
+Require Import riscv.Utility.Utility.
 Require Import Coq.Lists.List. Import ListNotations.
-Require Import riscv.Minimal.
+Require Import riscv.Platform.Minimal.
 Require Import coqutil.Map.Interface.
 
 
@@ -25,8 +25,8 @@ Section Riscv.
     (* we don't log the memory because that would be too big to read *)
     ((map.empty, e, nil), (map.empty, nil)).
 
-  Local Notation RiscvMachine := (riscv.RiscvMachine.RiscvMachine Register Empty_set).
-  Local Notation RiscvMachineL := (riscv.RiscvMachine.RiscvMachine Register LogEvent).
+  Local Notation RiscvMachine := (riscv.Platform.RiscvMachine.RiscvMachine Register Empty_set).
+  Local Notation RiscvMachineL := (riscv.Platform.RiscvMachine.RiscvMachine Register LogEvent).
 
   Definition downgrade: RiscvMachineL -> RiscvMachine :=
     fun '(mkRiscvMachine regs pc nextPC mem log) => mkRiscvMachine regs pc nextPC mem nil.

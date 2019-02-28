@@ -2,8 +2,8 @@ Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndian.
-Require Import riscv.Memory.
-Require Import riscv.Utility.
+Require Import riscv.Platform.Memory.
+Require Import riscv.Utility.Utility.
 
 
 Section Machine.

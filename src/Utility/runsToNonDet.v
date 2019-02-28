@@ -1,6 +1,6 @@
 Require Import coqutil.sanity.
 Unset Universe Minimization ToSet.
-Require Export riscv.util.PowerFunc.
+Require Export riscv.Utility.PowerFunc.
 
 
 Section RunsTo.

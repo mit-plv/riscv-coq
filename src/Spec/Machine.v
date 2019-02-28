@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.ZArith.
-Require Import riscv.util.Monads.
-Require Import riscv.Utility.
-Require Import riscv.Decode.
+Require Import riscv.Utility.Monads.
+Require Import riscv.Utility.Utility.
+Require Import riscv.Spec.Decode.
 
 
 Inductive AccessType: Type := Instr | Load | Store.

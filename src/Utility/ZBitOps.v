@@ -1,5 +1,5 @@
 Require Import Coq.ZArith.ZArith.
-Require Import riscv.util.div_mod_to_quot_rem.
+Require Import riscv.Utility.div_mod_to_quot_rem.
 Require Import Coq.micromega.Lia.
 
 Local Open Scope Z_scope.
