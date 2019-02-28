@@ -17,12 +17,12 @@ Section Riscv.
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
   Context {RVP: RiscvProgram M mword}.
-  Context {RVS: RiscvState M mword}.
+  Context {RVS: RiscvMachine M mword}.
 
   Definition run1(iset: InstructionSet):
     M unit :=
     pc <- getPC;
-    inst <- loadWord pc;
+    inst <- loadWord Fetch pc;
     execute (decode iset (combine 4 inst));;
     step.
 

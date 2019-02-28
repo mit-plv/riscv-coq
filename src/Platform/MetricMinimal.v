@@ -41,22 +41,25 @@ Section Riscv.
   Definition liftL2{A1 A2 B: Type} fl (f: A1 -> A2 -> OState RiscvMachineL B) :=
     fun a1 a2 => liftL0 fl (f a1 a2).
 
-  Instance IsMetricRiscvMachineL: RiscvProgram (OState MetricRiscvMachineL) word := {|
+  Definition liftL3{A1 A2 A3 B: Type} fl (f: A1 -> A2 -> A3 -> OState RiscvMachineL B) :=
+    fun a1 a2 a3 => liftL0 fl (f a1 a2 a3).
+
+  Instance IsMetricRiscvMachineL: RiscvProgram (OState MetricRiscvMachineL) word := {
     getRegister := liftL1 id getRegister;
     setRegister := liftL2 id setRegister;
     getPC := liftL0 id getPC;
     setPC := liftL1 (addMetricJumps 1) setPC;
-    loadByte := liftL1 (addMetricLoads 1) loadByte;
-    loadHalf := liftL1 (addMetricLoads 1) loadHalf;
-    loadWord := liftL1 (addMetricLoads 1) loadWord;
-    loadDouble := liftL1 (addMetricLoads 1) loadDouble;
-    storeByte := liftL2 (addMetricStores 1) storeByte;
-    storeHalf := liftL2 (addMetricStores 1) storeHalf;
-    storeWord := liftL2 (addMetricStores 1) storeWord;
-    storeDouble := liftL2 (addMetricStores 1) storeDouble;
+    loadByte := liftL2 (addMetricLoads 1) loadByte;
+    loadHalf := liftL2 (addMetricLoads 1) loadHalf;
+    loadWord := liftL2 (addMetricLoads 1) loadWord;
+    loadDouble := liftL2 (addMetricLoads 1) loadDouble;
+    storeByte := liftL3 (addMetricStores 1) storeByte;
+    storeHalf := liftL3 (addMetricStores 1) storeHalf;
+    storeWord := liftL3 (addMetricStores 1) storeWord;
+    storeDouble := liftL3 (addMetricStores 1) storeDouble;
     step := liftL0 (addMetricInstructions 1) step;
-    raiseException{A} := liftL2 id (raiseException (A := A));
-  |}.
+    raiseExceptionWithInfo{A} := liftL3 id (raiseExceptionWithInfo (A := A));
+  }.
 
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
@@ -75,7 +78,7 @@ Section Riscv.
                             Memory.loadWord, Memory.storeWord,
                             Memory.loadDouble, Memory.storeDouble,
                             fail_if_None, loadN, storeN,
-                            liftL0, liftL1, liftL2, id,
+                            liftL0, liftL1, liftL2, liftL3, id,
                             getRegs, getMem, liftGet in *;
                      subst;
                      simpl in *)

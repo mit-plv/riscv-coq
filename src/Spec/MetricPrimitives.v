@@ -23,29 +23,29 @@ Section MetricPrimitives.
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
   Context {RVM: RiscvProgram M word}.
-  Context {RVS: @RiscvState M word _ _ RVM}.
+  Context {RVS: @RiscvMachine M word _ _ RVM}.
 
   Definition spec_load{p: PrimitivesParams M RiscvMachineL}(V: Type)
-             (riscv_load: word -> M V)
+             (riscv_load: SourceType -> word -> M V)
              (mem_load: mem -> word -> option V)
              (nonmem_load: RiscvMachineL -> word -> (V  -> RiscvMachineL -> Prop) -> Prop)
              : Prop :=
-    forall initialL addr (post: V -> RiscvMachineL -> Prop),
+    forall initialL addr (kind: SourceType) (post: V -> RiscvMachineL -> Prop),
         let initialLMetrics := updateMetrics (addMetricLoads 1) initialL in
         (exists v: V, mem_load initialL.(getMem) addr = Some v /\ post v initialLMetrics) \/
         (mem_load initialL.(getMem) addr = None /\ nonmem_load initialL addr post) <->
-        mcomp_sat (riscv_load addr) initialL post.
+        mcomp_sat (riscv_load kind addr) initialL post.
 
   Definition spec_store{p: PrimitivesParams M RiscvMachineL}(V: Type)
-             (riscv_store: word -> V -> M unit)
+             (riscv_store: SourceType -> word -> V -> M unit)
              (mem_store: mem -> word -> V -> option mem)
              (nonmem_store: RiscvMachineL -> word -> V -> (RiscvMachineL -> Prop) -> Prop)
              : Prop :=
-    forall initialL addr v (post: unit -> RiscvMachineL -> Prop),
+    forall initialL addr v (kind: SourceType) (post: unit -> RiscvMachineL -> Prop),
       let initialLMetrics := updateMetrics (addMetricStores 1) initialL in
       (exists m', mem_store initialL.(getMem) addr v = Some m' /\ post tt (withMem m' initialLMetrics)) \/
       (mem_store initialL.(getMem) addr v = None /\ nonmem_store initialL addr v (post tt)) <->
-      mcomp_sat (riscv_store addr v) initialL post.
+      mcomp_sat (riscv_store kind addr v) initialL post.
 
   (* primitives_params is a paramater rather than a field because Primitives lives in Prop and
      is opaque, but the fields of primitives_params need to be visible *)
@@ -78,35 +78,35 @@ Section MetricPrimitives.
        x = Register0 /\ post tt initialL) <->
       mcomp_sat (setRegister x v) initialL post;
 
-    spec_loadByte: spec_load w8 (Program.loadByte (RiscvProgram := RVM))
+    spec_loadByte: spec_load w8 (Machine.loadByte (RiscvProgram := RVM))
                                 Memory.loadByte
                                 nonmem_loadByte_sat;
 
-    spec_loadHalf: spec_load w16 (Program.loadHalf (RiscvProgram := RVM))
+    spec_loadHalf: spec_load w16 (Machine.loadHalf (RiscvProgram := RVM))
                                  Memory.loadHalf
                                  nonmem_loadHalf_sat;
 
-    spec_loadWord: spec_load w32 (Program.loadWord (RiscvProgram := RVM))
+    spec_loadWord: spec_load w32 (Machine.loadWord (RiscvProgram := RVM))
                                  Memory.loadWord
                                  nonmem_loadWord_sat;
 
-    spec_loadDouble: spec_load w64 (Program.loadDouble (RiscvProgram := RVM))
+    spec_loadDouble: spec_load w64 (Machine.loadDouble (RiscvProgram := RVM))
                                    Memory.loadDouble
                                    nonmem_loadDouble_sat;
 
-    spec_storeByte: spec_store w8 (Program.storeByte (RiscvProgram := RVM))
+    spec_storeByte: spec_store w8 (Machine.storeByte (RiscvProgram := RVM))
                                   Memory.storeByte
                                   nonmem_storeByte_sat;
 
-    spec_storeHalf: spec_store w16 (Program.storeHalf (RiscvProgram := RVM))
+    spec_storeHalf: spec_store w16 (Machine.storeHalf (RiscvProgram := RVM))
                                     Memory.storeHalf
                                     nonmem_storeHalf_sat;
 
-    spec_storeWord: spec_store w32 (Program.storeWord (RiscvProgram := RVM))
+    spec_storeWord: spec_store w32 (Machine.storeWord (RiscvProgram := RVM))
                                     Memory.storeWord
                                     nonmem_storeWord_sat;
 
-    spec_storeDouble: spec_store w64 (Program.storeDouble (RiscvProgram := RVM))
+    spec_storeDouble: spec_store w64 (Machine.storeDouble (RiscvProgram := RVM))
                                      Memory.storeDouble
                                      nonmem_storeDouble_sat;
 

@@ -1,11 +1,10 @@
-
 Require Import Decode.
 Require ExecuteI.
 Require ExecuteI64.
 Require ExecuteM.
 Require ExecuteM64.
 Require Import Monads.
-Require Import Program.
+Require Import riscv.Spec.Machine.
 Require Import Utility.
 
 (* No type declarations to convert. *)
@@ -13,7 +12,7 @@ Require Import Utility.
 
 (* Note: Filtering of unsupported instructions was already done in Decode.
    Note: We don't support CSR instructions yet. *)
-Definition execute {p} {t} `{(RiscvState p t)}(inst: Instruction): p unit :=
+Definition execute {p} {t} `{(RiscvMachine p t)}(inst: Instruction): p unit :=
   match inst with
   | IInstruction i     => ExecuteI.execute i
   | MInstruction i     => ExecuteM.execute i

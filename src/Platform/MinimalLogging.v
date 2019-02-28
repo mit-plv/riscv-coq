@@ -44,34 +44,38 @@ Section Riscv.
     A1 -> A2 -> OState RiscvMachineL B :=
     fun a1 a2 s => let (ob, s') := f a1 a2 (downgrade s) in (ob, upgrade s' s.(getLog)).
 
-  Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) word := {|
+  Definition liftL3{A1 A2 A3 B: Type}(f: A1 -> A2 -> A3 -> OState RiscvMachine B):
+    A1 -> A2 -> A3 -> OState RiscvMachineL B :=
+    fun a1 a2 a3 s => let (ob, s') := f a1 a2 a3 (downgrade s) in (ob, upgrade s' s.(getLog)).
+
+  Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) word := {
       getRegister := liftL1 getRegister;
       setRegister := liftL2 setRegister;
       getPC := liftL0 getPC;
       setPC := liftL1 setPC;
-      loadByte   := liftL1 loadByte;
-      loadHalf   := liftL1 loadHalf;
-      loadWord a :=
+      loadByte   := liftL2 loadByte;
+      loadHalf   := liftL2 loadHalf;
+      loadWord kind a :=
         m <- get;
-        res <- (liftL1 loadWord a);
+        res <- (liftL2 loadWord kind a);
         put (withLogItem (mkLogItem (EvLoadWord (regToZ_unsigned a) (decode RV64IM (LittleEndian.combine 4 res)))) m);;
         Return res;
-      loadDouble := liftL1 loadDouble;
-      storeByte   := liftL2 storeByte;
-      storeHalf   := liftL2 storeHalf;
+      loadDouble := liftL2 loadDouble;
+      storeByte   := liftL3 storeByte;
+      storeHalf   := liftL3 storeHalf;
 
-      storeWord a v :=
+      storeWord kind a v :=
         Bind get
              (fun m =>
                 Bind (Monad := (OState_Monad _)) (* why does Coq infer OStateND_Monad?? *)
                      (put (withLogItem (mkLogItem (EvStoreWord (regToZ_unsigned a) v)) m))
                      (fun (_: unit) =>
-                        liftL2 storeWord a v));
+                        liftL3 storeWord kind a v));
 
-      storeDouble := liftL2 storeDouble;
+      storeDouble := liftL3 storeDouble;
       step := liftL0 step;
-      raiseException{A} := liftL2 (raiseException (A := A));
-  |}.
+      raiseExceptionWithInfo{A} := liftL3 (raiseExceptionWithInfo (A := A));
+  }.
 
 End Riscv.
 

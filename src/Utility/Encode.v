@@ -36,6 +36,10 @@ Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)(inst: I
   | A64Instruction InvalidA64 => mapper.(map_Invalid) 0
   | CSRInstruction InvalidCSR => mapper.(map_Invalid) 0
 
+  (* encoding floating point is not supported at the moment *)
+  | FInstruction   _ => mapper.(map_Invalid) 0
+  | F64Instruction _ => mapper.(map_Invalid) 0
+
   | IInstruction   (Lb  rd rs1 oimm12) => mapper.(map_I) opcode_LOAD rd rs1 funct3_LB  oimm12
   | IInstruction   (Lh  rd rs1 oimm12) => mapper.(map_I) opcode_LOAD rd rs1 funct3_LH  oimm12
   | IInstruction   (Lw  rd rs1 oimm12) => mapper.(map_I) opcode_LOAD rd rs1 funct3_LW  oimm12
@@ -388,7 +392,7 @@ Definition verify_iset(inst: Instruction)(iset: InstructionSet): Prop :=
   | M64Instruction i =>                 iset = RV64IM \/                  iset = RV64IMA
   | A64Instruction i =>                                  iset = RV64IA \/ iset = RV64IMA
   | CSRInstruction i   => True
-  | InvalidInstruction z => False
+  | _ => False
   end.
 
 Definition verify(inst: Instruction)(iset: InstructionSet): Prop :=

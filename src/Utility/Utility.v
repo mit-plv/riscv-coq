@@ -10,6 +10,9 @@ Global Unset Universe Minimization ToSet.
 
 Local Open Scope Z_scope.
 
+Notation bitSlice := riscv.Utility.ZBitOps.bitSlice.
+Notation signExtend := riscv.Utility.ZBitOps.signExtend.
+
 (* when we don't need any operators, we just use tuples of bytes: *)
 Section ByteTuples.
   Context {byte: word 8}.

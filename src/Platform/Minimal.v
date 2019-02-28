@@ -36,7 +36,7 @@ Section Riscv.
     m <- fail_if_None (Memory.store_bytes n mach.(getMem) a v);
     put (withMem m mach).
 
-  Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) word :=  {|
+  Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) word :=  {
       getRegister reg :=
         if Z.eq_dec reg Register0 then
           Return (ZToReg 0)
@@ -67,15 +67,15 @@ Section Riscv.
         mach <- get;
         put (withNextPc newPC mach);
 
-      loadByte   := loadN 1;
-      loadHalf   := loadN 2;
-      loadWord   := loadN 4;
-      loadDouble := loadN 8;
+      loadByte   kind := loadN 1;
+      loadHalf   kind := loadN 2;
+      loadWord   kind := loadN 4;
+      loadDouble kind := loadN 8;
 
-      storeByte   := storeN 1;
-      storeHalf   := storeN 2;
-      storeWord   := storeN 4;
-      storeDouble := storeN 8;
+      storeByte   kind := storeN 1;
+      storeHalf   kind := storeN 2;
+      storeWord   kind := storeN 4;
+      storeDouble kind := storeN 8;
 
       step :=
         m <- get;
@@ -85,8 +85,8 @@ Section Riscv.
 
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
-      raiseException{A: Type}(isInterrupt: word)(exceptionCode: word) := fail_hard;
-  |}.
+      raiseExceptionWithInfo{A: Type} _ _ _ := fail_hard;
+  }.
 
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.

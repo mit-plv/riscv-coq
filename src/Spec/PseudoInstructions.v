@@ -2,6 +2,8 @@ Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.Machine.
 Require Import Coq.ZArith.BinInt.
 
+Open Scope Z_scope.
+
 (* Table 20.2 in the standard *)
 
 Local Notation x0 := Register0.

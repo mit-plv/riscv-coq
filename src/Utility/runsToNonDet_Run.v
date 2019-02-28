@@ -18,12 +18,12 @@ Section Equiv.
   Variable iset: InstructionSet.
 
   (* redefine mcomp_sat to simplify for the case where no answer is returned *)
-  Definition mcomp_sat(m: M unit)(initialL: RiscvMachine Register Action)
-             (post: RiscvMachine Register Action -> Prop): Prop :=
+  Definition mcomp_sat(m: M unit)(initialL: RiscvMachine.RiscvMachine Register Action)
+             (post: RiscvMachine.RiscvMachine Register Action -> Prop): Prop :=
     mcomp_sat m initialL (fun (_: unit) => post).
 
-  Lemma runsToNonDet_to_Run_aux: forall (initial: RiscvMachine Register Action)
-                                    (P: RiscvMachine Register Action -> Prop),
+  Lemma runsToNonDet_to_Run_aux: forall (initial: RiscvMachine.RiscvMachine Register Action)
+                                    (P: RiscvMachine.RiscvMachine Register Action -> Prop),
       runsTo (mcomp_sat (run1 iset)) initial P ->
       runsTo (mcomp_sat (run1 iset)) initial (fun final =>
          P final /\ exists (n: nat), mcomp_sat (run iset n) initial P).
@@ -72,8 +72,8 @@ eassumption.
 
   Abort.
 
-  Lemma runsToNonDet_to_Run: forall (initial: RiscvMachine Register Action)
-                                    (P: RiscvMachine Register Action -> Prop),
+  Lemma runsToNonDet_to_Run: forall (initial: RiscvMachine.RiscvMachine Register Action)
+                                    (P: RiscvMachine.RiscvMachine Register Action -> Prop),
       runsTo (mcomp_sat (run1 iset)) initial P ->
       exists (n: nat), mcomp_sat (run iset n) initial P.
   Proof.
@@ -87,8 +87,8 @@ eassumption.
   Abort.
 
 
-  Lemma Run_to_runsToNonDet: forall (n: nat) (initial: RiscvMachine Register Action)
-                                    (P: RiscvMachine Register Action -> Prop),
+  Lemma Run_to_runsToNonDet: forall (n: nat) (initial: RiscvMachine.RiscvMachine Register Action)
+                                    (P: RiscvMachine.RiscvMachine Register Action -> Prop),
       mcomp_sat (run iset n) initial P ->
       runsTo (mcomp_sat (run1 iset)) initial P.
   Proof.
