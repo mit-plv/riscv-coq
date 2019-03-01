@@ -1,5 +1,5 @@
 Require Import Coq.ZArith.BinInt.
-Require Import riscv.Encode.
+Require Import riscv.Utility.Encode.
 Require Import riscv.Utility.ZBitOps.
 Require Import riscv.Utility.prove_Zeq_bitwise.
 

@@ -1,5 +1,5 @@
 Require Import Coq.ZArith.BinInt.
-Require Import riscv.Encode.
+Require Import riscv.Utility.Encode.
 Require Import riscv.Utility.ZBitOps.
 Require Import riscv.Utility.prove_Zeq_bitwise.
 
@@ -15,10 +15,16 @@ Lemma invert_encode_I_shift_66: forall {bitwidth opcode rd rs1 shamt6 funct3 fun
   rd = bitSlice inst 7 12 /\
   rs1 = bitSlice inst 15 20 /\
   shamt6 = bitSlice inst 20 26 /\
-  ((Z.eqb (bitSlice inst 25 26) 0) || (Z.eqb bitwidth 64)) = true.
+  true = ((Z.eqb (bitSlice inst 25 26) 0) || (Z.eqb bitwidth 64)).
 Proof.
   intros. unfold encode_I_shift_66, verify_I_shift_66 in *.
-  rewrite Bool.orb_true_iff.
+  assert ((true = (bitSlice inst 25 26 =? 0)%Z || (bitwidth =? 64)%Z)
+          <-> (bitSlice inst 25 26 =? 0)%Z = true \/ (bitwidth =? 64)%Z = true) as E. {
+    split; intro.
+    - rewrite <- Bool.orb_true_iff. congruence.
+    - symmetry. rewrite Bool.orb_true_iff. assumption.
+  }
+  rewrite E.
   rewrite? Z.eqb_eq.
   prove_Zeq_bitwise.
 Qed.

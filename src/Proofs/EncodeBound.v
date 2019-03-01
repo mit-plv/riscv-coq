@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import riscv.Spec.Decode.
-Require Import riscv.Encode.
+Require Import riscv.Utility.Encode.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Utility.Tactics.
 Require Import riscv.Utility.div_mod_to_quot_rem.
@@ -89,7 +89,7 @@ Proof.
   intros.
   unfold encode.
   repeat autounfold with mappers.
-  destruct i as [i|i|i|i|i|i|i|i]; [destruct i..|];
+  destruct i as [i|i|i|i|i|i|i|i|i|i]; [destruct i..|];
     autorewrite with encode_bitSlice_idemp;
     reflexivity.
 Qed.
