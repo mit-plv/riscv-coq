@@ -85,6 +85,11 @@ Ltac simpl_ifs_in H :=
       | ?d = (if ?b then ?x else ?y) => change (d = x) in H
       end.
 
+Ltac destruct_ors :=
+  repeat match goal with
+         | H: _ \/ _ |- _ => destruct H
+         end.
+
 Ltac prove_decode_encode :=
   let inst := fresh "inst" in let iset := fresh "iset" in let V := fresh "V" in
   intros inst iset V; unfold verify in V; destruct V;
@@ -123,5 +128,6 @@ Ltac prove_decode_encode :=
          | H: _ |- _ => progress simpl_ifs_in H
          end;
   first [ subst; reflexivity
+        | (progress destruct_ors); subst; reflexivity
         | destruct iset; subst; reflexivity
         | idtac ].
