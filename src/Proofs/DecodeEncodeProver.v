@@ -63,7 +63,6 @@ Ltac subst_lets_from_encode_inversion :=
                  assert_fails (constr_eq x y);
                  replace y with x in * by
                      exact (eq_trans HencPart (eq_sym HLet));
-                 idtac y HLet;
                  clear HLet y
                end
       end in
