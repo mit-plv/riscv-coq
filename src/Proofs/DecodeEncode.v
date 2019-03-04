@@ -127,8 +127,55 @@ Ltac simpl_ifs_in H :=
       | ?d = (if ?b then ?x else ?y) => change (d = x) in H
       end.
 
-Axiom TODO: False.
+Ltac prove_decode_encode :=
+  let inst := fresh "inst" in let iset := fresh "iset" in let V := fresh "V" in
+  intros inst iset V; unfold verify in V; destruct V;
+  unfold verify_iset in *;
+  let Henc := fresh "Henc" in
+  match goal with
+  | |- ?D ?I (encode ?x) = _ =>
+    remember (encode x) as encoded eqn:Henc; symmetry in Henc
+  end;
+  cbv [ encode
+        Encoder
+        Verifier
+        apply_InstructionMapper
+        map_Fence
+        map_FenceI
+        map_I
+        map_I_shift_57
+        map_I_shift_66
+        map_I_system
+        map_Invalid
+        map_R
+        map_R_atomic
+        map_S
+        map_SB
+        map_U
+        map_UJ
+    ] in Henc;
+  match goal with
+  | |- ?D ?I _ = _ => cbv beta delta [D]
+  end;
+  destruct inst;
+  invert_encode;
+  lets_to_eqs;
+  subst_lets_from_encode_inversion;
+  repeat match goal with
+         | H: _ |- _ => progress simpl_ifs_in H
+         end;
+  first [ subst; reflexivity
+        | destruct iset; subst; reflexivity
+        | idtac ].
 
+Lemma decodeI_encode: forall (inst: InstructionI) (iset: InstructionSet),
+    verify (IInstruction inst) iset ->
+    decode iset (encode (IInstruction inst)) = IInstruction inst.
+Proof.
+  Time prove_decode_encode.
+Time Qed.
+
+(*
 Lemma decodeI_encode: forall (inst: InstructionI) (iset: InstructionSet),
     verify (IInstruction inst) iset ->
     decode iset (encode (IInstruction inst)) = IInstruction inst.
@@ -174,3 +221,15 @@ Proof.
           | idtac ].
 
 Time Qed.
+
+
+
+Lemma decode_encode: forall (inst: Instruction) (iset: InstructionSet),
+    verify inst iset ->
+    decode iset (encode inst) = inst.
+Proof.
+  destruct inst; intros.
+  - apply decodeI_encode; assumption.
+  -
+Abort.
+ *)

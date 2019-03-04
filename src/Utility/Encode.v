@@ -400,7 +400,8 @@ Definition Verifier(bitwidth: Z): InstructionMapper Prop := {|
 Definition respects_bounds(bitwidth: Z): Instruction -> Prop :=
   apply_InstructionMapper (Verifier bitwidth).
 
-(* Note: does not consider F and F64 at the moment *)
+(* We don't use CSR, F, F64, so we return False for them so that they don't complicate the
+   decode_encode proof *)
 Definition verify_iset(inst: Instruction)(iset: InstructionSet): Prop :=
   match inst with
   | IInstruction i => True
@@ -409,7 +410,7 @@ Definition verify_iset(inst: Instruction)(iset: InstructionSet): Prop :=
   | I64Instruction i => iset = RV64I \/ iset = RV64IM \/ iset = RV64IA \/ iset = RV64IMA
   | M64Instruction i =>                 iset = RV64IM \/                  iset = RV64IMA
   | A64Instruction i =>                                  iset = RV64IA \/ iset = RV64IMA
-  | CSRInstruction i   => True
+  | CSRInstruction i => False
   | _ => False
   end.
 
