@@ -21,6 +21,7 @@ Record InstructionMapper{T: Type} := mkInstructionMapper {
   map_U(opcode: MachineInt)(rd: Register)(imm20: Z): T;
   map_UJ(opcode: MachineInt)(rd: Register)(jimm20: Z): T;
   map_Fence(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(prd scc msb4: MachineInt): T;
+  map_FenceI(opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(imm12: MachineInt): T;
 }.
 
 Arguments InstructionMapper: clear implicits.
@@ -49,7 +50,7 @@ Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)(inst: I
   | I64Instruction (Lwu rd rs1 oimm12) => mapper.(map_I) opcode_LOAD rd rs1 funct3_LWU oimm12
 
   | IInstruction (Fence pred succ) => mapper.(map_Fence) opcode_MISC_MEM 0 0 funct3_FENCE pred succ 0
-  | IInstruction (Fence_i) =>         mapper.(map_Fence) opcode_MISC_MEM 0 0 funct3_FENCE_I 0 0 0
+  | IInstruction (Fence_i) =>         mapper.(map_FenceI) opcode_MISC_MEM 0 0 funct3_FENCE_I 0
 
   | IInstruction (Addi  rd rs1 imm12 ) => mapper.(map_I) opcode_OP_IMM rd rs1 funct3_ADDI imm12
   | IInstruction (Slli  rd rs1 shamt6) => mapper.(map_I_shift_66) opcode_OP_IMM rd rs1 shamt6 funct3_SLLI funct6_SLLI
@@ -246,6 +247,13 @@ Definition encode_Fence(opcode: MachineInt)(rd rs1: Register)(funct3 prd scc msb
     Z.shiftl (bitSlice prd    0 4) 24 <|>             (* 24..28 (4 bit) *)
     Z.shiftl (bitSlice msb4   0 4) 28.                (* 28..32 (4 bit) *)
 
+Definition encode_FenceI(opcode: MachineInt)(rd rs1: Register)(funct3 imm12: MachineInt) :=
+             (bitSlice opcode 0  7)    <|>             (*  0..7  ( 7 bit) *)
+    Z.shiftl (bitSlice rd     0  5)  7 <|>             (*  7..12 ( 5 bit) *)
+    Z.shiftl (bitSlice funct3 0  3) 12 <|>             (* 12..15 ( 3 bit) *)
+    Z.shiftl (bitSlice rs1    0  5) 15 <|>             (* 15..20 ( 5 bit) *)
+    Z.shiftl (bitSlice imm12  0 12) 20.                (* 20..32 (12 bit) *)
+
 Definition Encoder: InstructionMapper MachineInt := {|
   map_Invalid := encode_Invalid;
   map_R := encode_R;
@@ -259,6 +267,7 @@ Definition Encoder: InstructionMapper MachineInt := {|
   map_U := encode_U;
   map_UJ := encode_UJ;
   map_Fence := encode_Fence;
+  map_FenceI := encode_FenceI;
 |}.
 
 Definition encode: Instruction -> MachineInt := apply_InstructionMapper Encoder.
@@ -363,6 +372,13 @@ Definition verify_Fence(opcode: MachineInt)(rd rs1: Register)(funct3 prd scc msb
     0 <= scc    < 2^4 /\
     0 <= msb4   < 2^4 .
 
+Definition verify_FenceI(opcode: MachineInt)(rd rs1: Register)(funct3 imm12: MachineInt) :=
+    0 <= opcode < 2^7 /\
+    0 <= rd     < 2^5 /\
+    0 <= rs1    < 2^5 /\
+    0 <= funct3 < 2^3 /\
+    - 2^11 <= imm12 < 2^11.
+
 (* Only verifies that each field is within bounds and has the correct modulus.
    Validity of opcodes and funct codes follows from the fact that it was an Instruction. *)
 Definition Verifier(bitwidth: Z): InstructionMapper Prop := {|
@@ -378,11 +394,13 @@ Definition Verifier(bitwidth: Z): InstructionMapper Prop := {|
   map_U := verify_U;
   map_UJ := verify_UJ;
   map_Fence := verify_Fence;
+  map_FenceI := verify_FenceI;
 |}.
 
 Definition respects_bounds(bitwidth: Z): Instruction -> Prop :=
   apply_InstructionMapper (Verifier bitwidth).
 
+(* Note: does not consider F and F64 at the moment *)
 Definition verify_iset(inst: Instruction)(iset: InstructionSet): Prop :=
   match inst with
   | IInstruction i => True
@@ -411,6 +429,7 @@ Hint Unfold
   map_U
   map_UJ
   map_Fence
+  map_FenceI
   Verifier
   Encoder
   apply_InstructionMapper
