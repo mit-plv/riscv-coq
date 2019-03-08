@@ -10,60 +10,95 @@ rename value Data.Bits.testBit    = Coq.ZArith.BinInt.Z.testbit
 rename value Data.Bits.complement = Coq.ZArith.BinInt.Z.lnot
 
 
-rewrite forall x, x GHC.Base./= Decode.InvalidI = match x with | Decode.InvalidI => false | _ => true end
-rewrite forall x, x GHC.Base./= Decode.InvalidM = match x with | Decode.InvalidM => false | _ => true end
-rewrite forall x, x GHC.Base./= Decode.InvalidI64 = match x with | Decode.InvalidI64 => false | _ => true end
-rewrite forall x, x GHC.Base./= Decode.InvalidM64 = match x with | Decode.InvalidM64 => false | _ => true end
-rewrite forall x, x GHC.Base./= Decode.InvalidCSR = match x with | Decode.InvalidCSR => false | _ => true end
-rewrite forall x, x GHC.Base./= Decode.InvalidA = match x with | Decode.InvalidA => false | _ => true end
-rewrite forall x, x GHC.Base./= Decode.InvalidA64 = match x with | Decode.InvalidA64 => false | _ => true end
+rewrite forall x, x GHC.Base./= Spec.Decode.InvalidI = match x with | Spec.Decode.InvalidI => false | _ => true end
+rewrite forall x, x GHC.Base./= Spec.Decode.InvalidM = match x with | Spec.Decode.InvalidM => false | _ => true end
+rewrite forall x, x GHC.Base./= Spec.Decode.InvalidI64 = match x with | Spec.Decode.InvalidI64 => false | _ => true end
+rewrite forall x, x GHC.Base./= Spec.Decode.InvalidM64 = match x with | Spec.Decode.InvalidM64 => false | _ => true end
+rewrite forall x, x GHC.Base./= Spec.Decode.InvalidCSR = match x with | Spec.Decode.InvalidCSR => false | _ => true end
+rewrite forall x, x GHC.Base./= Spec.Decode.InvalidA = match x with | Spec.Decode.InvalidA => false | _ => true end
+rewrite forall x, x GHC.Base./= Spec.Decode.InvalidA64 = match x with | Spec.Decode.InvalidA64 => false | _ => true end
+rewrite forall x, x GHC.Base./= Spec.Decode.InvalidF = match x with | Spec.Decode.InvalidF => false | _ => true end
+rewrite forall x, x GHC.Base./= Spec.Decode.InvalidF64 = match x with | Spec.Decode.InvalidF64 => false | _ => true end
 
-rewrite forall, Decode.head_default = Coq.Lists.List.nth O 
-rewrite forall x, Decode.isAmbiguous x = Coq.ZArith.BinInt.Z.gtb (Coq.ZArith.BinInt.Z.of_nat (Coq.Lists.List.length x)) 1  
-skip Decode.head_default
-skip Decode.isAmbiguous
+rewrite forall, Spec.Decode.head_default = Coq.Lists.List.nth O
+rewrite forall x, Spec.Decode.isAmbiguous x = Coq.ZArith.BinInt.Z.gtb (Coq.ZArith.BinInt.Z.of_nat (Coq.Lists.List.length x)) 1
+skip Spec.Decode.head_default
+skip Spec.Decode.isAmbiguous
 
-skip Decode.Eq___InstructionI
-skip Decode.Eq___InstructionM
-skip Decode.Eq___InstructionM64
-skip Decode.Eq___InstructionI64
-skip Decode.Eq___InstructionCSR
-skip Decode.Eq___InstructionSet
-skip Decode.Eq___Instruction
-skip Decode.Eq___InstructionA
-skip Decode.Eq___InstructionA64
+skip Spec.Decode.Eq___InstructionI
+skip Spec.Decode.Eq___InstructionM
+skip Spec.Decode.Eq___InstructionM64
+skip Spec.Decode.Eq___InstructionI64
+skip Spec.Decode.Eq___InstructionCSR
+skip Spec.Decode.Eq___InstructionSet
+skip Spec.Decode.Eq___InstructionA
+skip Spec.Decode.Eq___InstructionA64
+skip Spec.Decode.Eq___InstructionF
+skip Spec.Decode.Eq___InstructionF64
+skip Spec.Decode.Eq___Instruction
 
-skip Decode.Default__InstructionSet
-skip Decode.Default__InstructionM64
-skip Decode.Default__InstructionM
-skip Decode.Default__InstructionI64
-skip Decode.Default__InstructionI
-skip Decode.Default__InstructionCSR
-skip Decode.Default__InstructionA
-skip Decode.Default__InstructionA64
+skip Spec.Decode.Show__InstructionSet
+skip Spec.Decode.Show__InstructionM64
+skip Spec.Decode.Show__InstructionM
+skip Spec.Decode.Show__InstructionI64
+skip Spec.Decode.Show__InstructionI
+skip Spec.Decode.Show__InstructionCSR
+skip Spec.Decode.Show__InstructionA
+skip Spec.Decode.Show__InstructionA64
+skip Spec.Decode.Show__InstructionF
+skip Spec.Decode.Show__InstructionF64
+skip Spec.Decode.Show__Instruction
 
-skip Decode.rd
-skip Decode.rs1
-skip Decode.rs2
-skip Decode.oimm12
-skip Decode.oimm20
-skip Decode.imm12
-skip Decode.imm20
-skip Decode.jimm20
-skip Decode.sbimm12
-skip Decode.simm12
-skip Decode.shamt5
-skip Decode.shamt6
-skip Decode.pred
-skip Decode.succ
-skip Decode.csr12
-skip Decode.zimm
-skip Decode.csrInstruction
-skip Decode.i64Instruction
-skip Decode.iInstruction
-skip Decode.m64Instruction
-skip Decode.mInstruction
-skip Decode.a64Instruction
-skip Decode.aInstruction
-skip Decode.inst
-skip Decode.aqrl
+skip Spec.Decode.Read__InstructionSet
+skip Spec.Decode.Read__InstructionM64
+skip Spec.Decode.Read__InstructionM
+skip Spec.Decode.Read__InstructionI64
+skip Spec.Decode.Read__InstructionI
+skip Spec.Decode.Read__InstructionCSR
+skip Spec.Decode.Read__InstructionA
+skip Spec.Decode.Read__InstructionA64
+skip Spec.Decode.Read__InstructionF
+skip Spec.Decode.Read__InstructionF64
+skip Spec.Decode.Read__Instruction
+
+skip Spec.Decode.Default__InstructionSet
+skip Spec.Decode.Default__InstructionM64
+skip Spec.Decode.Default__InstructionM
+skip Spec.Decode.Default__InstructionI64
+skip Spec.Decode.Default__InstructionI
+skip Spec.Decode.Default__InstructionCSR
+skip Spec.Decode.Default__InstructionA
+skip Spec.Decode.Default__InstructionA64
+skip Spec.Decode.Default__InstructionF
+skip Spec.Decode.Default__InstructionF64
+skip Spec.Decode.Default__Instruction
+
+skip Spec.Decode.rd
+skip Spec.Decode.rs1
+skip Spec.Decode.rs2
+skip Spec.Decode.rs3
+skip Spec.Decode.rm
+skip Spec.Decode.oimm12
+skip Spec.Decode.oimm20
+skip Spec.Decode.imm12
+skip Spec.Decode.imm20
+skip Spec.Decode.jimm20
+skip Spec.Decode.sbimm12
+skip Spec.Decode.simm12
+skip Spec.Decode.shamt5
+skip Spec.Decode.shamt6
+skip Spec.Decode.pred
+skip Spec.Decode.succ
+skip Spec.Decode.csr12
+skip Spec.Decode.zimm
+skip Spec.Decode.csrInstruction
+skip Spec.Decode.i64Instruction
+skip Spec.Decode.iInstruction
+skip Spec.Decode.m64Instruction
+skip Spec.Decode.mInstruction
+skip Spec.Decode.a64Instruction
+skip Spec.Decode.aInstruction
+skip Spec.Decode.f64Instruction
+skip Spec.Decode.fInstruction
+skip Spec.Decode.inst
+skip Spec.Decode.aqrl
