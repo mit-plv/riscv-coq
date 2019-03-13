@@ -52,6 +52,11 @@ Section Machine.
   Definition forgetMetrics(m: MetricRiscvMachine): RiscvMachineL := m.(getMachine).
   Definition addMetrics(m: RiscvMachineL)(mc: MetricLog): MetricRiscvMachine :=
     mkMetricRiscvMachine m mc.
+
+  Definition putProgram(prog: list MachineInt)(addr: word)(ma: MetricRiscvMachine): MetricRiscvMachine :=
+    (withPc addr
+    (withNextPc (word.add addr (word.of_Z 4))
+    (withMem (unchecked_store_byte_tuple_list addr (List.map (split 4) prog) ma.(getMem)) ma))).
   
 End Machine.
 
