@@ -29,12 +29,12 @@ Section Riscv.
   Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
     word.of_Z (BitOps.sextend (8 * Z.of_nat n) (LittleEndian.combine n v)).
 
-  Definition mmioLoadEvent(m: Mem)(addr: word){n: nat}(v: HList.tuple byte n):
-    LogItem MMIOAction := ((m, MMInput, [addr]), (m, [signedByteTupleToReg v])).
+  Definition mmioLoadEvent(addr: word){n: nat}(v: HList.tuple byte n):
+    LogItem MMIOAction := ((map.empty, MMInput, [addr]), (map.empty, [signedByteTupleToReg v])).
 
-  Definition mmioStoreEvent(m: Mem)(addr: word){n: nat}(v: HList.tuple byte n):
+  Definition mmioStoreEvent(addr: word){n: nat}(v: HList.tuple byte n):
     LogItem MMIOAction :=
-    ((m, MMOutput, [addr; signedByteTupleToReg v]), (m, [])).
+    ((map.empty, MMOutput, [addr; signedByteTupleToReg v]), (map.empty, [])).
 
   Definition logEvent(e: LogItem MMIOAction): OStateND RiscvMachineL unit :=
     m <- get; put (withLogItem e m).
@@ -52,7 +52,7 @@ Section Riscv.
     | None =>
       (* if any of the n addresses is not present in the memory, we perform an MMIO load event: *)
       inp <- arbitrary (HList.tuple byte n);
-      logEvent (mmioLoadEvent mach.(getMem) a inp);;
+      logEvent (mmioLoadEvent a inp);;
       Return inp
     end.
 
@@ -62,7 +62,7 @@ Section Riscv.
     | Some m => put (withMem m mach)
     | None =>
       (* if any of the n addresses is not present in the memory, we perform an MMIO store event: *)
-      logEvent (mmioStoreEvent mach.(getMem) a v)
+      logEvent (mmioStoreEvent a v)
     end.
 
   Instance IsRiscvMachineL: RiscvProgram (OStateND RiscvMachineL) word :=  {
@@ -230,22 +230,22 @@ Section Riscv.
     Primitives.is_initial_register_value x := True;
 
     Primitives.nonmem_loadByte_sat initialL addr post :=
-      forall (v: w8), post v (withLogItem (mmioLoadEvent initialL.(getMem) addr v) initialL);
+      forall (v: w8), post v (withLogItem (mmioLoadEvent addr v) initialL);
     Primitives.nonmem_loadHalf_sat initialL addr post :=
-      forall (v: w16), post v (withLogItem (mmioLoadEvent initialL.(getMem) addr v) initialL);
+      forall (v: w16), post v (withLogItem (mmioLoadEvent addr v) initialL);
     Primitives.nonmem_loadWord_sat initialL addr post :=
-      forall (v: w32), post v (withLogItem (mmioLoadEvent initialL.(getMem) addr v) initialL);
+      forall (v: w32), post v (withLogItem (mmioLoadEvent addr v) initialL);
     Primitives.nonmem_loadDouble_sat initialL addr post :=
-      forall (v: w64), post v (withLogItem (mmioLoadEvent initialL.(getMem) addr v) initialL);
+      forall (v: w64), post v (withLogItem (mmioLoadEvent addr v) initialL);
 
     Primitives.nonmem_storeByte_sat initialL addr v post :=
-      post (withLogItem (mmioStoreEvent initialL.(getMem) addr v) initialL);
+      post (withLogItem (mmioStoreEvent addr v) initialL);
     Primitives.nonmem_storeHalf_sat initialL addr v post :=
-      post (withLogItem (mmioStoreEvent initialL.(getMem) addr v) initialL);
+      post (withLogItem (mmioStoreEvent addr v) initialL);
     Primitives.nonmem_storeWord_sat initialL addr v post :=
-      post (withLogItem (mmioStoreEvent initialL.(getMem) addr v) initialL);
+      post (withLogItem (mmioStoreEvent addr v) initialL);
     Primitives.nonmem_storeDouble_sat initialL addr v post :=
-      post (withLogItem (mmioStoreEvent initialL.(getMem) addr v) initialL);
+      post (withLogItem (mmioStoreEvent addr v) initialL);
   |}.
 
   Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
