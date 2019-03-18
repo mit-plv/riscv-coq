@@ -37,4 +37,15 @@ Section RunsTo.
     eauto.
   Qed.
 
+  Lemma runsTo_det_step : forall initialL midL P,
+    step initialL (eq midL) ->
+    runsTo midL P ->
+    runsTo initialL P.
+  Proof.
+    intros.
+    eapply runsToStep; [eassumption|].
+    intros. subst.
+    assumption.
+  Qed.
+
 End RunsTo.
