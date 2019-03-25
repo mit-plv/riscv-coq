@@ -18,6 +18,51 @@ Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
 Proof.
   intros. unfold encode_SB, verify_SB in *.
 
+(*
+  Set Ltac Profiling.
+
+  prove_Zeq_bitwise.
+
+  Show Ltac Profile.
+
+total time:     18.576s
+
+ tactic                                   local  total   calls       max
+────────────────────────────────────────┴──────┴──────┴───────┴─────────┘
+─prove_Zeq_bitwise ---------------------   0.0% 100.0%       1   18.576s
+─solve_or_split ------------------------   0.0%  98.5%       1   18.298s
+─solve_or_split_step -------------------   0.0%  98.5%      38    4.105s
+─rewrite_testbit -----------------------   0.1%  96.8%      38    4.082s
+─rewrite_strat (rewstrategy) -----------  32.2%  73.3%     126    3.603s
+─autorewrite with (ne_preident_list) (cl  23.4%  23.4%     112    0.784s
+─Omega.omega ---------------------------  21.0%  21.0%    7574    0.013s
+─autoapply (constr) using (preident) ---   5.8%   5.8%   10436    0.009s
+─Init.class_apply ----------------------   2.2%   5.5%    9738    0.011s
+─Morphisms.normalizes ------------------   1.8%   4.4%       0    0.009s
+─Morphisms.proper_subrelation ----------   1.5%   3.5%    8196    0.007s
+─rewrite ?Z.log2_up_pow2 by Omega.omega    1.9%   2.6%     907    0.009s
+─eassumption ---------------------------   2.6%   2.6%     907    0.006s
+─Morphisms.proper_reflexive ------------   0.8%   2.1%     683    0.011s
+
+ tactic                                   local  total   calls       max
+────────────────────────────────────────┴──────┴──────┴───────┴─────────┘
+─prove_Zeq_bitwise ---------------------   0.0% 100.0%       1   18.576s
+└solve_or_split ------------------------   0.0%  98.5%       1   18.298s
+└solve_or_split_step -------------------   0.0%  98.5%      38    4.105s
+└rewrite_testbit -----------------------   0.1%  96.8%      38    4.082s
+ ├─rewrite_strat (rewstrategy) ---------  32.2%  73.3%     126    3.603s
+ │ ├─Omega.omega -----------------------  19.8%  19.8%    7387    0.013s
+ │ ├─Morphisms.normalizes --------------   1.8%   4.4%       0    0.009s
+ │ │└autoapply (constr) using (preident)   2.6%   2.6%    3043    0.009s
+ │ ├─Morphisms.proper_subrelation ------   1.5%   3.5%    8196    0.007s
+ │ │└Init.class_apply ------------------   0.6%   2.0%    2049    0.007s
+ │ ├─rewrite ?Z.log2_up_pow2 by Omega.om   1.9%   2.6%     907    0.009s
+ │ ├─eassumption -----------------------   2.6%   2.6%     907    0.006s
+ │ └─Morphisms.proper_reflexive --------   0.8%   2.1%     683    0.011s
+ └─autorewrite with (ne_preident_list) (  23.4%  23.4%     112    0.784s
+*)
+
+
 Require Import Omega Lia.
 Require Import coqutil.Z.bitblast.
 Open Scope Z_scope.
@@ -169,12 +214,358 @@ repeat match goal with |- _ /\ _ => split end.
 
 Hint Rewrite testbit_if: z_bitwise_no_hyps.
 
+Set Ltac Profiling.
 
 repeat (rewrite_strat ((repeat (topdown (choice (hints z_bitwise_no_hyps)
                                                 (hints z_bitwise_with_hyps))));
                        (try (topdown (hints z_bitwise_forced_no_hyps))))).
 
+Show Ltac Profile.
+
+(*
+total time:     23.277s
+
+ tactic                                   local  total   calls       max
+────────────────────────────────────────┴──────┴──────┴───────┴─────────┘
+─rewrite_strat (rewstrategy) -----------  45.2% 100.0%       5    9.301s
+─auto (int_or_var_opt) (auto_using) (hin  16.4%  30.9%    5094    0.010s
+─abstract omega ------------------------  10.0%  14.1%    5066    0.007s
+─Init.class_apply ----------------------   4.2%   8.1%   13481    0.011s
+─autoapply (constr) using (preident) ---   6.9%   6.9%   14740    0.011s
+─Morphisms.normalizes ------------------   3.6%   6.4%       0    0.010s
+─Morphisms.proper_subrelation ----------   2.0%   4.8%   11160    0.011s
+─omega ---------------------------------   4.1%   4.1%    5066    0.003s
+─Morphisms.proper_reflexive ------------   1.3%   3.2%     930    0.010s
+─Morphisms.proper_normalization --------   1.6%   2.4%    2790    0.008s
+─Morphisms.partial_application_tactic --   0.7%   2.3%       0    0.010s
+─Morphisms.subrelation_tac -------------   1.1%   2.2%     930    0.003s
+
+ tactic                                   local  total   calls       max
+────────────────────────────────────────┴──────┴──────┴───────┴─────────┘
+─rewrite_strat (rewstrategy) -----------  45.2% 100.0%       5    9.301s
+ ├─auto (int_or_var_opt) (auto_using) (h  16.4%  30.9%    5094    0.010s
+ │└abstract omega ----------------------  10.0%  14.1%    5066    0.007s
+ │└omega -------------------------------   4.1%   4.1%    5066    0.003s
+ ├─Morphisms.normalizes ----------------   3.6%   6.4%       0    0.010s
+ │└autoapply (constr) using (preident) -   2.7%   2.7%    4414    0.010s
+ ├─Morphisms.proper_subrelation --------   2.0%   4.8%   11160    0.011s
+ │└Init.class_apply --------------------   1.2%   2.8%    2790    0.008s
+ ├─Morphisms.proper_reflexive ----------   1.3%   3.2%     930    0.010s
+ ├─Morphisms.proper_normalization ------   1.6%   2.4%    2790    0.008s
+ ├─Morphisms.partial_application_tactic    0.7%   2.3%       0    0.010s
+ └─Morphisms.subrelation_tac -----------   1.1%   2.2%     930    0.003s
+*)
+
       simpl_concrete_Zs.
+
+(*
+Ltac compare_Zs i j :=
+  tryif (first [assert (i <= j) by lia | assert (j < i) by lia])
+  then fail
+  else (let C := fresh "C" in
+        assert (j < i \/ i <= j) as C by lia;
+        ring_simplify i j in C;
+        destruct C as [C | C]).
+*)
+
+(* takes forever:
+      Time repeat match goal with
+                  | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+                  end.
+*)
+
+(* so let's drill down one branch: *)
+      match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+    { match goal with
+      | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+      end.
+
+      Fail
+        match goal with
+        | |- context [?a <? ?b] => destruct (Z.ltb_spec a b); try (exfalso; lia)
+        end.
+
+      clear.
+
+      repeat match goal with
+             | |- context [Z.testbit _ ?i] =>
+               assert_fails (is_var i);
+                 match isZcst i with false => idtac end;
+                 let l := fresh "l" in let E := fresh in remember i as l eqn: E;
+                 ring_simplify in E
+             end.
+      subst.
+
+      Time Btauto.btauto. (* 0.014 *)
+    }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+    }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+    }}}}
+
+    {
+
+}
+
+(*      discover_equal_testbit_indices.*)
 
 (* both too slow:
       repeat match goal with
