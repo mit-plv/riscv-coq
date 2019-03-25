@@ -18,7 +18,7 @@ Lemma testbit_minus1: forall i,
     Z.testbit (-1) i = true.
 Proof.
   intros. rewrite (Z.bits_opp 1) by assumption.
-  simpl. rewrite Z.bits_0. reflexivity. 
+  simpl. rewrite Z.bits_0. reflexivity.
 Qed.
 
 Lemma testbit_above: forall {p n},
@@ -136,7 +136,7 @@ Proof.
   intros.
   pose proof (Z.log2_log2_up_spec b).
   apply testbit_above_signed; omega.
-Qed.      
+Qed.
 
 Lemma mod0_testbit: forall a i p,
     a mod 2 ^ p = 0 ->
@@ -167,7 +167,7 @@ Proof.
       rewrite Z.pow_add_r by omega.
       apply Z.divide_factor_r.
 Qed.
-  
+
 Lemma mod0_testbit': forall a i m,
     a mod m = 0 ->
     m = 2 ^ Z.log2_up m ->
@@ -250,4 +250,4 @@ Ltac prove_Zeq_bitwise_pre :=
     unfold Z.eqf;
     intro i.
 
-Ltac prove_Zeq_bitwise := prove_Zeq_bitwise_pre; solve_or_split.
+Ltac prove_Zeq_bitwise := time "prove_Zeq_bitwise" (prove_Zeq_bitwise_pre; solve_or_split).
