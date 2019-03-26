@@ -139,6 +139,19 @@ Proof.
   apply testbit_above_signed; omega.
 Qed.
 
+Lemma testbit_above_signed'': forall a b i,
+    - b <= a ->
+    a < b ->
+    0 < Z.log2_up b ->
+    Z.log2_up b <= i ->
+    Z.testbit a i = Z.testbit a (Z.log2_up b).
+Proof.
+  intros.
+  assert (i = Z.log2_up b \/ Z.log2_up b < i) as C by lia. destruct C.
+  - subst i. reflexivity.
+  - eauto using testbit_above_signed'.
+Qed.
+
 Lemma mod0_testbit: forall a i p,
     a mod 2 ^ p = 0 ->
     0 <= i < p ->
@@ -212,6 +225,7 @@ Hint Rewrite
 Hint Rewrite
      testbit_above'
      testbit_above_signed'
+(*   testbit_above_signed''  <-- TODO why does this one make proofs run forever? *)
      mod0_testbit'
      mod20_testbit'
      using (try eassumption; try reflexivity; rewrite? Z.log2_up_pow2 by omega; omega)
