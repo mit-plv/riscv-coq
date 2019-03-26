@@ -27,7 +27,7 @@ Section Riscv.
   Local Notation RiscvMachineL := (RiscvMachine Register MMIOAction).
 
   Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
-    word.of_Z (BitOps.sextend (8 * Z.of_nat n) (LittleEndian.combine n v)).
+    word.of_Z (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).
 
   Definition mmioLoadEvent(addr: word){n: nat}(v: HList.tuple byte n):
     LogItem MMIOAction := ((map.empty, MMInput, [addr]), (map.empty, [signedByteTupleToReg v])).

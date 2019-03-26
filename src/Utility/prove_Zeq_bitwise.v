@@ -2,8 +2,9 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import riscv.Utility.Tactics.
 Require Import riscv.Utility.div_mod_to_quot_rem.
-Require Import riscv.Utility.ZBitOps.
+Require Import coqutil.Z.BitOps.
 Require Export Coq.setoid_ring.ZArithRing.
+Require Import Coq.btauto.Btauto.
 
 Local Open Scope bool_scope.
 Local Open Scope Z_scope.
@@ -18,7 +19,7 @@ Lemma testbit_minus1: forall i,
     Z.testbit (-1) i = true.
 Proof.
   intros. rewrite (Z.bits_opp 1) by assumption.
-  simpl. rewrite Z.bits_0. reflexivity. 
+  simpl. rewrite Z.bits_0. reflexivity.
 Qed.
 
 Lemma testbit_above: forall {p n},
@@ -136,7 +137,7 @@ Proof.
   intros.
   pose proof (Z.log2_log2_up_spec b).
   apply testbit_above_signed; omega.
-Qed.      
+Qed.
 
 Lemma mod0_testbit: forall a i p,
     a mod 2 ^ p = 0 ->
@@ -167,7 +168,7 @@ Proof.
       rewrite Z.pow_add_r by omega.
       apply Z.divide_factor_r.
 Qed.
-  
+
 Lemma mod0_testbit': forall a i m,
     a mod m = 0 ->
     m = 2 ^ Z.log2_up m ->
