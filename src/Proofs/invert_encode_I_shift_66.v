@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.Utility.Encode.
-Require Import riscv.Utility.ZBitOps.
+Require Import coqutil.Z.BitOps.
 Require Import riscv.Utility.prove_Zeq_bitwise.
 
 Local Open Scope bool_scope.
@@ -26,5 +26,5 @@ Proof.
   }
   rewrite E.
   rewrite? Z.eqb_eq.
-  prove_Zeq_bitwise.
+  (intuition idtac); prove_Zeq_bitwise.
 Qed.

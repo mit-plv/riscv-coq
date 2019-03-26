@@ -4,14 +4,14 @@ Require Import Coq.setoid_ring.Ring_theory.
 Require Export coqutil.Word.Interface.
 Require Import coqutil.Datatypes.HList.
 Require Import coqutil.sanity.
-Require Export riscv.Utility.ZBitOps.
+Require Export coqutil.Z.BitOps.
 
 Global Unset Universe Minimization ToSet.
 
 Local Open Scope Z_scope.
 
-Notation bitSlice := riscv.Utility.ZBitOps.bitSlice.
-Notation signExtend := riscv.Utility.ZBitOps.signExtend.
+Notation bitSlice := coqutil.Z.BitOps.bitSlice.
+Notation signExtend := coqutil.Z.BitOps.signExtend.
 
 (* when we don't need any operators, we just use tuples of bytes: *)
 Section ByteTuples.
