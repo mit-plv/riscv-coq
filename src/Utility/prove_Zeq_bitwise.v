@@ -246,7 +246,11 @@ Ltac solve_or_split_step :=
 
 Ltac solve_or_split := repeat solve_or_split_step.
 
-Ltac Zbitwise := apply Z.bits_inj'; intros ?i ?Hi; solve_or_split; try btauto.
+Ltac Zbitwise :=
+  apply Z.bits_inj'; intros ?i ?Hi;
+  solve_or_split;
+  rewrite_testbit;
+  try btauto.
 
 Ltac prove_Zeq_bitwise_pre :=
   rewrite ?signExtend_alt_bitwise by lia; unfold signExtend_bitwise, bitSlice in *;
