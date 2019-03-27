@@ -109,4 +109,4 @@ Ltac solve_MetricLog :=
   repeat unfold_MetricLog;
   repeat simpl_MetricLog;
   try_equality_MetricLog;
-  lia || fold_MetricLog.
+  lia || f_equal; lia || fold_MetricLog.
