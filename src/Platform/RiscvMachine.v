@@ -53,10 +53,13 @@ Section Machine.
     fun items '(mkRiscvMachine regs pc nextPC mem log) =>
                 mkRiscvMachine regs pc nextPC mem (items ++ log).
 
+  Definition Z32s_to_bytes(l: list Z): list byte :=
+    List.flat_map (fun z => HList.tuple.to_list (LittleEndian.split 4 z)) l.
+
   Definition putProgram(prog: list MachineInt)(addr: word)(ma: RiscvMachine): RiscvMachine :=
     (withPc addr
     (withNextPc (word.add addr (word.of_Z 4))
-    (withMem (unchecked_store_byte_tuple_list addr (List.map (split 4) prog) ma.(getMem)) ma))).
+    (withMem (unchecked_store_byte_list addr (Z32s_to_bytes prog) ma.(getMem)) ma))).
 
 End Machine.
 
