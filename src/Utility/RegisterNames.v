@@ -1,0 +1,34 @@
+Require Import Coq.ZArith.BinInt.
+
+Definition zero: Z := 0.
+Definition ra: Z := 1.
+Definition sp: Z := 2.
+Definition gp: Z := 3.
+Definition tp: Z := 4.
+Definition t0: Z := 5.
+Definition t1: Z := 6.
+Definition t2: Z := 7.
+Definition s0: Z := 8.
+Definition s1: Z := 9.
+Definition a0: Z := 10.
+Definition a1: Z := 11.
+Definition a2: Z := 12.
+Definition a3: Z := 13.
+Definition a4: Z := 14.
+Definition a5: Z := 15.
+Definition a6: Z := 16.
+Definition a7: Z := 17.
+Definition s2: Z := 18.
+Definition s3: Z := 19.
+Definition s4: Z := 20.
+Definition s5: Z := 21.
+Definition s6: Z := 22.
+Definition s7: Z := 23.
+Definition s8: Z := 24.
+Definition s9: Z := 25.
+Definition s10: Z := 26.
+Definition s11: Z := 27.
+Definition t3: Z := 28.
+Definition t4: Z := 29.
+Definition t5: Z := 30.
+Definition t6: Z := 31.
