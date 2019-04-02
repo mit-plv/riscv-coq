@@ -27,15 +27,9 @@ Section Machine.
 
   Definition updateMetrics(fm: MetricLog -> MetricLog)(m: MetricRiscvMachine) :=
     withMetrics (fm m.(getMetrics)) m.
-  
+
   Definition liftGet{A: Type}(getF: RiscvMachineL -> A): (MetricRiscvMachine -> A) :=
     fun m => getF m.
-
-  Definition getRegs := liftGet getRegs.
-  Definition getPc := liftGet getPc.
-  Definition getNextPc := liftGet getNextPc.
-  Definition getMem := liftGet getMem.
-  Definition getLog := liftGet getLog.
 
   Definition liftWith{A: Type}(withF: A -> RiscvMachineL -> RiscvMachineL) :=
     fun a m =>
@@ -52,7 +46,7 @@ Section Machine.
   Definition forgetMetrics(m: MetricRiscvMachine): RiscvMachineL := m.(getMachine).
   Definition addMetrics(m: RiscvMachineL)(mc: MetricLog): MetricRiscvMachine :=
     mkMetricRiscvMachine m mc.
-  
+
 End Machine.
 
 Arguments MetricRiscvMachine Reg {W} {Registers} {Mem} Action.
