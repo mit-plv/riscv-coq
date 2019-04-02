@@ -27,15 +27,9 @@ Section Machine.
 
   Definition updateMetrics(fm: MetricLog -> MetricLog)(m: MetricRiscvMachine) :=
     withMetrics (fm m.(getMetrics)) m.
-  
+
   Definition liftGet{A: Type}(getF: RiscvMachineL -> A): (MetricRiscvMachine -> A) :=
     fun m => getF m.
-
-  Definition getRegs := liftGet getRegs.
-  Definition getPc := liftGet getPc.
-  Definition getNextPc := liftGet getNextPc.
-  Definition getMem := liftGet getMem.
-  Definition getLog := liftGet getLog.
 
   Definition liftWith{A: Type}(withF: A -> RiscvMachineL -> RiscvMachineL) :=
     fun a m =>
@@ -56,8 +50,8 @@ Section Machine.
   Definition putProgram(prog: list MachineInt)(addr: word)(ma: MetricRiscvMachine): MetricRiscvMachine :=
     (withPc addr
     (withNextPc (word.add addr (word.of_Z 4))
-    (withMem (unchecked_store_byte_tuple_list addr (List.map (split 4) prog) ma.(getMem)) ma))).
-  
+    (withMem (unchecked_store_byte_list addr (Z32s_to_bytes prog) ma.(getMem)) ma))).
+
 End Machine.
 
 Arguments MetricRiscvMachine Reg {W} {Registers} {Mem} Action.

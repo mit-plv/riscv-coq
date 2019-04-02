@@ -5,6 +5,7 @@ Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Platform.Memory.
+Require Import riscv.Platform.RiscvMachine.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Platform.MetricRiscvMachine.
 Require Import riscv.Utility.MkMachineWidth.
@@ -73,7 +74,7 @@ Section MetricPrimitives.
         (x = Register0 /\ post (word.of_Z 0) initialL) <->
         mcomp_sat (getRegister x) initialL post;
 
-    spec_setRegister: forall initialL x v (post: unit -> RiscvMachineL -> Prop),
+    spec_setRegister: forall (initialL: RiscvMachineL) x v (post: unit -> RiscvMachineL -> Prop),
       (valid_register x /\ post tt (withRegs (map.put initialL.(getRegs) x v) initialL) \/
        x = Register0 /\ post tt initialL) <->
       mcomp_sat (setRegister x v) initialL post;
@@ -110,7 +111,7 @@ Section MetricPrimitives.
                                      Memory.storeDouble
                                      nonmem_storeDouble_sat;
 
-    spec_getPC: forall initialL (post: word -> RiscvMachineL -> Prop),
+    spec_getPC: forall (initialL: RiscvMachineL) (post: word -> RiscvMachineL -> Prop),
         post initialL.(getPc) initialL <->
         mcomp_sat getPC initialL post;
 
@@ -120,7 +121,7 @@ Section MetricPrimitives.
                                initialL)) <->
         mcomp_sat (setPC v) initialL post;
 
-    spec_step: forall initialL (post: unit -> RiscvMachineL -> Prop),
+    spec_step: forall (initialL: RiscvMachineL) (post: unit -> RiscvMachineL -> Prop),
         post tt (withNextPc (word.add initialL.(getNextPc) (word.of_Z 4))
                 (withPc     initialL.(getNextPc)
                 (updateMetrics (addMetricInstructions 1)
