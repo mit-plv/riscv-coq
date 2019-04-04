@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.BinInt.
-Require Import Coq.omega.Omega.
-Require Import Coq.micromega.Lia.
+Require Import coqutil.Z.Lia.
+Require Import coqutil.Z.Lia.
 
 Section Riscv.
   
@@ -63,19 +63,19 @@ Section Riscv.
   Ltac try_equality_MetricLog :=
     repeat match goal with
            | H : MetricLog |- context[{| instructions := ?i; |}] =>
-             progress replace i with (instructions H) by omega
+             progress replace i with (instructions H) by blia
            | H : MetricLog |- context[{| stores := ?i; |}] =>
-             progress replace i with (stores H) by omega      
+             progress replace i with (stores H) by blia      
            | H : MetricLog |- context[{| loads := ?i; |}] =>
-             progress replace i with (loads H) by omega      
+             progress replace i with (loads H) by blia      
            | H : MetricLog |- context[{| jumps := ?i; |}] =>
-             progress replace i with (jumps H) by omega
+             progress replace i with (jumps H) by blia
            end.
 
   Ltac solve_MetricLog :=
     repeat unfold_MetricLog;
     repeat simpl_MetricLog;
     try_equality_MetricLog;
-    lia || fold_MetricLog.
+    blia || fold_MetricLog.
 
 End Riscv.

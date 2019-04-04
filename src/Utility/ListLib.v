@@ -1,4 +1,4 @@
-Require Import Coq.Lists.List Coq.ZArith.ZArith Coq.micromega.Lia Coq.omega.Omega.
+Require Import Coq.Lists.List Coq.ZArith.ZArith coqutil.Z.Lia coqutil.Z.Lia.
 
 Open Scope Z_scope.
 
@@ -41,12 +41,12 @@ Proof.
   intro i. specialize (H (Z.of_nat i)).
   unfold Znth_error in *.
   destruct (Z.of_nat i) eqn: E;
-    try lia;
-    apply Z2Nat.inj_iff in E; try omega;
+    try blia;
+    apply Z2Nat.inj_iff in E; try blia;
       rewrite Nat2Z.id in E;
       subst i;
       apply H;
-      lia.
+      blia.
 Qed.
 
 Lemma list_elementwise_same': forall (A : Type) (l1 l2 : list A),
@@ -139,16 +139,16 @@ Lemma nth_error_map_nat_range{R: Type}: forall (f: nat -> R) (count start i: nat
     nth_error (map_nat_range f start count) (i - start) = Some (f i).
 Proof.
   induction count; intros.
-  - exfalso. omega.
-  - simpl. assert (start = i \/ start < i)%nat as C by omega. destruct C as [C | C].
+  - exfalso. blia.
+  - simpl. assert (start = i \/ start < i)%nat as C by blia. destruct C as [C | C].
     + subst. rewrite Nat.sub_diag. reflexivity.
-    + destruct i; [exfalso;omega|].
-      replace (S i - start)%nat with (S (i - start)) by omega.
+    + destruct i; [exfalso;blia|].
+      replace (S i - start)%nat with (S (i - start)) by blia.
       simpl.
       specialize (IHcount (S start) (S i)).
       rewrite Nat.sub_succ in IHcount.
       apply IHcount.
-      omega.
+      blia.
 Qed.
 
 Lemma Znth_error_map_range{R: Type}: forall (f: Z -> R) (count i: Z),
@@ -162,13 +162,13 @@ Proof.
   destruct i.
   - rewrite P.
     + reflexivity.
-    + split; [omega|].
-      apply Z2Nat.inj_lt; omega.
+    + split; [blia|].
+      apply Z2Nat.inj_lt; blia.
   - rewrite P.
-    + f_equal. f_equal. apply Z2Nat.id. omega.
-    + split; [omega|].
+    + f_equal. f_equal. apply Z2Nat.id. blia.
+    + split; [blia|].
       rewrite Nat.add_0_l.
-      apply Z2Nat.inj_lt; omega.
+      apply Z2Nat.inj_lt; blia.
   - exfalso. destruct H as [H _].
     unfold Z.le in H. simpl in H. congruence.
 Qed.
@@ -181,10 +181,10 @@ Proof using .
   pose proof (nth_error_Some l (Z.to_nat n)) as P.
   split; intros.
   - apply proj1 in P.
-    destruct n; try contradiction; (split; [lia|]); (apply Z2Nat.inj_lt; [lia|lia|]);
+    destruct n; try contradiction; (split; [blia|]); (apply Z2Nat.inj_lt; [blia|blia|]);
       rewrite? Nat2Z.id; apply P; assumption.
   - apply proj2 in P.
-    destruct n; try lia; apply P; apply Nat2Z.inj_lt; rewrite? Z2Nat.id; lia.
+    destruct n; try blia; apply P; apply Nat2Z.inj_lt; rewrite? Z2Nat.id; blia.
 Qed.
 
 Lemma Znth_error_ge_None: forall {A : Type} (l : list A) (n : Z),
@@ -192,12 +192,12 @@ Lemma Znth_error_ge_None: forall {A : Type} (l : list A) (n : Z),
 Proof.
   unfold Znth_error. intros. rewrite Zlength_correct in *.
   destruct n; try reflexivity; apply nth_error_None;
-    apply Nat2Z.inj_le; rewrite? Z2Nat.id; lia.
+    apply Nat2Z.inj_le; rewrite? Z2Nat.id; blia.
 Qed.
 
 Lemma Zlength_nonneg: forall {A: Type} (l: list A), 0 <= Zlength l.
 Proof.
-  intros. rewrite Zlength_correct. lia.
+  intros. rewrite Zlength_correct. blia.
 Qed.
 
 Lemma map_Znth_error: forall {A B : Type} (f : A -> B) (n : Z) (l : list A) {d : A},
@@ -238,7 +238,7 @@ Proof.
   simpl.
   rewrite? Zlength_correct.
   rewrite app_length.
-  lia.
+  blia.
 Qed.
 
 Lemma Znth_error_head: forall {A: Type} (l: list A) (a: A),
@@ -253,12 +253,12 @@ Lemma Znth_error_tail: forall {A: Type} (l: list A) (a: A) (i: Z),
 Proof.
   intros.
   unfold Znth_error.
-  assert (i = 1 \/ 1 < i) as C by omega. destruct C as [C | C].
+  assert (i = 1 \/ 1 < i) as C by blia. destruct C as [C | C].
   - subst. reflexivity.
-  - destruct i eqn: E; try lia.
-    destruct (Z.pos p - 1) eqn: F; try lia.
-    replace (Z.pos p) with (Z.succ (Z.pos p0)) by omega.
-    rewrite Z2Nat.inj_succ by omega.
+  - destruct i eqn: E; try blia.
+    destruct (Z.pos p - 1) eqn: F; try blia.
+    replace (Z.pos p) with (Z.succ (Z.pos p0)) by blia.
+    rewrite Z2Nat.inj_succ by blia.
     reflexivity.
 Qed.
 
@@ -273,5 +273,5 @@ Qed.
 Hint Rewrite
      @Zlength_nil @Zlength_cons
      @Znth_error_head @Znth_error_tail @Znth_error_nil
-  using omega
+  using blia
   : rew_Zlist.

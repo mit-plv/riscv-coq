@@ -41,7 +41,7 @@ Build_optionT
 runOptionT
      : forall (M : Type -> Type) (A : Type), optionT M A -> M (option A)
 
-but how is this really different from just creating an alias like below?
+but how is this really different from just creating an ablias like below?
 *)
 
 (* wrong direction: *)

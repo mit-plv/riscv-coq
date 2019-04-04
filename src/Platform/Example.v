@@ -1,5 +1,5 @@
 Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
+Require Import coqutil.Z.Lia.
 Import ListNotations.
 Require Import coqutil.Word.Naive.
 Require Import coqutil.Word.Properties.

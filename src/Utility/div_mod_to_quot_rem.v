@@ -1,11 +1,12 @@
 Require Import Coq.ZArith.ZArith.
 Require Import riscv.Utility.Tactics.
+Require Import coqutil.Z.Lia.
 
 Local Open Scope Z_scope.
 
 (* Credits: Mostly copied from fiat-crypto *)
 
-Ltac div_mod_to_quot_rem_inequality_solver := omega.
+Ltac div_mod_to_quot_rem_inequality_solver := blia.
 
 Ltac generalize_div_eucl x y :=
   let H := fresh in
