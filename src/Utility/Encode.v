@@ -450,7 +450,7 @@ Goal (respects_bounds 32 (IInstruction (Jal 0 4))).
   simpl. unfold verify_UJ.
   unfold opcode_JAL.
   cbn.
-  blia.
+  bomega.
 Qed.
 
 (* This expression will generate a runtime exception, because the jump target is not

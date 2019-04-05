@@ -6,7 +6,7 @@ Local Open Scope Z_scope.
 
 (* Credits: Mostly copied from fiat-crypto *)
 
-Ltac div_mod_to_quot_rem_inequality_solver := blia.
+Ltac div_mod_to_quot_rem_inequality_solver := bomega.
 
 Ltac generalize_div_eucl x y :=
   let H := fresh in

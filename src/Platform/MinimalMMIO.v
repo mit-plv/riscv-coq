@@ -178,14 +178,14 @@ Section Riscv.
        | |- option _ => exact None
        | |- _ => discriminate
        | |- _ => congruence
-       | |- _ => solve [exfalso; blia]
+       | |- _ => solve [exfalso; bomega]
        | |- _ => solve [eauto 15]
        | H: false = ?rhs |- _ => match rhs with
                                  | false => fail 1
                                  | _ => symmetry in H
                                  end
        | |- _ => progress (rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in *)
-       | |- _ => blia
+       | |- _ => bomega
        | H: context[let (_, _) := ?y in _] |- _ => let E := fresh "E" in destruct y eqn: E
        | E: ?x = Some _, H: context[match ?x with _ => _ end] |- _ => rewrite E in H
        | E: ?x = Some _  |- context[match ?x with _ => _ end]      => rewrite E

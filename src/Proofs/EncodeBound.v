@@ -101,5 +101,5 @@ Proof.
   intros.
   rewrite <- encode_bitSlice_idemp.
   apply bitSlice_range.
-  blia.
+  bomega.
 Qed.

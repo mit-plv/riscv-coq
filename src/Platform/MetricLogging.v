@@ -63,19 +63,19 @@ Section Riscv.
   Ltac try_equality_MetricLog :=
     repeat match goal with
            | H : MetricLog |- context[{| instructions := ?i; |}] =>
-             progress replace i with (instructions H) by blia
+             progress replace i with (instructions H) by bomega
            | H : MetricLog |- context[{| stores := ?i; |}] =>
-             progress replace i with (stores H) by blia      
+             progress replace i with (stores H) by bomega      
            | H : MetricLog |- context[{| loads := ?i; |}] =>
-             progress replace i with (loads H) by blia      
+             progress replace i with (loads H) by bomega      
            | H : MetricLog |- context[{| jumps := ?i; |}] =>
-             progress replace i with (jumps H) by blia
+             progress replace i with (jumps H) by bomega
            end.
 
   Ltac solve_MetricLog :=
     repeat unfold_MetricLog;
     repeat simpl_MetricLog;
     try_equality_MetricLog;
-    blia || fold_MetricLog.
+    bomega || fold_MetricLog.
 
 End Riscv.
