@@ -13,7 +13,7 @@ Require Export riscv.Platform.RiscvMachine.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Tactics.Tactics.
-
+Require riscv.Platform.Minimal.
 
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
@@ -39,16 +39,14 @@ Section Riscv.
   Definition logEvent(e: LogItem MMIOAction): OStateND RiscvMachineL unit :=
     m <- get; put (withLogItem e m).
 
-  Definition fail_if_None{R}(o: option R): OStateND RiscvMachineL R :=
-    match o with
-    | Some x => Return x
-    | None => fail_hard
-    end.
+  Definition lift{A: Type}(m: OState RiscvMachineL A): OStateND RiscvMachineL A :=
+    fun s oas' => (exists s', m s = (None, s') /\ oas' = None) \/
+                  (exists a s', m s = (Some a, s') /\ oas' = Some (a, s')).
 
   Definition loadN(n: nat)(a: word): OStateND RiscvMachineL (HList.tuple byte n) :=
     mach <- get;
     match Memory.load_bytes n mach.(getMem) a with
-    | Some v => Return v
+    | Some v => lift (Minimal.loadN n a)
     | None =>
       (* if any of the n addresses is not present in the memory, we perform an MMIO load event: *)
       inp <- arbitrary (HList.tuple byte n);
@@ -59,42 +57,31 @@ Section Riscv.
   Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OStateND RiscvMachineL unit :=
     mach <- get;
     match Memory.store_bytes n mach.(getMem) a v with
-    | Some m => put (withMem m mach)
+    | Some m => lift (Minimal.storeN n a v)
     | None =>
       (* if any of the n addresses is not present in the memory, we perform an MMIO store event: *)
       logEvent (mmioStoreEvent a v)
     end.
 
+  Definition isNone{T: Type}(o: option T) :=
+    match o with
+    | Some _ => false
+    | None => true
+    end.
+
   Instance IsRiscvMachineL: RiscvProgram (OStateND RiscvMachineL) word :=  {
       getRegister reg :=
-        if Z.eq_dec reg Register0 then
-          Return (ZToReg 0)
-        else
-          if (0 <? reg) && (reg <? 32) then
-            mach <- get;
-            match map.get mach.(getRegs) reg with
-            | Some v => Return v
-            | None => arbitrary word
-            end
-          else
-            fail_hard;
-
-      setRegister reg v :=
-        if Z.eq_dec reg Register0 then
-          Return tt
-        else
-          if (0 <? reg) && (reg <? 32) then
-            mach <- get;
-            let newRegs := map.put mach.(getRegs) reg v in
-            put (withRegs newRegs mach)
-          else
-            fail_hard;
-
-      getPC := mach <- get; Return mach.(getPc);
-
-      setPC newPC :=
         mach <- get;
-        put (withNextPc newPC mach);
+        if (0 <? reg) && (reg <? 32) && (isNone (map.get mach.(getRegs) reg)) then
+          arbitrary word
+        else
+          lift (getRegister reg);
+
+      setRegister reg v := lift (setRegister reg v);
+
+      getPC := lift getPC;
+
+      setPC newPC := lift (setPC newPC);
 
       loadByte   kind := loadN 1;
       loadHalf   kind := loadN 2;
@@ -106,23 +93,18 @@ Section Riscv.
       storeWord   kind := storeN 4;
       storeDouble kind := storeN 8;
 
-      step :=
-        m <- get;
-        let m' := withPc m.(getNextPc) m in
-        let m'' := withNextPc (add m.(getNextPc) (ZToReg 4)) m' in
-        put m'';
+      step := lift step;
 
-      (* fail hard if exception is thrown because at the moment, we want to prove that
-         code output by the compiler never throws exceptions *)
-      raiseExceptionWithInfo{A: Type} _ _ _ := fail_hard;
+      raiseExceptionWithInfo{A: Type} isInterrupt exceptionCode info :=
+        lift (raiseExceptionWithInfo isInterrupt exceptionCode info);
   }.
 
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
 
-  Lemma not_load_fails_but_store_succeeds: forall {m addr n v m'},
-      Memory.load_bytes m n addr = None ->
-      Memory.store_bytes m n addr v = Some m' ->
+  Lemma not_load_fails_but_store_succeeds: forall {m: Mem} {addr: word} {n v m'},
+      Memory.load_bytes n m addr = None ->
+      Memory.store_bytes n m addr v = Some m' ->
       False.
   Proof.
     intros. unfold Memory.store_bytes in *.
@@ -130,9 +112,9 @@ Section Riscv.
     discriminate.
   Qed.
 
-  Lemma not_store_fails_but_load_succeeds: forall {m addr n v0 v1},
-      Memory.load_bytes m n addr = Some v0 ->
-      Memory.store_bytes m n addr v1 = None ->
+  Lemma not_store_fails_but_load_succeeds: forall {m: Mem} {addr: word} {n v0 v1},
+      Memory.load_bytes n m addr = Some v0 ->
+      Memory.store_bytes n m addr v1 = None ->
       False.
   Proof.
     intros. unfold Memory.store_bytes in *.
@@ -151,12 +133,9 @@ Section Riscv.
                             get, put, fail_hard,
                             arbitrary,
                             logEvent,
+                            isNone,
                             ZToReg, MkMachineWidth.MachineWidth_XLEN,
-                            Memory.loadByte, Memory.storeByte,
-                            Memory.loadHalf, Memory.storeHalf,
-                            Memory.loadWord, Memory.storeWord,
-                            Memory.loadDouble, Memory.storeDouble,
-                            fail_if_None, loadN, storeN in *;
+                            loadN, storeN in *;
                      subst;
                      simpl in *)
        | |- _ => intro
@@ -250,8 +229,64 @@ Section Riscv.
 
   Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
   Proof.
-    constructor.
-    all: split; [solve [t]|].
+    constructor. all: split.
+    (* spec_Bind *)
+    - t.
+    - t.
+      unfold OStateND in m.
+      exists (fun (a: A) (middleL: RiscvMachineL) => m initialL (Some (a, middleL))).
+      t.
+      edestruct H as [b [? ?]]; [eauto|]. t.
+    (* spec_Return *)
+    - t.
+    - t.
+    (* spec_getRegister *)
+    - t0. t0. t0. t0. t0. t0; try solve [t]. { t0; try solve [t]. t0. t0. t0. t0. t0; try solve [t]. { t0; try solve [t].
+
+                                                                                                       edestruct (spec_getRegister (Primitives := Minimal.MinimalSatisfiesPrimitives)) as [F1 F2].
+
+                                                                                                       clear -H1 F2. simpl in F2.
+    unfold OStateOperations.computation_with_answer_satisfies in *.
+                                                                                                       unfold lift in *.
+                                                                                                       simpl in F1, F2.
+
+                                                                                                       pose proof (spec_getRegister (Primitives := Minimal.MinimalSatisfiesPrimitives)) as P.
+                                                                                                       edestruct (spec_getRegister (Primitives := Minimal.MinimalSatisfiesPrimitives)) as [F1 F2].                                                                                                       apply F1
+
+
+
+as P.
+
+                                                                                                       destruct P.
+
+
+                                                                                                       apply spec_getRegister in H1.
+
+ t0. t0. t0. t0; try solve [t]. t0. t0; try solve [t]. t0; try solve [t]. { t0.
+
+
+                                                                                                                                                                          t0. t0. t0. t0. t0. t0. t0. t0. t0. t0. t0. t0. t0. t0. t0. t0. t0. t0. t0. t0. t0. t0. t0.
+
+ t.
+    - t.
+
+    (* spec_setRegister *)
+    (* spec_loadByte *)
+    (* spec_loadHalf *)
+    (* spec_loadWord *)
+    (* spec_loadDouble *)
+    (* spec_storeByte *)
+    (* spec_storeHalf *)
+    (* spec_storeWord *)
+    (* spec_storeDouble *)
+    (* spec_getPC *)
+    (* spec_setPC *)
+    (* spec_step *)
+
+
+    - t.
+    - t.
+    -
     - t.
       unfold OStateND in m.
       exists (fun (a: A) (middleL: RiscvMachineL) => m initialL (Some (a, middleL))).

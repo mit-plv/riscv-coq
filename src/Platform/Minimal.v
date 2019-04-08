@@ -20,7 +20,7 @@ Section Riscv.
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
 
-  Local Notation RiscvMachineL := (RiscvMachine Register Empty_set).
+  Local Notation RiscvMachineL := (RiscvMachine Register bool).
 
   Definition fail_if_None{R}(o: option R): OState RiscvMachineL R :=
     match o with
@@ -36,56 +36,64 @@ Section Riscv.
     m <- fail_if_None (Memory.store_bytes n mach.(getMem) a v);
     put (withMem m mach).
 
-  Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) word :=  {
-      getRegister reg :=
-        if Z.eq_dec reg Register0 then
-          Return (ZToReg 0)
-        else
-          if (0 <? reg) && (reg <? 32) then
-            mach <- get;
-            match map.get mach.(getRegs) reg with
-            | Some v => Return v
-            | None => Return (word.of_Z 0)
-            end
-          else
-            fail_hard;
-
-      setRegister reg v :=
-        if Z.eq_dec reg Register0 then
-          Return tt
-        else
-          if (0 <? reg) && (reg <? 32) then
-            mach <- get;
-            let newRegs := map.put mach.(getRegs) reg v in
-            put (withRegs newRegs mach)
-          else
-            fail_hard;
-
-      getPC := mach <- get; Return mach.(getPc);
-
-      setPC newPC :=
+  Definition getRegister(reg: Register): OState RiscvMachineL word :=
+    if Z.eq_dec reg Register0 then
+      Return (ZToReg 0)
+    else
+      if (0 <? reg) && (reg <? 32) then
         mach <- get;
-        put (withNextPc newPC mach);
+        match map.get mach.(getRegs) reg with
+        | Some v => Return v
+        | None => Return (word.of_Z 0)
+        end
+      else
+        fail_hard.
 
-      loadByte   kind := loadN 1;
-      loadHalf   kind := loadN 2;
-      loadWord   kind := loadN 4;
-      loadDouble kind := loadN 8;
+  Definition setRegister(reg: Register)(v: word): OState RiscvMachineL unit :=
+    if Z.eq_dec reg Register0 then
+      Return tt
+    else
+      if (0 <? reg) && (reg <? 32) then
+        mach <- get;
+        let newRegs := map.put mach.(getRegs) reg v in
+        put (withRegs newRegs mach)
+      else
+        fail_hard.
 
-      storeByte   kind := storeN 1;
-      storeHalf   kind := storeN 2;
-      storeWord   kind := storeN 4;
-      storeDouble kind := storeN 8;
+  Definition getPC: OState RiscvMachineL word :=
+    mach <- get;
+    Return mach.(getPc).
 
-      step :=
-        m <- get;
-        let m' := withPc m.(getNextPc) m in
-        let m'' := withNextPc (add m.(getNextPc) (ZToReg 4)) m' in
-        put m'';
+  Definition setPC(newPC: word): OState RiscvMachineL unit :=
+    mach <- get;
+    put (withNextPc newPC mach).
 
-      (* fail hard if exception is thrown because at the moment, we want to prove that
-         code output by the compiler never throws exceptions *)
-      raiseExceptionWithInfo{A: Type} _ _ _ := fail_hard;
+  Definition step: OState RiscvMachineL unit :=
+    m <- get;
+    let m' := withPc m.(getNextPc) m in
+    let m'' := withNextPc (add m.(getNextPc) (ZToReg 4)) m' in
+    put m''.
+
+  (* fail hard if exception is thrown because at the moment, we want to prove that
+     code output by the compiler never throws exceptions *)
+  Definition raiseExceptionWithInfo{A: Type}(isInterrupt exceptionCode info: word):
+    OState RiscvMachineL A := fail_hard.
+
+  Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) word :=  {
+    riscv.Spec.Machine.getRegister := getRegister;
+    riscv.Spec.Machine.setRegister := setRegister;
+    riscv.Spec.Machine.getPC := getPC;
+    riscv.Spec.Machine.setPC := setPC;
+    riscv.Spec.Machine.loadByte   kind := loadN 1;
+    riscv.Spec.Machine.loadHalf   kind := loadN 2;
+    riscv.Spec.Machine.loadWord   kind := loadN 4;
+    riscv.Spec.Machine.loadDouble kind := loadN 8;
+    riscv.Spec.Machine.storeByte   kind := storeN 1;
+    riscv.Spec.Machine.storeHalf   kind := storeN 2;
+    riscv.Spec.Machine.storeWord   kind := storeN 4;
+    riscv.Spec.Machine.storeDouble kind := storeN 8;
+    riscv.Spec.Machine.step := step;
+    riscv.Spec.Machine.raiseExceptionWithInfo := @raiseExceptionWithInfo;
   }.
 
   Arguments Memory.load_bytes: simpl never.
@@ -100,6 +108,7 @@ Section Riscv.
                             valid_register, Register0,
                             is_initial_register_value,
                             get, put, fail_hard,
+                            getRegister, setRegister, getPC, setPC, step, raiseExceptionWithInfo,
                             Memory.loadByte, Memory.storeByte,
                             Memory.loadHalf, Memory.storeHalf,
                             Memory.loadWord, Memory.storeWord,
