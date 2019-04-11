@@ -33,11 +33,20 @@ Section Riscv.
 
   Definition liftL0{B : Type}(fl: MetricLog -> MetricLog)(f: OStateND RiscvMachineL B):
     OStateND MetricRiscvMachineL B :=
+    fun s p => (exists b mach, p = Some (b, {| getMachine := mach;
+                                               getMetrics := fl s.(getMetrics) |}) /\
+                               f s.(getMachine) (Some (b, mach))) \/
+               (p = None /\ f s.(getMachine) None).
+
+  (* alternative definition, should be equivalent:
+  Definition liftL0{B : Type}(fl: MetricLog -> MetricLog)(f: OStateND RiscvMachineL B):
+    OStateND MetricRiscvMachineL B :=
     fun s p => match p with
                | Some (b, m) => (f s.(getMachine)) (Some (b, m.(getMachine))) /\
                                 (fl s.(getMetrics)) = m.(getMetrics)
                | None => (f s.(getMachine)) None
                end.
+   *)
 
   Definition liftL1{A B: Type} fl (f: A -> OStateND RiscvMachineL B) :=
     fun a => liftL0 fl (f a).
@@ -65,10 +74,10 @@ Section Riscv.
     raiseExceptionWithInfo{A} := liftL3 id (raiseExceptionWithInfo (A := A));
   }.
 
-  
+
   Definition pLoad (m : MetricRiscvMachineL) := updateMetrics (addMetricLoads 1) m.
   Definition pStore (m : MetricRiscvMachineL) := updateMetrics (addMetricStores 1) m.
-  
+
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
 
@@ -220,7 +229,7 @@ Section Riscv.
   Proof.
     discriminate.
   Qed.
-                                                           
+
   Instance MinimalMMIOSatisfiesPrimitives: MetricPrimitives MetricMinimalMMIOPrimitivesParams.
   Proof.
     constructor.
@@ -231,40 +240,70 @@ Section Riscv.
       t.
       edestruct H as [b [? ?]]; [eauto|]; t.
     - t.
-    - t; admit.
-    - t; admit.
+    - t.
+      + edestruct H as [b [? ?]]; [solve [eauto]|]. t.
+      + edestruct H as [b [? ?]]; [solve [eauto]|]. t.
+      + edestruct H as [b [? ?]]; [solve [left; do 2 eexists; split; [reflexivity | t]]|]. t.
+      + left. split; [solve [t]|]. t.
+        edestruct H as [b [? ?]]; [solve [left; do 2 eexists; split; [reflexivity | t]]|]. t.
+      + edestruct H as [b [? ?]]; [solve [right; eauto]|]. t.
+      + edestruct H as [b [? ?]]; [solve [right; eauto]|]. t.
+      + edestruct H as [b [? ?]]; [solve [right; eauto]|]. t.
+      + edestruct H as [b [? ?]]; [solve [right; eauto]|]. t.
+    - t.
+      + right. edestruct H as [b [? ?]]; [solve [left; eauto]|]. t.
+      + left. split; [solve [t]|]. t.
+        edestruct H as [b [? ?]]; [solve [left; do 2 eexists; split; [reflexivity | t]]|]. t.
+      + edestruct H as [b [? ?]]; [solve [right; eauto]|]. t.
+      + edestruct H as [b [? ?]]; [solve [right; eauto]|]. t.
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.loadByte (getMem initialL) addr) eqn: F; [left|right].
-      + t; match goal with
+      + t. match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
+           end.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
       + t. match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.loadHalf (getMem initialL) addr) eqn: F; [left|right].
       + t; match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
       + t. match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.loadWord (getMem initialL) addr) eqn: F; [left|right].
       + t; match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
       + t. match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.loadDouble (getMem initialL) addr) eqn: F; [left|right].
       + t; match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
       + t. match goal with
            | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
            end; t.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
 
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.storeByte (getMem initialL) addr v) eqn: F.
@@ -273,11 +312,15 @@ Section Riscv.
         t; match goal with
         | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
         end; t.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
       + destruct (Memory.loadByte (getMem initialL) addr) eqn: G; [ exfalso; t | ].
         right.
         t; match goal with
            | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
            end; t.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.storeHalf (getMem initialL) addr v) eqn: F.
       + destruct (Memory.loadHalf (getMem initialL) addr) eqn: G; [ | exfalso; t ].
@@ -285,11 +328,15 @@ Section Riscv.
         t; match goal with
         | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
         end; t.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
       + destruct (Memory.loadHalf (getMem initialL) addr) eqn: G; [ exfalso; t | ].
         right.
         t; match goal with
            | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
            end; t.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.storeWord (getMem initialL) addr v) eqn: F.
       + destruct (Memory.loadWord (getMem initialL) addr) eqn: G; [ | exfalso; t ].
@@ -297,11 +344,15 @@ Section Riscv.
         t; match goal with
         | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
         end; t.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
       + destruct (Memory.loadWord (getMem initialL) addr) eqn: G; [ exfalso; t | ].
         right.
         t; match goal with
            | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
            end; t.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
     - intros. simpl in *. unfold computation_with_answer_satisfies in *.
       destruct (Memory.storeDouble (getMem initialL) addr v) eqn: F.
       + destruct (Memory.loadDouble (getMem initialL) addr) eqn: G; [ | exfalso; t ].
@@ -309,15 +360,19 @@ Section Riscv.
         t; match goal with
         | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
         end; t.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
       + destruct (Memory.loadDouble (getMem initialL) addr) eqn: G; [ exfalso; t | ].
         right.
         t; match goal with
            | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
            end; t.
-    - t; admit.
-    - t; admit.
-    - t; admit.
-  Admitted.
+        edestruct H; [|solve [t]].
+        left. do 2 eexists. split; [reflexivity|]. t.
+    - t. edestruct H as [b [? ?]]; [solve [left; t]|]. t.
+    - t. edestruct H as [b [? ?]]; [solve [left; t]|]. t.
+    - t. edestruct H as [b [? ?]]; [solve [left; t]|]. t.
+  Qed.
 
 End Riscv.
 
