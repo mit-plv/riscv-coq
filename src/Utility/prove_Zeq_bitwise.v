@@ -1,5 +1,5 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
+Require Import coqutil.Z.Lia.
 Require Import riscv.Utility.Tactics.
 Require Import riscv.Utility.div_mod_to_quot_rem.
 Require Import coqutil.Z.BitOps.
@@ -79,7 +79,7 @@ Lemma Zdiv_small_neg: forall a b,
     - b <= a < 0 ->
     a / b = -1.
 Proof.
-  intros. div_mod_to_quot_rem. nia.
+  intros. div_mod_to_quot_rem. Lia.nia.
 Qed.
 
 Lemma testbit_above_signed: forall l a i,
@@ -89,28 +89,28 @@ Lemma testbit_above_signed: forall l a i,
     Z.testbit a i = Z.testbit a l.
 Proof.
   intros. destruct (Z.testbit a l) eqn: E.
-  - rewrite Z.testbit_true in E by omega.
-    assert (a < -1 \/ a = -1 \/ 0 <= a) as C by omega. destruct C as [C | [C | C]].
-    + apply Z.bits_above_log2_neg; [omega|].
-      rewrite (Z.pow_lt_mono_r_iff 2) by omega.
+  - rewrite Z.testbit_true in E by bomega.
+    assert (a < -1 \/ a = -1 \/ 0 <= a) as C by bomega. destruct C as [C | [C | C]].
+    + apply Z.bits_above_log2_neg; [bomega|].
+      rewrite (Z.pow_lt_mono_r_iff 2) by bomega.
       pose proof (Z.log2_spec (Z.pred (- a))) as P.
       pose proof (Z.pow_lt_mono_r 2 l i).
-      omega.
-    + subst. apply testbit_minus1. omega.
-    + rewrite Z.div_small in E by omega.
+      bomega.
+    + subst. apply testbit_minus1. bomega.
+    + rewrite Z.div_small in E by bomega.
       cbv in E. discriminate.
-  - assert (a < 0 \/ 0 <= a) as C by omega. destruct C as [C | C].
+  - assert (a < 0 \/ 0 <= a) as C by bomega. destruct C as [C | C].
     + exfalso.
       pose proof (Z.testbit_true a l) as P.
-      destruct P as [_ P]; [omega|].
+      destruct P as [_ P]; [bomega|].
       rewrite P in E; [discriminate|clear P E].
-      rewrite Zdiv_small_neg by omega.
+      rewrite Zdiv_small_neg by bomega.
       reflexivity.
     + assert (a / 2 ^ i = 0) as F. {
         pose proof (Z.pow_lt_mono_r 2 l i).
-        apply Z.div_small. omega.
+        apply Z.div_small. bomega.
       }
-      rewrite Z.testbit_false by omega.
+      rewrite Z.testbit_false by bomega.
       rewrite F.
       reflexivity.
 Qed.
@@ -124,7 +124,7 @@ Lemma testbit_above': forall n b i,
 Proof.
   intros.
   pose proof (Z.log2_log2_up_spec b).
-  apply (@testbit_above (Z.log2_up b) n); omega.
+  apply (@testbit_above (Z.log2_up b) n); bomega.
 Qed.
 
 Lemma testbit_above_signed': forall a b i,
@@ -136,7 +136,7 @@ Lemma testbit_above_signed': forall a b i,
 Proof.
   intros.
   pose proof (Z.log2_log2_up_spec b).
-  apply testbit_above_signed; omega.
+  apply testbit_above_signed; bomega.
 Qed.
 
 Lemma testbit_above_signed'': forall a b i,
@@ -147,7 +147,7 @@ Lemma testbit_above_signed'': forall a b i,
     Z.testbit a i = Z.testbit a (Z.log2_up b).
 Proof.
   intros.
-  assert (i = Z.log2_up b \/ Z.log2_up b < i) as C by lia. destruct C.
+  assert (i = Z.log2_up b \/ Z.log2_up b < i) as C by bomega. destruct C.
   - subst i. reflexivity.
   - eauto using testbit_above_signed'.
 Qed.
@@ -158,27 +158,27 @@ Lemma mod0_testbit: forall a i p,
     Z.testbit a i = false.
 Proof.
   intros.
-  rewrite Z.testbit_false by omega.
+  rewrite Z.testbit_false by bomega.
   pose proof (Zdiv.Zmod_divides a (2 ^ p)) as P.
   destruct P as [P _].
-  - apply Z.pow_nonzero; omega.
+  - apply Z.pow_nonzero; bomega.
   - specialize (P H). destruct P as [c P]. subst a. clear H.
     rewrite Z.mul_comm.
     rewrite Z.divide_div_mul_exact.
-    + replace p with ((1 + (p - i - 1)) + i) by omega.
-      rewrite Z.pow_add_r by omega.
-      rewrite Z.div_mul by (apply Z.pow_nonzero; omega).
+    + replace p with ((1 + (p - i - 1)) + i) by bomega.
+      rewrite Z.pow_add_r by bomega.
+      rewrite Z.div_mul by (apply Z.pow_nonzero; bomega).
       rewrite Zdiv.Zmult_mod.
-      rewrite Z.pow_add_r by omega.
+      rewrite Z.pow_add_r by bomega.
       rewrite (Zdiv.Zmult_mod (2 ^ 1)).
       change (2 ^ 1 mod 2) with 0.
       rewrite Z.mul_0_l.
       change (0 mod 2) with 0.
       rewrite Z.mul_0_r.
       reflexivity.
-    + apply Z.pow_nonzero; omega.
-    + replace p with ((p - i) + i) by omega.
-      rewrite Z.pow_add_r by omega.
+    + apply Z.pow_nonzero; bomega.
+    + replace p with ((p - i) + i) by bomega.
+      rewrite Z.pow_add_r by bomega.
       apply Z.divide_factor_r.
 Qed.
 
@@ -219,7 +219,7 @@ Hint Rewrite
     Z.ones_spec_high
     Z.ones_spec_low
     testbit_if
-    using omega
+    using bomega
 : rew_testbit.
 
 Hint Rewrite
@@ -228,7 +228,7 @@ Hint Rewrite
 (*   testbit_above_signed''  <-- TODO why does this one make proofs run forever? *)
      mod0_testbit'
      mod20_testbit'
-     using (try eassumption; try reflexivity; rewrite? Z.log2_up_pow2 by omega; omega)
+     using (try eassumption; try reflexivity; rewrite? Z.log2_up_pow2 by bomega; bomega)
 : rew_testbit_expensive.
 
 Ltac rewrite_testbit :=
@@ -238,10 +238,10 @@ Ltac rewrite_testbit :=
      ((rewrite_strat (repeat (topdown (hints rew_testbit_expensive)))))).
 
 Ltac compare_cases cst i :=
-  tryif (first [assert (cst <= i) by omega | assert (i < cst) by omega])
+  tryif (first [assert (cst <= i) by bomega | assert (i < cst) by bomega])
   then fail
   else (let C := fresh "C" in
-        assert (i < cst \/ cst <= i) as C by omega;
+        assert (i < cst \/ cst <= i) as C by bomega;
         safe_ring_simplify i in C;
         destruct C as [C | C]).
 
@@ -252,7 +252,7 @@ Ltac solve_or_split_step :=
        but there are goals such as those generated by
        riscv.Proofs.EncodeBound.encode_SB_bitSlice_idemp where
        btauto runs forever. See https://github.com/coq/coq/issues/9832 *)
-    try solve [f_equal; (reflexivity || omega)];
+    try solve [f_equal; (reflexivity || bomega)];
     match goal with
     | |- context [Z.testbit _ ?i] => compare_cases 0 i
     | |- context [Z.testbit (Z.ones ?sz) ?i] => compare_cases sz i
@@ -267,7 +267,7 @@ Ltac Zbitwise :=
   try btauto.
 
 Ltac prove_Zeq_bitwise_pre :=
-  rewrite ?signExtend_alt_bitwise by lia; unfold signExtend_bitwise, bitSlice in *;
+  rewrite ?signExtend_alt_bitwise by bomega; unfold signExtend_bitwise, bitSlice in *;
   subst;
   repeat match goal with
          | H: _ /\ _ |- _ => destruct H
@@ -275,6 +275,6 @@ Ltac prove_Zeq_bitwise_pre :=
   repeat match goal with
          | |- _ /\ _ => split
          end;
-  repeat (discard_contradictory_or ltac:(first [discriminate | lia ])).
+  repeat (discard_contradictory_or ltac:(first [discriminate | bomega ])).
 
 Ltac prove_Zeq_bitwise := prove_Zeq_bitwise_pre; Zbitwise.

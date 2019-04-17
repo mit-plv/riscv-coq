@@ -5,6 +5,7 @@ Require Import riscv.Utility.Utility.
 Require Import riscv.Utility.Tactics.
 Require Import riscv.Utility.div_mod_to_quot_rem.
 Require Import riscv.Utility.prove_Zeq_bitwise.
+Require Import coqutil.Z.Lia.
 
 
 Local Open Scope bool_scope.
@@ -100,5 +101,5 @@ Proof.
   intros.
   rewrite <- encode_bitSlice_idemp.
   apply bitSlice_range.
-  omega.
+  bomega.
 Qed.

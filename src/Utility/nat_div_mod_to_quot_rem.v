@@ -1,6 +1,7 @@
 Require Import Coq.Arith.PeanoNat.
 Require Import Coq.ZArith.ZArith.
 Require Import riscv.Utility.Tactics.
+Require Import coqutil.Z.Lia.
 
 Local Open Scope nat_scope.
 
@@ -21,7 +22,7 @@ Ltac nat_div_mod_to_quot_rem_step :=
   | context [?a mod ?b] =>
       let Ne := fresh "Ne" in
       let P := fresh "P" in
-      assert (b <> 0) as Ne by omega;
+      assert (b <> 0) as Ne by bomega;
       pose proof (rewrite_div_mod a b Ne) as P;
       clear Ne;
       let q := fresh "q" in

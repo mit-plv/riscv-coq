@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.BinInt.
-Require Import Coq.omega.Omega.
-Require Import Coq.micromega.Lia.
+Require Import coqutil.Z.Lia.
+Require Import coqutil.Z.Lia.
 
 Section Riscv.
 
@@ -75,7 +75,7 @@ Hint Unfold
      boundMetricLog
      UnitMetricLog
   : unf_metric_log.
-
+  
 Ltac unfold_MetricLog := autounfold with unf_metric_log in *.
 
 Ltac fold_MetricLog :=
@@ -96,17 +96,17 @@ Ltac simpl_MetricLog :=
 Ltac try_equality_MetricLog :=
   repeat match goal with
          | H : MetricLog |- context[{| instructions := ?i; |}] =>
-           progress replace i with (instructions H) by omega
+           progress replace i with (instructions H) by bomega
          | H : MetricLog |- context[{| stores := ?i; |}] =>
-           progress replace i with (stores H) by omega      
+           progress replace i with (stores H) by bomega      
          | H : MetricLog |- context[{| loads := ?i; |}] =>
-           progress replace i with (loads H) by omega      
+           progress replace i with (loads H) by bomega      
          | H : MetricLog |- context[{| jumps := ?i; |}] =>
-           progress replace i with (jumps H) by omega
+           progress replace i with (jumps H) by bomega
          end.
 
 Ltac solve_MetricLog :=
   repeat unfold_MetricLog;
   repeat simpl_MetricLog;
   try_equality_MetricLog;
-  lia || f_equal; lia || fold_MetricLog.
+  bomega || f_equal; bomega fold_MetricLog.
