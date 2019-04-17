@@ -377,5 +377,5 @@ Section Riscv.
 End Riscv.
 
 (* needed because defined inside a Section *)
-Existing Instance IsRiscvMachineL.
+Existing Instance IsMetricRiscvMachineL.
 Existing Instance MinimalMMIOSatisfiesPrimitives.
