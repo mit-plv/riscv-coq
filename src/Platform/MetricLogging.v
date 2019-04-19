@@ -3,7 +3,7 @@ Require Import coqutil.Z.Lia.
 Require Import coqutil.Z.Lia.
 
 Section Riscv.
-  
+
   Record MetricLog := mkMetricLog {
     instructions: Z;
     stores: Z;
@@ -22,7 +22,7 @@ Section Riscv.
   Definition addMetricStores n log := withStores (stores log + n) log.
   Definition addMetricLoads n log := withLoads (loads log + n) log.
   Definition addMetricJumps n log := withJumps (jumps log + n) log.
-  
+
   Definition subMetricInstructions n log := withInstructions (instructions log - n) log.
   Definition subMetricStores n log := withStores (stores log - n) log.
   Definition subMetricLoads n log := withLoads (loads log - n) log.
@@ -42,7 +42,7 @@ Section Riscv.
        subMetricStores
        subMetricJumps
   : unf_metric_log.
-  
+
   Ltac unfold_MetricLog := autounfold with unf_metric_log in *.
 
   Ltac fold_MetricLog :=
@@ -65,9 +65,9 @@ Section Riscv.
            | H : MetricLog |- context[{| instructions := ?i; |}] =>
              progress replace i with (instructions H) by bomega
            | H : MetricLog |- context[{| stores := ?i; |}] =>
-             progress replace i with (stores H) by bomega      
+             progress replace i with (stores H) by bomega
            | H : MetricLog |- context[{| loads := ?i; |}] =>
-             progress replace i with (loads H) by bomega      
+             progress replace i with (loads H) by bomega
            | H : MetricLog |- context[{| jumps := ?i; |}] =>
              progress replace i with (jumps H) by bomega
            end.
