@@ -13,7 +13,6 @@ Section Riscv.
   }.
 
   Definition EmptyMetricLog := mkMetricLog 0 0 0 0.
-  Definition UnitMetricLog := mkMetricLog 1 1 1 1.
 
   Definition withInstructions i log := mkMetricLog i (stores log) (loads log) (jumps log).
   Definition withStores s log := mkMetricLog (instructions log) s (loads log) (jumps log).
@@ -30,10 +29,10 @@ Section Riscv.
   Definition subMetricLoads n log := withLoads (loads log - n) log.
   Definition subMetricJumps n log := withJumps (jumps log - n) log.
 
-  Definition metricDifference(metric: MetricLog -> Z) initialM finalM: Z :=
+  Definition metricSub(metric: MetricLog -> Z) finalM initialM: Z :=
     Z.sub (metric finalM) (metric initialM).
 
-  Definition metricLogOp op : MetricLog -> MetricLog -> MetricLog :=
+  Definition metricsOp op : MetricLog -> MetricLog -> MetricLog :=
     fun initialM finalM =>
       mkMetricLog
         (op instructions initialM finalM)
@@ -41,18 +40,24 @@ Section Riscv.
         (op loads initialM finalM)
         (op jumps initialM finalM).
 
-  Definition metricLogDifference := metricLogOp metricDifference.
+  Definition metricsSub := metricsOp metricSub.
 
-  Definition boundMetric(metric: MetricLog -> Z) mBound m1 m2: Prop :=
-    (metric m1) <= (metric m2) * (metric mBound).
+  Definition metricLeq(metric: MetricLog -> Z) m1 m2: Prop :=
+    (metric m1) <= (metric m2).
 
-  Definition boundMetricLog(mBound: MetricLog)(m1: MetricLog)(m2: MetricLog): Prop :=
-    boundMetric instructions mBound m1 m2 /\
-    boundMetric stores mBound m1 m2 /\
-    boundMetric loads mBound m1 m2 /\
-    boundMetric jumps mBound m1 m2.
+  Definition metricsLeq(m1: MetricLog)(m2: MetricLog): Prop :=
+    metricLeq instructions m1 m2 /\
+    metricLeq stores m1 m2 /\
+    metricLeq loads m1 m2 /\
+    metricLeq jumps m1 m2.
 
 End Riscv.
+
+Bind Scope MetricL_scope with MetricLog.
+Delimit Scope MetricL_scope with metricsL.
+
+Infix "<=" := metricsLeq : MetricL_scope.
+Infix "-" := metricsSub : MetricL_scope.
 
 Hint Unfold
      withInstructions
@@ -67,12 +72,11 @@ Hint Unfold
      subMetricLoads
      subMetricStores
      subMetricJumps
-     metricLogOp
-     metricDifference
-     metricLogDifference
-     boundMetric
-     boundMetricLog
-     UnitMetricLog
+     metricsOp
+     metricSub
+     metricsSub
+     metricLeq
+     metricsLeq
   : unf_metric_log.
   
 Ltac unfold_MetricLog := autounfold with unf_metric_log in *.
