@@ -1,8 +1,9 @@
 Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Z.Lia.
-Require Import coqutil.Z.Lia.
 
 Section Riscv.
+
+  Open Scope Z_scope.
   
   Record MetricLog := mkMetricLog {
     instructions: Z;
@@ -28,54 +29,87 @@ Section Riscv.
   Definition subMetricLoads n log := withLoads (loads log - n) log.
   Definition subMetricJumps n log := withJumps (jumps log - n) log.
 
-  Hint Unfold
-       withInstructions
-       withLoads
-       withStores
-       withJumps
-       addMetricInstructions
-       addMetricLoads
-       addMetricStores
-       addMetricJumps
-       subMetricInstructions
-       subMetricLoads
-       subMetricStores
-       subMetricJumps
-  : unf_metric_log.
-  
-  Ltac unfold_MetricLog := autounfold with unf_metric_log in *.
+  Definition metricSub(metric: MetricLog -> Z) finalM initialM: Z :=
+    Z.sub (metric finalM) (metric initialM).
 
-  Ltac fold_MetricLog :=
-    match goal with
-    | _ : _ |- context[?x] =>
-      match x with
-      | {| instructions := instructions ?y;
-           stores := stores ?y;
-           loads := loads ?y;
-           jumps := jumps ?y; |} => replace x with y by (destruct y; reflexivity)
-      end
-    end.
+  Definition metricsOp op : MetricLog -> MetricLog -> MetricLog :=
+    fun initialM finalM =>
+      mkMetricLog
+        (op instructions initialM finalM)
+        (op stores initialM finalM)
+        (op loads initialM finalM)
+        (op jumps initialM finalM).
 
-  Ltac simpl_MetricLog :=
-    cbn [fst snd] in *; (* Unfold logs in tuples *)
-    cbn [instructions loads stores jumps] in *.
+  Definition metricsSub := metricsOp metricSub.
 
-  Ltac try_equality_MetricLog :=
-    repeat match goal with
-           | H : MetricLog |- context[{| instructions := ?i; |}] =>
-             progress replace i with (instructions H) by bomega
-           | H : MetricLog |- context[{| stores := ?i; |}] =>
-             progress replace i with (stores H) by bomega      
-           | H : MetricLog |- context[{| loads := ?i; |}] =>
-             progress replace i with (loads H) by bomega      
-           | H : MetricLog |- context[{| jumps := ?i; |}] =>
-             progress replace i with (jumps H) by bomega
-           end.
+  Definition metricLeq(metric: MetricLog -> Z) m1 m2: Prop :=
+    (metric m1) <= (metric m2).
 
-  Ltac solve_MetricLog :=
-    repeat unfold_MetricLog;
-    repeat simpl_MetricLog;
-    try_equality_MetricLog;
-    bomega || fold_MetricLog.
+  Definition metricsLeq(m1: MetricLog)(m2: MetricLog): Prop :=
+    metricLeq instructions m1 m2 /\
+    metricLeq stores m1 m2 /\
+    metricLeq loads m1 m2 /\
+    metricLeq jumps m1 m2.
 
 End Riscv.
+
+Bind Scope MetricL_scope with MetricLog.
+Delimit Scope MetricL_scope with metricsL.
+
+Infix "<=" := metricsLeq : MetricL_scope.
+Infix "-" := metricsSub : MetricL_scope.
+
+Hint Unfold
+     withInstructions
+     withLoads
+     withStores
+     withJumps
+     addMetricInstructions
+     addMetricLoads
+     addMetricStores
+     addMetricJumps
+     subMetricInstructions
+     subMetricLoads
+     subMetricStores
+     subMetricJumps
+     metricsOp
+     metricSub
+     metricsSub
+     metricLeq
+     metricsLeq
+  : unf_metric_log.
+  
+Ltac unfold_MetricLog := autounfold with unf_metric_log in *.
+
+Ltac fold_MetricLog :=
+  match goal with
+  | _ : _ |- context[?x] =>
+    match x with
+    | {| instructions := instructions ?y;
+         stores := stores ?y;
+         loads := loads ?y;
+         jumps := jumps ?y; |} => replace x with y by (destruct y; reflexivity)
+    end
+  end.
+
+Ltac simpl_MetricLog :=
+  cbn [fst snd] in *; (* Unfold logs in tuples *)
+  cbn [instructions loads stores jumps] in *.
+
+Ltac try_equality_MetricLog :=
+  repeat match goal with
+         | H : MetricLog |- context[{| instructions := ?i; |}] =>
+           progress replace i with (instructions H) by bomega
+         | H : MetricLog |- context[{| stores := ?i; |}] =>
+           progress replace i with (stores H) by bomega      
+         | H : MetricLog |- context[{| loads := ?i; |}] =>
+           progress replace i with (loads H) by bomega      
+         | H : MetricLog |- context[{| jumps := ?i; |}] =>
+           progress replace i with (jumps H) by bomega
+         end.
+
+Ltac solve_MetricLog :=
+  repeat unfold_MetricLog;
+  repeat simpl_MetricLog;
+  try_equality_MetricLog;
+  bomega || f_equal; bomega || fold_MetricLog.

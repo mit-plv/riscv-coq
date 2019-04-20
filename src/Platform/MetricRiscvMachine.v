@@ -47,6 +47,11 @@ Section Machine.
   Definition addMetrics(m: RiscvMachineL)(mc: MetricLog): MetricRiscvMachine :=
     mkMetricRiscvMachine m mc.
 
+  Definition putProgram(prog: list MachineInt)(addr: word)(ma: MetricRiscvMachine): MetricRiscvMachine :=
+    (withPc addr
+    (withNextPc (word.add addr (word.of_Z 4))
+    (withMem (unchecked_store_byte_list addr (Z32s_to_bytes prog) ma.(getMem)) ma))).
+
 End Machine.
 
 Arguments MetricRiscvMachine Reg {W} {Registers} {Mem} Action.
