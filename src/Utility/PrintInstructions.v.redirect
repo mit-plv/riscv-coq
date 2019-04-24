@@ -1,0 +1,14 @@
+Require Import riscv.Spec.Decode.
+Require Import riscv.Utility.Utility.
+
+Set Printing Width 200.
+
+Print InstructionM64.
+Print InstructionM.
+Print InstructionI64.
+Print InstructionI.
+Print InstructionCSR.
+Print InstructionA64.
+Print InstructionA.
+Print InstructionF64.
+Print InstructionF.
