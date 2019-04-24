@@ -89,7 +89,7 @@ Definition fib6_L_trace(fuel: nat): list (LogItem LogEvent) :=
 (* only uncomment this if you're sure there are no admits in the computational parts,
    otherwise this will eat all your memory *)
 
-Eval vm_compute in (fib6_L_trace 50).
+Example trace_result := Eval vm_compute in (fib6_L_trace 50).
 
 Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_L_res fuel = word.of_Z 13.
   exists 50%nat.

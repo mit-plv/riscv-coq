@@ -112,7 +112,7 @@ Definition comp1: listT Id (nat * bool) :=
   x2 <- pick [true; false];
   Return (x1, x2).
 
-Compute (runListT comp1).
+Example test1 := Eval compute in (runListT comp1).
 
 Definition comp2: (listT (optionT Id)) nat :=
   b <- pick [true; false];
@@ -121,7 +121,7 @@ Definition comp2: (listT (optionT Id)) nat :=
   else
     lift_into_listT fail.
 
-Compute (runOptionT (runListT comp2)).
+Example test2 := Eval compute in (runOptionT (runListT comp2)).
 
 Definition comp3: (optionT (listT Id)) nat :=
   b <- lift_into_optionT (pick [true; false]);
@@ -130,13 +130,13 @@ Definition comp3: (optionT (listT Id)) nat :=
   else
     fail.
 
-Compute (runListT (runOptionT comp3)).
+Example test3 := Eval compute in (runListT (runOptionT comp3)).
 
 Definition comp4: StateT nat Id unit :=
   x <- get;
   put (x + 1).
 
-Compute (runStateT comp4 4).
+Example test4 := Eval compute in (runStateT comp4 4).
 
 
 Definition comp5: StateT nat (listT Id) unit :=
@@ -144,16 +144,16 @@ Definition comp5: StateT nat (listT Id) unit :=
   y <- lift_into_StateT (pick [2; 3]);
   put (x + y).
 
-Compute (runListT (runStateT comp5 4)).
+Example test5 := Eval compute in (runListT (runStateT comp5 4)).
 
-Compute (seq 0 4).
+Example test5' := Eval compute in (seq 0 4).
 
 Definition comp6: StateT nat (listT Id) unit :=
   x <- get;
   y <- lift_into_StateT (pick (seq 0 x));
   put y.
 
-Compute (runListT (runStateT comp6 4)).
+Example test6 := Eval compute in (runListT (runStateT comp6 4)).
 
 
 Definition comp7: StateT nat (listT Id) unit :=
@@ -179,7 +179,7 @@ Definition comp7': (listT (StateT (nat * nat)  Id) (nat * nat)) :=
                         lift_into_listT get))
 .
 
-Compute (runStateT (runListT comp7') (1,1)). (* 0,0 is an invalid state, reached here *)
+Example test7' := Eval compute in (runStateT (runListT comp7') (1,1)). (* 0,0 is an invalid state, reached here *)
 
 Definition comp7'': StateT (nat * nat) (listT Id) (nat * nat) :=
   y <- lift_into_StateT (pick (seq 0 2));
@@ -228,7 +228,7 @@ Definition runOStateND{S A: Type}(m: OStateND S A)(s: S): list (option A * S) :=
  runListT (runStateT (runOptionT m) s).
 
 
-Compute (runListT (runStateT comp7'' (1, 1))).
+Example test7'' := Eval compute in (runListT (runStateT comp7'' (1, 1))).
 (* if we compose the other way, this example works fine (getting answer * state pairs) *)
 
 Definition comp8: (listT (StateT nat Id) nat) :=
@@ -237,7 +237,7 @@ Definition comp8: (listT (StateT nat Id) nat) :=
   lift_into_listT (put y);;
   lift_into_listT get.
 
-Compute (runStateT (runListT comp8) 4).
+Example test8 := Eval compute in (runStateT (runListT comp8) 4).
 
 
 Definition comp9: (listT (StateT nat Id) nat) :=
@@ -252,7 +252,7 @@ Definition comp9: (listT (StateT nat Id) nat) :=
      lift_into_listT (put (c * 5))));;
   lift_into_listT get.
 
-Compute (runStateT (runListT comp9) 4).
+Example test9 := Eval compute in (runStateT (runListT comp9) 4).
 
 Record Regs := mkRegs {
   reg1: nat;
@@ -289,9 +289,9 @@ Definition swap12: StateT Regs Id unit :=
   assign r1 r2;;
   assign r2 r3.
 
-Compute (runStateT swap12 (mkRegs 10 20 30)).
+Example test12 := Eval compute in (runStateT swap12 (mkRegs 10 20 30)).
 
-Definition test1: listT (StateT Regs Id) Regs :=
+Definition testt1: listT (StateT Regs Id) Regs :=
   x <- lift_into_listT (getReg r1);
   y <- pick (seq 0 x);
   lift_into_listT (setReg r1 y);;
@@ -299,9 +299,9 @@ Definition test1: listT (StateT Regs Id) Regs :=
 
 (* returns a list of all final states as "answer"
    and one implementation-chosen final state as "state" *)
-Compute (runStateT (runListT test1) (mkRegs 3 20 30)).
+Example testp1 := Eval compute in (runStateT (runListT testt1) (mkRegs 3 20 30)).
 
-Definition test2: listT (StateT Regs Id) Regs :=
-  lift_into_listT swap12;; test1.
+Definition testp2: listT (StateT Regs Id) Regs :=
+  lift_into_listT swap12;; testt1.
 
-Compute (runStateT (runListT test2) (mkRegs 11 4 33)).
+Example testt2 := Eval compute in (runStateT (runListT testp2) (mkRegs 11 4 33)).

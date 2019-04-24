@@ -72,7 +72,7 @@ listT option nat
 
 *)
 
-Eval cbv in (optionT list nat).
+(*Eval cbv in (optionT list nat).*)
 
 
 Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
@@ -134,7 +134,7 @@ Module NonDetMonad.
     Bind ma (fun (a: A) => Return (f a)).
 
   Definition foo0{A: Type} := @mapSet (A -> Prop) A.
-  Eval cbv in @foo0.
+  (* Eval cbv in @foo0. *)
   (*
   Definition bar{A: Type}(M: Type -> Type)(mla: M (list A)
 *)
@@ -254,7 +254,7 @@ Module OldVersions.
         (forall omid, step initial omid -> exists mid, omid = Some mid /\ runsTo mid P) ->
         runsTo initial P.
 
-    Check runsTo_ind. (* bad! *)
+    (*Check runsTo_ind.  bad! *)
   End RunsTo.
 
 End OldVersions.
@@ -262,8 +262,8 @@ End OldVersions.
 
 Module DeterministicByAccident.
 
-  Variable State: Type.
-  Variable step: OStateND State unit.
+  Parameter State: Type.
+  Parameter step: OStateND State unit.
 
   Inductive runsTo(initial: State)(P: State -> Prop): Prop :=
     | runsToDone:
@@ -277,8 +277,8 @@ End DeterministicByAccident.
 
 Module MoreOld.
 
-  Variable State: Type.
-  Variable step: OStateND State unit.
+  Parameter State: Type.
+  Parameter step: OStateND State unit.
 
   Inductive runsTo(initial: State)(P: State -> Prop): Prop :=
     | runsToDone:
@@ -310,7 +310,7 @@ Section RunsTo.
 
   Hint Constructors runsTo.
 
-  Print runsTo_ind. (* bad (not a fixpoint) *)
+  (* Print runsTo_ind. bad (not a fixpoint) *)
 
   Lemma runsTo_induct: forall (R : State -> (State -> Prop) -> Prop),
       (forall (initial : State) (P : State -> Prop), P initial -> R initial P) ->
@@ -369,4 +369,4 @@ Section RunsTo.
 
 End RunsTo.
 
-Print Assumptions runsTo_weaken.
+(* Print Assumptions runsTo_weaken. *)
