@@ -6,11 +6,7 @@ Require Import riscv.Utility.Utility.
 
 Open Scope Z_scope.
 
-Instance word32: word.word 32 := Naive.word 32 eq_refl.
-Instance word32ok: word.ok word32 := Naive.ok 32 eq_refl.
-
-Instance word8: word.word 8 := Naive.word 8 eq_refl.
-Instance word8ok: word.ok word8 := Naive.ok 8 eq_refl.
+Existing Instance Naive.word.
 
 Instance Words32Naive: Words := {|
   byte := word8;
