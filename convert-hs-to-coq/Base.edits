@@ -104,7 +104,7 @@ rename value GHC.Err.errorWithoutStackTrace = GHC.Base.errorWithoutStackTrace
 skip method GHC.Base.Monad fail
 skip method GHC.Enum.Enum enumFromThen
 skip method GHC.Enum.Enum enumFromThenTo
-skip method Data.Semigroup.Semigroup stimes  
+skip method Data.Semigroup.Semigroup stimes
 skip method Data.Semigroup.Semigroup sconcat
 
 # deprecated
