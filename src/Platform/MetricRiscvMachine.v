@@ -55,3 +55,17 @@ Section Machine.
 End Machine.
 
 Arguments MetricRiscvMachine Reg {W} {Registers} {Mem} Action.
+
+Ltac destruct_RiscvMachine m :=
+  lazymatch type of m with
+  | MetricRiscvMachine _ _ =>
+    let r := fresh m "_regs" in
+    let p := fresh m "_pc" in
+    let n := fresh m "_npc" in
+    let me := fresh m "_mem" in
+    let l := fresh m "_log" in
+    let mc := fresh m "_metrics" in
+    destruct m as [ [r p n me l] mc ];
+    simpl in *
+  | _ => let expected := constr:(@MetricRiscvMachine) in fail "not a" expected
+  end.
