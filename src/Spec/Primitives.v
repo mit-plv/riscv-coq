@@ -32,21 +32,21 @@ Section Primitives.
        On instances without non-determinism, it only accepts a default value, eg 0 *)
     is_initial_register_value: word -> Prop;
 
-    (* Given an initial RiscvMachine state, an address, and a postcondition on
+    (* Given an address, an initial RiscvMachine state, and a postcondition on
        (input, final state), tells if this postcondition characterizes the
        behavior of the machine *)
-    nonmem_loadByte_sat  :  Machine -> word -> (w8  -> Machine -> Prop) -> Prop;
-    nonmem_loadHalf_sat  :  Machine -> word -> (w16 -> Machine -> Prop) -> Prop;
-    nonmem_loadWord_sat  :  Machine -> word -> (w32 -> Machine -> Prop) -> Prop;
-    nonmem_loadDouble_sat:  Machine -> word -> (w64 -> Machine -> Prop) -> Prop;
+    nonmem_loadByte_sat  :  word -> Machine -> (w8  -> Machine -> Prop) -> Prop;
+    nonmem_loadHalf_sat  :  word -> Machine -> (w16 -> Machine -> Prop) -> Prop;
+    nonmem_loadWord_sat  :  word -> Machine -> (w32 -> Machine -> Prop) -> Prop;
+    nonmem_loadDouble_sat:  word -> Machine -> (w64 -> Machine -> Prop) -> Prop;
 
-    (* Given an initial RiscvMachine state, an address, a value to write,
+    (* Given an address, a value to write, an initial RiscvMachine state,
        and a postcondition on final states, tells if this postcondition characterizes the
        behavior of the machine *)
-    nonmem_storeByte_sat  : Machine -> word -> w8  -> (Machine -> Prop) -> Prop;
-    nonmem_storeHalf_sat  : Machine -> word -> w16 -> (Machine -> Prop) -> Prop;
-    nonmem_storeWord_sat  : Machine -> word -> w32 -> (Machine -> Prop) -> Prop;
-    nonmem_storeDouble_sat: Machine -> word -> w64 -> (Machine -> Prop) -> Prop;
+    nonmem_storeByte_sat  : word -> w8  -> Machine -> (unit -> Machine -> Prop) -> Prop;
+    nonmem_storeHalf_sat  : word -> w16 -> Machine -> (unit -> Machine -> Prop) -> Prop;
+    nonmem_storeWord_sat  : word -> w32 -> Machine -> (unit -> Machine -> Prop) -> Prop;
+    nonmem_storeDouble_sat: word -> w64 -> Machine -> (unit -> Machine -> Prop) -> Prop;
   }.
 
   Context {RVM: RiscvProgram M word}.
@@ -55,21 +55,21 @@ Section Primitives.
   Definition spec_load{p: PrimitivesParams RiscvMachine}(V: Type)
              (riscv_load: SourceType -> word -> M V)
              (mem_load: mem -> word -> option V)
-             (nonmem_load: RiscvMachine -> word -> (V  -> RiscvMachine -> Prop) -> Prop)
+             (nonmem_load: word -> RiscvMachine -> (V -> RiscvMachine -> Prop) -> Prop)
              : Prop :=
     forall initialL addr (kind: SourceType) (post: V -> RiscvMachine -> Prop),
         (exists v: V, mem_load initialL.(getMem) addr = Some v /\ post v initialL) \/
-        (mem_load initialL.(getMem) addr = None /\ nonmem_load initialL addr post) <->
+        (mem_load initialL.(getMem) addr = None /\ nonmem_load addr initialL post) <->
         mcomp_sat (riscv_load kind addr) initialL post.
 
   Definition spec_store{p: PrimitivesParams RiscvMachine}(V: Type)
              (riscv_store: SourceType -> word -> V -> M unit)
              (mem_store: mem -> word -> V -> option mem)
-             (nonmem_store: RiscvMachine -> word -> V -> (RiscvMachine -> Prop) -> Prop)
+             (nonmem_store: word -> V -> RiscvMachine -> (unit -> RiscvMachine -> Prop) -> Prop)
              : Prop :=
     forall initialL addr v (kind: SourceType) (post: unit -> RiscvMachine -> Prop),
       (exists m', mem_store initialL.(getMem) addr v = Some m' /\ post tt (withMem m' initialL)) \/
-      (mem_store initialL.(getMem) addr v = None /\ nonmem_store initialL addr v (post tt)) <->
+      (mem_store initialL.(getMem) addr v = None /\ nonmem_store addr v initialL post) <->
       mcomp_sat (riscv_store kind addr v) initialL post.
 
   (* primitives_params is a paramater rather than a field because Primitives lives in Prop and
