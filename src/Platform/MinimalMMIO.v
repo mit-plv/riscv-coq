@@ -245,145 +245,167 @@ Section Riscv.
       post (withLogItem (mmioStoreEvent addr v) initialL);
   |}.
 
+  Lemma computation_with_answer_satisfies_Return{S A: Type}: forall (a: A) (initial: S) post,
+      computation_with_answer_satisfies (Return a) initial post ->
+      post a initial.
+  Proof.
+    unfold computation_with_answer_satisfies.
+    intros. simpl in *.
+    edestruct H as (? & ? & ? & ?); [reflexivity|].
+    inversion H0. subst. assumption.
+  Qed.
+
+  Lemma computation_with_answer_satisfies_Bind{S A B: Type}:
+    forall (m: OStateND S A) (f: A -> OStateND S B) (initial: S) post,
+      computation_with_answer_satisfies (Bind m f) initial post ->
+      (exists mid, computation_with_answer_satisfies m initial mid
+                   /\ forall s a, mid a s -> computation_with_answer_satisfies (f a) s post).
+  Proof.
+    unfold computation_with_answer_satisfies.
+    intros. simpl in *.
+    eexists.
+    split.
+    - intros. destruct o as [(? & ?) |]. 1: do 2 eexists; split; [reflexivity|].
+      2: { edestruct (H None) as (? & ? & ? & ?); [auto|discriminate]. }
+      exact H0.
+    - simpl. intros. specialize (H o). eapply H. right. eauto.
+  Qed.
+
+  Lemma computation_with_answer_satisfies_get{S: Type}: forall (initial: S) post,
+      computation_with_answer_satisfies get initial post ->
+      post initial initial.
+  Proof.
+    unfold computation_with_answer_satisfies, get.
+    intros. specialize (H _ eq_refl). destruct H as (? & ? & ? & ?).
+    inversion H. subst. assumption.
+  Qed.
+
+  Lemma computation_with_answer_satisfies_arbitrary{S A: Type}: forall (initial: S) post,
+      computation_with_answer_satisfies (arbitrary A) initial post ->
+      forall (a: A), post a initial.
+  Proof.
+    unfold computation_with_answer_satisfies, arbitrary.
+    intros. specialize (H (Some (a, initial))). destruct H as (? & ? & ? & ?).
+    - eexists. reflexivity.
+    - inversion H. subst. assumption.
+  Qed.
+
+  Lemma computation_with_answer_satisfies_fail_hard{S A: Type}:
+    forall (initial: S) (post: A -> S -> Prop),
+      computation_with_answer_satisfies fail_hard initial post ->
+      False.
+  Proof.
+    unfold computation_with_answer_satisfies, fail_hard.
+    intros. specialize (H _ eq_refl). destruct H as (? & ? & ? & ?). discriminate.
+  Qed.
+
+  Lemma bool_test_to_valid_register: forall (x: Z),
+      (0 <? x) && (x <? 32) = true ->
+      valid_register x.
+  Proof.
+    intros. apply andb_prop in H. destruct H.
+    rewrite! Z.ltb_lt in *.
+    unfold valid_register.
+    auto.
+  Qed.
+
+  Ltac fw_step :=
+    match goal with
+    | H: exists x, _ |- _ => destruct H
+    | H: _ /\ _ |- _ => destruct H
+    | |- _ => progress unfold
+              mcomp_sat, MinimalMMIOPrimitivesParams,
+              getRegister, setRegister,
+              loadByte, loadHalf, loadWord, loadDouble,
+              storeByte, storeHalf, storeWord, storeDouble,
+              getPC, setPC, step, raiseExceptionWithInfo,
+              IsRiscvMachine, logEvent,
+              Memory.loadByte, Memory.storeByte,
+              Memory.loadHalf, Memory.storeHalf,
+              Memory.loadWord, Memory.storeWord,
+              Memory.loadDouble, Memory.storeDouble,
+              nonmem_loadByte_sat, nonmem_storeByte_sat,
+              nonmem_loadHalf_sat, nonmem_storeHalf_sat,
+              nonmem_loadWord_sat, nonmem_storeWord_sat,
+              nonmem_loadDouble_sat, nonmem_storeDouble_sat,
+              ZToReg, MkMachineWidth.MachineWidth_XLEN,
+              fail_if_None, loadN, storeN in *
+    | |- _ => progress intros
+    | |- _ => progress subst
+    | |- _ => destruct_one_match_hyp
+    | |- exists a b, Some (a, b) = _ /\ _ => do 2 eexists; split; [reflexivity|]
+    | |- exists a, _ = _ /\ _ => eexists; split; [reflexivity|]
+    | H: _ |- _ => apply computation_with_answer_satisfies_Return in H
+    | H: _ |- _ => apply bool_test_to_valid_register in H
+    | H: _ |- _ => apply computation_with_answer_satisfies_Bind in H
+    | H: _ |- _ => apply computation_with_answer_satisfies_get in H
+    | H: _ |- _ => specialize @computation_with_answer_satisfies_arbitrary with (1 := H);
+                   clear H
+    | H: _ |- _ => apply computation_with_answer_satisfies_fail_hard in H; contradiction
+    | |- _ => congruence
+    | H1: _, H2: _ |- _ => exfalso; apply (not_load_fails_but_store_succeeds H1 H2)
+    | H1: _, H2: _ |- _ => exfalso; apply (not_store_fails_but_load_succeeds H1 H2)
+    | |- _ /\ _ => split
+    | |- _ => reflexivity
+    (* note: in general, these might turn a solvable goal into an unsolvable one, but here
+           we should be safe *)
+    | F: forall (s: RiscvMachine) (a: _), ?mid a s -> _, P: ?mid _ _ |- _ =>
+      specialize F with (1 := P)
+    | F: forall (s: RiscvMachine) (a: ?A), ?mid a s -> _,
+      P: forall (a: ?A), ?mid a _,
+      x: ?A |- _ => specialize F with (1 := (P x))
+    end.
+
+  Ltac u := repeat fw_step; eauto.
+
   Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
   Proof.
     constructor. all: split.
     (* spec_Bind *)
     - t.
-    - t.
-      unfold OStateND in m.
-      exists (fun (a: A) (middleL: RiscvMachine) => m initialL (Some (a, middleL))).
-      t.
-      edestruct H as [b [? ?]]; [eauto|]. t.
+    - u.
     (* spec_Return *)
     - t.
-    - t.
+    - u.
     (* spec_getRegister *)
     - t.
-    - t.
-      + (edestruct H as [b [? ?]]; [eauto|]); t.
-      + left. t. edestruct H as [b [? ?]]; t.
+    - u.
     (* spec_setRegister *)
     - t.
-    - t.
-      (edestruct H as [b [? ?]]; [eauto|]); t.
+    - u.
     (* spec_loadByte *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.loadByte (getMem initialL) addr) eqn: F; [left|right].
-      + t; match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-      + t. match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        right. do 2 eexists. split; [reflexivity|]. simpl. rewrite F.
-        right. repeat eexists. right. repeat eexists. right. repeat eexists.
+    - u. right. u.
     (* spec_loadHalf *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.loadHalf (getMem initialL) addr) eqn: F; [left|right].
-      + t; match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-      + t. match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        right. do 2 eexists. split; [reflexivity|]. simpl. rewrite F.
-        right. repeat eexists. right. repeat eexists. right. repeat eexists.
+    - u. right. u.
     (* spec_loadWord *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.loadWord (getMem initialL) addr) eqn: F; [left|right].
-      + t; match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-      + t. match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        right. do 2 eexists. split; [reflexivity|]. simpl. rewrite F.
-        right. repeat eexists. right. repeat eexists. right. repeat eexists.
+    - u. right. u.
     (* spec_loadDouble *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.loadDouble (getMem initialL) addr) eqn: F; [left|right].
-      + t; match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-      + t. match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        right. do 2 eexists. split; [reflexivity|]. simpl. rewrite F.
-        right. repeat eexists. right. repeat eexists. right. repeat eexists.
+    - u. right. u.
     (* spec_storeByte *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.storeByte (getMem initialL) addr v) eqn: F.
-      + destruct (Memory.loadByte (getMem initialL) addr) eqn: G; [ | exfalso; t ].
-       left.
-        t; match goal with
-        | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-        end; t.
-      + destruct (Memory.loadByte (getMem initialL) addr) eqn: G; [ exfalso; t | ].
-        right.
-        t; match goal with
-           | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-           end; t.
+    - u.
     (* spec_storeHalf *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.storeHalf (getMem initialL) addr v) eqn: F.
-      + destruct (Memory.loadHalf (getMem initialL) addr) eqn: G; [ | exfalso; t ].
-       left.
-        t; match goal with
-        | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-        end; t.
-      + destruct (Memory.loadHalf (getMem initialL) addr) eqn: G; [ exfalso; t | ].
-        right.
-        t; match goal with
-           | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-           end; t.
+    - u.
     (* spec_storeWord *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.storeWord (getMem initialL) addr v) eqn: F.
-      + destruct (Memory.loadWord (getMem initialL) addr) eqn: G; [ | exfalso; t ].
-        left.
-        t; match goal with
-        | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-        end; t.
-      + destruct (Memory.loadWord (getMem initialL) addr) eqn: G; [ exfalso; t | ].
-        right.
-        t; match goal with
-           | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-           end; t.
+    - u.
     (* spec_storeDouble *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.storeDouble (getMem initialL) addr v) eqn: F.
-      + destruct (Memory.loadDouble (getMem initialL) addr) eqn: G; [ | exfalso; t ].
-       left.
-        t; match goal with
-        | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-        end; t.
-      + destruct (Memory.loadDouble (getMem initialL) addr) eqn: G; [ exfalso; t | ].
-        right.
-        t; match goal with
-           | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-           end; t.
+    - u.
     (* spec_getPC *)
     - t.
-    - t. (edestruct H as [b [? ?]]; [eauto|]); t.
+    - u.
     (* spec_setPC *)
     - t.
-    - t. (edestruct H as [b [? ?]]; [eauto|]); t.
+    - u.
     (* spec_step *)
     - t.
-    - t. (edestruct H as [b [? ?]]; [eauto|]); t.
+    - u.
   Qed.
 
 End Riscv.
