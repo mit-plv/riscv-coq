@@ -245,60 +245,6 @@ Section Riscv.
       post (withLogItem (mmioStoreEvent addr v) initialL);
   |}.
 
-  Lemma computation_with_answer_satisfies_Return{S A: Type}: forall (a: A) (initial: S) post,
-      computation_with_answer_satisfies (Return a) initial post ->
-      post a initial.
-  Proof.
-    unfold computation_with_answer_satisfies.
-    intros. simpl in *.
-    edestruct H as (? & ? & ? & ?); [reflexivity|].
-    inversion H0. subst. assumption.
-  Qed.
-
-  Lemma computation_with_answer_satisfies_Bind{S A B: Type}:
-    forall (m: OStateND S A) (f: A -> OStateND S B) (initial: S) post,
-      computation_with_answer_satisfies (Bind m f) initial post ->
-      (exists mid, computation_with_answer_satisfies m initial mid
-                   /\ forall s a, mid a s -> computation_with_answer_satisfies (f a) s post).
-  Proof.
-    unfold computation_with_answer_satisfies.
-    intros. simpl in *.
-    eexists.
-    split.
-    - intros. destruct o as [(? & ?) |]. 1: do 2 eexists; split; [reflexivity|].
-      2: { edestruct (H None) as (? & ? & ? & ?); [auto|discriminate]. }
-      exact H0.
-    - simpl. intros. specialize (H o). eapply H. right. eauto.
-  Qed.
-
-  Lemma computation_with_answer_satisfies_get{S: Type}: forall (initial: S) post,
-      computation_with_answer_satisfies get initial post ->
-      post initial initial.
-  Proof.
-    unfold computation_with_answer_satisfies, get.
-    intros. specialize (H _ eq_refl). destruct H as (? & ? & ? & ?).
-    inversion H. subst. assumption.
-  Qed.
-
-  Lemma computation_with_answer_satisfies_arbitrary{S A: Type}: forall (initial: S) post,
-      computation_with_answer_satisfies (arbitrary A) initial post ->
-      forall (a: A), post a initial.
-  Proof.
-    unfold computation_with_answer_satisfies, arbitrary.
-    intros. specialize (H (Some (a, initial))). destruct H as (? & ? & ? & ?).
-    - eexists. reflexivity.
-    - inversion H. subst. assumption.
-  Qed.
-
-  Lemma computation_with_answer_satisfies_fail_hard{S A: Type}:
-    forall (initial: S) (post: A -> S -> Prop),
-      computation_with_answer_satisfies fail_hard initial post ->
-      False.
-  Proof.
-    unfold computation_with_answer_satisfies, fail_hard.
-    intros. specialize (H _ eq_refl). destruct H as (? & ? & ? & ?). discriminate.
-  Qed.
-
   Lemma bool_test_to_valid_register: forall (x: Z),
       (0 <? x) && (x <? 32) = true ->
       valid_register x.
@@ -335,13 +281,8 @@ Section Riscv.
     | |- _ => destruct_one_match_hyp
     | |- exists a b, Some (a, b) = _ /\ _ => do 2 eexists; split; [reflexivity|]
     | |- exists a, _ = _ /\ _ => eexists; split; [reflexivity|]
-    | H: _ |- _ => apply computation_with_answer_satisfies_Return in H
+    | |- _ => simpl_computation_with_answer_satisfies
     | H: _ |- _ => apply bool_test_to_valid_register in H
-    | H: _ |- _ => apply computation_with_answer_satisfies_Bind in H
-    | H: _ |- _ => apply computation_with_answer_satisfies_get in H
-    | H: _ |- _ => specialize @computation_with_answer_satisfies_arbitrary with (1 := H);
-                   clear H
-    | H: _ |- _ => apply computation_with_answer_satisfies_fail_hard in H; contradiction
     | |- _ => congruence
     | H1: _, H2: _ |- _ => exfalso; apply (not_load_fails_but_store_succeeds H1 H2)
     | H1: _, H2: _ |- _ => exfalso; apply (not_store_fails_but_load_succeeds H1 H2)
