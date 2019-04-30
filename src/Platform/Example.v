@@ -50,9 +50,6 @@ Goal False.
   (* decoder seems to work :) *)
 Abort.
 
-Definition RiscvMachine := riscv.Platform.RiscvMachine.RiscvMachine Register Empty_set.
-Definition RiscvMachineL := riscv.Platform.RiscvMachine.RiscvMachine Register LogEvent.
-
 (* This example uses the memory only as instruction memory
    TODO make an example which uses memory to store data *)
 Definition zeroedRiscvMachine: RiscvMachine := {|
@@ -63,35 +60,32 @@ Definition zeroedRiscvMachine: RiscvMachine := {|
   getLog := nil;
 |}.
 
-Definition zeroedRiscvMachineL: RiscvMachineL :=
-  upgrade zeroedRiscvMachine nil.
+Definition initialRiscvMachine(imem: list MachineInt): RiscvMachine :=
+  putProgram imem (ZToReg 0) zeroedRiscvMachine.
 
-Definition initialRiscvMachineL(imem: list MachineInt): RiscvMachineL :=
-  putProgram imem (ZToReg 0) zeroedRiscvMachineL.
-
-Definition run: nat -> RiscvMachineL -> (option unit) * RiscvMachineL := run RV32IM.
+Definition run: nat -> RiscvMachine -> (option unit) * RiscvMachine := run RV32IM.
  (* @run BitWidths32 MachineWidth32 (OState RiscvMachineL) (OState_Monad _) _ _ _ *)
 
-Definition fib6_L_final(fuel: nat): RiscvMachineL :=
-  match run fuel (initialRiscvMachineL fib6_riscv) with
+Definition fib6_final(fuel: nat): RiscvMachine :=
+  match run fuel (initialRiscvMachine fib6_riscv) with
   | (answer, state) => state
   end.
 
-Definition fib6_L_res(fuel: nat): word32 :=
-  match map.get (fib6_L_final fuel).(getRegs) 18 with
+Definition fib6_res(fuel: nat): word32 :=
+  match map.get (fib6_final fuel).(getRegs) 18 with
   | Some v => v
   | None => word.of_Z 0
   end.
 
-Definition fib6_L_trace(fuel: nat): list (LogItem LogEvent) :=
-  (fib6_L_final fuel).(getLog).
+Definition fib6_trace(fuel: nat): list LogItem :=
+  (fib6_final fuel).(getLog).
 
 (* only uncomment this if you're sure there are no admits in the computational parts,
    otherwise this will eat all your memory *)
 
-Example trace_result := Eval vm_compute in (fib6_L_trace 50).
+Example trace_result := Eval vm_compute in (fib6_trace 50).
 
-Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_L_res fuel = word.of_Z 13.
+Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_res fuel = word.of_Z 13.
   exists 50%nat.
   reflexivity.
 Qed.

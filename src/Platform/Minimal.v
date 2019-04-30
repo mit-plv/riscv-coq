@@ -20,23 +20,21 @@ Section Riscv.
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
 
-  Local Notation RiscvMachineL := (RiscvMachine Register Empty_set).
-
-  Definition fail_if_None{R}(o: option R): OState RiscvMachineL R :=
+  Definition fail_if_None{R}(o: option R): OState RiscvMachine R :=
     match o with
     | Some x => Return x
     | None => fail_hard
     end.
 
-  Definition loadN(n: nat)(a: word): OState RiscvMachineL (HList.tuple byte n) :=
+  Definition loadN(n: nat)(a: word): OState RiscvMachine (HList.tuple byte n) :=
     mach <- get; fail_if_None (Memory.load_bytes n mach.(getMem) a).
 
-  Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OState RiscvMachineL unit :=
+  Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OState RiscvMachine unit :=
     mach <- get;
     m <- fail_if_None (Memory.store_bytes n mach.(getMem) a v);
     put (withMem m mach).
 
-  Instance IsRiscvMachineL: RiscvProgram (OState RiscvMachineL) word :=  {
+  Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) word :=  {
       getRegister reg :=
         if Z.eq_dec reg Register0 then
           Return (ZToReg 0)
@@ -96,7 +94,7 @@ Section Riscv.
        | |- _ => reflexivity
        | |- _ => progress (
                      unfold computation_satisfies, computation_with_answer_satisfies,
-                            IsRiscvMachineL,
+                            IsRiscvMachine,
                             valid_register, Register0,
                             is_initial_register_value,
                             get, put, fail_hard,
@@ -135,7 +133,7 @@ Section Riscv.
        | H: context[match ?x with _ => _ end] |- _ => let E := fresh "E" in destruct x eqn: E
        | |- context[match ?x with _ => _ end]      => let E := fresh "E" in destruct x eqn: E
        | H: _ \/ _ |- _ => destruct H
-       | r: RiscvMachineL |- _ =>
+       | r: RiscvMachine |- _ =>
          destruct r as [regs pc npc m l];
          simpl in *
 (*       | H: context[match ?x with _ => _ end] |- _ => let E := fresh in destruct x eqn: E*)
@@ -151,8 +149,8 @@ Section Riscv.
        | |- _ \/ _ => right; solve [t]
        end.
 
-  Instance MinimalPrimitivesParams: PrimitivesParams (OState RiscvMachineL) RiscvMachineL := {|
-    Primitives.mcomp_sat := @OStateOperations.computation_with_answer_satisfies RiscvMachineL;
+  Instance MinimalPrimitivesParams: PrimitivesParams (OState RiscvMachine) RiscvMachine := {|
+    Primitives.mcomp_sat := @OStateOperations.computation_with_answer_satisfies RiscvMachine;
     Primitives.is_initial_register_value := eq (word.of_Z 0);
     Primitives.nonmem_loadByte_sat   initialL addr post := False;
     Primitives.nonmem_loadHalf_sat   initialL addr post := False;
@@ -173,5 +171,5 @@ Section Riscv.
 End Riscv.
 
 (* needed because defined inside a Section *)
-Existing Instance IsRiscvMachineL.
+Existing Instance IsRiscvMachine.
 Existing Instance MinimalSatisfiesPrimitives.

@@ -27,24 +27,21 @@ Section Riscv.
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
 
-  Local Notation RiscvMachineL := (RiscvMachine Register Empty_set).
-  Local Notation MetricRiscvMachineL := (MetricRiscvMachine Register Empty_set).
-
-  Definition liftL0{B: Type}(fl: MetricLog -> MetricLog)(f: OState RiscvMachineL B):
-    OState MetricRiscvMachineL B :=
+  Definition liftL0{B: Type}(fl: MetricLog -> MetricLog)(f: OState RiscvMachine B):
+    OState MetricRiscvMachine B :=
     fun s => let (ob, s') := f s.(getMachine) in
              (ob, mkMetricRiscvMachine s' (fl s.(getMetrics))).
 
-  Definition liftL1{A B: Type} fl (f: A -> OState RiscvMachineL B) :=
+  Definition liftL1{A B: Type} fl (f: A -> OState RiscvMachine B) :=
     fun a => liftL0 fl (f a).
 
-  Definition liftL2{A1 A2 B: Type} fl (f: A1 -> A2 -> OState RiscvMachineL B) :=
+  Definition liftL2{A1 A2 B: Type} fl (f: A1 -> A2 -> OState RiscvMachine B) :=
     fun a1 a2 => liftL0 fl (f a1 a2).
 
-  Definition liftL3{A1 A2 A3 B: Type} fl (f: A1 -> A2 -> A3 -> OState RiscvMachineL B) :=
+  Definition liftL3{A1 A2 A3 B: Type} fl (f: A1 -> A2 -> A3 -> OState RiscvMachine B) :=
     fun a1 a2 a3 => liftL0 fl (f a1 a2 a3).
 
-  Instance IsMetricRiscvMachineL: RiscvProgram (OState MetricRiscvMachineL) word := {
+  Instance IsMetricRiscvMachine: RiscvProgram (OState MetricRiscvMachine) word := {
     getRegister := liftL1 id getRegister;
     setRegister := liftL2 id setRegister;
     getPC := liftL0 id getPC;
@@ -69,7 +66,7 @@ Section Riscv.
        | |- _ => reflexivity
        | |- _ => progress (
                      unfold computation_satisfies, computation_with_answer_satisfies,
-                            IsRiscvMachineL,
+                            IsRiscvMachine,
                             valid_register, Register0,
                             is_initial_register_value,
                             get, put, fail_hard,
@@ -112,7 +109,7 @@ Section Riscv.
        | H0: ?l = Some ?r0, H1:?l = Some ?r1 |- _ =>
          assert (r0 = r1) by (rewrite H1 in H0; inversion H0; reflexivity)
        | H: _ \/ _ |- _ => destruct H
-       | r: MetricRiscvMachineL |- _ =>
+       | r: MetricRiscvMachine |- _ =>
          destruct r as [[regs pc npc m l] mc];
          simpl in *
 (*       | H: context[match ?x with _ => _ end] |- _ => let E := fresh in destruct x eqn: E*)
@@ -128,8 +125,8 @@ Section Riscv.
        | |- _ \/ _ => right; solve [t]
        end.
 
-  Instance MetricMinimalMetricPrimitivesParams: PrimitivesParams (OState MetricRiscvMachineL) MetricRiscvMachineL := {|
-    Primitives.mcomp_sat := @computation_with_answer_satisfies MetricRiscvMachineL;
+  Instance MetricMinimalMetricPrimitivesParams: PrimitivesParams (OState MetricRiscvMachine) MetricRiscvMachine := {|
+    Primitives.mcomp_sat := @computation_with_answer_satisfies MetricRiscvMachine;
     Primitives.is_initial_register_value := eq (word.of_Z 0);
     Primitives.nonmem_loadByte_sat   initialL addr post := False;
     Primitives.nonmem_loadHalf_sat   initialL addr post := False;
@@ -149,4 +146,4 @@ Section Riscv.
 
 End Riscv.
 
-Existing Instance IsMetricRiscvMachineL.
+Existing Instance IsMetricRiscvMachine.

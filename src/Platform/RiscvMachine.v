@@ -1,21 +1,21 @@
+Require Import Coq.Strings.String.
 Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndian.
+Require Import riscv.Spec.Decode.
 Require Import riscv.Platform.Memory.
 Require Import riscv.Utility.Utility.
 
 
 Section Machine.
 
-  Context {Reg: Type}.
   Context {W: Words}.
-  Context {Registers: map.map Reg word}.
+  Context {Registers: map.map Register word}.
   Context {Mem: map.map word byte}.
-  Context {Action: Type}.
 
   (* (memory before call, call name, arg values) and (memory after call, return values) *)
-  Definition LogItem: Type := (Mem * Action * list word) * (Mem * list word).
+  Definition LogItem: Type := (Mem * string * list word) * (Mem * list word).
 
   Record RiscvMachine := mkRiscvMachine {
     getRegs: Registers;
@@ -62,6 +62,3 @@ Section Machine.
     (withMem (unchecked_store_byte_list addr (Z32s_to_bytes prog) ma.(getMem)) ma))).
 
 End Machine.
-
-Arguments RiscvMachine Reg {W} {Registers} {Mem} Action.
-Arguments LogItem {W} {Mem} Action.

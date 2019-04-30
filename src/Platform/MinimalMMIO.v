@@ -24,28 +24,25 @@ Section Riscv.
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
 
-  Local Notation RiscvMachineL := (RiscvMachine Register MMIOAction).
-
   Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
     word.of_Z (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).
 
-  Definition mmioLoadEvent(addr: word){n: nat}(v: HList.tuple byte n):
-    LogItem MMIOAction := ((map.empty, MMInput, [addr]), (map.empty, [signedByteTupleToReg v])).
+  Definition mmioLoadEvent(addr: word){n: nat}(v: HList.tuple byte n): LogItem :=
+    ((map.empty, MMInput, [addr]), (map.empty, [signedByteTupleToReg v])).
 
-  Definition mmioStoreEvent(addr: word){n: nat}(v: HList.tuple byte n):
-    LogItem MMIOAction :=
+  Definition mmioStoreEvent(addr: word){n: nat}(v: HList.tuple byte n): LogItem :=
     ((map.empty, MMOutput, [addr; signedByteTupleToReg v]), (map.empty, [])).
 
-  Definition logEvent(e: LogItem MMIOAction): OStateND RiscvMachineL unit :=
+  Definition logEvent(e: LogItem): OStateND RiscvMachine unit :=
     m <- get; put (withLogItem e m).
 
-  Definition fail_if_None{R}(o: option R): OStateND RiscvMachineL R :=
+  Definition fail_if_None{R}(o: option R): OStateND RiscvMachine R :=
     match o with
     | Some x => Return x
     | None => fail_hard
     end.
 
-  Definition loadN(n: nat)(a: word): OStateND RiscvMachineL (HList.tuple byte n) :=
+  Definition loadN(n: nat)(a: word): OStateND RiscvMachine (HList.tuple byte n) :=
     mach <- get;
     match Memory.load_bytes n mach.(getMem) a with
     | Some v => Return v
@@ -56,7 +53,7 @@ Section Riscv.
       Return inp
     end.
 
-  Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OStateND RiscvMachineL unit :=
+  Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OStateND RiscvMachine unit :=
     mach <- get;
     match Memory.store_bytes n mach.(getMem) a v with
     | Some m => put (withMem m mach)
@@ -65,7 +62,7 @@ Section Riscv.
       logEvent (mmioStoreEvent a v)
     end.
 
-  Instance IsRiscvMachineL: RiscvProgram (OStateND RiscvMachineL) word :=  {
+  Instance IsRiscvMachine: RiscvProgram (OStateND RiscvMachine) word :=  {
       getRegister reg :=
         if Z.eq_dec reg Register0 then
           Return (ZToReg 0)
@@ -145,7 +142,7 @@ Section Riscv.
        | |- _ => reflexivity
        | |- _ => progress (
                      unfold computation_satisfies, computation_with_answer_satisfies,
-                            IsRiscvMachineL,
+                            IsRiscvMachine,
                             valid_register, Register0,
                             is_initial_register_value,
                             get, put, fail_hard,
@@ -203,7 +200,7 @@ Section Riscv.
          specialize (H N);
          clear N
        | H: _ \/ _ |- _ => destruct H
-       | r: RiscvMachineL |- _ =>
+       | r: RiscvMachine |- _ =>
          destruct r as [regs pc npc m l];
          simpl in *
        | o: option _ |- _ => destruct o
@@ -223,8 +220,8 @@ Section Riscv.
 
   Arguments LittleEndian.combine: simpl never.
 
-  Instance MinimalMMIOPrimitivesParams: PrimitivesParams (OStateND RiscvMachineL) RiscvMachineL := {|
-    Primitives.mcomp_sat := @OStateNDOperations.computation_with_answer_satisfies RiscvMachineL;
+  Instance MinimalMMIOPrimitivesParams: PrimitivesParams (OStateND RiscvMachine) RiscvMachine := {|
+    Primitives.mcomp_sat := @OStateNDOperations.computation_with_answer_satisfies RiscvMachine;
 
     (* any value can be found in an uninitialized register *)
     Primitives.is_initial_register_value x := True;
@@ -255,7 +252,7 @@ Section Riscv.
     - t.
     - t.
       unfold OStateND in m.
-      exists (fun (a: A) (middleL: RiscvMachineL) => m initialL (Some (a, middleL))).
+      exists (fun (a: A) (middleL: RiscvMachine) => m initialL (Some (a, middleL))).
       t.
       edestruct H as [b [? ?]]; [eauto|]. t.
     (* spec_Return *)
@@ -392,5 +389,5 @@ Section Riscv.
 End Riscv.
 
 (* needed because defined inside a Section *)
-Existing Instance IsRiscvMachineL.
+Existing Instance IsRiscvMachine.
 Existing Instance MinimalMMIOSatisfiesPrimitives.

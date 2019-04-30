@@ -19,30 +19,28 @@ Section MetricPrimitives.
   Context {Action: Type}.
   Context {mem: map.map word byte}.
 
-  Local Notation RiscvMachineL := (MetricRiscvMachine Register Action).
-
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
   Context {RVM: RiscvProgram M word}.
   Context {RVS: @RiscvMachine M word _ _ RVM}.
 
-  Definition spec_load{p: PrimitivesParams M RiscvMachineL}(V: Type)
+  Definition spec_load{p: PrimitivesParams M MetricRiscvMachine}(V: Type)
              (riscv_load: SourceType -> word -> M V)
              (mem_load: mem -> word -> option V)
-             (nonmem_load: RiscvMachineL -> word -> (V  -> RiscvMachineL -> Prop) -> Prop)
+             (nonmem_load: MetricRiscvMachine -> word -> (V  -> MetricRiscvMachine -> Prop) -> Prop)
              : Prop :=
-    forall initialL addr (kind: SourceType) (post: V -> RiscvMachineL -> Prop),
+    forall initialL addr (kind: SourceType) (post: V -> MetricRiscvMachine -> Prop),
         let initialLMetrics := updateMetrics (addMetricLoads 1) initialL in
         (exists v: V, mem_load initialL.(getMem) addr = Some v /\ post v initialLMetrics) \/
         (mem_load initialL.(getMem) addr = None /\ nonmem_load initialL addr post) <->
         mcomp_sat (riscv_load kind addr) initialL post.
 
-  Definition spec_store{p: PrimitivesParams M RiscvMachineL}(V: Type)
+  Definition spec_store{p: PrimitivesParams M MetricRiscvMachine}(V: Type)
              (riscv_store: SourceType -> word -> V -> M unit)
              (mem_store: mem -> word -> V -> option mem)
-             (nonmem_store: RiscvMachineL -> word -> V -> (RiscvMachineL -> Prop) -> Prop)
+             (nonmem_store: MetricRiscvMachine -> word -> V -> (MetricRiscvMachine -> Prop) -> Prop)
              : Prop :=
-    forall initialL addr v (kind: SourceType) (post: unit -> RiscvMachineL -> Prop),
+    forall initialL addr v (kind: SourceType) (post: unit -> MetricRiscvMachine -> Prop),
       let initialLMetrics := updateMetrics (addMetricStores 1) initialL in
       (exists m', mem_store initialL.(getMem) addr v = Some m' /\ post tt (withMem m' initialLMetrics)) \/
       (mem_store initialL.(getMem) addr v = None /\ nonmem_store initialL addr v (post tt)) <->
@@ -50,22 +48,22 @@ Section MetricPrimitives.
 
   (* primitives_params is a paramater rather than a field because Primitives lives in Prop and
      is opaque, but the fields of primitives_params need to be visible *)
-  Class MetricPrimitives(primitives_params: PrimitivesParams M RiscvMachineL): Prop := {
+  Class MetricPrimitives(primitives_params: PrimitivesParams M MetricRiscvMachine): Prop := {
 
-    spec_Bind{A B: Type}: forall (initialL: RiscvMachineL) (post: B -> RiscvMachineL -> Prop)
+    spec_Bind{A B: Type}: forall (initialL: MetricRiscvMachine) (post: B -> MetricRiscvMachine -> Prop)
                                  (m: M A) (f : A -> M B),
-        (exists mid: A -> RiscvMachineL -> Prop,
+        (exists mid: A -> MetricRiscvMachine -> Prop,
             mcomp_sat m initialL mid /\
             (forall a middle, mid a middle -> mcomp_sat (f a) middle post)) <->
         mcomp_sat (Bind m f) initialL post;
 
-    spec_Return{A: Type}: forall (initialL: RiscvMachineL)
-                                 (post: A -> RiscvMachineL -> Prop) (a: A),
+    spec_Return{A: Type}: forall (initialL: MetricRiscvMachine)
+                                 (post: A -> MetricRiscvMachine -> Prop) (a: A),
         post a initialL <->
         mcomp_sat (Return a) initialL post;
 
-    spec_getRegister: forall (initialL: RiscvMachineL) (x: Register)
-                             (post: word -> RiscvMachineL -> Prop),
+    spec_getRegister: forall (initialL: MetricRiscvMachine) (x: Register)
+                             (post: word -> MetricRiscvMachine -> Prop),
         (valid_register x /\
          match map.get initialL.(getRegs) x with
          | Some v => post v initialL
@@ -74,7 +72,7 @@ Section MetricPrimitives.
         (x = Register0 /\ post (word.of_Z 0) initialL) <->
         mcomp_sat (getRegister x) initialL post;
 
-    spec_setRegister: forall (initialL: RiscvMachineL) x v (post: unit -> RiscvMachineL -> Prop),
+    spec_setRegister: forall (initialL: MetricRiscvMachine) x v (post: unit -> MetricRiscvMachine -> Prop),
       (valid_register x /\ post tt (withRegs (map.put initialL.(getRegs) x v) initialL) \/
        x = Register0 /\ post tt initialL) <->
       mcomp_sat (setRegister x v) initialL post;
@@ -111,17 +109,17 @@ Section MetricPrimitives.
                                      Memory.storeDouble
                                      nonmem_storeDouble_sat;
 
-    spec_getPC: forall (initialL: RiscvMachineL) (post: word -> RiscvMachineL -> Prop),
+    spec_getPC: forall (initialL: MetricRiscvMachine) (post: word -> MetricRiscvMachine -> Prop),
         post initialL.(getPc) initialL <->
         mcomp_sat getPC initialL post;
 
-    spec_setPC: forall initialL v (post: unit -> RiscvMachineL -> Prop),
+    spec_setPC: forall initialL v (post: unit -> MetricRiscvMachine -> Prop),
         post tt (withNextPc v
                 (updateMetrics (addMetricJumps 1)
                                initialL)) <->
         mcomp_sat (setPC v) initialL post;
 
-    spec_step: forall (initialL: RiscvMachineL) (post: unit -> RiscvMachineL -> Prop),
+    spec_step: forall (initialL: MetricRiscvMachine) (post: unit -> MetricRiscvMachine -> Prop),
         post tt (withNextPc (word.add initialL.(getNextPc) (word.of_Z 4))
                 (withPc     initialL.(getNextPc)
                 (updateMetrics (addMetricInstructions 1)

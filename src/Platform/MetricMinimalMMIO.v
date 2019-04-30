@@ -28,19 +28,16 @@ Section Riscv.
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
 
-  Local Notation RiscvMachineL := (RiscvMachine Register MMIOAction).
-  Local Notation MetricRiscvMachineL := (MetricRiscvMachine Register MMIOAction).
-
-  Definition liftL0{B : Type}(fl: MetricLog -> MetricLog)(f: OStateND RiscvMachineL B):
-    OStateND MetricRiscvMachineL B :=
+  Definition liftL0{B : Type}(fl: MetricLog -> MetricLog)(f: OStateND RiscvMachine B):
+    OStateND MetricRiscvMachine B :=
     fun s p => (exists b mach, p = Some (b, {| getMachine := mach;
                                                getMetrics := fl s.(getMetrics) |}) /\
                                f s.(getMachine) (Some (b, mach))) \/
                (p = None /\ f s.(getMachine) None).
 
   (* alternative definition, should be equivalent:
-  Definition liftL0{B : Type}(fl: MetricLog -> MetricLog)(f: OStateND RiscvMachineL B):
-    OStateND MetricRiscvMachineL B :=
+  Definition liftL0{B : Type}(fl: MetricLog -> MetricLog)(f: OStateND RiscvMachine B):
+    OStateND MetricRiscvMachine B :=
     fun s p => match p with
                | Some (b, m) => (f s.(getMachine)) (Some (b, m.(getMachine))) /\
                                 (fl s.(getMetrics)) = m.(getMetrics)
@@ -48,16 +45,16 @@ Section Riscv.
                end.
    *)
 
-  Definition liftL1{A B: Type} fl (f: A -> OStateND RiscvMachineL B) :=
+  Definition liftL1{A B: Type} fl (f: A -> OStateND RiscvMachine B) :=
     fun a => liftL0 fl (f a).
 
-  Definition liftL2{A1 A2 B: Type} fl (f: A1 -> A2 -> OStateND RiscvMachineL B) :=
+  Definition liftL2{A1 A2 B: Type} fl (f: A1 -> A2 -> OStateND RiscvMachine B) :=
     fun a1 a2 => liftL0 fl (f a1 a2).
 
-  Definition liftL3{A1 A2 A3 B: Type} fl (f: A1 -> A2 -> A3 -> OStateND RiscvMachineL B) :=
+  Definition liftL3{A1 A2 A3 B: Type} fl (f: A1 -> A2 -> A3 -> OStateND RiscvMachine B) :=
     fun a1 a2 a3 => liftL0 fl (f a1 a2 a3).
 
-  Instance IsMetricRiscvMachineL: RiscvProgram (OStateND MetricRiscvMachineL) word := {
+  Instance IsMetricRiscvMachine: RiscvProgram (OStateND MetricRiscvMachine) word := {
     getRegister := liftL1 id getRegister;
     setRegister := liftL2 id setRegister;
     getPC := liftL0 id getPC;
@@ -75,8 +72,8 @@ Section Riscv.
   }.
 
 
-  Definition pLoad (m : MetricRiscvMachineL) := updateMetrics (addMetricLoads 1) m.
-  Definition pStore (m : MetricRiscvMachineL) := updateMetrics (addMetricStores 1) m.
+  Definition pLoad (m : MetricRiscvMachine) := updateMetrics (addMetricLoads 1) m.
+  Definition pStore (m : MetricRiscvMachine) := updateMetrics (addMetricStores 1) m.
 
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
@@ -106,7 +103,7 @@ Section Riscv.
        | |- _ => reflexivity
        | |- _ => progress (
                      unfold computation_satisfies, computation_with_answer_satisfies,
-                            IsMetricRiscvMachineL,
+                            IsMetricRiscvMachine,
                             valid_register, Register0,
                             is_initial_register_value,
                             get, put, fail_hard,
@@ -168,7 +165,7 @@ Section Riscv.
          specialize (H N);
          clear N
        | H: _ \/ _ |- _ => destruct H
-       | r: MetricRiscvMachineL |- _ =>
+       | r: MetricRiscvMachine |- _ =>
          destruct r as [[regs pc npc m l] mc];
          simpl in *
        | H: {| getRegs := _;
@@ -198,8 +195,8 @@ Section Riscv.
 
   Arguments LittleEndian.combine: simpl never.
 
-  Instance MetricMinimalMMIOPrimitivesParams: PrimitivesParams (OStateND MetricRiscvMachineL) MetricRiscvMachineL := {|
-    Primitives.mcomp_sat := @OStateNDOperations.computation_with_answer_satisfies MetricRiscvMachineL;
+  Instance MetricMinimalMMIOPrimitivesParams: PrimitivesParams (OStateND MetricRiscvMachine) MetricRiscvMachine := {|
+    Primitives.mcomp_sat := @OStateNDOperations.computation_with_answer_satisfies MetricRiscvMachine;
 
     (* any value can be found in an uninitialized register *)
     Primitives.is_initial_register_value x := True;
@@ -238,7 +235,7 @@ Section Riscv.
     - t.
     - t.
       unfold OStateND in m.
-      exists (fun (a: A) (middleL: MetricRiscvMachineL) => m initialL (Some (a, middleL))).
+      exists (fun (a: A) (middleL: MetricRiscvMachine) => m initialL (Some (a, middleL))).
       t.
       edestruct H as [b [? ?]]; [eauto|]; t.
     (* spec_Return *)
@@ -414,5 +411,5 @@ Section Riscv.
 End Riscv.
 
 (* needed because defined inside a Section *)
-Existing Instance IsMetricRiscvMachineL.
+Existing Instance IsMetricRiscvMachine.
 Existing Instance MinimalMMIOSatisfiesPrimitives.
