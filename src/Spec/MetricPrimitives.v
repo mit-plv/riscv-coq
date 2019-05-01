@@ -16,7 +16,6 @@ Section MetricPrimitives.
 
   Context {W: Words}.
   Context {Registers: map.map Register word}.
-  Context {Action: Type}.
   Context {mem: map.map word byte}.
 
   Context {M: Type -> Type}.
@@ -24,26 +23,27 @@ Section MetricPrimitives.
   Context {RVM: RiscvProgram M word}.
   Context {RVS: @RiscvMachine M word _ _ RVM}.
 
-  Definition spec_load{p: PrimitivesParams M MetricRiscvMachine}(V: Type)
-             (riscv_load: SourceType -> word -> M V)
-             (mem_load: mem -> word -> option V)
-             (nonmem_load: MetricRiscvMachine -> word -> (V  -> MetricRiscvMachine -> Prop) -> Prop)
+  Definition spec_load{p: PrimitivesParams M MetricRiscvMachine}(n: nat)
+             (riscv_load: SourceType -> word -> M (HList.tuple byte n))
+             (mem_load: mem -> word -> option (HList.tuple byte n))
              : Prop :=
-    forall initialL addr (kind: SourceType) (post: V -> MetricRiscvMachine -> Prop),
-        let initialLMetrics := updateMetrics (addMetricLoads 1) initialL in
-        (exists v: V, mem_load initialL.(getMem) addr = Some v /\ post v initialLMetrics) \/
-        (mem_load initialL.(getMem) addr = None /\ nonmem_load initialL addr post) <->
-        mcomp_sat (riscv_load kind addr) initialL post.
+    forall (initialL: MetricRiscvMachine) addr (kind: SourceType)
+           (post: HList.tuple byte n -> MetricRiscvMachine -> Prop),
+      (exists v, mem_load initialL.(getMem) addr = Some v /\
+                 post v (updateMetrics (addMetricLoads 1) initialL)) \/
+      (mem_load initialL.(getMem) addr = None /\ mcomp_sat (nonmem_load n addr) initialL post) <->
+      mcomp_sat (riscv_load kind addr) initialL post.
 
-  Definition spec_store{p: PrimitivesParams M MetricRiscvMachine}(V: Type)
-             (riscv_store: SourceType -> word -> V -> M unit)
-             (mem_store: mem -> word -> V -> option mem)
-             (nonmem_store: MetricRiscvMachine -> word -> V -> (MetricRiscvMachine -> Prop) -> Prop)
+  Definition spec_store{p: PrimitivesParams M MetricRiscvMachine}(n: nat)
+             (riscv_store: SourceType -> word -> HList.tuple byte n -> M unit)
+             (mem_store: mem -> word -> HList.tuple byte n -> option mem)
              : Prop :=
-    forall initialL addr v (kind: SourceType) (post: unit -> MetricRiscvMachine -> Prop),
-      let initialLMetrics := updateMetrics (addMetricStores 1) initialL in
-      (exists m', mem_store initialL.(getMem) addr v = Some m' /\ post tt (withMem m' initialLMetrics)) \/
-      (mem_store initialL.(getMem) addr v = None /\ nonmem_store initialL addr v (post tt)) <->
+    forall (initialL: MetricRiscvMachine) addr v (kind: SourceType)
+           (post: unit -> MetricRiscvMachine -> Prop),
+      (exists m', mem_store initialL.(getMem) addr v = Some m' /\
+                  post tt (withMem m' (updateMetrics (addMetricStores 1) initialL))) \/
+      (mem_store initialL.(getMem) addr v = None /\
+       mcomp_sat (nonmem_store n addr v) initialL post) <->
       mcomp_sat (riscv_store kind addr v) initialL post.
 
   (* primitives_params is a paramater rather than a field because Primitives lives in Prop and
@@ -77,37 +77,15 @@ Section MetricPrimitives.
        x = Register0 /\ post tt initialL) <->
       mcomp_sat (setRegister x v) initialL post;
 
-    spec_loadByte: spec_load w8 (Machine.loadByte (RiscvProgram := RVM))
-                                Memory.loadByte
-                                nonmem_loadByte_sat;
+    spec_loadByte: spec_load 1 (Machine.loadByte (RiscvProgram := RVM)) Memory.loadByte;
+    spec_loadHalf: spec_load 2 (Machine.loadHalf (RiscvProgram := RVM)) Memory.loadHalf;
+    spec_loadWord: spec_load 4 (Machine.loadWord (RiscvProgram := RVM)) Memory.loadWord;
+    spec_loadDouble: spec_load 8 (Machine.loadDouble (RiscvProgram := RVM)) Memory.loadDouble;
 
-    spec_loadHalf: spec_load w16 (Machine.loadHalf (RiscvProgram := RVM))
-                                 Memory.loadHalf
-                                 nonmem_loadHalf_sat;
-
-    spec_loadWord: spec_load w32 (Machine.loadWord (RiscvProgram := RVM))
-                                 Memory.loadWord
-                                 nonmem_loadWord_sat;
-
-    spec_loadDouble: spec_load w64 (Machine.loadDouble (RiscvProgram := RVM))
-                                   Memory.loadDouble
-                                   nonmem_loadDouble_sat;
-
-    spec_storeByte: spec_store w8 (Machine.storeByte (RiscvProgram := RVM))
-                                  Memory.storeByte
-                                  nonmem_storeByte_sat;
-
-    spec_storeHalf: spec_store w16 (Machine.storeHalf (RiscvProgram := RVM))
-                                    Memory.storeHalf
-                                    nonmem_storeHalf_sat;
-
-    spec_storeWord: spec_store w32 (Machine.storeWord (RiscvProgram := RVM))
-                                    Memory.storeWord
-                                    nonmem_storeWord_sat;
-
-    spec_storeDouble: spec_store w64 (Machine.storeDouble (RiscvProgram := RVM))
-                                     Memory.storeDouble
-                                     nonmem_storeDouble_sat;
+    spec_storeByte: spec_store 1 (Machine.storeByte (RiscvProgram := RVM)) Memory.storeByte;
+    spec_storeHalf: spec_store 2 (Machine.storeHalf (RiscvProgram := RVM)) Memory.storeHalf;
+    spec_storeWord: spec_store 4 (Machine.storeWord (RiscvProgram := RVM)) Memory.storeWord;
+    spec_storeDouble: spec_store 8 (Machine.storeDouble (RiscvProgram := RVM)) Memory.storeDouble;
 
     spec_getPC: forall (initialL: MetricRiscvMachine) (post: word -> MetricRiscvMachine -> Prop),
         post initialL.(getPc) initialL <->

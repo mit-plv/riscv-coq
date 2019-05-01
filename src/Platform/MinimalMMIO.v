@@ -1,3 +1,4 @@
+Require Import Coq.Strings.String.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.PropExtensionality.
@@ -18,11 +19,42 @@ Require Import coqutil.Tactics.Tactics.
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
+Class ExtSpec{W: Words}(M: Type -> Type) := {
+  (* given a number of bytes to read and an address, returns the value read (or fails) *)
+  run_mmio_load: forall (n: nat), word -> M (HList.tuple byte n);
+
+  (* given a number of bytes to write, an address and a value, succeeds or fails *)
+  run_mmio_store: forall (n: nat), word -> HList.tuple byte n -> M unit;
+}.
+
 Section Riscv.
 
   Context {W: Words}.
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
+
+  (* Alternative tries:
+
+  (* given a name of the external action, a list of arguments, returns a list of return values *)
+  Context (run_ext_call: String.string -> list word -> OStateND RiscvMachine (list word)).
+
+  Context (ext_spec:
+    (* Given a trace of what happened so far,
+       the given-away memory, an action label and a list of function call arguments, *)
+    list LogItem -> Mem -> string -> list word ->
+    (* and a postcondition on the received memory and function call results, *)
+    (Mem -> list word -> Prop) ->
+    (* tells if this postcondition will hold *)
+    Prop).
+
+  (* given a number of bytes to read and an address, returns the value read (or fails) *)
+  Definition run_mmio_load(n: nat)(addr: word): OStateND RiscvMachine (HList.tuple byte n) :=
+    fun initial oBytes =>
+      (oBytes = None /\ forall post, ~ ext_spec initial.(getLog) map.empty "fooo" [addr] post) \/
+      (exists bytes, oBytes = Some bytes /\ ... )
+  *)
+
+  Context {ext_spec: ExtSpec (OStateND RiscvMachine)}.
 
   Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
     word.of_Z (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).
@@ -42,24 +74,30 @@ Section Riscv.
     | None => fail_hard
     end.
 
+  Definition run_and_log_mmio_load(n: nat)(a: word): OStateND RiscvMachine (HList.tuple byte n) :=
+    inp <- run_mmio_load n a;
+    logEvent (mmioLoadEvent a inp);;
+    Return inp.
+
   Definition loadN(n: nat)(a: word): OStateND RiscvMachine (HList.tuple byte n) :=
     mach <- get;
     match Memory.load_bytes n mach.(getMem) a with
     | Some v => Return v
-    | None =>
-      (* if any of the n addresses is not present in the memory, we perform an MMIO load event: *)
-      inp <- arbitrary (HList.tuple byte n);
-      logEvent (mmioLoadEvent a inp);;
-      Return inp
+    (* if any of the n addresses is not present in the memory, we perform an MMIO load event: *)
+    | None => run_and_log_mmio_load n a
     end.
+
+  Definition run_and_log_mmio_store(n: nat)(a: word)(v: HList.tuple byte n):
+    OStateND RiscvMachine unit :=
+    run_mmio_store n a v;;
+    logEvent (mmioStoreEvent a v).
 
   Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OStateND RiscvMachine unit :=
     mach <- get;
     match Memory.store_bytes n mach.(getMem) a v with
     | Some m => put (withMem m mach)
-    | None =>
-      (* if any of the n addresses is not present in the memory, we perform an MMIO store event: *)
-      logEvent (mmioStoreEvent a v)
+    (* if any of the n addresses is not present in the memory, we perform an MMIO store event: *)
+    | None => run_and_log_mmio_store n a v
     end.
 
   Instance IsRiscvMachine: RiscvProgram (OStateND RiscvMachine) word :=  {
@@ -220,30 +258,13 @@ Section Riscv.
 
   Arguments LittleEndian.combine: simpl never.
 
-  Instance MinimalMMIOPrimitivesParams: PrimitivesParams (OStateND RiscvMachine) RiscvMachine := {|
-    Primitives.mcomp_sat := @OStateNDOperations.computation_with_answer_satisfies RiscvMachine;
-
+  Instance MinimalMMIOPrimitivesParams: PrimitivesParams (OStateND RiscvMachine) RiscvMachine := {
+    Primitives.mcomp_sat := @computation_with_answer_satisfies RiscvMachine;
     (* any value can be found in an uninitialized register *)
     Primitives.is_initial_register_value x := True;
-
-    Primitives.nonmem_loadByte_sat initialL addr post :=
-      forall (v: w8), post v (withLogItem (mmioLoadEvent addr v) initialL);
-    Primitives.nonmem_loadHalf_sat initialL addr post :=
-      forall (v: w16), post v (withLogItem (mmioLoadEvent addr v) initialL);
-    Primitives.nonmem_loadWord_sat initialL addr post :=
-      forall (v: w32), post v (withLogItem (mmioLoadEvent addr v) initialL);
-    Primitives.nonmem_loadDouble_sat initialL addr post :=
-      forall (v: w64), post v (withLogItem (mmioLoadEvent addr v) initialL);
-
-    Primitives.nonmem_storeByte_sat initialL addr v post :=
-      post (withLogItem (mmioStoreEvent addr v) initialL);
-    Primitives.nonmem_storeHalf_sat initialL addr v post :=
-      post (withLogItem (mmioStoreEvent addr v) initialL);
-    Primitives.nonmem_storeWord_sat initialL addr v post :=
-      post (withLogItem (mmioStoreEvent addr v) initialL);
-    Primitives.nonmem_storeDouble_sat initialL addr v post :=
-      post (withLogItem (mmioStoreEvent addr v) initialL);
-  |}.
+    Primitives.nonmem_load := run_and_log_mmio_load;
+    Primitives.nonmem_store := run_and_log_mmio_store;
+  }.
 
   Lemma bool_test_to_valid_register: forall (x: Z),
       (0 <? x) && (x <? 32) = true ->
@@ -270,10 +291,7 @@ Section Riscv.
               Memory.loadHalf, Memory.storeHalf,
               Memory.loadWord, Memory.storeWord,
               Memory.loadDouble, Memory.storeDouble,
-              nonmem_loadByte_sat, nonmem_storeByte_sat,
-              nonmem_loadHalf_sat, nonmem_storeHalf_sat,
-              nonmem_loadWord_sat, nonmem_storeWord_sat,
-              nonmem_loadDouble_sat, nonmem_storeDouble_sat,
+              nonmem_load, nonmem_store,
               ZToReg, MkMachineWidth.MachineWidth_XLEN,
               fail_if_None, loadN, storeN in *
     | |- _ => progress intros
@@ -290,9 +308,9 @@ Section Riscv.
     | |- _ => reflexivity
     (* note: in general, these might turn a solvable goal into an unsolvable one, but here
            we should be safe *)
-    | F: forall (s: RiscvMachine) (a: _), ?mid a s -> _, P: ?mid _ _ |- _ =>
+    | F: forall (a: _) (s: RiscvMachine), ?mid a s -> _, P: ?mid _ _ |- _ =>
       specialize F with (1 := P)
-    | F: forall (s: RiscvMachine) (a: ?A), ?mid a s -> _,
+    | F: forall (a: ?A) (s: RiscvMachine), ?mid a s -> _,
       P: forall (a: ?A), ?mid a _,
       x: ?A |- _ => specialize F with (1 := (P x))
     end.
@@ -301,52 +319,7 @@ Section Riscv.
 
   Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
   Proof.
-    constructor. all: split.
-    (* spec_Bind *)
-    - t.
-    - u.
-    (* spec_Return *)
-    - t.
-    - u.
-    (* spec_getRegister *)
-    - t.
-    - u.
-    (* spec_setRegister *)
-    - t.
-    - u.
-    (* spec_loadByte *)
-    - t.
-    - u. right. u.
-    (* spec_loadHalf *)
-    - t.
-    - u. right. u.
-    (* spec_loadWord *)
-    - t.
-    - u. right. u.
-    (* spec_loadDouble *)
-    - t.
-    - u. right. u.
-    (* spec_storeByte *)
-    - t.
-    - u.
-    (* spec_storeHalf *)
-    - t.
-    - u.
-    (* spec_storeWord *)
-    - t.
-    - u.
-    (* spec_storeDouble *)
-    - t.
-    - u.
-    (* spec_getPC *)
-    - t.
-    - u.
-    (* spec_setPC *)
-    - t.
-    - u.
-    (* spec_step *)
-    - t.
-    - u.
+    constructor. all: split; [t|u].
   Qed.
 
 End Riscv.

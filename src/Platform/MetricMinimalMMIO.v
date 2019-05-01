@@ -28,6 +28,9 @@ Section Riscv.
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
 
+  (* note: ext_spec does not have access to the metrics *)
+  Context {ext_spec: ExtSpec (OStateND RiscvMachine)}.
+
   Definition liftL0{B : Type}(fl: MetricLog -> MetricLog)(f: OStateND RiscvMachine B):
     OStateND MetricRiscvMachine B :=
     fun s p => (exists b mach, p = Some (b, {| getMachine := mach;
@@ -70,7 +73,6 @@ Section Riscv.
     step := liftL0 (addMetricInstructions 1) step;
     raiseExceptionWithInfo{A} := liftL3 id (raiseExceptionWithInfo (A := A));
   }.
-
 
   Definition pLoad (m : MetricRiscvMachine) := updateMetrics (addMetricLoads 1) m.
   Definition pStore (m : MetricRiscvMachine) := updateMetrics (addMetricStores 1) m.
@@ -195,30 +197,17 @@ Section Riscv.
 
   Arguments LittleEndian.combine: simpl never.
 
-  Instance MetricMinimalMMIOPrimitivesParams: PrimitivesParams (OStateND MetricRiscvMachine) MetricRiscvMachine := {|
-    Primitives.mcomp_sat := @OStateNDOperations.computation_with_answer_satisfies MetricRiscvMachine;
+  Instance MetricMinimalMMIOPrimitivesParams:
+    PrimitivesParams (OStateND MetricRiscvMachine) MetricRiscvMachine :=
+  {
+    Primitives.mcomp_sat := @computation_with_answer_satisfies MetricRiscvMachine;
 
     (* any value can be found in an uninitialized register *)
     Primitives.is_initial_register_value x := True;
 
-    Primitives.nonmem_loadByte_sat initialL addr post :=
-      forall (v: w8), post v (pLoad (withLogItem (mmioLoadEvent addr v) initialL));
-    Primitives.nonmem_loadHalf_sat initialL addr post :=
-      forall (v: w16), post v (pLoad (withLogItem (mmioLoadEvent addr v) initialL));
-    Primitives.nonmem_loadWord_sat initialL addr post :=
-      forall (v: w32), post v (pLoad (withLogItem (mmioLoadEvent addr v) initialL));
-    Primitives.nonmem_loadDouble_sat initialL addr post :=
-      forall (v: w64), post v (pLoad (withLogItem (mmioLoadEvent addr v) initialL));
-
-    Primitives.nonmem_storeByte_sat initialL addr v post :=
-      post (pStore (withLogItem (mmioStoreEvent addr v) initialL));
-    Primitives.nonmem_storeHalf_sat initialL addr v post :=
-      post (pStore (withLogItem (mmioStoreEvent addr v) initialL));
-    Primitives.nonmem_storeWord_sat initialL addr v post :=
-      post (pStore (withLogItem (mmioStoreEvent addr v) initialL));
-    Primitives.nonmem_storeDouble_sat initialL addr v post :=
-      post (pStore (withLogItem (mmioStoreEvent addr v) initialL));
-  |}.
+    Primitives.nonmem_load n := liftL1 (addMetricLoads 1) (run_and_log_mmio_load n);
+    Primitives.nonmem_store n := liftL2 (addMetricStores 1) (run_and_log_mmio_store n);
+  }.
 
   Lemma some_none_falsomatic: forall (A : Type) (a : A),
       @None A = Some a ->
@@ -227,176 +216,216 @@ Section Riscv.
     discriminate.
   Qed.
 
+  Lemma computation_with_answer_satisfies_liftL0{A: Type}:
+    forall f (m: OStateND RiscvMachine A) initial post,
+      computation_with_answer_satisfies (liftL0 f m) initial post ->
+      computation_with_answer_satisfies m initial.(getMachine) (fun a final =>
+        post a {| getMachine := final; getMetrics := f initial.(getMetrics) |}).
+  Proof.
+    unfold computation_with_answer_satisfies, liftL0. intros.
+    destruct o as [(? & ?)|].
+    - specialize (H (Some (a, {| getMachine := r; getMetrics := f (getMetrics initial) |}))).
+      destruct H as (? & ? & ? & ?); cycle 1.
+      + do 2 eexists. split; [reflexivity|]. inversion H. subst. assumption.
+      + left. eauto.
+    - specialize (H None).
+      destruct H as (? & ? & ? & ?); [|discriminate]. right. auto.
+  Qed.
+
+  Lemma computation_with_answer_satisfies_liftL0_bw{A: Type}:
+    forall f (m: OStateND RiscvMachine A) initial post,
+      computation_with_answer_satisfies m initial.(getMachine) (fun a final =>
+        post a {| getMachine := final; getMetrics := f initial.(getMetrics) |}) ->
+      computation_with_answer_satisfies (liftL0 f m) initial post.
+  Proof.
+    unfold computation_with_answer_satisfies, liftL0. intros.
+    destruct H0.
+    - destruct H0 as (? & ? & ? & ?). subst. do 2 eexists. split; [reflexivity|].
+      specialize (H _ H1).
+      destruct H as (? & ? & ? & ?). inversion H. subst. assumption.
+    - destruct H0. subst.
+      specialize (H _ H1).
+      destruct H as (? & ? & ? & ?). discriminate.
+  Qed.
+
   Instance MinimalMMIOSatisfiesPrimitives: MetricPrimitives MetricMinimalMMIOPrimitivesParams.
   Proof.
     constructor.
     all: split.
     (* spec_Bind *)
     - t.
-    - t.
-      unfold OStateND in m.
-      exists (fun (a: A) (middleL: MetricRiscvMachine) => m initialL (Some (a, middleL))).
-      t.
-      edestruct H as [b [? ?]]; [eauto|]; t.
+    - intros.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
+      apply computation_with_answer_satisfies_Bind in H. exact H.
     (* spec_Return *)
     - t.
     - t.
     (* spec_getRegister *)
     - t.
-    - t.
-      + edestruct H as [b [? ?]]; [solve [eauto]|]. t.
-      + edestruct H as [b [? ?]]; [solve [eauto]|]. t.
-      + edestruct H as [b [? ?]]; [solve [left; do 2 eexists; split; [reflexivity | t]]|]. t.
-      + left. split; [solve [t]|]. t.
-        edestruct H as [b [? ?]]; [solve [left; do 2 eexists; split; [reflexivity | t]]|]. t.
-      + edestruct H as [b [? ?]]; [solve [right; eauto]|]. t.
-      + edestruct H as [b [? ?]]; [solve [right; eauto]|]. t.
-      + edestruct H as [b [? ?]]; [solve [right; eauto]|]. t.
-      + edestruct H as [b [? ?]]; [solve [right; eauto]|]. t.
+    - unfold getRegister, IsMetricRiscvMachine.
+      intros. unfold liftL1 in *.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
+      apply computation_with_answer_satisfies_liftL0 in H.
+      eapply (proj2 (Primitives.spec_getRegister
+                       (primitives_params := MinimalMMIOPrimitivesParams) _ _ _)) in H.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
+      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      exact H.
     (* spec_setRegister *)
     - t.
-    - t.
-      + right. edestruct H as [b [? ?]]; [solve [left; eauto]|]. t.
-      + left. split; [solve [t]|]. t.
-        edestruct H as [b [? ?]]; [solve [left; do 2 eexists; split; [reflexivity | t]]|]. t.
-      + edestruct H as [b [? ?]]; [solve [right; eauto]|]. t.
-      + edestruct H as [b [? ?]]; [solve [right; eauto]|]. t.
+    - unfold setRegister, IsMetricRiscvMachine.
+      intros. unfold liftL2 in *.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
+      apply computation_with_answer_satisfies_liftL0 in H.
+      eapply (proj2 (Primitives.spec_setRegister
+                       (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _)) in H.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
+      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      exact H.
     (* spec_loadByte *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.loadByte (getMem initialL) addr) eqn: F; [left|right].
-      + t; match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
-      + t; match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
-        right. do 2 eexists. split; [reflexivity|]. simpl. rewrite F.
-        right. repeat eexists. right. repeat eexists. right. repeat eexists.
+    - unfold loadByte, IsMetricRiscvMachine.
+      intros. unfold liftL2 in *.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
+      apply computation_with_answer_satisfies_liftL0 in H.
+      eapply (proj2 (Primitives.spec_loadByte
+                       (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _)) in H.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
+      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct H.
+      + left. exact H.
+      + right. destruct H. split.
+        * assumption.
+        * unfold nonmem_load in *.
+          unfold liftL1.
+          eapply computation_with_answer_satisfies_liftL0_bw.
+          exact H0.
     (* spec_loadHalf *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.loadHalf (getMem initialL) addr) eqn: F; [left|right].
-      + t; match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
-      + t. match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
-        right. do 2 eexists. split; [reflexivity|]. simpl. rewrite F.
-        right. repeat eexists. right. repeat eexists. right. repeat eexists.
+    - unfold loadHalf, IsMetricRiscvMachine.
+      intros. unfold liftL2 in *.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
+      apply computation_with_answer_satisfies_liftL0 in H.
+      eapply (proj2 (Primitives.spec_loadHalf
+                       (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _)) in H.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
+      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct H.
+      + left. exact H.
+      + right. destruct H. split.
+        * assumption.
+        * unfold nonmem_load in *.
+          unfold liftL1.
+          eapply computation_with_answer_satisfies_liftL0_bw.
+          exact H0.
     (* spec_loadWord *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.loadWord (getMem initialL) addr) eqn: F; [left|right].
-      + t; match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
-      + t. match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
-        right. do 2 eexists. split; [reflexivity|]. simpl. rewrite F.
-        right. repeat eexists. right. repeat eexists. right. repeat eexists.
+    - unfold loadWord, IsMetricRiscvMachine.
+      intros. unfold liftL2 in *.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
+      apply computation_with_answer_satisfies_liftL0 in H.
+      eapply (proj2 (Primitives.spec_loadWord
+                       (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _)) in H.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
+      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct H.
+      + left. exact H.
+      + right. destruct H. split.
+        * assumption.
+        * unfold nonmem_load in *.
+          unfold liftL1.
+          eapply computation_with_answer_satisfies_liftL0_bw.
+          exact H0.
     (* spec_loadDouble *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.loadDouble (getMem initialL) addr) eqn: F; [left|right].
-      + t; match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
-      + t. match goal with
-           | |- context [?post ?inp ?mach] => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
-        right. do 2 eexists. split; [reflexivity|]. simpl. rewrite F.
-        right. repeat eexists. right. repeat eexists. right. repeat eexists.
+    - unfold loadDouble, IsMetricRiscvMachine.
+      intros. unfold liftL2 in *.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
+      apply computation_with_answer_satisfies_liftL0 in H.
+      eapply (proj2 (Primitives.spec_loadDouble
+                       (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _)) in H.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
+      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct H.
+      + left. exact H.
+      + right. destruct H. split.
+        * assumption.
+        * unfold nonmem_load in *.
+          unfold liftL1.
+          eapply computation_with_answer_satisfies_liftL0_bw.
+          exact H0.
     (* spec_storeByte *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.storeByte (getMem initialL) addr v) eqn: F.
-      + destruct (Memory.loadByte (getMem initialL) addr) eqn: G; [ | exfalso; t ].
-       left.
-        t; match goal with
-        | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-        end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
-      + destruct (Memory.loadByte (getMem initialL) addr) eqn: G; [ exfalso; t | ].
-        right.
-        t; match goal with
-           | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
-    (* soec_storeHalf *)
+    - unfold storeByte, IsMetricRiscvMachine.
+      intros. unfold liftL3 in *.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
+      apply computation_with_answer_satisfies_liftL0 in H.
+      eapply (proj2 (Primitives.spec_storeByte
+                       (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _ _)) in H.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
+      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct H.
+      + left. exact H.
+      + right. destruct H. split.
+        * assumption.
+        * unfold nonmem_store in *.
+          unfold liftL2.
+          eapply computation_with_answer_satisfies_liftL0_bw.
+          exact H0.
+    (* spec_storeHalf *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.storeHalf (getMem initialL) addr v) eqn: F.
-      + destruct (Memory.loadHalf (getMem initialL) addr) eqn: G; [ | exfalso; t ].
-       left.
-        t; match goal with
-        | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-        end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
-      + destruct (Memory.loadHalf (getMem initialL) addr) eqn: G; [ exfalso; t | ].
-        right.
-        t; match goal with
-           | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
+    - unfold storeHalf, IsMetricRiscvMachine.
+      intros. unfold liftL3 in *.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
+      apply computation_with_answer_satisfies_liftL0 in H.
+      eapply (proj2 (Primitives.spec_storeHalf
+                       (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _ _)) in H.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
+      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct H.
+      + left. exact H.
+      + right. destruct H. split.
+        * assumption.
+        * unfold nonmem_store in *.
+          unfold liftL2.
+          eapply computation_with_answer_satisfies_liftL0_bw.
+          exact H0.
     (* spec_storeWord *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.storeWord (getMem initialL) addr v) eqn: F.
-      + destruct (Memory.loadWord (getMem initialL) addr) eqn: G; [ | exfalso; t ].
-        left.
-        t; match goal with
-        | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-        end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
-      + destruct (Memory.loadWord (getMem initialL) addr) eqn: G; [ exfalso; t | ].
-        right.
-        t; match goal with
-           | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
+    - unfold storeWord, IsMetricRiscvMachine.
+      intros. unfold liftL3 in *.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
+      apply computation_with_answer_satisfies_liftL0 in H.
+      eapply (proj2 (Primitives.spec_storeWord
+                       (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _ _)) in H.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
+      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct H.
+      + left. exact H.
+      + right. destruct H. split.
+        * assumption.
+        * unfold nonmem_store in *.
+          unfold liftL2.
+          eapply computation_with_answer_satisfies_liftL0_bw.
+          exact H0.
     (* spec_storeDouble *)
     - t.
-    - intros. simpl in *. unfold computation_with_answer_satisfies in *.
-      destruct (Memory.storeDouble (getMem initialL) addr v) eqn: F.
-      + destruct (Memory.loadDouble (getMem initialL) addr) eqn: G; [ | exfalso; t ].
-       left.
-        t; match goal with
-        | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-        end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
-      + destruct (Memory.loadDouble (getMem initialL) addr) eqn: G; [ exfalso; t | ].
-        right.
-        t; match goal with
-           | |- post ?inp ?mach => specialize (H (Some (inp, mach)))
-           end; t.
-        edestruct H; [|solve [t]].
-        left. do 2 eexists. split; [reflexivity|]. t.
+    - unfold storeDouble, IsMetricRiscvMachine.
+      intros. unfold liftL3 in *.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
+      apply computation_with_answer_satisfies_liftL0 in H.
+      eapply (proj2 (Primitives.spec_storeDouble
+                       (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _ _)) in H.
+      unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
+      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct H.
+      + left. exact H.
+      + right. destruct H. split.
+        * assumption.
+        * unfold nonmem_store in *.
+          unfold liftL2.
+          eapply computation_with_answer_satisfies_liftL0_bw.
+          exact H0.
     (* spec_getPC *)
     - t.
     - t. edestruct H as [b [? ?]]; [solve [left; t]|]. t.

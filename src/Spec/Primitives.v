@@ -32,44 +32,33 @@ Section Primitives.
        On instances without non-determinism, it only accepts a default value, eg 0 *)
     is_initial_register_value: word -> Prop;
 
-    (* Given an address, an initial RiscvMachine state, and a postcondition on
-       (input, final state), tells if this postcondition characterizes the
-       behavior of the machine *)
-    nonmem_loadByte_sat  :  word -> Machine -> (w8  -> Machine -> Prop) -> Prop;
-    nonmem_loadHalf_sat  :  word -> Machine -> (w16 -> Machine -> Prop) -> Prop;
-    nonmem_loadWord_sat  :  word -> Machine -> (w32 -> Machine -> Prop) -> Prop;
-    nonmem_loadDouble_sat:  word -> Machine -> (w64 -> Machine -> Prop) -> Prop;
+    (* tells what happens if an n-byte read at a non-memory address is performed *)
+    nonmem_load: forall (n: nat), word -> M (HList.tuple byte n);
 
-    (* Given an address, a value to write, an initial RiscvMachine state,
-       and a postcondition on final states, tells if this postcondition characterizes the
-       behavior of the machine *)
-    nonmem_storeByte_sat  : word -> w8  -> Machine -> (unit -> Machine -> Prop) -> Prop;
-    nonmem_storeHalf_sat  : word -> w16 -> Machine -> (unit -> Machine -> Prop) -> Prop;
-    nonmem_storeWord_sat  : word -> w32 -> Machine -> (unit -> Machine -> Prop) -> Prop;
-    nonmem_storeDouble_sat: word -> w64 -> Machine -> (unit -> Machine -> Prop) -> Prop;
+    (* tells what happens if an n-byte write at a non-memory address is performed *)
+    nonmem_store: forall (n: nat), word -> HList.tuple byte n -> M unit;
   }.
 
   Context {RVM: RiscvProgram M word}.
   Context {RVS: @riscv.Spec.Machine.RiscvMachine M word _ _ RVM}.
 
-  Definition spec_load{p: PrimitivesParams RiscvMachine}(V: Type)
-             (riscv_load: SourceType -> word -> M V)
-             (mem_load: mem -> word -> option V)
-             (nonmem_load: word -> RiscvMachine -> (V -> RiscvMachine -> Prop) -> Prop)
+  Definition spec_load{p: PrimitivesParams RiscvMachine}(n: nat)
+             (riscv_load: SourceType -> word -> M (HList.tuple byte n))
+             (mem_load: mem -> word -> option (HList.tuple byte n))
              : Prop :=
-    forall initialL addr (kind: SourceType) (post: V -> RiscvMachine -> Prop),
-        (exists v: V, mem_load initialL.(getMem) addr = Some v /\ post v initialL) \/
-        (mem_load initialL.(getMem) addr = None /\ nonmem_load addr initialL post) <->
-        mcomp_sat (riscv_load kind addr) initialL post.
+    forall initialL addr (kind: SourceType) (post: HList.tuple byte n -> RiscvMachine -> Prop),
+      (exists v, mem_load initialL.(getMem) addr = Some v /\ post v initialL) \/
+      (mem_load initialL.(getMem) addr = None /\ mcomp_sat (nonmem_load n addr) initialL post) <->
+      mcomp_sat (riscv_load kind addr) initialL post.
 
-  Definition spec_store{p: PrimitivesParams RiscvMachine}(V: Type)
-             (riscv_store: SourceType -> word -> V -> M unit)
-             (mem_store: mem -> word -> V -> option mem)
-             (nonmem_store: word -> V -> RiscvMachine -> (unit -> RiscvMachine -> Prop) -> Prop)
+  Definition spec_store{p: PrimitivesParams RiscvMachine}(n: nat)
+             (riscv_store: SourceType -> word -> HList.tuple byte n -> M unit)
+             (mem_store: mem -> word -> HList.tuple byte n -> option mem)
              : Prop :=
     forall initialL addr v (kind: SourceType) (post: unit -> RiscvMachine -> Prop),
       (exists m', mem_store initialL.(getMem) addr v = Some m' /\ post tt (withMem m' initialL)) \/
-      (mem_store initialL.(getMem) addr v = None /\ nonmem_store addr v initialL post) <->
+      (mem_store initialL.(getMem) addr v = None /\
+       mcomp_sat (nonmem_store n addr v) initialL post) <->
       mcomp_sat (riscv_store kind addr v) initialL post.
 
   (* primitives_params is a paramater rather than a field because Primitives lives in Prop and
@@ -103,37 +92,15 @@ Section Primitives.
        x = Register0 /\ post tt initialL) <->
       mcomp_sat (setRegister x v) initialL post;
 
-    spec_loadByte: spec_load w8 (Machine.loadByte (RiscvProgram := RVM))
-                                Memory.loadByte
-                                nonmem_loadByte_sat;
+    spec_loadByte: spec_load 1 (Machine.loadByte (RiscvProgram := RVM)) Memory.loadByte;
+    spec_loadHalf: spec_load 2 (Machine.loadHalf (RiscvProgram := RVM)) Memory.loadHalf;
+    spec_loadWord: spec_load 4 (Machine.loadWord (RiscvProgram := RVM)) Memory.loadWord;
+    spec_loadDouble: spec_load 8 (Machine.loadDouble (RiscvProgram := RVM)) Memory.loadDouble;
 
-    spec_loadHalf: spec_load w16 (Machine.loadHalf (RiscvProgram := RVM))
-                                 Memory.loadHalf
-                                 nonmem_loadHalf_sat;
-
-    spec_loadWord: spec_load w32 (Machine.loadWord (RiscvProgram := RVM))
-                                 Memory.loadWord
-                                 nonmem_loadWord_sat;
-
-    spec_loadDouble: spec_load w64 (Machine.loadDouble (RiscvProgram := RVM))
-                                   Memory.loadDouble
-                                   nonmem_loadDouble_sat;
-
-    spec_storeByte: spec_store w8 (Machine.storeByte (RiscvProgram := RVM))
-                                  Memory.storeByte
-                                  nonmem_storeByte_sat;
-
-    spec_storeHalf: spec_store w16 (Machine.storeHalf (RiscvProgram := RVM))
-                                    Memory.storeHalf
-                                    nonmem_storeHalf_sat;
-
-    spec_storeWord: spec_store w32 (Machine.storeWord (RiscvProgram := RVM))
-                                    Memory.storeWord
-                                    nonmem_storeWord_sat;
-
-    spec_storeDouble: spec_store w64 (Machine.storeDouble (RiscvProgram := RVM))
-                                     Memory.storeDouble
-                                     nonmem_storeDouble_sat;
+    spec_storeByte: spec_store 1 (Machine.storeByte (RiscvProgram := RVM)) Memory.storeByte;
+    spec_storeHalf: spec_store 2 (Machine.storeHalf (RiscvProgram := RVM)) Memory.storeHalf;
+    spec_storeWord: spec_store 4 (Machine.storeWord (RiscvProgram := RVM)) Memory.storeWord;
+    spec_storeDouble: spec_store 8 (Machine.storeDouble (RiscvProgram := RVM)) Memory.storeDouble;
 
     spec_getPC: forall initialL (post: word -> RiscvMachine -> Prop),
         post initialL.(getPc) initialL <->

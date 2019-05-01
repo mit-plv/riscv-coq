@@ -125,18 +125,14 @@ Section Riscv.
        | |- _ \/ _ => right; solve [t]
        end.
 
-  Instance MetricMinimalMetricPrimitivesParams: PrimitivesParams (OState MetricRiscvMachine) MetricRiscvMachine := {|
+  Instance MetricMinimalMetricPrimitivesParams:
+    PrimitivesParams (OState MetricRiscvMachine) MetricRiscvMachine :=
+  {
     Primitives.mcomp_sat := @computation_with_answer_satisfies MetricRiscvMachine;
     Primitives.is_initial_register_value := eq (word.of_Z 0);
-    Primitives.nonmem_loadByte_sat   initialL addr post := False;
-    Primitives.nonmem_loadHalf_sat   initialL addr post := False;
-    Primitives.nonmem_loadWord_sat   initialL addr post := False;
-    Primitives.nonmem_loadDouble_sat initialL addr post := False;
-    Primitives.nonmem_storeByte_sat   initialL addr v post := False;
-    Primitives.nonmem_storeHalf_sat   initialL addr v post := False;
-    Primitives.nonmem_storeWord_sat   initialL addr v post := False;
-    Primitives.nonmem_storeDouble_sat initialL addr v post := False;
-  |}.
+    Primitives.nonmem_load n addr := fail_hard;
+    Primitives.nonmem_store n addr v := fail_hard;
+  }.
 
   Instance MetricMinimalSatisfiesMetricPrimitives: MetricPrimitives MetricMinimalMetricPrimitivesParams.
   Proof.

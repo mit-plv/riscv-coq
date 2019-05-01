@@ -135,7 +135,7 @@ Module OStateOperations.
     forall (m: OState S A) (f: A -> OState S B) (initial: S) post,
       computation_with_answer_satisfies (Bind m f) initial post ->
       (exists mid, computation_with_answer_satisfies m initial mid
-                   /\ forall s a, mid a s -> computation_with_answer_satisfies (f a) s post).
+                   /\ forall a s, mid a s -> computation_with_answer_satisfies (f a) s post).
   Proof.
     unfold computation_with_answer_satisfies.
     intros. simpl in *.
@@ -157,6 +157,15 @@ Module OStateOperations.
     inversion H. subst. assumption.
   Qed.
 
+  Lemma computation_with_answer_satisfies_put{S: Type}: forall (initial new: S) post,
+      computation_with_answer_satisfies (put new) initial post ->
+      post tt new.
+  Proof.
+    unfold computation_with_answer_satisfies, put.
+    intros. destruct H as (? & ? & ? & ?).
+    inversion H. subst. assumption.
+  Qed.
+
   Lemma computation_with_answer_satisfies_fail_hard{S A: Type}:
     forall (initial: S) (post: A -> S -> Prop),
       computation_with_answer_satisfies fail_hard initial post ->
@@ -168,10 +177,16 @@ Module OStateOperations.
 
   Ltac simpl_computation_with_answer_satisfies :=
     match goal with
-    | H: _ |- _ => apply computation_with_answer_satisfies_Return in H
-    | H: _ |- _ => apply computation_with_answer_satisfies_Bind in H
-    | H: _ |- _ => apply computation_with_answer_satisfies_get in H
-    | H: _ |- _ => apply computation_with_answer_satisfies_fail_hard in H; contradiction
+    | H: computation_with_answer_satisfies (Return _) _ _ |- _ =>
+      apply computation_with_answer_satisfies_Return in H
+    | H: computation_with_answer_satisfies (Bind _ _) _ _ |- _ =>
+      apply computation_with_answer_satisfies_Bind in H
+    | H: computation_with_answer_satisfies get _ _ |- _ =>
+      apply computation_with_answer_satisfies_get in H
+    | H: computation_with_answer_satisfies (put _) _ _ |- _ =>
+      apply computation_with_answer_satisfies_put in H
+    | H: computation_with_answer_satisfies fail_hard _ _ |- _ =>
+      apply computation_with_answer_satisfies_fail_hard in H; contradiction
     end.
 
 End OStateOperations.
@@ -289,7 +304,7 @@ Module OStateNDOperations.
     forall (m: OStateND S A) (f: A -> OStateND S B) (initial: S) post,
       computation_with_answer_satisfies (Bind m f) initial post ->
       (exists mid, computation_with_answer_satisfies m initial mid
-                   /\ forall s a, mid a s -> computation_with_answer_satisfies (f a) s post).
+                   /\ forall a s, mid a s -> computation_with_answer_satisfies (f a) s post).
   Proof.
     unfold computation_with_answer_satisfies.
     intros. simpl in *.
@@ -306,6 +321,15 @@ Module OStateNDOperations.
       post initial initial.
   Proof.
     unfold computation_with_answer_satisfies, get.
+    intros. specialize (H _ eq_refl). destruct H as (? & ? & ? & ?).
+    inversion H. subst. assumption.
+  Qed.
+
+  Lemma computation_with_answer_satisfies_put{S: Type}: forall (initial new: S) post,
+      computation_with_answer_satisfies (put new) initial post ->
+      post tt new.
+  Proof.
+    unfold computation_with_answer_satisfies, put.
     intros. specialize (H _ eq_refl). destruct H as (? & ? & ? & ?).
     inversion H. subst. assumption.
   Qed.
@@ -331,12 +355,19 @@ Module OStateNDOperations.
 
   Ltac simpl_computation_with_answer_satisfies :=
     match goal with
-    | H: _ |- _ => apply computation_with_answer_satisfies_Return in H
-    | H: _ |- _ => apply computation_with_answer_satisfies_Bind in H
-    | H: _ |- _ => apply computation_with_answer_satisfies_get in H
-    | H: _ |- _ => specialize @computation_with_answer_satisfies_arbitrary with (1 := H);
-                   clear H
-    | H: _ |- _ => apply computation_with_answer_satisfies_fail_hard in H; contradiction
+    | H: computation_with_answer_satisfies (Return _) _ _ |- _ =>
+      apply computation_with_answer_satisfies_Return in H
+    | H: computation_with_answer_satisfies (Bind _ _) _ _ |- _ =>
+      apply computation_with_answer_satisfies_Bind in H
+    | H: computation_with_answer_satisfies get _ _ |- _ =>
+      apply computation_with_answer_satisfies_get in H
+    | H: computation_with_answer_satisfies (put _) _ _ |- _ =>
+      apply computation_with_answer_satisfies_put in H
+    | H: computation_with_answer_satisfies (arbitrary _) _ _ |- _ =>
+      specialize @computation_with_answer_satisfies_arbitrary with (1 := H);
+      clear H
+    | H: computation_with_answer_satisfies fail_hard _ _ |- _ =>
+      apply computation_with_answer_satisfies_fail_hard in H; contradiction
     end.
 
 End OStateNDOperations.
