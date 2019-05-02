@@ -30,6 +30,7 @@ Section MetricPrimitives.
     forall (initialL: MetricRiscvMachine) addr (kind: SourceType)
            (post: HList.tuple byte n -> MetricRiscvMachine -> Prop),
       (exists v, mem_load initialL.(getMem) addr = Some v /\
+                 (kind = Fetch -> isXAddr addr initialL.(getXAddrs)) /\
                  post v (updateMetrics (addMetricLoads 1) initialL)) \/
       (mem_load initialL.(getMem) addr = None /\ mcomp_sat (nonmem_load n addr) initialL post) <->
       mcomp_sat (riscv_load kind addr) initialL post.
@@ -41,7 +42,8 @@ Section MetricPrimitives.
     forall (initialL: MetricRiscvMachine) addr v (kind: SourceType)
            (post: unit -> MetricRiscvMachine -> Prop),
       (exists m', mem_store initialL.(getMem) addr v = Some m' /\
-                  post tt (withMem m' (updateMetrics (addMetricStores 1) initialL))) \/
+                  post tt (withXAddrs (invalidateWrittenXAddrs n addr initialL.(getXAddrs))
+                          (withMem m' (updateMetrics (addMetricStores 1) initialL)))) \/
       (mem_store initialL.(getMem) addr v = None /\
        mcomp_sat (nonmem_store n addr v) initialL post) <->
       mcomp_sat (riscv_store kind addr v) initialL post.

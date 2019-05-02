@@ -79,10 +79,14 @@ Section Riscv.
     logEvent (mmioLoadEvent a inp);;
     Return inp.
 
-  Definition loadN(n: nat)(a: word): OStateND RiscvMachine (HList.tuple byte n) :=
+  Definition loadN(n: nat)(kind: SourceType)(a: word):
+    OStateND RiscvMachine (HList.tuple byte n) :=
     mach <- get;
     match Memory.load_bytes n mach.(getMem) a with
-    | Some v => Return v
+    | Some v => match kind with
+                | Fetch => if isXAddrB a mach.(getXAddrs) then Return v else fail_hard
+                | _ => Return v
+                end
     (* if any of the n addresses is not present in the memory, we perform an MMIO load event: *)
     | None => run_and_log_mmio_load n a
     end.
@@ -92,10 +96,12 @@ Section Riscv.
     run_mmio_store n a v;;
     logEvent (mmioStoreEvent a v).
 
-  Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OStateND RiscvMachine unit :=
+  Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n):
+    OStateND RiscvMachine unit :=
     mach <- get;
     match Memory.store_bytes n mach.(getMem) a v with
-    | Some m => put (withMem m mach)
+    | Some m => put (withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs))
+                    (withMem m mach))
     (* if any of the n addresses is not present in the memory, we perform an MMIO store event: *)
     | None => run_and_log_mmio_store n a v
     end.
@@ -131,15 +137,15 @@ Section Riscv.
         mach <- get;
         put (withNextPc newPC mach);
 
-      loadByte   kind := loadN 1;
-      loadHalf   kind := loadN 2;
-      loadWord   kind := loadN 4;
-      loadDouble kind := loadN 8;
+      loadByte   := loadN 1;
+      loadHalf   := loadN 2;
+      loadWord   := loadN 4;
+      loadDouble := loadN 8;
 
-      storeByte   kind := storeN 1;
-      storeHalf   kind := storeN 2;
-      storeWord   kind := storeN 4;
-      storeDouble kind := storeN 8;
+      storeByte   := storeN 1;
+      storeHalf   := storeN 2;
+      storeWord   := storeN 4;
+      storeDouble := storeN 8;
 
       step :=
         m <- get;
@@ -209,6 +215,9 @@ Section Riscv.
        | H: forall x, x = _ -> _ |- _ => specialize (H _ eq_refl)
        | H: _ && _ = true |- _ => apply andb_prop in H
        | H: _ && _ = false |- _ => apply Bool.andb_false_iff in H
+       | H: isXAddrB _ _ = false |- _ => apply isXAddrB_not in H
+       | H: isXAddrB _ _ = true  |- _ => apply isXAddrB_holds in H
+       | H: ?x = ?x -> _ |- _ => specialize (H eq_refl)
        | |- _ * _ => constructor
        | |- option _ => exact None
        | |- _ => discriminate
@@ -276,6 +285,14 @@ Section Riscv.
     auto.
   Qed.
 
+  Lemma VirtualMemoryFetchP: forall addr xAddrs,
+      VirtualMemory = Fetch -> isXAddr addr xAddrs.
+  Proof. intros. discriminate. Qed.
+
+  Lemma ExecuteFetchP: forall addr xAddrs,
+      Execute = Fetch -> isXAddr addr xAddrs.
+  Proof. intros. discriminate. Qed.
+
   Ltac fw_step :=
     match goal with
     | H: exists x, _ |- _ => destruct H
@@ -301,6 +318,8 @@ Section Riscv.
     | |- exists a, _ = _ /\ _ => eexists; split; [reflexivity|]
     | |- _ => simpl_computation_with_answer_satisfies
     | H: _ |- _ => apply bool_test_to_valid_register in H
+    | H: isXAddrB _ _ = false |- _ => apply isXAddrB_not in H
+    | H: isXAddrB _ _ = true  |- _ => apply isXAddrB_holds in H
     | |- _ => congruence
     | H1: _, H2: _ |- _ => exfalso; apply (not_load_fails_but_store_succeeds H1 H2)
     | H1: _, H2: _ |- _ => exfalso; apply (not_store_fails_but_load_succeeds H1 H2)
@@ -315,11 +334,11 @@ Section Riscv.
       x: ?A |- _ => specialize F with (1 := (P x))
     end.
 
-  Ltac u := repeat fw_step; eauto.
+  Ltac u := repeat fw_step; eauto 10 using VirtualMemoryFetchP, ExecuteFetchP.
 
   Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
   Proof.
-    constructor. all: split; [t|u].
+   constructor. all: split; [t|u].
   Qed.
 
 End Riscv.

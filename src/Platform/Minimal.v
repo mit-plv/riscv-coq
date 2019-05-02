@@ -26,13 +26,18 @@ Section Riscv.
     | None => fail_hard
     end.
 
-  Definition loadN(n: nat)(a: word): OState RiscvMachine (HList.tuple byte n) :=
-    mach <- get; fail_if_None (Memory.load_bytes n mach.(getMem) a).
+  Definition loadN(n: nat)(kind: SourceType)(a: word): OState RiscvMachine (HList.tuple byte n) :=
+    mach <- get;
+    v <- fail_if_None (Memory.load_bytes n mach.(getMem) a);
+    match kind with
+    | Fetch => if isXAddrB a mach.(getXAddrs) then Return v else fail_hard
+    | _ => Return v
+    end.
 
-  Definition storeN(n: nat)(a: word)(v: HList.tuple byte n): OState RiscvMachine unit :=
+  Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n) :=
     mach <- get;
     m <- fail_if_None (Memory.store_bytes n mach.(getMem) a v);
-    put (withMem m mach).
+    put (withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs)) (withMem m mach)).
 
   Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) word :=  {
       getRegister reg :=
@@ -65,15 +70,15 @@ Section Riscv.
         mach <- get;
         put (withNextPc newPC mach);
 
-      loadByte   kind := loadN 1;
-      loadHalf   kind := loadN 2;
-      loadWord   kind := loadN 4;
-      loadDouble kind := loadN 8;
+      loadByte   := loadN 1;
+      loadHalf   := loadN 2;
+      loadWord   := loadN 4;
+      loadDouble := loadN 8;
 
-      storeByte   kind := storeN 1;
-      storeHalf   kind := storeN 2;
-      storeWord   kind := storeN 4;
-      storeDouble kind := storeN 8;
+      storeByte   := storeN 1;
+      storeHalf   := storeN 2;
+      storeWord   := storeN 4;
+      storeDouble := storeN 8;
 
       step :=
         m <- get;
@@ -88,6 +93,14 @@ Section Riscv.
 
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
+
+  Lemma VirtualMemoryFetchP: forall addr xAddrs,
+      VirtualMemory = Fetch -> isXAddr addr xAddrs.
+  Proof. intros. discriminate. Qed.
+
+  Lemma ExecuteFetchP: forall addr xAddrs,
+      Execute = Fetch -> isXAddr addr xAddrs.
+  Proof. intros. discriminate. Qed.
 
   Ltac t :=
     repeat match goal with
@@ -119,12 +132,15 @@ Section Riscv.
        | H: (_, _) = (_, _) |- _ => inversion H; clear H; subst
        | H: _ && _ = true |- _ => apply andb_prop in H
        | H: _ && _ = false |- _ => apply Bool.andb_false_iff in H
+       | H: isXAddrB _ _ = false |- _ => apply isXAddrB_not in H
+       | H: isXAddrB _ _ = true  |- _ => apply isXAddrB_holds in H
+       | H: ?x = ?x -> _ |- _ => specialize (H eq_refl)
        | |- _ * _ => constructor
        | |- option _ => exact None
        | |- _ => discriminate
        | |- _ => congruence
        | |- _ => solve [exfalso; bomega]
-       | |- _ => solve [eauto 15]
+       | |- _ => solve [eauto 15 using VirtualMemoryFetchP, ExecuteFetchP]
        | |- _ => progress (rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in *)
        | |- _ => bomega
        | H: context[let (_, _) := ?y in _] |- _ => let E := fresh "E" in destruct y eqn: E

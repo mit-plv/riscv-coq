@@ -37,6 +37,7 @@ Section Machine.
   Definition withPc := liftWith withPc.
   Definition withNextPc := liftWith withNextPc.
   Definition withMem := liftWith withMem.
+  Definition withXAddrs := liftWith withXAddrs.
   Definition withLog := liftWith withLog.
   Definition withLogItem := liftWith withLogItem.
   Definition withLogItems := liftWith withLogItems.
@@ -46,9 +47,7 @@ Section Machine.
     mkMetricRiscvMachine m mc.
 
   Definition putProgram(prog: list MachineInt)(addr: word)(ma: MetricRiscvMachine): MetricRiscvMachine :=
-    (withPc addr
-    (withNextPc (word.add addr (word.of_Z 4))
-    (withMem (unchecked_store_byte_list addr (Z32s_to_bytes prog) ma.(getMem)) ma))).
+    mkMetricRiscvMachine (putProgram prog addr ma.(getMachine)) ma.(getMetrics).
 
 End Machine.
 
@@ -59,9 +58,10 @@ Ltac destruct_RiscvMachine m :=
     let p := fresh m "_pc" in
     let n := fresh m "_npc" in
     let me := fresh m "_mem" in
+    let x := fresh m "_xaddrs" in
     let l := fresh m "_log" in
     let mc := fresh m "_metrics" in
-    destruct m as [ [r p n me l] mc ];
+    destruct m as [ [r p n me x l] mc ];
     simpl in *
   | _ => let expected := constr:(@MetricRiscvMachine) in fail "not a" expected
   end.

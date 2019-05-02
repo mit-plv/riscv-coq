@@ -45,6 +45,7 @@ Definition zeroedRiscvMachine: RiscvMachine := {|
   getPc := ZToReg 0;
   getNextPc := ZToReg 4;
   getMem := map.empty;
+  getXAddrs := nil;
   getLog := nil;
 |}.
 

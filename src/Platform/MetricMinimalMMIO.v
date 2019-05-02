@@ -138,6 +138,9 @@ Section Riscv.
        | H: forall x, x = _ -> _ |- _ => specialize (H _ eq_refl)
        | H: _ && _ = true |- _ => apply andb_prop in H
        | H: _ && _ = false |- _ => apply Bool.andb_false_iff in H
+       | H: isXAddrB _ _ = false |- _ => apply isXAddrB_not in H
+       | H: isXAddrB _ _ = true  |- _ => apply isXAddrB_holds in H
+       | H: ?x = ?x -> _ |- _ => specialize (H eq_refl)
        | |- _ * _ => constructor
        | |- option _ => exact None
        | |- _ => discriminate

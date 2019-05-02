@@ -47,16 +47,30 @@ Section Primitives.
              (mem_load: mem -> word -> option (HList.tuple byte n))
              : Prop :=
     forall initialL addr (kind: SourceType) (post: HList.tuple byte n -> RiscvMachine -> Prop),
-      (exists v, mem_load initialL.(getMem) addr = Some v /\ post v initialL) \/
+      (exists v, mem_load initialL.(getMem) addr = Some v /\
+                 (kind = Fetch -> isXAddr addr initialL.(getXAddrs)) /\
+                 post v initialL) \/
       (mem_load initialL.(getMem) addr = None /\ mcomp_sat (nonmem_load n addr) initialL post) <->
       mcomp_sat (riscv_load kind addr) initialL post.
+
+  (* After an address has been written, we make it non-executable, to make sure a processor
+     with an instruction cache won't execute a stale instruction.
+     Note: writes might be misaligned, but XAddrs only contains 4-byte aligned addresses. *)
+  Fixpoint invalidateWrittenXAddrs(nBytes: nat)(addr: word)(xAddrs: XAddrs): XAddrs :=
+    match nBytes with
+    | O => xAddrs
+    | S n => removeXAddr (word.modu addr (word.of_Z 4))
+                         (invalidateWrittenXAddrs n (word.add addr (word.of_Z 1)) xAddrs)
+    end.
 
   Definition spec_store{p: PrimitivesParams RiscvMachine}(n: nat)
              (riscv_store: SourceType -> word -> HList.tuple byte n -> M unit)
              (mem_store: mem -> word -> HList.tuple byte n -> option mem)
              : Prop :=
     forall initialL addr v (kind: SourceType) (post: unit -> RiscvMachine -> Prop),
-      (exists m', mem_store initialL.(getMem) addr v = Some m' /\ post tt (withMem m' initialL)) \/
+      (exists m', mem_store initialL.(getMem) addr v = Some m' /\
+                  post tt (withXAddrs (invalidateWrittenXAddrs n addr initialL.(getXAddrs))
+                          (withMem m' initialL))) \/
       (mem_store initialL.(getMem) addr v = None /\
        mcomp_sat (nonmem_store n addr v) initialL post) <->
       mcomp_sat (riscv_store kind addr v) initialL post.
