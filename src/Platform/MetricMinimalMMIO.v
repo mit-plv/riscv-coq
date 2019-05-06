@@ -117,7 +117,7 @@ Section Riscv.
                             Memory.loadWord, Memory.storeWord,
                             Memory.loadDouble, Memory.storeDouble,
                             liftL0, liftL1, liftL2, liftL3, id,
-                            withRegs, liftWith,
+                            withRegs,
                             updateMetrics, withMetrics,
                             pLoad, pStore,
                             fail_if_None, loadN, storeN in *;
@@ -272,7 +272,7 @@ Section Riscv.
       eapply (proj2 (Primitives.spec_getRegister
                        (primitives_params := MinimalMMIOPrimitivesParams) _ _ _)) in H.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
-      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct_RiscvMachine initialL.
       exact H.
     (* spec_setRegister *)
     - t.
@@ -283,7 +283,7 @@ Section Riscv.
       eapply (proj2 (Primitives.spec_setRegister
                        (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _)) in H.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
-      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct_RiscvMachine initialL.
       exact H.
     (* spec_loadByte *)
     - t.
@@ -294,7 +294,7 @@ Section Riscv.
       eapply (proj2 (Primitives.spec_loadByte
                        (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _)) in H.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
-      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct_RiscvMachine initialL.
       destruct H.
       + left. exact H.
       + right. destruct H. split.
@@ -312,7 +312,7 @@ Section Riscv.
       eapply (proj2 (Primitives.spec_loadHalf
                        (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _)) in H.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
-      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct_RiscvMachine initialL.
       destruct H.
       + left. exact H.
       + right. destruct H. split.
@@ -330,7 +330,7 @@ Section Riscv.
       eapply (proj2 (Primitives.spec_loadWord
                        (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _)) in H.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
-      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct_RiscvMachine initialL.
       destruct H.
       + left. exact H.
       + right. destruct H. split.
@@ -348,7 +348,7 @@ Section Riscv.
       eapply (proj2 (Primitives.spec_loadDouble
                        (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _)) in H.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
-      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct_RiscvMachine initialL.
       destruct H.
       + left. exact H.
       + right. destruct H. split.
@@ -366,7 +366,7 @@ Section Riscv.
       eapply (proj2 (Primitives.spec_storeByte
                        (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _ _)) in H.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
-      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct_RiscvMachine initialL.
       destruct H.
       + left. exact H.
       + right. destruct H. split.
@@ -384,7 +384,7 @@ Section Riscv.
       eapply (proj2 (Primitives.spec_storeHalf
                        (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _ _)) in H.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
-      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct_RiscvMachine initialL.
       destruct H.
       + left. exact H.
       + right. destruct H. split.
@@ -402,7 +402,7 @@ Section Riscv.
       eapply (proj2 (Primitives.spec_storeWord
                        (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _ _)) in H.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
-      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct_RiscvMachine initialL.
       destruct H.
       + left. exact H.
       + right. destruct H. split.
@@ -420,7 +420,7 @@ Section Riscv.
       eapply (proj2 (Primitives.spec_storeDouble
                        (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _ _)) in H.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
-      destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
+      destruct_RiscvMachine initialL.
       destruct H.
       + left. exact H.
       + right. destruct H. split.

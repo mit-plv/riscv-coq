@@ -76,7 +76,7 @@ Section Riscv.
                             Memory.loadDouble, Memory.storeDouble,
                             fail_if_None, loadN, storeN,
                             liftL0, liftL1, liftL2, liftL3, id,
-                            getRegs, getMem, liftGet in *;
+                            getRegs, getMem in *;
                      subst;
                      simpl in *)
        | |- _ => intro
