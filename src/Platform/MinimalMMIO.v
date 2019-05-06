@@ -21,10 +21,10 @@ Local Open Scope bool_scope.
 
 Class ExtSpec{W: Words}(M: Type -> Type) := {
   (* given a number of bytes to read and an address, returns the value read (or fails) *)
-  run_mmio_load: forall (n: nat), word -> M (HList.tuple byte n);
+  run_mmio_load: forall (n: nat), SourceType -> word -> M (HList.tuple byte n);
 
   (* given a number of bytes to write, an address and a value, succeeds or fails *)
-  run_mmio_store: forall (n: nat), word -> HList.tuple byte n -> M unit;
+  run_mmio_store: forall (n: nat), SourceType -> word -> HList.tuple byte n -> M unit;
 }.
 
 Section Riscv.
@@ -74,26 +74,28 @@ Section Riscv.
     | None => fail_hard
     end.
 
-  Definition run_and_log_mmio_load(n: nat)(a: word): OStateND RiscvMachine (HList.tuple byte n) :=
-    inp <- run_mmio_load n a;
+  Definition run_and_log_mmio_load(n: nat)(kind: SourceType)(a: word):
+    OStateND RiscvMachine (HList.tuple byte n) :=
+    inp <- run_mmio_load n kind a;
     logEvent (mmioLoadEvent a inp);;
     Return inp.
 
   Definition loadN(n: nat)(kind: SourceType)(a: word):
     OStateND RiscvMachine (HList.tuple byte n) :=
     mach <- get;
+    match kind with
+    | Fetch => if isXAddrB a mach.(getXAddrs) then Return tt else fail_hard
+    | _ => Return tt
+    end;;
     match Memory.load_bytes n mach.(getMem) a with
-    | Some v => match kind with
-                | Fetch => if isXAddrB a mach.(getXAddrs) then Return v else fail_hard
-                | _ => Return v
-                end
+    | Some v => Return v
     (* if any of the n addresses is not present in the memory, we perform an MMIO load event: *)
-    | None => run_and_log_mmio_load n a
+    | None => run_and_log_mmio_load n kind a
     end.
 
-  Definition run_and_log_mmio_store(n: nat)(a: word)(v: HList.tuple byte n):
+  Definition run_and_log_mmio_store(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n):
     OStateND RiscvMachine unit :=
-    run_mmio_store n a v;;
+    run_mmio_store n kind a v;;
     logEvent (mmioStoreEvent a v).
 
   Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n):
@@ -102,8 +104,10 @@ Section Riscv.
     match Memory.store_bytes n mach.(getMem) a v with
     | Some m => put (withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs))
                     (withMem m mach))
-    (* if any of the n addresses is not present in the memory, we perform an MMIO store event: *)
-    | None => run_and_log_mmio_store n a v
+    (* If any of the n addresses is not present in the memory, we perform an MMIO store event.
+       Whether or not this invalidates isXAddr for this address is decided by the run_mmio_store
+       parameter. *)
+    | None => run_and_log_mmio_store n kind a v
     end.
 
   Instance IsRiscvMachine: RiscvProgram (OStateND RiscvMachine) word :=  {
