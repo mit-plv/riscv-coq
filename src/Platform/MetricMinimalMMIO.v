@@ -208,8 +208,8 @@ Section Riscv.
     (* any value can be found in an uninitialized register *)
     Primitives.is_initial_register_value x := True;
 
-    Primitives.nonmem_load n := liftL1 (addMetricLoads 1) (run_and_log_mmio_load n);
-    Primitives.nonmem_store n := liftL2 (addMetricStores 1) (run_and_log_mmio_store n);
+    Primitives.nonmem_load n := liftL2 (addMetricLoads 1) (run_and_log_mmio_load n);
+    Primitives.nonmem_store n := liftL3 (addMetricStores 1) (run_and_log_mmio_store n);
   }.
 
   Lemma some_none_falsomatic: forall (A : Type) (a : A),
@@ -288,14 +288,14 @@ Section Riscv.
     (* spec_loadByte *)
     - t.
     - unfold loadByte, IsMetricRiscvMachine.
-      intros. unfold liftL2 in *.
+      intros. unfold liftL2, liftL3 in *.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
       apply computation_with_answer_satisfies_liftL0 in H.
       eapply (proj2 (Primitives.spec_loadByte
                        (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _)) in H.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
       destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
-      destruct H.
+      destruct H as [A H]. split; [assumption|]. destruct H.
       + left. exact H.
       + right. destruct H. split.
         * assumption.
@@ -306,14 +306,14 @@ Section Riscv.
     (* spec_loadHalf *)
     - t.
     - unfold loadHalf, IsMetricRiscvMachine.
-      intros. unfold liftL2 in *.
+      intros. unfold liftL2, liftL3 in *.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
       apply computation_with_answer_satisfies_liftL0 in H.
       eapply (proj2 (Primitives.spec_loadHalf
                        (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _)) in H.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
       destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
-      destruct H.
+      destruct H as [A H]. split; [assumption|]. destruct H.
       + left. exact H.
       + right. destruct H. split.
         * assumption.
@@ -324,14 +324,14 @@ Section Riscv.
     (* spec_loadWord *)
     - t.
     - unfold loadWord, IsMetricRiscvMachine.
-      intros. unfold liftL2 in *.
+      intros. unfold liftL2, liftL3 in *.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
       apply computation_with_answer_satisfies_liftL0 in H.
       eapply (proj2 (Primitives.spec_loadWord
                        (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _)) in H.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
       destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
-      destruct H.
+      destruct H as [A H]. split; [assumption|]. destruct H.
       + left. exact H.
       + right. destruct H. split.
         * assumption.
@@ -342,14 +342,14 @@ Section Riscv.
     (* spec_loadDouble *)
     - t.
     - unfold loadDouble, IsMetricRiscvMachine.
-      intros. unfold liftL2 in *.
+      intros. unfold liftL2, liftL3 in *.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
       apply computation_with_answer_satisfies_liftL0 in H.
       eapply (proj2 (Primitives.spec_loadDouble
                        (primitives_params := MinimalMMIOPrimitivesParams) _ _ _ _)) in H.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams, MinimalMMIOPrimitivesParams in *.
       destruct initialL. cbn [MetricRiscvMachine.getMachine MetricRiscvMachine.getMetrics] in *.
-      destruct H.
+      destruct H as [A H]. split; [assumption|]. destruct H.
       + left. exact H.
       + right. destruct H. split.
         * assumption.
@@ -360,7 +360,7 @@ Section Riscv.
     (* spec_storeByte *)
     - t.
     - unfold storeByte, IsMetricRiscvMachine.
-      intros. unfold liftL3 in *.
+      intros. unfold liftL2, liftL3 in *.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
       apply computation_with_answer_satisfies_liftL0 in H.
       eapply (proj2 (Primitives.spec_storeByte
@@ -378,7 +378,7 @@ Section Riscv.
     (* spec_storeHalf *)
     - t.
     - unfold storeHalf, IsMetricRiscvMachine.
-      intros. unfold liftL3 in *.
+      intros. unfold liftL2, liftL3 in *.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
       apply computation_with_answer_satisfies_liftL0 in H.
       eapply (proj2 (Primitives.spec_storeHalf
@@ -396,7 +396,7 @@ Section Riscv.
     (* spec_storeWord *)
     - t.
     - unfold storeWord, IsMetricRiscvMachine.
-      intros. unfold liftL3 in *.
+      intros. unfold liftL2, liftL3 in *.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
       apply computation_with_answer_satisfies_liftL0 in H.
       eapply (proj2 (Primitives.spec_storeWord
@@ -414,7 +414,7 @@ Section Riscv.
     (* spec_storeDouble *)
     - t.
     - unfold storeDouble, IsMetricRiscvMachine.
-      intros. unfold liftL3 in *.
+      intros. unfold liftL2, liftL3 in *.
       unfold mcomp_sat, MetricMinimalMMIOPrimitivesParams in *.
       apply computation_with_answer_satisfies_liftL0 in H.
       eapply (proj2 (Primitives.spec_storeDouble

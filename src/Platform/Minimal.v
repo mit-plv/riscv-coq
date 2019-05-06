@@ -168,8 +168,8 @@ Section Riscv.
   Instance MinimalPrimitivesParams: PrimitivesParams (OState RiscvMachine) RiscvMachine := {
     Primitives.mcomp_sat := @OStateOperations.computation_with_answer_satisfies RiscvMachine;
     Primitives.is_initial_register_value := eq (word.of_Z 0);
-    Primitives.nonmem_load n addr := fail_hard;
-    Primitives.nonmem_store n addr v := fail_hard;
+    Primitives.nonmem_load n kind addr := fail_hard;
+    Primitives.nonmem_store n kind addr v := fail_hard;
   }.
 
   Instance MinimalSatisfiesPrimitives: Primitives MinimalPrimitivesParams.

@@ -26,13 +26,14 @@ Section MetricPrimitives.
   Definition spec_load{p: PrimitivesParams M MetricRiscvMachine}(n: nat)
              (riscv_load: SourceType -> word -> M (HList.tuple byte n))
              (mem_load: mem -> word -> option (HList.tuple byte n))
-             : Prop :=
+    : Prop :=
     forall (initialL: MetricRiscvMachine) addr (kind: SourceType)
            (post: HList.tuple byte n -> MetricRiscvMachine -> Prop),
-      (exists v, mem_load initialL.(getMem) addr = Some v /\
-                 (kind = Fetch -> isXAddr addr initialL.(getXAddrs)) /\
-                 post v (updateMetrics (addMetricLoads 1) initialL)) \/
-      (mem_load initialL.(getMem) addr = None /\ mcomp_sat (nonmem_load n addr) initialL post) <->
+      (kind = Fetch -> isXAddr addr initialL.(getXAddrs)) /\
+      ((exists v, mem_load initialL.(getMem) addr = Some v /\
+                  post v (updateMetrics (addMetricLoads 1) initialL)) \/
+       (mem_load initialL.(getMem) addr = None /\
+        mcomp_sat (nonmem_load n kind addr) initialL post)) <->
       mcomp_sat (riscv_load kind addr) initialL post.
 
   Definition spec_store{p: PrimitivesParams M MetricRiscvMachine}(n: nat)
@@ -45,7 +46,7 @@ Section MetricPrimitives.
                   post tt (withXAddrs (invalidateWrittenXAddrs n addr initialL.(getXAddrs))
                           (withMem m' (updateMetrics (addMetricStores 1) initialL)))) \/
       (mem_store initialL.(getMem) addr v = None /\
-       mcomp_sat (nonmem_store n addr v) initialL post) <->
+       mcomp_sat (nonmem_store n kind addr v) initialL post) <->
       mcomp_sat (riscv_store kind addr v) initialL post.
 
   (* primitives_params is a paramater rather than a field because Primitives lives in Prop and

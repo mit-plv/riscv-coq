@@ -130,8 +130,8 @@ Section Riscv.
   {
     Primitives.mcomp_sat := @computation_with_answer_satisfies MetricRiscvMachine;
     Primitives.is_initial_register_value := eq (word.of_Z 0);
-    Primitives.nonmem_load n addr := fail_hard;
-    Primitives.nonmem_store n addr v := fail_hard;
+    Primitives.nonmem_load n kind addr := fail_hard;
+    Primitives.nonmem_store n kind addr v := fail_hard;
   }.
 
   Instance MetricMinimalSatisfiesMetricPrimitives: MetricPrimitives MetricMinimalMetricPrimitivesParams.

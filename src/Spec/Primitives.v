@@ -33,10 +33,10 @@ Section Primitives.
     is_initial_register_value: word -> Prop;
 
     (* tells what happens if an n-byte read at a non-memory address is performed *)
-    nonmem_load: forall (n: nat), word -> M (HList.tuple byte n);
+    nonmem_load: forall (n: nat), SourceType -> word -> M (HList.tuple byte n);
 
     (* tells what happens if an n-byte write at a non-memory address is performed *)
-    nonmem_store: forall (n: nat), word -> HList.tuple byte n -> M unit;
+    nonmem_store: forall (n: nat), SourceType -> word -> HList.tuple byte n -> M unit;
   }.
 
   Context {RVM: RiscvProgram M word}.
@@ -45,12 +45,13 @@ Section Primitives.
   Definition spec_load{p: PrimitivesParams RiscvMachine}(n: nat)
              (riscv_load: SourceType -> word -> M (HList.tuple byte n))
              (mem_load: mem -> word -> option (HList.tuple byte n))
-             : Prop :=
+    : Prop :=
     forall initialL addr (kind: SourceType) (post: HList.tuple byte n -> RiscvMachine -> Prop),
-      (exists v, mem_load initialL.(getMem) addr = Some v /\
-                 (kind = Fetch -> isXAddr addr initialL.(getXAddrs)) /\
-                 post v initialL) \/
-      (mem_load initialL.(getMem) addr = None /\ mcomp_sat (nonmem_load n addr) initialL post) <->
+      (kind = Fetch -> isXAddr addr initialL.(getXAddrs)) /\
+      ((exists v, mem_load initialL.(getMem) addr = Some v /\
+                  post v initialL) \/
+       (mem_load initialL.(getMem) addr = None /\
+        mcomp_sat (nonmem_load n kind addr) initialL post)) <->
       mcomp_sat (riscv_load kind addr) initialL post.
 
   (* After an address has been written, we make it non-executable, to make sure a processor
@@ -72,7 +73,7 @@ Section Primitives.
                   post tt (withXAddrs (invalidateWrittenXAddrs n addr initialL.(getXAddrs))
                           (withMem m' initialL))) \/
       (mem_store initialL.(getMem) addr v = None /\
-       mcomp_sat (nonmem_store n addr v) initialL post) <->
+       mcomp_sat (nonmem_store n kind addr v) initialL post) <->
       mcomp_sat (riscv_store kind addr v) initialL post.
 
   (* primitives_params is a paramater rather than a field because Primitives lives in Prop and
