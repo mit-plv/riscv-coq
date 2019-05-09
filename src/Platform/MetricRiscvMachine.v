@@ -28,43 +28,35 @@ Section Machine.
 
   Definition withRegs: Registers -> MetricRiscvMachine -> MetricRiscvMachine :=
     fun regs2 '(mkMetricRiscvMachine mach mc) =>
-      let '(mkRiscvMachine regs1 pc nextPC mem xAddrs log) := mach in
-      (mkMetricRiscvMachine (mkRiscvMachine regs2 pc nextPC mem xAddrs log) mc).
+      (mkMetricRiscvMachine (withRegs regs2 mach) mc).
 
   Definition withPc: word -> MetricRiscvMachine -> MetricRiscvMachine :=
     fun pc2 '(mkMetricRiscvMachine mach mc) =>
-      let '(mkRiscvMachine regs pc1 nextPC mem xAddrs log) := mach in
-      (mkMetricRiscvMachine (mkRiscvMachine regs pc2 nextPC mem xAddrs log) mc).
+      (mkMetricRiscvMachine (withPc pc2 mach) mc).
 
   Definition withNextPc: word -> MetricRiscvMachine -> MetricRiscvMachine :=
     fun nextPC2 '(mkMetricRiscvMachine mach mc) =>
-      let '(mkRiscvMachine regs pc nextPC1 mem xAddrs log) := mach in
-      (mkMetricRiscvMachine (mkRiscvMachine regs pc nextPC2 mem xAddrs log) mc).
+      (mkMetricRiscvMachine (withNextPc nextPC2 mach) mc).
 
   Definition withMem: Mem -> MetricRiscvMachine -> MetricRiscvMachine :=
     fun mem2 '(mkMetricRiscvMachine mach mc) =>
-      let '(mkRiscvMachine regs pc nextPC mem1 xAddrs log) := mach in
-      (mkMetricRiscvMachine (mkRiscvMachine regs pc nextPC mem2 xAddrs log) mc).
+      (mkMetricRiscvMachine (withMem mem2 mach) mc).
 
   Definition withXAddrs: XAddrs -> MetricRiscvMachine -> MetricRiscvMachine :=
     fun xAddrs2 '(mkMetricRiscvMachine mach mc) =>
-      let '(mkRiscvMachine regs pc nextPC mem xAddrs1 log) := mach in
-      (mkMetricRiscvMachine (mkRiscvMachine regs pc nextPC mem xAddrs2 log) mc).
+      (mkMetricRiscvMachine (withXAddrs xAddrs2 mach) mc).
 
   Definition withLog: list LogItem -> MetricRiscvMachine -> MetricRiscvMachine :=
     fun log2 '(mkMetricRiscvMachine mach mc) =>
-      let '(mkRiscvMachine regs pc nextPC mem xAddrs log1) := mach in
-      (mkMetricRiscvMachine (mkRiscvMachine regs pc nextPC mem xAddrs log2) mc).
+      (mkMetricRiscvMachine (withLog log2 mach) mc).
 
   Definition withLogItem: LogItem -> MetricRiscvMachine -> MetricRiscvMachine :=
     fun item '(mkMetricRiscvMachine mach mc) =>
-      let '(mkRiscvMachine regs pc nextPC mem xAddrs log) := mach in
-      (mkMetricRiscvMachine (mkRiscvMachine regs pc nextPC mem xAddrs (item :: log)) mc).
+      (mkMetricRiscvMachine (withLogItem item mach) mc).
 
   Definition withLogItems: list LogItem -> MetricRiscvMachine -> MetricRiscvMachine :=
     fun items '(mkMetricRiscvMachine mach mc) =>
-      let '(mkRiscvMachine regs pc nextPC mem xAddrs log) := mach in
-      (mkMetricRiscvMachine (mkRiscvMachine regs pc nextPC mem xAddrs (items ++ log)) mc).
+      (mkMetricRiscvMachine (withLogItems items mach) mc).
 
   Definition forgetMetrics(m: MetricRiscvMachine): RiscvMachine := m.(getMachine).
   Definition addMetrics(m: RiscvMachine)(mc: MetricLog): MetricRiscvMachine :=
