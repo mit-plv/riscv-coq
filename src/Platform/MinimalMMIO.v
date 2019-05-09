@@ -14,7 +14,7 @@ Require Export riscv.Platform.RiscvMachine.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Tactics.Tactics.
-Require Import riscv.Proofs.Sane.
+Require Import riscv.Platform.Sane.
 
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
