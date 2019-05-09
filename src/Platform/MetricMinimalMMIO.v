@@ -71,6 +71,9 @@ Section Riscv.
     storeHalf := liftL3 (addMetricStores 1) storeHalf;
     storeWord := liftL3 (addMetricStores 1) storeWord;
     storeDouble := liftL3 (addMetricStores 1) storeDouble;
+    makeReservation := liftL1 id makeReservation;
+    clearReservation := liftL1 id clearReservation;
+    checkReservation := liftL1 id checkReservation;
     step := liftL0 (addMetricInstructions 1) step;
     raiseExceptionWithInfo{A} := liftL3 id (raiseExceptionWithInfo (A := A));
   }.
