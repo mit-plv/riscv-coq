@@ -23,6 +23,35 @@ Section MetricPrimitives.
   Context {RVM: RiscvProgram M word}.
   Context {RVS: @RiscvMachine M word _ _ RVM}.
 
+  (* monadic computations used for specifying the behavior of RiscvMachines should be "sane"
+     in the sense that we never step to the empty set (that's not absence of failure, since
+     failure is modeled as "steps to no set at all"), and that the trace of events is
+     append-only *)
+  Definition mcomp_sane{p: PrimitivesParams M MetricRiscvMachine}{A: Type}(comp: M A): Prop :=
+    forall (st: MetricRiscvMachine) (post: A -> MetricRiscvMachine -> Prop),
+      mcomp_sat comp st post ->
+      (exists a st', post a st') /\
+      (mcomp_sat comp st (fun a st' =>
+         post a st' /\ exists diff, st'.(getLog) = diff ++ st.(getLog))).
+
+  Class MetricPrimitivesSane(p: PrimitivesParams M MetricRiscvMachine): Prop := {
+    getRegister_sane: forall r, mcomp_sane (getRegister r);
+    setRegister_sane: forall r v, mcomp_sane (setRegister r v);
+    loadByte_sane: forall kind addr, mcomp_sane (loadByte kind addr);
+    loadHalf_sane: forall kind addr, mcomp_sane (loadHalf kind addr);
+    loadWord_sane: forall kind addr, mcomp_sane (loadWord kind addr);
+    loadDouble_sane: forall kind addr, mcomp_sane (loadDouble kind addr);
+    storeByte_sane: forall kind addr v, mcomp_sane (storeByte kind addr v);
+    storeHalf_sane: forall kind addr v, mcomp_sane (storeHalf kind addr v);
+    storeWord_sane: forall kind addr v, mcomp_sane (storeWord kind addr v);
+    storeDouble_sane: forall kind addr v, mcomp_sane (storeDouble kind addr v);
+    getPC_sane: mcomp_sane getPC;
+    setPC_sane: forall newPc, mcomp_sane (setPC newPc);
+    step_sane: mcomp_sane step;
+    raiseExceptionWithInfo_sane: forall A i1 i2 i3,
+        mcomp_sane (raiseExceptionWithInfo (A := A) i1 i2 i3);
+  }.
+
   Definition spec_load{p: PrimitivesParams M MetricRiscvMachine}(n: nat)
              (riscv_load: SourceType -> word -> M (HList.tuple byte n))
              (mem_load: mem -> word -> option (HList.tuple byte n))
@@ -52,18 +81,9 @@ Section MetricPrimitives.
   (* primitives_params is a paramater rather than a field because Primitives lives in Prop and
      is opaque, but the fields of primitives_params need to be visible *)
   Class MetricPrimitives(primitives_params: PrimitivesParams M MetricRiscvMachine): Prop := {
+    mcomp_sat_ok :> mcomp_sat_spec primitives_params;
 
-    spec_Bind{A B: Type}: forall (initialL: MetricRiscvMachine) (post: B -> MetricRiscvMachine -> Prop)
-                                 (m: M A) (f : A -> M B),
-        (exists mid: A -> MetricRiscvMachine -> Prop,
-            mcomp_sat m initialL mid /\
-            (forall a middle, mid a middle -> mcomp_sat (f a) middle post)) <->
-        mcomp_sat (Bind m f) initialL post;
-
-    spec_Return{A: Type}: forall (initialL: MetricRiscvMachine)
-                                 (post: A -> MetricRiscvMachine -> Prop) (a: A),
-        post a initialL <->
-        mcomp_sat (Return a) initialL post;
+    primitives_sane :> MetricPrimitivesSane primitives_params;
 
     spec_getRegister: forall (initialL: MetricRiscvMachine) (x: Register)
                              (post: word -> MetricRiscvMachine -> Prop),
@@ -101,8 +121,8 @@ Section MetricPrimitives.
         mcomp_sat (setPC v) initialL post;
 
     spec_step: forall (initialL: MetricRiscvMachine) (post: unit -> MetricRiscvMachine -> Prop),
-        post tt (withNextPc (word.add initialL.(getNextPc) (word.of_Z 4))
-                (withPc     initialL.(getNextPc)
+        post tt (withPc     initialL.(getNextPc)
+                (withNextPc (word.add initialL.(getNextPc) (word.of_Z 4))
                 (updateMetrics (addMetricInstructions 1)
                                initialL))) <->
         mcomp_sat step initialL post;

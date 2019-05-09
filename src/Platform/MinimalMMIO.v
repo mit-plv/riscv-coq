@@ -14,7 +14,7 @@ Require Export riscv.Platform.RiscvMachine.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Tactics.Tactics.
-
+Require Import riscv.Proofs.Sane.
 
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
@@ -25,6 +25,12 @@ Class ExtSpec{W: Words}(M: Type -> Type) := {
 
   (* given a number of bytes to write, an address and a value, succeeds or fails *)
   run_mmio_store: forall (n: nat), SourceType -> word -> HList.tuple byte n -> M unit;
+}.
+
+Class ExtSpecSane {W: Words}{Registers : map.map Register word}{mem : map.map word byte}
+      {M : Type -> Type}(p: PrimitivesParams M RiscvMachine)(e: ExtSpec M): Prop := {
+  run_mmio_load_sane: forall n kind addr, mcomp_sane (run_mmio_load n kind addr);
+  run_mmio_store_sane: forall n kind addr v, mcomp_sane (run_mmio_store n kind addr v);
 }.
 
 Section Riscv.
@@ -65,8 +71,10 @@ Section Riscv.
   Definition mmioStoreEvent(addr: word){n: nat}(v: HList.tuple byte n): LogItem :=
     ((map.empty, MMOutput, [addr; signedByteTupleToReg v]), (map.empty, [])).
 
-  Definition logEvent(e: LogItem): OStateND RiscvMachine unit :=
-    m <- get; put (withLogItem e m).
+  Definition update(f: RiscvMachine -> RiscvMachine): OStateND RiscvMachine unit :=
+    m <- get; put (f m).
+
+  Definition logEvent(e: LogItem): OStateND RiscvMachine unit := update (withLogItem e).
 
   Definition fail_if_None{R}(o: option R): OStateND RiscvMachine R :=
     match o with
@@ -102,8 +110,8 @@ Section Riscv.
     OStateND RiscvMachine unit :=
     mach <- get;
     match Memory.store_bytes n mach.(getMem) a v with
-    | Some m => put (withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs))
-                    (withMem m mach))
+    | Some m => update (fun mach => (withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs))
+                                    (withMem m mach)))
     (* If any of the n addresses is not present in the memory, we perform an MMIO store event.
        Whether or not this invalidates isXAddr for this address is decided by the run_mmio_store
        parameter. *)
@@ -129,17 +137,13 @@ Section Riscv.
           Return tt
         else
           if (0 <? reg) && (reg <? 32) then
-            mach <- get;
-            let newRegs := map.put mach.(getRegs) reg v in
-            put (withRegs newRegs mach)
+            update (fun mach => withRegs (map.put mach.(getRegs) reg v) mach)
           else
             fail_hard;
 
       getPC := mach <- get; Return mach.(getPc);
 
-      setPC newPC :=
-        mach <- get;
-        put (withNextPc newPC mach);
+      setPC newPC := update (withNextPc newPC);
 
       loadByte   := loadN 1;
       loadHalf   := loadN 2;
@@ -151,11 +155,8 @@ Section Riscv.
       storeWord   := storeN 4;
       storeDouble := storeN 8;
 
-      step :=
-        m <- get;
-        let m' := withPc m.(getNextPc) m in
-        let m'' := withNextPc (add m.(getNextPc) (ZToReg 4)) m' in
-        put m'';
+      step := update (fun m => (withPc m.(getNextPc)
+                               (withNextPc (word.add m.(getNextPc) (word.of_Z 4)) m)));
 
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
@@ -195,7 +196,7 @@ Section Riscv.
                             is_initial_register_value,
                             get, put, fail_hard,
                             arbitrary,
-                            logEvent,
+                            logEvent, update,
                             ZToReg, MkMachineWidth.MachineWidth_XLEN,
                             Memory.loadByte, Memory.storeByte,
                             Memory.loadHalf, Memory.storeHalf,
@@ -279,6 +280,8 @@ Section Riscv.
     Primitives.nonmem_store := run_and_log_mmio_store;
   }.
 
+  Context {ext_spec_sane: ExtSpecSane MinimalMMIOPrimitivesParams ext_spec}.
+
   Lemma bool_test_to_valid_register: forall (x: Z),
       (0 <? x) && (x <? 32) = true ->
       valid_register x.
@@ -307,7 +310,7 @@ Section Riscv.
               loadByte, loadHalf, loadWord, loadDouble,
               storeByte, storeHalf, storeWord, storeDouble,
               getPC, setPC, step, raiseExceptionWithInfo,
-              IsRiscvMachine, logEvent,
+              IsRiscvMachine, logEvent, update,
               Memory.loadByte, Memory.storeByte,
               Memory.loadHalf, Memory.storeHalf,
               Memory.loadWord, Memory.storeWord,
@@ -340,9 +343,102 @@ Section Riscv.
 
   Ltac u := repeat fw_step; eauto 10 using VirtualMemoryFetchP, ExecuteFetchP.
 
+  Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MinimalMMIOPrimitivesParams.
+  Proof.
+    constructor. all: split; [t|u].
+  Qed.
+
+  Lemma get_sane: mcomp_sane get.
+  Proof.
+    unfold mcomp_sane, get. simpl. unfold computation_with_answer_satisfies. intros.
+    specialize (H _ eq_refl). destruct H as (? & ? & ? & ?). inversion H. subst. clear H.
+    split.
+    - eauto.
+    - intros. subst. do 2 eexists. split; [reflexivity|]. split; [assumption|].
+      exists nil. reflexivity.
+  Qed.
+
+  (* does not hold in general, because we could put a machine with a shorter log *)
+  Lemma put_sane: forall m, mcomp_sane (put m). Abort.
+
+  Lemma fail_hard_sane: forall A, mcomp_sane (fail_hard (A := A)).
+  Proof.
+    unfold mcomp_sane, fail_hard. simpl. unfold computation_with_answer_satisfies. intros.
+    specialize (H _ eq_refl). destruct H as (? & ? & ? & ?). discriminate.
+  Qed.
+
+  (* does not hold in general, because A could be uninhabited *)
+  Lemma arbitrary_sane: forall A, mcomp_sane (arbitrary A). Abort.
+
+  Lemma arbitrary_sane: forall (A: Type) (a: A),
+      mcomp_sane (arbitrary A).
+  Proof.
+    unfold mcomp_sane, arbitrary. simpl. unfold computation_with_answer_satisfies. intros.
+    split.
+    - specialize (H (Some (a, st))). destruct H as (? & ? & ? & ?); eauto.
+    - intros. specialize H with (1 := H0). destruct H as (? & ? & ? & ?). subst.
+      destruct H0 as (? & ?). inversion H. subst. clear H.
+      do 2 eexists. split; [reflexivity|]. split; [assumption|].
+      exists nil. reflexivity.
+  Qed.
+
+  Lemma arbitrary_word_sane: mcomp_sane (arbitrary word).
+  Proof. apply arbitrary_sane. exact (word.of_Z 42). Qed.
+
+  Lemma update_sane: forall f,
+      (forall mach, exists diff, (f mach).(getLog) = diff ++ mach.(getLog)) ->
+      mcomp_sane (update f).
+  Proof.
+    unfold mcomp_sane, update, get, put. simpl. unfold computation_with_answer_satisfies. intros.
+    split.
+    - edestruct H0 as (? & ? & ? & ?); eauto.
+    - intros. destruct H1 as [(? & ?) | (? & ? & ? & ?)]; [discriminate|]. subst.
+      inversion H1. subst. clear H1.
+      edestruct H0 as (? & ? & ? & ?); [eauto|].
+      inversion H1. subst. clear H1.
+      eauto.
+  Qed.
+
+  Lemma logEvent_sane: forall e,
+      mcomp_sane (update (withLogItem e)).
+  Proof.
+    intros. eapply update_sane. intros. exists [e]. destruct mach. reflexivity.
+  Qed.
+
+  Instance MinimalMMIOSane: PrimitivesSane MinimalMMIOPrimitivesParams.
+  Proof.
+    constructor.
+    all: intros;
+      unfold getRegister, setRegister,
+         loadByte, loadHalf, loadWord, loadDouble,
+         storeByte, storeHalf, storeWord, storeDouble,
+         getPC, setPC,
+         step, raiseExceptionWithInfo,
+         IsRiscvMachine,
+         loadN, storeN,
+         run_and_log_mmio_load, run_and_log_mmio_store.
+
+    all: repeat match goal with
+                | |- _ => apply run_mmio_load_sane
+                | |- _ => apply run_mmio_store_sane
+                | |- _ => apply logEvent_sane
+                | |- mcomp_sane (Bind _ _) => apply Bind_sane
+                | |- _ => apply Return_sane
+                | |- _ => apply get_sane
+                | |- _ => apply fail_hard_sane
+                | |- _ => apply arbitrary_word_sane
+                | |- _ => apply update_sane; intros [? ? ? ? ? ?]; simpl; exists nil; reflexivity
+                | |- context [match ?b with _ => _ end] => destruct b
+                | |- _ => progress intros
+                end.
+  Qed.
+
   Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
   Proof.
-   constructor. all: split; [t|u].
+    constructor.
+    1: exact MinimalMMIOSatisfies_mcomp_sat_spec.
+    1: exact MinimalMMIOSane.
+    all: split; [t|u].
   Qed.
 
 End Riscv.

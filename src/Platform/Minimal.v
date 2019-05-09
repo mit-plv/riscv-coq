@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.Lists.List.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.PropExtensionality.
 Require Import riscv.Utility.Monads. Import OStateOperations.
@@ -10,15 +11,20 @@ Require Import riscv.Spec.Primitives.
 Require Export riscv.Platform.RiscvMachine.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
+Require Import riscv.Proofs.Sane.
 
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
+Import ListNotations.
 
 Section Riscv.
 
   Context {W: Words}.
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
+
+  Definition update(f: RiscvMachine -> RiscvMachine): OState RiscvMachine unit :=
+    m <- get; put (f m).
 
   Definition fail_if_None{R}(o: option R): OState RiscvMachine R :=
     match o with
@@ -37,7 +43,8 @@ Section Riscv.
   Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n) :=
     mach <- get;
     m <- fail_if_None (Memory.store_bytes n mach.(getMem) a v);
-    put (withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs)) (withMem m mach)).
+    update (fun mach =>
+              withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs)) (withMem m mach)).
 
   Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) word :=  {
       getRegister reg :=
@@ -58,17 +65,13 @@ Section Riscv.
           Return tt
         else
           if (0 <? reg) && (reg <? 32) then
-            mach <- get;
-            let newRegs := map.put mach.(getRegs) reg v in
-            put (withRegs newRegs mach)
+            update (fun mach => withRegs (map.put mach.(getRegs) reg v) mach)
           else
             fail_hard;
 
       getPC := mach <- get; Return mach.(getPc);
 
-      setPC newPC :=
-        mach <- get;
-        put (withNextPc newPC mach);
+      setPC newPC := update (withNextPc newPC);
 
       loadByte   := loadN 1;
       loadHalf   := loadN 2;
@@ -80,11 +83,8 @@ Section Riscv.
       storeWord   := storeN 4;
       storeDouble := storeN 8;
 
-      step :=
-        m <- get;
-        let m' := withPc m.(getNextPc) m in
-        let m'' := withNextPc (add m.(getNextPc) (ZToReg 4)) m' in
-        put m'';
+      step := update (fun m => (withPc m.(getNextPc)
+                               (withNextPc (word.add m.(getNextPc) (word.of_Z 4)) m)));
 
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
@@ -111,6 +111,7 @@ Section Riscv.
                             valid_register, Register0,
                             is_initial_register_value,
                             get, put, fail_hard,
+                            update,
                             Memory.loadByte, Memory.storeByte,
                             Memory.loadHalf, Memory.storeHalf,
                             Memory.loadWord, Memory.storeWord,
@@ -172,9 +173,75 @@ Section Riscv.
     Primitives.nonmem_store n kind addr v := fail_hard;
   }.
 
+  Instance MinimalSatisfies_mcomp_sat_spec: mcomp_sat_spec MinimalPrimitivesParams.
+  Proof. constructor; t. Qed.
+
+  Lemma get_sane: mcomp_sane get.
+  Proof.
+    unfold mcomp_sane, get. simpl. unfold computation_with_answer_satisfies. intros.
+    destruct H as (? & ? & ? & ?). inversion H. subst. clear H.
+    split.
+    - eauto.
+    - intros. do 2 eexists. split; [reflexivity|]. split; [assumption|].
+      exists nil. reflexivity.
+  Qed.
+
+  (* does not hold in general, because we could put a machine with a shorter log *)
+  Lemma put_sane: forall m, mcomp_sane (put m). Abort.
+
+  Lemma fail_hard_sane: forall A, mcomp_sane (fail_hard (A := A)).
+  Proof.
+    unfold mcomp_sane, fail_hard. simpl. unfold computation_with_answer_satisfies. intros.
+    destruct H as (? & ? & ? & ?). discriminate.
+  Qed.
+
+  Lemma update_sane: forall f,
+      (forall mach, exists diff, (f mach).(getLog) = diff ++ mach.(getLog)) ->
+      mcomp_sane (update f).
+  Proof.
+    unfold mcomp_sane, update, get, put. simpl. unfold computation_with_answer_satisfies. intros.
+    split.
+    - edestruct H0 as (? & ? & ? & ?); eauto.
+    - intros. destruct H0 as (? & ? & ? & ?).
+      inversion H0. subst. clear H0.
+      eauto.
+  Qed.
+
+  Lemma logEvent_sane: forall e,
+      mcomp_sane (update (withLogItem e)).
+  Proof.
+    intros. eapply update_sane. intros. exists [e]. destruct mach. reflexivity.
+  Qed.
+
+  Instance MinimalSane: PrimitivesSane MinimalPrimitivesParams.
+  Proof.
+    constructor.
+    all: intros;
+      unfold getRegister, setRegister,
+         loadByte, loadHalf, loadWord, loadDouble,
+         storeByte, storeHalf, storeWord, storeDouble,
+         getPC, setPC,
+         step, raiseExceptionWithInfo,
+         IsRiscvMachine,
+         loadN, storeN, fail_if_None.
+
+    all: repeat match goal with
+                | |- _ => apply logEvent_sane
+                | |- mcomp_sane (Bind _ _) => apply Bind_sane
+                | |- _ => apply Return_sane
+                | |- _ => apply get_sane
+                | |- _ => apply fail_hard_sane
+                | |- _ => apply update_sane; intros [? ? ? ? ? ?]; simpl; exists nil; reflexivity
+                | |- context [match ?b with _ => _ end] => destruct b
+                | |- _ => progress intros
+                end.
+  Qed.
+
   Instance MinimalSatisfiesPrimitives: Primitives MinimalPrimitivesParams.
   Proof.
     constructor.
+    1: exact MinimalSatisfies_mcomp_sat_spec.
+    1: exact MinimalSane.
     all: try t.
   Qed.
 

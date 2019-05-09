@@ -30,6 +30,7 @@ Section Riscv.
 
   (* note: ext_spec does not have access to the metrics *)
   Context {ext_spec: ExtSpec (OStateND RiscvMachine)}.
+  Context {ext_spec_sane: ExtSpecSane MinimalMMIOPrimitivesParams ext_spec}.
 
   Definition liftL0{B : Type}(fl: MetricLog -> MetricLog)(f: OStateND RiscvMachine B):
     OStateND MetricRiscvMachine B :=
@@ -74,9 +75,6 @@ Section Riscv.
     raiseExceptionWithInfo{A} := liftL3 id (raiseExceptionWithInfo (A := A));
   }.
 
-  Definition pLoad (m : MetricRiscvMachine) := updateMetrics (addMetricLoads 1) m.
-  Definition pStore (m : MetricRiscvMachine) := updateMetrics (addMetricStores 1) m.
-
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
 
@@ -110,7 +108,7 @@ Section Riscv.
                             is_initial_register_value,
                             get, put, fail_hard,
                             arbitrary,
-                            logEvent,
+                            logEvent, update,
                             ZToReg, MkMachineWidth.MachineWidth_XLEN,
                             Memory.loadByte, Memory.storeByte,
                             Memory.loadHalf, Memory.storeHalf,
@@ -119,7 +117,6 @@ Section Riscv.
                             liftL0, liftL1, liftL2, liftL3, id,
                             withRegs,
                             updateMetrics, withMetrics,
-                            pLoad, pStore,
                             fail_if_None, loadN, storeN in *;
                      subst;
                      simpl in *)
@@ -251,10 +248,9 @@ Section Riscv.
       destruct H as (? & ? & ? & ?). discriminate.
   Qed.
 
-  Instance MinimalMMIOSatisfiesPrimitives: MetricPrimitives MetricMinimalMMIOPrimitivesParams.
+  Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MetricMinimalMMIOPrimitivesParams.
   Proof.
-    constructor.
-    all: split.
+    constructor. all: split.
     (* spec_Bind *)
     - t.
     - intros.
@@ -263,6 +259,68 @@ Section Riscv.
     (* spec_Return *)
     - t.
     - t.
+  Qed.
+
+  Lemma liftL0_sane: forall A (comp: OStateND RiscvMachine A) f,
+      Primitives.mcomp_sane (p := MinimalMMIOPrimitivesParams) comp ->
+      mcomp_sane (liftL0 f comp).
+  Proof.
+    unfold mcomp_sane, Primitives.mcomp_sane, liftL0. simpl.
+    unfold computation_with_answer_satisfies. intros.
+    destruct st as [mach mc]. simpl in *.
+    specialize (H mach (fun a m =>
+       post a {| getMachine := m; getMetrics := f mc |} /\ comp mach (Some (a, m)))).
+    match type of H with
+    | ?P -> ?Q => assert P as p; [clear H|specialize (H p); clear p]
+    end.
+    - intros. destruct o as [(a & st') | ].
+      + edestruct H0 as (? & ? & ? & ?).
+        * left. do 2 eexists; split; [reflexivity|eassumption].
+        * inversion H1. subst. clear H1. eauto.
+      + edestruct H0 as (? & ? & ? & ?).
+        * right. eauto.
+        * discriminate.
+    - destruct H as ((? & ? & ? & ?) & ?).
+      split; [eauto|].
+      intros.
+      destruct H3 as [(? & ? & ? & ?) | (? & ?)].
+      + subst. do 2 eexists. split; [reflexivity|].
+        edestruct H0 as (? & ? & ? & ?).
+        * left. do 2 eexists; split; [reflexivity|eassumption].
+        * inversion H3. subst. clear H3. split; [assumption|].
+          specialize (H2 _ H4).
+          destruct H2 as (? & ? & ? & ? & ?).
+          inversion H2. subst. clear H2.
+          destruct x4. simpl in *. assumption.
+      + subst.
+        specialize (H2 _ H4).
+        destruct H2 as (? & ? & ? & ? & ?).
+        discriminate.
+  Qed.
+
+  Instance MetricMinimalMMIOSane: MetricPrimitivesSane MetricMinimalMMIOPrimitivesParams.
+  Proof.
+    destruct MinimalMMIOSane.
+    constructor.
+    all: intros;
+      unfold
+         getRegister, setRegister,
+         loadByte, loadHalf, loadWord, loadDouble,
+         storeByte, storeHalf, storeWord, storeDouble,
+         getPC, setPC, step, raiseExceptionWithInfo,
+         IsMetricRiscvMachine,
+         liftL3, liftL2, liftL1;
+      apply liftL0_sane;
+      eauto.
+  Qed.
+
+  Instance MetricMinimalMMIOSatisfiesPrimitives:
+    MetricPrimitives MetricMinimalMMIOPrimitivesParams.
+  Proof.
+    constructor.
+    1: exact MinimalMMIOSatisfies_mcomp_sat_spec.
+    1: exact MetricMinimalMMIOSane.
+    all: split.
     (* spec_getRegister *)
     - t.
     - unfold getRegister, IsMetricRiscvMachine.
