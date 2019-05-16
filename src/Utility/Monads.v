@@ -37,36 +37,36 @@ Ltac prove_monad_law :=
          | o: option _ |- _ => destruct o
          end.
 
-Instance option_Monad: Monad option := {|
+Instance option_Monad: Monad option. refine ({|
   Bind := fun {A B: Type} (o: option A) (f: A -> option B) => match o with
           | Some x => f x
           | None => None
           end;
   Return := fun {A: Type} (a: A) => Some a
-|}.
+|}).
 all: prove_monad_law.
 Defined.
 
 
 Definition NonDet(A: Type): Type := A -> Prop.
 
-Instance NonDet_Monad: Monad NonDet := {|
+Instance NonDet_Monad: Monad NonDet. refine ({|
   Bind{A B}(m: NonDet A)(f: A -> NonDet B) :=
     fun (b: B) => exists a, m a /\ f a b;
   Return{A} := eq;
-|}.
+|}).
 all: prove_monad_law.
 Defined.
 
 
 Definition State(S A: Type) := S -> (A * S).
 
-Instance State_Monad(S: Type): Monad (State S) := {|
+Instance State_Monad(S: Type): Monad (State S). refine ({|
   Bind := fun {A B: Type} (m: State S A) (f: A -> State S B) =>
             fun (s: S) => let (a, s') := m s in f a s' ;
   Return := fun {A: Type} (a: A) =>
               fun (s: S) => (a, s)
-|}.
+|}).
 all: prove_monad_law.
 Defined.
 
@@ -79,7 +79,7 @@ End StateOperations.
 
 Definition OState(S A: Type) := S -> (option A) * S.
 
-Instance OState_Monad(S: Type): Monad (OState S) := {|
+Instance OState_Monad(S: Type): Monad (OState S). refine ({|
   Bind := fun {A B: Type} (m: OState S A) (f: A -> OState S B) =>
             fun (s: S) => match m s with
             | (Some a, s') => f a s'
@@ -87,7 +87,7 @@ Instance OState_Monad(S: Type): Monad (OState S) := {|
             end;
   Return := fun {A: Type} (a: A) =>
               fun (s: S) => (Some a, s)
-|}.
+|}).
 all: prove_monad_law.
 Defined.
 
@@ -126,12 +126,12 @@ End OStateOperations.
    a unique set of all possible outcomes. *)
 Definition StateND(S A: Type) := S -> (A * S) -> Prop.
 
-Instance StateND_Monad(S: Type): Monad (StateND S) := {|
+Instance StateND_Monad(S: Type): Monad (StateND S). refine ({|
   Bind{A B}(m: StateND S A)(f : A -> StateND S B) :=
     fun (s1 : S) bs3 => exists a s2, m s1 (a, s2) /\ f a s2 bs3;
   Return{A}(a : A) :=
     fun (s : S) '(a', s') => a' = a /\ s' = s;
-|}.
+|}).
 all: prove_monad_law.
 Defined.
 
@@ -176,14 +176,14 @@ End StateNDOperations.
    a unique set of all possible outcomes. *)
 Definition OStateND(S A: Type) := S -> option (A * S) -> Prop.
 
-Instance OStateND_Monad(S: Type): Monad (OStateND S) := {|
+Instance OStateND_Monad(S: Type): Monad (OStateND S). refine ({|
   Bind{A B}(m: OStateND S A)(f : A -> OStateND S B) :=
     fun (s : S) (obs: option (B * S)) =>
       (m s None /\ obs = None) \/
       (exists a s', m s (Some (a, s')) /\ f a s' obs);
   Return{A}(a : A) :=
     fun (s : S) (oas: option (A * S)) => oas = Some (a, s);
-|}.
+|}).
 all: prove_monad_law.
 Defined.
 
