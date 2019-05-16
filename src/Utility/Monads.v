@@ -2,8 +2,6 @@ Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.PropExtensionality.
 Require Import Coq.Lists.List.
 
-Local Set Refine Instance Mode.
-
 Class Monad(M: Type -> Type) := mkMonad {
   Bind: forall {A B}, M A -> (A -> M B) -> M B;
   Return: forall {A}, A -> M A;
