@@ -184,8 +184,6 @@ Definition NonDetT(M: Type -> Type)(A: Type) := NonDet (M A).
 Goal forall (M: Type -> Type) (A: Type), NonDet (M A) = (M A -> Prop).
   intros. reflexivity. Qed.
 
-Local Set Refine Instance Mode.
-
 Instance NonDetT_Monad(M: Type -> Type){MM: Monad M}: Monad (NonDetT M) := {|
   Bind{A B}(m: NonDet (M A))(f: A -> NonDet (M B)) := _;
   Return := _
