@@ -62,6 +62,9 @@ Section Riscv.
                         storeWord kind a v));
 
       storeDouble := storeDouble;
+      makeReservation := makeReservation;
+      clearReservation := clearReservation;
+      checkReservation := checkReservation;
       step := step;
       raiseExceptionWithInfo{A} := (raiseExceptionWithInfo (A := A));
   }.

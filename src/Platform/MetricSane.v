@@ -94,6 +94,9 @@ Section Sane.
                  | apply storeHalf_sane
                  | apply storeWord_sane
                  | apply storeDouble_sane
+                 | apply makeReservation_sane
+                 | apply clearReservation_sane
+                 | apply checkReservation_sane
                  | apply getPC_sane
                  | apply setPC_sane
                  | apply step_sane

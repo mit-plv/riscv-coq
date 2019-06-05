@@ -61,6 +61,8 @@ convert: riscv-semantics_version_check hs-to-coq_version_check $(HS_SOURCES) $(P
 	$(HS_TO_COQ) $(EXECUTE_OPTS) $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteI64.hs
 	$(HS_TO_COQ) $(EXECUTE_OPTS) $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteM.hs
 	$(HS_TO_COQ) $(EXECUTE_OPTS) $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteM64.hs
+	$(HS_TO_COQ) $(EXECUTE_OPTS) $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteA.hs
+	$(HS_TO_COQ) $(EXECUTE_OPTS) $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteA64.hs
 
 
 # coq-to-other languages conversion:

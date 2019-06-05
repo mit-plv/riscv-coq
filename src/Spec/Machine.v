@@ -21,6 +21,10 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   storeWord   : SourceType -> t -> w32 -> M unit;
   storeDouble : SourceType -> t -> w64 -> M unit;
 
+  makeReservation  : t -> M unit;
+  clearReservation : t -> M unit;
+  checkReservation : t -> M bool;
+
   getPC: M t;
   setPC: t -> M unit;
 

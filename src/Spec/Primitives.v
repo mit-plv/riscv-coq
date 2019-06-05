@@ -78,6 +78,9 @@ Section Primitives.
     storeHalf_sane: forall kind addr v, mcomp_sane (storeHalf kind addr v);
     storeWord_sane: forall kind addr v, mcomp_sane (storeWord kind addr v);
     storeDouble_sane: forall kind addr v, mcomp_sane (storeDouble kind addr v);
+    makeReservation_sane: forall addr, mcomp_sane (makeReservation addr);
+    clearReservation_sane: forall addr, mcomp_sane (clearReservation addr);
+    checkReservation_sane: forall addr, mcomp_sane (checkReservation addr);
     getPC_sane: mcomp_sane getPC;
     setPC_sane: forall newPc, mcomp_sane (setPC newPc);
     step_sane: mcomp_sane step;
