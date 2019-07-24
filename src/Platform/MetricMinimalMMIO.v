@@ -17,7 +17,7 @@ Require Import riscv.Platform.MetricLogging.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Tactics.Tactics.
-
+Import MetricRiscvMachine.
 
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
