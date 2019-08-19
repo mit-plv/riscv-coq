@@ -29,6 +29,23 @@ and calculations.
 
 --
 
+The directories in src/ have the following purposes:
+
+ Platform:
+Defines instances of the abstract model of RISCV processors and proves that
+these instances are well-behaved.
+ Proofs:
+Prooves properties of the definitions in Spec and Utility. Mostly compatibility
+of encoding and decoding functions.
+ Spec:
+Formalises the RISCV-ISA. It provides an abstract model of a RISCV processor,
+defines when an instance of this model is well-behaved and how execution should
+work.
+ Utility:
+Self-explanatory. Contains useful miscellaneous definitions.
+
+--
+
 It is always important to tell the difference between
 `Spec.Machine.RiscvMachine` and `Platform.RiscvMachine.RiscvMachine`. The
 former being the typeclass discussed above, while the latter is a Record used
