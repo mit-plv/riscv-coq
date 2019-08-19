@@ -46,3 +46,9 @@ are well-behaved (relative to the parameters used to construct the instance of
 `RiscvMachine`.
 
 The `Primitives` typeclass is defined in a very abstract and general way.
+
+Note that it is inherently impossible for `mcomp_sat` and the other members of
+`PrimitivesParams` to be defined more specifically using the type system. They
+are instantiated with functions that may know the implementation of the
+Machine. A proof of well-behaviour using `Primitives` is always relative to the
+given `PrimitivesParams`.
