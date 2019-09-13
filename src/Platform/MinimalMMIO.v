@@ -2,7 +2,7 @@ Require Import Coq.Strings.String.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.PropExtensionality.
-Require Import riscv.Utility.Monads. Import OStateNDOperations.
+Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.Machine.
@@ -19,48 +19,139 @@ Require Import riscv.Platform.Sane.
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
-Class ExtSpec{W: Words}(M: Type -> Type) := {
-  (* given a number of bytes to read and an address, returns the value read (or fails) *)
-  run_mmio_load: forall (n: nat), SourceType -> word -> M (HList.tuple byte n);
+(* TODO: move *)
+Section WithMem.
+  Context {W: Words} {Mem: map.map word byte}.
+  Lemma not_load_fails_but_store_succeeds: forall {m: Mem} {addr: word} {n v m'},
+      Memory.load_bytes n m addr = None ->
+      Memory.store_bytes n m addr v = Some m' ->
+      False.
+  Proof.
+    intros. unfold Memory.store_bytes in *.
+    rewrite H in H0.
+    discriminate.
+  Qed.
+  Lemma not_store_fails_but_load_succeeds: forall {m: Mem} {addr: word} {n v0 v1},
+      Memory.load_bytes n m addr = Some v0 ->
+      Memory.store_bytes n m addr v1 = None ->
+      False.
+  Proof.
+    intros. unfold Memory.store_bytes in *.
+    rewrite H in H0.
+    discriminate.
+  Qed.
+End WithMem.
 
-  (* given a number of bytes to write, an address and a value, succeeds or fails *)
-  run_mmio_store: forall (n: nat), SourceType -> word -> HList.tuple byte n -> M unit;
-}.
+(* TODO: move *)
+Module free.
+  Section WithInterface.
+    Context {action : Type} {result : action -> Type}.
+    Inductive free {T : Type} : Type :=
+    | act (a : action) (_ : result a -> free)
+    | ret (x : T).
+    Arguments free : clear implicits.
 
-Class ExtSpecSane {W: Words}{Registers : map.map Register word}{mem : map.map word byte}
-      {M : Type -> Type}(p: PrimitivesParams M RiscvMachine)(e: ExtSpec M): Prop := {
-  run_mmio_load_sane: forall n kind addr, mcomp_sane (run_mmio_load n kind addr);
-  run_mmio_store_sane: forall n kind addr v, mcomp_sane (run_mmio_store n kind addr v);
+    Fixpoint bind {A B} (mx : free A) (fy : A -> free B) : free B :=
+      match mx with
+      | act a k => act a (fun x => bind (k x) fy)
+      | ret x => fy x
+      end.
+
+    (** Monad laws *)
+    Definition bind_ret_l {A B} a b : @bind A B (ret a) b = b a := eq_refl.
+    Lemma bind_assoc {A B C} (a : free A) (b : A -> free B) (c : B -> free C) :
+      bind (bind a b) c = bind a (fun x => bind (b x) c).
+    Proof. revert c; revert C; revert b; revert B; induction a;
+        cbn [bind]; eauto using f_equal, functional_extensionality. Qed.
+    Lemma bind_ret_r {A} (a : free A) : bind a ret = a.
+    Proof. induction a;
+        cbn [bind]; eauto using f_equal, functional_extensionality. Qed.
+    Global Instance Monad_free : Monad free.
+    Proof. esplit; eauto using bind_ret_l, bind_assoc, bind_ret_r. Defined.
+
+    Section WithState.
+      Context {state}
+      (interp_action : forall a : action, state -> (result a -> state -> Prop) -> Prop)
+      {output} (post : output -> state -> Prop).
+      Definition interp_body interp (a : free output) (s : state) : Prop :=
+        match a with
+        | ret x => post x s
+        | act a k => interp_action a s (fun r => interp (k r))
+        end.
+      Fixpoint interp_fix a := interp_body interp_fix a.
+    End WithState.
+    Definition interp {state output} interp_action m s post := @interp_fix state interp_action output post m s.
+
+  End WithInterface.
+  Global Arguments free : clear implicits.
+End free. Notation free := free.free.
+
+Class ExtSpec{W: Words}{mem : map.map word byte} := {
+  mmio_load: forall (n: nat), SourceType -> word -> mem -> list LogItem -> (mem -> HList.tuple byte n -> Prop) -> Prop;
+  mmio_store: forall (n: nat), SourceType -> word -> HList.tuple byte n -> mem -> list LogItem -> (mem -> Prop) -> Prop;
 }.
 
 Section Riscv.
+  Import free.
+  Context {W: Words} {Mem: map.map word byte} {Registers: map.map Register word}.
 
-  Context {W: Words}.
-  Context {Mem: map.map word byte}.
-  Context {Registers: map.map Register word}.
+  Local Notation wxlen := word.
+  Variant action :=
+  | getRegister (_ : Register)
+  | setRegister (_ : Register) (_ : wxlen)
+  | loadByte (_ : SourceType) (_ : wxlen)
+  | loadHalf (_ : SourceType) (_ : wxlen)
+  | loadWord (_ : SourceType) (_ : wxlen)
+  | loadDouble (_ : SourceType) (_ : wxlen)
+  | storeByte (_ : SourceType) (_ : wxlen) (_ : w8)
+  | storeHalf (_ : SourceType) (_ : wxlen) (_ : w16)
+  | storeWord (_ : SourceType) (_ : wxlen) (_ : w32)
+  | storeDouble (_ : SourceType) (_ : wxlen) (_ : w64)
+  | makeReservation (_ : wxlen)
+  | clearReservation (_ : wxlen)
+  | checkReservation (_ : wxlen)
+  | raiseExceptionWithInfo (_ : Type) (isInterrupt exceptionCode info : wxlen)
+  | getPC
+  | setPC (_ : wxlen)
+  | step
+  .
 
-  (* Alternative tries:
+  Definition result (action : action) : Type :=
+    match action with
+    | getRegister _ => wxlen
+    | setRegister _ _ => unit
+    | loadByte _ _ => w8
+    | loadHalf _ _ => w16
+    | loadWord _ _ => w32
+    | loadDouble _ _ => w64
+    | storeByte _ _ _ | storeHalf _ _ _ | storeWord _ _ _ | storeDouble _ _ _ | makeReservation _ | clearReservation _ => unit
+    | checkReservation _ => bool
+    | raiseExceptionWithInfo T _ _ _ => T
+    | getPC => wxlen
+    | setPC _ | step => unit
+    end.
 
-  (* given a name of the external action, a list of arguments, returns a list of return values *)
-  Context (run_ext_call: String.string -> list word -> OStateND RiscvMachine (list word)).
+  Local Notation M := (free action result).
 
-  Context (ext_spec:
-    (* Given a trace of what happened so far,
-       the given-away memory, an action label and a list of function call arguments, *)
-    list LogItem -> Mem -> string -> list word ->
-    (* and a postcondition on the received memory and function call results, *)
-    (Mem -> list word -> Prop) ->
-    (* tells if this postcondition will hold *)
-    Prop).
-
-  (* given a number of bytes to read and an address, returns the value read (or fails) *)
-  Definition run_mmio_load(n: nat)(addr: word): OStateND RiscvMachine (HList.tuple byte n) :=
-    fun initial oBytes =>
-      (oBytes = None /\ forall post, ~ ext_spec initial.(getLog) map.empty "fooo" [addr] post) \/
-      (exists bytes, oBytes = Some bytes /\ ... )
-  *)
-
-  Context {ext_spec: ExtSpec (OStateND RiscvMachine)}.
+  Instance IsRiscvMachine: RiscvProgram M word := {|
+    Machine.getRegister a := act (getRegister a) ret;
+    Machine.setRegister a b := act (setRegister a b) ret;
+    Machine.loadByte a b := act (loadByte a b) ret;
+    Machine.loadHalf a b := act (loadHalf a b) ret;
+    Machine.loadWord a b := act (loadWord a b) ret;
+    Machine.loadDouble a b := act (loadDouble a b) ret;
+    Machine.storeByte a b c := act (storeByte a b c) ret;
+    Machine.storeHalf a b c := act (storeHalf a b c) ret;
+    Machine.storeWord a b c := act (storeWord a b c) ret;
+    Machine.storeDouble a b c := act (storeDouble a b c) ret;
+    Machine.makeReservation a := act (makeReservation a) ret;
+    Machine.clearReservation a := act (clearReservation a) ret;
+    Machine.checkReservation a := act (checkReservation a) ret;
+    Machine.getPC := act getPC ret;
+    Machine.setPC a := act (setPC a) ret;
+    Machine.step := act step ret;
+    Machine.raiseExceptionWithInfo a b c d := act (raiseExceptionWithInfo a b c d) ret;
+  |}.
 
   Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
     word.of_Z (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).
@@ -71,382 +162,144 @@ Section Riscv.
   Definition mmioStoreEvent(addr: word){n: nat}(v: HList.tuple byte n): LogItem :=
     ((map.empty, MMOutput, [addr; signedByteTupleToReg v]), (map.empty, [])).
 
-  Definition update(f: RiscvMachine -> RiscvMachine): OStateND RiscvMachine unit :=
-    m <- get; put (f m).
+  Context {ext_spec: ExtSpec}.
 
-  Definition logEvent(e: LogItem): OStateND RiscvMachine unit := update (withLogItem e).
-
-  Definition fail_if_None{R}(o: option R): OStateND RiscvMachine R :=
-    match o with
-    | Some x => Return x
-    | None => fail_hard
-    end.
-
-  Definition run_and_log_mmio_load(n: nat)(kind: SourceType)(a: word):
-    OStateND RiscvMachine (HList.tuple byte n) :=
-    inp <- run_mmio_load n kind a;
-    logEvent (mmioLoadEvent a inp);;
-    Return inp.
-
-  Definition loadN(n: nat)(kind: SourceType)(a: word):
-    OStateND RiscvMachine (HList.tuple byte n) :=
-    mach <- get;
-    match kind with
-    | Fetch => if isXAddrB a mach.(getXAddrs) then Return tt else fail_hard
-    | _ => Return tt
-    end;;
-    match Memory.load_bytes n mach.(getMem) a with
-    | Some v => Return v
-    (* if any of the n addresses is not present in the memory, we perform an MMIO load event: *)
-    | None => run_and_log_mmio_load n kind a
-    end.
-
-  Definition run_and_log_mmio_store(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n):
-    OStateND RiscvMachine unit :=
-    run_mmio_store n kind a v;;
-    logEvent (mmioStoreEvent a v).
-
-  Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n):
-    OStateND RiscvMachine unit :=
-    mach <- get;
+  Definition store n ctxid a v mach post :=
+    let mach' := withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs)) mach in
     match Memory.store_bytes n mach.(getMem) a v with
-    | Some m => update (fun mach => (withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs))
-                                    (withMem m mach)))
-    (* If any of the n addresses is not present in the memory, we perform an MMIO store event.
-       Whether or not this invalidates isXAddr for this address is decided by the run_mmio_store
-       parameter. *)
-    | None => run_and_log_mmio_store n kind a v
+    | Some m => post (withMem m mach')
+    | None => mmio_store n ctxid a v mach.(getMem) mach.(getLog) (fun m =>
+      post (withMem m (withLogItem (mmioStoreEvent a v) mach')))
     end.
 
-  Instance IsRiscvMachine: RiscvProgram (OStateND RiscvMachine) word :=  {
-      getRegister reg :=
-        if Z.eq_dec reg Register0 then
-          Return (ZToReg 0)
+  Definition load n ctxid a mach post :=
+    (ctxid = Fetch -> isXAddr a mach.(getXAddrs)) /\
+    match Memory.load_bytes n mach.(getMem) a with
+    | Some v => post v mach
+    | None => mmio_load n ctxid a mach.(getMem) mach.(getLog) (fun m v =>
+      post v (withMem m (withLogItem (@mmioLoadEvent a n v) mach)))
+    end.
+
+  Definition interp_action (a : action) (mach : RiscvMachine) : (result a -> RiscvMachine -> Prop) -> Prop :=
+    match a with
+    | getRegister reg => fun post =>
+        if Z.eq_dec reg Register0
+        then post (ZToReg 0) mach
         else
-          if (0 <? reg) && (reg <? 32) then
-            mach <- get;
-            match map.get mach.(getRegs) reg with
-            | Some v => Return v
-            | None => arbitrary word
-            end
-          else
-            fail_hard;
-
-      setRegister reg v :=
-        if Z.eq_dec reg Register0 then
-          Return tt
+          valid_register reg /\
+          match map.get mach.(getRegs) reg with
+          | Some v => post v mach
+          | None => forall v, post v mach
+          end
+    | setRegister reg v => fun post =>
+        if Z.eq_dec reg Register0
+        then post tt mach
         else
-          if (0 <? reg) && (reg <? 32) then
-            update (fun mach => withRegs (map.put mach.(getRegs) reg v) mach)
-          else
-            fail_hard;
+          valid_register reg /\
+          post tt (withRegs (map.put mach.(getRegs) reg v) mach)
+    | getPC => fun post => post mach.(getPc) mach
+    | setPC newPC => fun post => post tt (withNextPc newPC mach)
+    | step => fun post => post tt (withPc mach.(getNextPc) (withNextPc (word.add mach.(getNextPc) (word.of_Z 4)) mach))
+    | loadByte ctxid a => fun post => load 1 ctxid a mach post
+    | loadHalf ctxid a => fun post => load 2 ctxid a mach post
+    | loadWord ctxid a => fun post => load 4 ctxid a mach post
+    | loadDouble ctxid a => fun post => load 8 ctxid a mach post
+    | storeByte ctxid a v => fun post => store 1 ctxid a v mach (post tt)
+    | storeHalf ctxid a v => fun post => store 2 ctxid a v mach (post tt)
+    | storeWord ctxid a v => fun post => store 4 ctxid a v mach (post tt)
+    | storeDouble ctxid a v => fun post => store 8 ctxid a v mach (post tt)
+    | makeReservation _
+    | clearReservation _
+    | checkReservation _
+    | raiseExceptionWithInfo _ _ _ _
+        => fun _ => False
+    end.
+  
+  Definition interp {T} a mach post := @free.interp_fix action result RiscvMachine interp_action T post a mach.
 
-      getPC := mach <- get; Return mach.(getPc);
-
-      setPC newPC := update (withNextPc newPC);
-
-      loadByte   := loadN 1;
-      loadHalf   := loadN 2;
-      loadWord   := loadN 4;
-      loadDouble := loadN 8;
-
-      storeByte   := storeN 1;
-      storeHalf   := storeN 2;
-      storeWord   := storeN 4;
-      storeDouble := storeN 8;
-
-      makeReservation  addr := fail_hard;
-      clearReservation addr := fail_hard;
-      checkReservation addr := fail_hard;
-
-      step := update (fun m => (withPc m.(getNextPc)
-                               (withNextPc (word.add m.(getNextPc) (word.of_Z 4)) m)));
-
-      (* fail hard if exception is thrown because at the moment, we want to prove that
-         code output by the compiler never throws exceptions *)
-      raiseExceptionWithInfo{A: Type} _ _ _ := fail_hard;
-  }.
-
-  Arguments Memory.load_bytes: simpl never.
-  Arguments Memory.store_bytes: simpl never.
-
-  Lemma not_load_fails_but_store_succeeds: forall {m: Mem} {addr: word} {n v m'},
-      Memory.load_bytes n m addr = None ->
-      Memory.store_bytes n m addr v = Some m' ->
-      False.
+  Lemma interp_weaken_post {T} (p : M T) m
+    (post1 post2:_->_->Prop) (Hpost : forall r m, post1 r m -> post2 r m)
+    (Hinterp : interp p m post1) : interp p m post2.
   Proof.
-    intros. unfold Memory.store_bytes in *.
-    rewrite H in H0.
-    discriminate.
+    revert Hinterp; revert m; induction p.
+    { destruct a; cbn;
+      cbv [load store interp] in *;
+      repeat match goal with
+      | |- _ => solve [ intuition eauto ]
+      | |- context[match ?x with _ => _ end] => destruct x eqn:?
+      | |- forall _, _ => intro
+      end.
+      (* weaken mmio *)
+      all : admit. }
+    { cbn; intros; eauto. }
+  Admitted.
+
+  Lemma interp_ret {T} (x : T) m P : interp (ret x) m P <-> P x m. 
+  Proof. exact (iff_refl _). Qed.
+
+  Lemma interp_bind {A B} (m : RiscvMachine) post (a : M A) (b : A -> M B) :
+    interp (bind a b) m post <-> interp a m (fun x m => interp (b x) m post).
+  Proof.
+    revert post; revert b; revert B; revert m; induction a.
+    2: { intros. cbn. reflexivity. }
+    intros.
+    destruct a; cbn;
+      cbv [load store interp] in *;
+      repeat match goal with
+      | |- _ => solve [ intuition eauto ]
+      | |- context[match ?x with _ => _ end] => destruct x eqn:?
+      | |- forall _, _ => intro
+      | _ => rewrite H
+      end.
+    1: setoid_rewrite H; intuition eauto.
+    (* rewrite with iff in mmio post *)
+  Admitted.
+
+  Lemma interp_bind_ex_mid {A B} (m0 : RiscvMachine) post (a : M A) (b : A -> M B) :
+    interp (bind a b) m0 post <-> 
+    (exists mid, interp a m0 mid /\ forall x m1, mid x m1 -> interp (b x) m1 post).
+  Proof.
+    rewrite interp_bind.
+    split; [intros ? | intros (?&?&?)].
+    { exists (fun x m1 => interp (b x) m1 post); split; eauto. }
+    { eauto using interp_weaken_post. }
   Qed.
 
-  Lemma not_store_fails_but_load_succeeds: forall {m: Mem} {addr: word} {n v0 v1},
-      Memory.load_bytes n m addr = Some v0 ->
-      Memory.store_bytes n m addr v1 = None ->
-      False.
-  Proof.
-    intros. unfold Memory.store_bytes in *.
-    rewrite H in H0.
-    discriminate.
-  Qed.
-
-  Ltac t0 :=
-    match goal with
-       | |- _ => reflexivity
-       | |- _ => progress (
-                     unfold computation_satisfies, computation_with_answer_satisfies,
-                            IsRiscvMachine,
-                            valid_register, Register0,
-                            is_initial_register_value,
-                            get, put, fail_hard,
-                            arbitrary,
-                            logEvent, update,
-                            ZToReg, MkMachineWidth.MachineWidth_XLEN,
-                            Memory.loadByte, Memory.storeByte,
-                            Memory.loadHalf, Memory.storeHalf,
-                            Memory.loadWord, Memory.storeWord,
-                            Memory.loadDouble, Memory.storeDouble,
-                            fail_if_None, loadN, storeN in *;
-                     subst;
-                     simpl in *)
-       | |- _ => intro
-       | |- _ => split
-       | |- _ => apply functional_extensionality
-       | |- _ => apply propositional_extensionality; split; intros
-       | u: unit |- _ => destruct u
-       | H: exists x, _ |- _ => destruct H
-       | H: {_ : _ | _} |- _ => destruct H
-       | H: _ /\ _ |- _ => destruct H
-       | p: _ * _ |- _ => destruct p
-       | |- context [ let (_, _) := ?p in _ ] => let E := fresh "E" in destruct p eqn: E
-       | H: Some _ = Some _ |- _ => inversion H; clear H; subst
-       | H: (_, _) = (_, _) |- _ => inversion H; clear H; subst
-       | H: forall x, x = _ -> _ |- _ => specialize (H _ eq_refl)
-       | H: _ && _ = true |- _ => apply andb_prop in H
-       | H: _ && _ = false |- _ => apply Bool.andb_false_iff in H
-       | H: isXAddrB _ _ = false |- _ => apply isXAddrB_not in H
-       | H: isXAddrB _ _ = true  |- _ => apply isXAddrB_holds in H
-       | H: ?x = ?x -> _ |- _ => specialize (H eq_refl)
-       | |- _ * _ => constructor
-       | |- option _ => exact None
-       | |- _ => discriminate
-       | |- _ => congruence
-       | |- _ => solve [exfalso; bomega]
-       | |- _ => solve [eauto 15]
-       | H: false = ?rhs |- _ => match rhs with
-                                 | false => fail 1
-                                 | _ => symmetry in H
-                                 end
-       | |- _ => progress (rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in *)
-       | |- _ => bomega
-       | H: context[let (_, _) := ?y in _] |- _ => let E := fresh "E" in destruct y eqn: E
-       | E: ?x = Some _, H: context[match ?x with _ => _ end] |- _ => rewrite E in H
-       | E: ?x = Some _  |- context[match ?x with _ => _ end]      => rewrite E
-       | E: ?x = None, H: context[match ?x with _ => _ end] |- _ => rewrite E in H
-       | E: ?x = None  |- context[match ?x with _ => _ end]      => rewrite E
-       | H: context[match ?x with _ => _ end] |- _ => let E := fresh "E" in destruct x eqn: E
-       | |- context[match ?x with _ => _ end]      => let E := fresh "E" in destruct x eqn: E
-       | H1: _, H2: _ |- _ => exfalso; apply (not_load_fails_but_store_succeeds H1 H2)
-       | H1: _, H2: _ |- _ => exfalso; apply (not_store_fails_but_load_succeeds H1 H2)
-       | |- exists a b, Some (a, b) = _ /\ _ => do 2 eexists; split; [reflexivity|]
-       | |- exists a, _ = _ /\ _ => eexists; split; [reflexivity|]
-       | H: ?P -> exists _, _ |- _ =>
-         let N := fresh in
-         assert P as N by (clear H; repeat t0);
-         specialize (H N);
-         clear N
-       | H: _ \/ _ |- _ => destruct H
-       | r: RiscvMachine |- _ =>
-         destruct r as [regs pc npc m l];
-         simpl in *
-       | o: option _ |- _ => destruct o
-       (* introduce evars as late as possible (after all destructs), to make sure everything
-          is in their scope*)
-(*       | |- exists (P: ?A -> ?S -> Prop), _ =>
-            let a := fresh "a" in evar (a: A);
-            let s := fresh "s" in evar (s: S);
-            exists (fun a0 s0 => a0 = a /\ s0 = s);
-            subst a s*)
-       | H1: _, H2: _ |- _ => specialize H1 with (1 := H2)
-       | |- _ \/ _ => left; solve [repeat t0]
-       | |- _ \/ _ => right; solve [repeat t0]
-       end.
-
-  Ltac t := repeat t0.
-
-  Arguments LittleEndian.combine: simpl never.
-
-  Instance MinimalMMIOPrimitivesParams: PrimitivesParams (OStateND RiscvMachine) RiscvMachine := {
-    Primitives.mcomp_sat := @computation_with_answer_satisfies RiscvMachine;
-    (* any value can be found in an uninitialized register *)
+  Definition TODO_REMOVE {T} : T. Admitted.
+  Global Instance MinimalMMIOPrimitivesParams: PrimitivesParams M RiscvMachine := {
+    Primitives.mcomp_sat := @interp;
     Primitives.is_initial_register_value x := True;
-    Primitives.nonmem_load := run_and_log_mmio_load;
-    Primitives.nonmem_store := run_and_log_mmio_store;
+    Primitives.nonmem_load := TODO_REMOVE;
+    Primitives.nonmem_store := TODO_REMOVE;
   }.
 
-  Context {ext_spec_sane: ExtSpecSane MinimalMMIOPrimitivesParams ext_spec}.
-
-  Lemma bool_test_to_valid_register: forall (x: Z),
-      (0 <? x) && (x <? 32) = true ->
-      valid_register x.
+  Global Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MinimalMMIOPrimitivesParams.
   Proof.
-    intros. apply andb_prop in H. destruct H.
-    rewrite! Z.ltb_lt in *.
-    unfold valid_register.
-    auto.
+    split; cbv [mcomp_sat MinimalMMIOPrimitivesParams].
+    { symmetry. eapply interp_bind_ex_mid. }
+    { symmetry; eapply interp_ret. }
   Qed.
 
-  Lemma VirtualMemoryFetchP: forall addr xAddrs,
-      VirtualMemory = Fetch -> isXAddr addr xAddrs.
-  Proof. intros. discriminate. Qed.
-
-  Lemma ExecuteFetchP: forall addr xAddrs,
-      Execute = Fetch -> isXAddr addr xAddrs.
-  Proof. intros. discriminate. Qed.
-
-  Ltac fw_step :=
-    match goal with
-    | H: exists x, _ |- _ => destruct H
-    | H: _ /\ _ |- _ => destruct H
-    | |- _ => progress unfold
-              mcomp_sat, MinimalMMIOPrimitivesParams,
-              getRegister, setRegister,
-              loadByte, loadHalf, loadWord, loadDouble,
-              storeByte, storeHalf, storeWord, storeDouble,
-              getPC, setPC, step, raiseExceptionWithInfo,
-              IsRiscvMachine, logEvent, update,
-              Memory.loadByte, Memory.storeByte,
-              Memory.loadHalf, Memory.storeHalf,
-              Memory.loadWord, Memory.storeWord,
-              Memory.loadDouble, Memory.storeDouble,
-              nonmem_load, nonmem_store,
-              ZToReg, MkMachineWidth.MachineWidth_XLEN,
-              fail_if_None, loadN, storeN in *
-    | |- _ => progress intros
-    | |- _ => progress subst
-    | |- _ => destruct_one_match_hyp
-    | |- exists a b, Some (a, b) = _ /\ _ => do 2 eexists; split; [reflexivity|]
-    | |- exists a, _ = _ /\ _ => eexists; split; [reflexivity|]
-    | |- _ => simpl_computation_with_answer_satisfies
-    | H: _ |- _ => apply bool_test_to_valid_register in H
-    | H: isXAddrB _ _ = false |- _ => apply isXAddrB_not in H
-    | H: isXAddrB _ _ = true  |- _ => apply isXAddrB_holds in H
-    | |- _ => congruence
-    | H1: _, H2: _ |- _ => exfalso; apply (not_load_fails_but_store_succeeds H1 H2)
-    | H1: _, H2: _ |- _ => exfalso; apply (not_store_fails_but_load_succeeds H1 H2)
-    | |- _ /\ _ => split
-    | |- _ => reflexivity
-    (* note: in general, these might turn a solvable goal into an unsolvable one, but here
-           we should be safe *)
-    | F: forall (a: _) (s: RiscvMachine), ?mid a s -> _, P: ?mid _ _ |- _ =>
-      specialize F with (1 := P)
-    | F: forall (a: ?A) (s: RiscvMachine), ?mid a s -> _,
-      P: forall (a: ?A), ?mid a _,
-      x: ?A |- _ => specialize F with (1 := (P x))
-    end.
-
-  Ltac u := repeat fw_step; eauto 10 using VirtualMemoryFetchP, ExecuteFetchP.
-
-  Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MinimalMMIOPrimitivesParams.
+  Global Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
   Proof.
-    constructor. all: split; [t|u].
-  Qed.
-
-  Lemma get_sane: mcomp_sane get.
-  Proof.
-    unfold mcomp_sane, get. simpl. unfold computation_with_answer_satisfies. intros.
-    specialize (H _ eq_refl). destruct H as (? & ? & ? & ?). inversion H. subst. clear H.
-    split.
-    - eauto.
-    - intros. subst. do 2 eexists. split; [reflexivity|]. split; [assumption|].
-      exists nil. reflexivity.
-  Qed.
-
-  (* does not hold in general, because we could put a machine with a shorter log *)
-  Lemma put_sane: forall m, mcomp_sane (put m). Abort.
-
-  Lemma fail_hard_sane: forall A, mcomp_sane (fail_hard (A := A)).
-  Proof.
-    unfold mcomp_sane, fail_hard. simpl. unfold computation_with_answer_satisfies. intros.
-    specialize (H _ eq_refl). destruct H as (? & ? & ? & ?). discriminate.
-  Qed.
-
-  (* does not hold in general, because A could be uninhabited *)
-  Lemma arbitrary_sane: forall A, mcomp_sane (arbitrary A). Abort.
-
-  Lemma arbitrary_sane: forall (A: Type) (a: A),
-      mcomp_sane (arbitrary A).
-  Proof.
-    unfold mcomp_sane, arbitrary. simpl. unfold computation_with_answer_satisfies. intros.
-    split.
-    - specialize (H (Some (a, st))). destruct H as (? & ? & ? & ?); eauto.
-    - intros. specialize H with (1 := H0). destruct H as (? & ? & ? & ?). subst.
-      destruct H0 as (? & ?). inversion H. subst. clear H.
-      do 2 eexists. split; [reflexivity|]. split; [assumption|].
-      exists nil. reflexivity.
-  Qed.
-
-  Lemma arbitrary_word_sane: mcomp_sane (arbitrary word).
-  Proof. apply arbitrary_sane. exact (word.of_Z 42). Qed.
-
-  Lemma update_sane: forall f,
-      (forall mach, exists diff, (f mach).(getLog) = diff ++ mach.(getLog)) ->
-      mcomp_sane (update f).
-  Proof.
-    unfold mcomp_sane, update, get, put. simpl. unfold computation_with_answer_satisfies. intros.
-    split.
-    - edestruct H0 as (? & ? & ? & ?); eauto.
-    - intros. destruct H1 as [(? & ?) | (? & ? & ? & ?)]; [discriminate|]. subst.
-      inversion H1. subst. clear H1.
-      edestruct H0 as (? & ? & ? & ?); [eauto|].
-      inversion H1. subst. clear H1.
-      eauto.
-  Qed.
-
-  Lemma logEvent_sane: forall e,
-      mcomp_sane (update (withLogItem e)).
-  Proof.
-    intros. eapply update_sane. intros. exists [e]. destruct mach. reflexivity.
-  Qed.
-
-  Instance MinimalMMIOSane: PrimitivesSane MinimalMMIOPrimitivesParams.
-  Proof.
-    constructor.
+    split; try exact _.
+    1: admit. (* sane *)
+    all : split; [|admit].
+    all : cbv [mcomp_sat spec_load spec_store MinimalMMIOPrimitivesParams].
+    {
     all: intros;
-      unfold getRegister, setRegister,
-         loadByte, loadHalf, loadWord, loadDouble,
-         storeByte, storeHalf, storeWord, storeDouble,
-         getPC, setPC,
-         step, raiseExceptionWithInfo,
-         IsRiscvMachine,
-         loadN, storeN,
-         run_and_log_mmio_load, run_and_log_mmio_store.
-
-    all: repeat match goal with
-                | |- _ => apply run_mmio_load_sane
-                | |- _ => apply run_mmio_store_sane
-                | |- _ => apply logEvent_sane
-                | |- mcomp_sane (Bind _ _) => apply Bind_sane
-                | |- _ => apply Return_sane
-                | |- _ => apply get_sane
-                | |- _ => apply fail_hard_sane
-                | |- _ => apply arbitrary_word_sane
-                | |- _ => apply update_sane; intros [? ? ? ? ? ?]; simpl; exists nil; reflexivity
-                | |- context [match ?b with _ => _ end] => destruct b
-                | |- _ => progress intros
-                end.
-  Qed.
-
-  Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
-  Proof.
-    constructor.
-    1: exact MinimalMMIOSatisfies_mcomp_sat_spec.
-    1: exact MinimalMMIOSane.
-    all: split; [t|u].
-  Qed.
+      repeat match goal with
+      | _ => progress subst
+      | _ => Option.inversion_option
+      | _ => progress cbn -[Memory.load_bytes Memory.store_bytes HList.tuple]
+      | _ => progress cbv [Register0 valid_register is_initial_register_value load store Memory.loadByte Memory.loadHalf Memory.loadWord Memory.loadDouble Memory.storeByte Memory.storeHalf Memory.storeWord Memory.storeDouble] in *
+      | H : exists _, _ |- _ => destruct H
+      | H : _ /\ _ |- _ => destruct H
+      | |- _ => solve [ intuition (eauto || Lia.lia) ]
+      | H : _ \/ _ |- _ => destruct H
+      | |- context[match ?x with _ => _ end] => destruct x eqn:?
+      | |-_ /\ _ => split
+      end.
+  Admitted.
 
 End Riscv.
-
-(* needed because defined inside a Section *)
-Existing Instance IsRiscvMachine.
-Existing Instance MinimalMMIOSatisfiesPrimitives.
