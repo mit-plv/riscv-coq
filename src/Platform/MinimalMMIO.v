@@ -71,16 +71,48 @@ Module free.
 
     Section WithState.
       Context {state}
-      (interp_action : forall a : action, state -> (result a -> state -> Prop) -> Prop)
-      {output} (post : output -> state -> Prop).
-      Definition interp_body interp (a : free output) (s : state) : Prop :=
-        match a with
-        | ret x => post x s
-        | act a k => interp_action a s (fun r => interp (k r))
-        end.
-      Fixpoint interp_fix a := interp_body interp_fix a.
+      (interp_action : forall a : action, state -> (result a -> state -> Prop) -> Prop).
+      Section WithOutput.
+        Context {output} (post : output -> state -> Prop).
+        Definition interp_body interp (a : free output) (s : state) : Prop :=
+          match a with
+          | ret x => post x s
+          | act a k => interp_action a s (fun r => interp (k r))
+          end.
+        Fixpoint interp_fix a := interp_body interp_fix a.
+      End WithOutput.
+
+      Definition interp {output} a s post := @interp_fix output post a s.
+
+      Lemma interp_ret {T} (x : T) m P : interp (ret x) m P <-> P x m. 
+      Proof. exact (iff_refl _). Qed.
+
+      Context (interp_action_weaken_post :
+        forall a (post1 post2:_->_->Prop), (forall r s, post1 r s -> post2 r s) -> forall s, interp_action a s post1 -> interp_action a s post2).
+
+      Lemma interp_weaken_post {T} (p : free T) s
+        (post1 post2:_->_->Prop) (Hpost : forall r s, post1 r s -> post2 r s)
+        (Hinterp : interp p s post1) : interp p s post2.
+      Proof. revert dependent s; induction p; cbn; firstorder eauto. Qed.
+
+      Lemma interp_bind {A B} s post (a : free A) (b : A -> free B) :
+        interp (bind a b) s post <-> interp a s (fun x s => interp (b x) s post).
+      Proof.
+        revert post; revert b; revert B; revert s; induction a.
+        2: { intros. cbn. reflexivity. }
+        split; eapply interp_action_weaken_post; intros; eapply H; eauto.
+      Qed.
+
+      Lemma interp_bind_ex_mid {A B} m0 post (a : free A) (b : A -> free B) :
+        interp (bind a b) m0 post <-> 
+        (exists mid, interp a m0 mid /\ forall x m1, mid x m1 -> interp (b x) m1 post).
+      Proof.
+        rewrite interp_bind.
+        split; [intros ? | intros (?&?&?)].
+        { exists (fun x m1 => interp (b x) m1 post); split; eauto. }
+        { eauto using interp_weaken_post. }
+      Qed.
     End WithState.
-    Definition interp {state output} interp_action m s post := @interp_fix state interp_action output post m s.
 
   End WithInterface.
   Global Arguments free : clear implicits.
@@ -165,11 +197,11 @@ Section Riscv.
   Context {ext_spec: ExtSpec}.
 
   Definition store n ctxid a v mach post :=
-    let mach' := withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs)) mach in
+    let xa := withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs)) in
     match Memory.store_bytes n mach.(getMem) a v with
-    | Some m => post (withMem m mach')
+    | Some m => post (xa (withMem m mach))
     | None => mmio_store n ctxid a v mach.(getMem) mach.(getLog) (fun m =>
-      post (withMem m (withLogItem (mmioStoreEvent a v) mach')))
+      post (xa (withMem m (withLogItem (mmioStoreEvent a v) mach))))
     end.
 
   Definition load n ctxid a mach post :=
@@ -217,54 +249,6 @@ Section Riscv.
   
   Definition interp {T} a mach post := @free.interp_fix action result RiscvMachine interp_action T post a mach.
 
-  Lemma interp_weaken_post {T} (p : M T) m
-    (post1 post2:_->_->Prop) (Hpost : forall r m, post1 r m -> post2 r m)
-    (Hinterp : interp p m post1) : interp p m post2.
-  Proof.
-    revert Hinterp; revert m; induction p.
-    { destruct a; cbn;
-      cbv [load store interp] in *;
-      repeat match goal with
-      | |- _ => solve [ intuition eauto ]
-      | |- context[match ?x with _ => _ end] => destruct x eqn:?
-      | |- forall _, _ => intro
-      end.
-      (* weaken mmio *)
-      all : admit. }
-    { cbn; intros; eauto. }
-  Admitted.
-
-  Lemma interp_ret {T} (x : T) m P : interp (ret x) m P <-> P x m. 
-  Proof. exact (iff_refl _). Qed.
-
-  Lemma interp_bind {A B} (m : RiscvMachine) post (a : M A) (b : A -> M B) :
-    interp (bind a b) m post <-> interp a m (fun x m => interp (b x) m post).
-  Proof.
-    revert post; revert b; revert B; revert m; induction a.
-    2: { intros. cbn. reflexivity. }
-    intros.
-    destruct a; cbn;
-      cbv [load store interp] in *;
-      repeat match goal with
-      | |- _ => solve [ intuition eauto ]
-      | |- context[match ?x with _ => _ end] => destruct x eqn:?
-      | |- forall _, _ => intro
-      | _ => rewrite H
-      end.
-    1: setoid_rewrite H; intuition eauto.
-    (* rewrite with iff in mmio post *)
-  Admitted.
-
-  Lemma interp_bind_ex_mid {A B} (m0 : RiscvMachine) post (a : M A) (b : A -> M B) :
-    interp (bind a b) m0 post <-> 
-    (exists mid, interp a m0 mid /\ forall x m1, mid x m1 -> interp (b x) m1 post).
-  Proof.
-    rewrite interp_bind.
-    split; [intros ? | intros (?&?&?)].
-    { exists (fun x m1 => interp (b x) m1 post); split; eauto. }
-    { eauto using interp_weaken_post. }
-  Qed.
-
   Definition TODO_REMOVE {T} : T. Admitted.
   Global Instance MinimalMMIOPrimitivesParams: PrimitivesParams M RiscvMachine := {
     Primitives.mcomp_sat := @interp;
@@ -273,20 +257,51 @@ Section Riscv.
     Primitives.nonmem_store := TODO_REMOVE;
   }.
 
+  Context
+    (mmio_load_weaken_post : forall n c a m t (post1 post2:_->_->Prop), (forall m r, post1 m r -> post2 m r) -> mmio_load n c a m t post1 -> mmio_load n c a m t post2)
+    (mmio_store_weaken_post : forall n c a v m t (post1 post2:_->Prop), (forall m, post1 m -> post2 m) -> mmio_store n c a v m t post1 -> mmio_store n c a v m t post2).
+
+  Lemma load_weaken_post n c a m (post1 post2:_->_->Prop)
+    (H: forall r s, post1 r s -> post2 r s)
+    : load n c a m post1 -> load n c a m post2.
+  Proof.
+    cbv [load].
+    destruct (Memory.load_bytes n (getMem m) a); intuition eauto.
+    eapply mmio_load_weaken_post; eauto; intros. eapply H; eauto.
+  Qed.
+
+  Lemma store_weaken_post n c a v m (post1 post2:_->Prop)
+    (H: forall s, post1 s -> post2 s)
+    : store n c a v m post1 -> store n c a v m post2.
+  Proof.
+    cbv [store].
+    destruct (Memory.store_bytes n (getMem m) a); intuition eauto.
+    eapply mmio_store_weaken_post; eauto; intros. eapply H; eauto.
+  Qed.
+
+  Lemma interp_action_weaken_post a (post1 post2:_->_->Prop)
+    (H: forall r s, post1 r s -> post2 r s) s
+    : interp_action a s post1 -> interp_action a s post2.
+  Proof.
+    destruct a; cbn; try solve [intuition eauto].
+    { destruct (Z.eq_dec r Register0), (map.get (getRegs s)); intuition eauto. }
+    { destruct (Z.eq_dec r Register0); intuition eauto. }
+    all : eauto using load_weaken_post, store_weaken_post.
+  Qed.
+
   Global Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MinimalMMIOPrimitivesParams.
   Proof.
     split; cbv [mcomp_sat MinimalMMIOPrimitivesParams].
-    { symmetry. eapply interp_bind_ex_mid. }
+    { symmetry. eapply interp_bind_ex_mid, interp_action_weaken_post. }
     { symmetry; eapply interp_ret. }
   Qed.
 
   Global Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
   Proof.
     split; try exact _.
-    1: admit. (* sane *)
-    all : split; [|admit].
+    1: admit. (* sane/"total" *)
+    all : split; [|admit]. (* opposite direction *)
     all : cbv [mcomp_sat spec_load spec_store MinimalMMIOPrimitivesParams].
-    {
     all: intros;
       repeat match goal with
       | _ => progress subst
@@ -300,6 +315,9 @@ Section Riscv.
       | |- context[match ?x with _ => _ end] => destruct x eqn:?
       | |-_ /\ _ => split
       end.
+      (* removed cases of MinimalMMIOPrimitivesParams *)
+      all : try match goal with H : interp (nonmem_load _ _ _) _ _ |- _ => admit end.
+      all : try match goal with H : interp (nonmem_store _ _ _ _) _ _ |- _ => admit end.
   Admitted.
 
 End Riscv.
