@@ -1,2 +1,1 @@
--Q ../coqutil/src coqutil
--R ./src riscv
+-R ./src/riscv riscv
