@@ -122,7 +122,7 @@ Section Riscv.
                             Memory.loadDouble, Memory.storeDouble,
                             fail_if_None, loadN, storeN in *;
                      subst;
-                     simpl in *)
+                     simpl in * )
        | |- _ => intro
        | |- _ => split
        | |- _ => apply functional_extensionality
@@ -146,7 +146,7 @@ Section Riscv.
        | |- _ => congruence
        | |- _ => solve [exfalso; bomega]
        | |- _ => solve [eauto 15 using VirtualMemoryFetchP, ExecuteFetchP]
-       | |- _ => progress (rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in *)
+       | |- _ => progress (rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in * )
        | |- _ => bomega
        | H: context[let (_, _) := ?y in _] |- _ => let E := fresh "E" in destruct y eqn: E
        | E: ?x = Some _, H: context[match ?x with _ => _ end] |- _ => rewrite E in H
@@ -173,8 +173,8 @@ Section Riscv.
   Instance MinimalPrimitivesParams: PrimitivesParams (OState RiscvMachine) RiscvMachine := {
     Primitives.mcomp_sat := @OStateOperations.computation_with_answer_satisfies RiscvMachine;
     Primitives.is_initial_register_value := eq (word.of_Z 0);
-    Primitives.nonmem_load n kind addr := fail_hard;
-    Primitives.nonmem_store n kind addr v := fail_hard;
+    Primitives.nonmem_load n kind addr _ _ := False;
+    Primitives.nonmem_store n kind addr v _ _ := False;
   }.
 
   Instance MinimalSatisfies_mcomp_sat_spec: mcomp_sat_spec MinimalPrimitivesParams.

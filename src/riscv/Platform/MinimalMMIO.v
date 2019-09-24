@@ -197,11 +197,11 @@ Section Riscv.
   Context {ext_spec: ExtSpec}.
 
   Definition store n ctxid a v mach post :=
-    let xa := withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs)) in
+    let XAddrs := invalidateWrittenXAddrs n a mach.(getXAddrs) in
     match Memory.store_bytes n mach.(getMem) a v with
-    | Some m => post (xa (withMem m mach))
+    | Some m => post (withXAddrs XAddrs (withMem m mach))
     | None => mmio_store n ctxid a v mach.(getMem) mach.(getLog) (fun m =>
-      post (xa (withMem m (withLogItem (mmioStoreEvent a v) mach))))
+      post (withXAddrs XAddrs (withMem m (withLogItem (mmioStoreEvent a v) mach))))
     end.
 
   Definition load n ctxid a mach post :=
@@ -249,13 +249,17 @@ Section Riscv.
   
   Definition interp {T} a mach post := @free.interp_fix action result RiscvMachine interp_action T post a mach.
 
-  Definition TODO_REMOVE {T} : T. Admitted.
-  Global Instance MinimalMMIOPrimitivesParams: PrimitivesParams M RiscvMachine := {
+  Definition MinimalMMIOPrimitivesParams: PrimitivesParams M RiscvMachine := {|
     Primitives.mcomp_sat := @interp;
     Primitives.is_initial_register_value x := True;
-    Primitives.nonmem_load := TODO_REMOVE;
-    Primitives.nonmem_store := TODO_REMOVE;
-  }.
+    Primitives.nonmem_load n ctxid a mach post :=
+      mmio_load n ctxid a mach.(getMem) mach.(getLog) (fun m v =>
+      post v (withMem m (withLogItem (@mmioLoadEvent a n v) mach)));
+    Primitives.nonmem_store n ctxid a v mach post :=
+      let XAddrs := invalidateWrittenXAddrs n a mach.(getXAddrs) in
+      mmio_store n ctxid a v mach.(getMem) mach.(getLog) (fun m =>
+      post (withXAddrs XAddrs (withMem m (withLogItem (mmioStoreEvent a v) mach))));
+  |}.
 
   Context
     (mmio_load_weaken_post : forall n c a m t (post1 post2:_->_->Prop), (forall m r, post1 m r -> post2 m r) -> mmio_load n c a m t post1 -> mmio_load n c a m t post2)
@@ -299,9 +303,9 @@ Section Riscv.
   Global Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
   Proof.
     split; try exact _.
-    1: admit. (* sane/"total" *)
-    all : split; [|admit]. (* opposite direction *)
-    all : cbv [mcomp_sat spec_load spec_store MinimalMMIOPrimitivesParams].
+    1: admit. (* sane *)
+    all : split; [|admit].
+    all : cbv [mcomp_sat spec_load spec_store MinimalMMIOPrimitivesParams invalidateWrittenXAddrs].
     all: intros;
       repeat match goal with
       | _ => progress subst
@@ -315,9 +319,6 @@ Section Riscv.
       | |- context[match ?x with _ => _ end] => destruct x eqn:?
       | |-_ /\ _ => split
       end.
-      (* removed cases of MinimalMMIOPrimitivesParams *)
-      all : try match goal with H : interp (nonmem_load _ _ _) _ _ |- _ => admit end.
-      all : try match goal with H : interp (nonmem_store _ _ _ _) _ _ |- _ => admit end.
   Admitted.
 
 End Riscv.

@@ -65,7 +65,7 @@ Section MetricPrimitives.
       ((exists v, mem_load initialL.(getMem) addr = Some v /\
                   post v (updateMetrics (addMetricLoads 1) initialL)) \/
        (mem_load initialL.(getMem) addr = None /\
-        mcomp_sat (nonmem_load n kind addr) initialL post)) <->
+        nonmem_load n kind addr initialL (fun v m => post v (mkMetricRiscvMachine m initialL.(getMetrics))))) <->
       mcomp_sat (riscv_load kind addr) initialL post.
 
   Definition spec_store{p: PrimitivesParams M MetricRiscvMachine}(n: nat)
@@ -78,7 +78,7 @@ Section MetricPrimitives.
                   post tt (withXAddrs (invalidateWrittenXAddrs n addr initialL.(getXAddrs))
                           (withMem m' (updateMetrics (addMetricStores 1) initialL)))) \/
       (mem_store initialL.(getMem) addr v = None /\
-       mcomp_sat (nonmem_store n kind addr v) initialL post) <->
+       nonmem_store n kind addr v initialL (fun m => post tt (mkMetricRiscvMachine m initialL.(getMetrics)))) <->
       mcomp_sat (riscv_store kind addr v) initialL post.
 
   (* primitives_params is a paramater rather than a field because Primitives lives in Prop and

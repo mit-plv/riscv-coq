@@ -30,7 +30,6 @@ Section Riscv.
 
   Definition update(f: AtomicRiscvMachine -> AtomicRiscvMachine): OState AtomicRiscvMachine unit :=
     m <- get; put (f m).
-  Search word.
 
   Instance IsAtomicRiscvMachine: RiscvProgram (OState AtomicRiscvMachine) word :=
     {
@@ -62,8 +61,8 @@ Section Riscv.
     {
       Primitives.mcomp_sat := @OStateOperations.computation_with_answer_satisfies AtomicRiscvMachine;
       Primitives.is_initial_register_value := eq (word.of_Z 0);
-      Primitives.nonmem_load n kind addr := fail_hard;
-      Primitives.nonmem_store n kind addr v := fail_hard;
+      Primitives.nonmem_load n kind addr _ _ := False;
+      Primitives.nonmem_store n kind addr v _ _ := False;
     }.
 
 End Riscv.

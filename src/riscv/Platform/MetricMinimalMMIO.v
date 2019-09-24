@@ -70,8 +70,8 @@ Section Riscv.
   {
     Primitives.mcomp_sat := @interp;
     Primitives.is_initial_register_value x := True;
-    Primitives.nonmem_load n := TODO_REMOVE;
-    Primitives.nonmem_store n := TODO_REMOVE;
+    Primitives.nonmem_load := @Primitives.nonmem_load _ _ _ _ _ MinimalMMIOPrimitivesParams;
+    Primitives.nonmem_store := @Primitives.nonmem_store _ _ _ _ _ MinimalMMIOPrimitivesParams;
   }.
 
   Global Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MetricMinimalMMIOPrimitivesParams.

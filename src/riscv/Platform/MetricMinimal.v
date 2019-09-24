@@ -81,7 +81,7 @@ Section Riscv.
                             liftL0, liftL1, liftL2, liftL3, id,
                             getRegs, getMem in *;
                      subst;
-                     simpl in *)
+                     simpl in * )
        | |- _ => intro
        | |- _ => split
        | |- _ => apply functional_extensionality
@@ -102,7 +102,7 @@ Section Riscv.
        | |- _ => congruence
        | |- _ => solve [exfalso; bomega]
        | |- _ => solve [eauto 15]
-       | |- _ => progress (rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in *)
+       | |- _ => progress (rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in * )
        | |- _ => bomega
        | H: context[let (_, _) := ?y in _] |- _ => let E := fresh "E" in destruct y eqn: E
        | E: ?x = Some _, H: context[match ?x with _ => _ end] |- _ => rewrite E in H
@@ -133,8 +133,8 @@ Section Riscv.
   {
     Primitives.mcomp_sat := @computation_with_answer_satisfies MetricRiscvMachine;
     Primitives.is_initial_register_value := eq (word.of_Z 0);
-    Primitives.nonmem_load n kind addr := fail_hard;
-    Primitives.nonmem_store n kind addr v := fail_hard;
+    Primitives.nonmem_load n kind addr _ _ := False;
+    Primitives.nonmem_store n kind addr v _ _ := False;
   }.
 
   Instance MetricMinimalSatisfiesMetricPrimitives: MetricPrimitives MetricMinimalMetricPrimitivesParams.
