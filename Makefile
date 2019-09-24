@@ -4,13 +4,21 @@ default_target: spec
 
 # absolute paths so that emacs compile mode knows where to find error
 # use cygpath -m because Coq on Windows cannot handle cygwin paths
-SRCDIR := $(shell cygpath -m "$$(pwd)" 2>/dev/null || pwd)/src
+SRCDIR := $(shell cygpath -m "$$(pwd)" 2>/dev/null || pwd)/src/riscv
+PARENT_DIR := $(shell cd .. && (cygpath -m "$$(pwd)" 2>/dev/null || pwd))
 
 SPEC_VS := $(wildcard $(SRCDIR)/Spec/*.v $(SRCDIR)/Utility/*.v $(SRCDIR)/Platform/*.v)
 ALL_VS := $(SPEC_VS) $(wildcard $(SRCDIR)/Proofs/*.v)
 
 SPEC_VOS := $(patsubst %.v,%.vo,$(SPEC_VS))
 ALL_VOS := $(patsubst %.v,%.vo,$(ALL_VOS))
+
+EXTERNAL_DEPENDENCIES?=
+
+ifneq ($(EXTERNAL_DEPENDENCIES),1)
+COQPATH?=$(PARENT_DIR)/coqutil/src
+export COQPATH
+endif
 
 spec: Makefile.coq.spec $(SPEC_VS)
 	$(MAKE) -f Makefile.coq.spec
@@ -51,7 +59,7 @@ export STACK_YAML=$(HS_TO_COQ_DIR)/stack.yaml
 HS_SOURCES = $(RISCV_SEMANTICS_DIR)/src/Spec/Decode.hs $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteI.hs $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteI64.hs $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteM.hs $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteM64.hs
 PREAMBLES = convert-hs-to-coq/Decode_preamble.v convert-hs-to-coq/Execute_preamble.v
 EDIT_FILES = convert-hs-to-coq/Decode.edits convert-hs-to-coq/General.edits convert-hs-to-coq/Base.edits  convert-hs-to-coq/Execute.edits
-HS_TO_COQ = stack exec hs-to-coq -- -N -i $(RISCV_SEMANTICS_DIR)/src -o ./src --iface-dir ./src
+HS_TO_COQ = stack exec hs-to-coq -- -N -i $(RISCV_SEMANTICS_DIR)/src -o $(SRCDIR) --iface-dir $(SRCDIR)
 DECODE_OPTS =  -e convert-hs-to-coq/Decode.edits  -p convert-hs-to-coq/Decode_preamble.v  -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits
 EXECUTE_OPTS = -e convert-hs-to-coq/Execute.edits -p convert-hs-to-coq/Execute_preamble.v -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits
 
@@ -74,9 +82,9 @@ convert: riscv-semantics_version_check hs-to-coq_version_check $(HS_SOURCES) $(P
 .SECONDARY:
 
 export/extract.vo: export/extract.v spec
-	$(COQBIN)coqc -R ./src riscv export/extract.v
+	$(COQBIN)coqc -R $(SRCDIR) riscv export/extract.v
 
-export/json/%.json: export/extract.vo src/%.vo
+export/json/%.json: export/extract.vo src/riscv/%.vo
 	find . -maxdepth 1 -name '*.json' -type f -exec mv -t export/json -- {} +
 
 export/c/%.h: export/json/%.json $(wildcard export/*.py)
