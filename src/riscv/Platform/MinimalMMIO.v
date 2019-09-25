@@ -263,7 +263,9 @@ Section Riscv.
 
   Context
     (mmio_load_weaken_post : forall n c a m t (post1 post2:_->_->Prop), (forall m r, post1 m r -> post2 m r) -> mmio_load n c a m t post1 -> mmio_load n c a m t post2)
-    (mmio_store_weaken_post : forall n c a v m t (post1 post2:_->Prop), (forall m, post1 m -> post2 m) -> mmio_store n c a v m t post1 -> mmio_store n c a v m t post2).
+    (mmio_store_weaken_post : forall n c a v m t (post1 post2:_->Prop), (forall m, post1 m -> post2 m) -> mmio_store n c a v m t post1 -> mmio_store n c a v m t post2)
+    (mmio_load_total : forall n c a m t post, mmio_load n c a m t post -> exists v s, post v s)
+    (mmio_store_total : forall n c a v m t post, mmio_store n c a v m t post -> exists s, post s).
 
   Lemma load_weaken_post n c a m (post1 post2:_->_->Prop)
     (H: forall r s, post1 r s -> post2 r s)
@@ -300,7 +302,49 @@ Section Riscv.
     { symmetry; eapply interp_ret. }
   Qed.
 
+  Lemma interp_action_total a s post :
+    interp_action a s post -> exists v s, post v s.
+  Proof.
+    destruct a; cbn -[HList.tuple]; cbv [load store]; cbn -[HList.tuple];
+      repeat destruct_one_match; intuition eauto;
+        try (eapply mmio_load_total in H1; destruct_products; eauto);
+        try (eapply mmio_store_total in H; destruct_products; eauto).
+    Unshelve. exact (word.of_Z 0).
+  Qed.
+
+  Definition endswith {T} (xs : list T) (suffix : list T) :=
+    exists prefix, xs = prefix ++ suffix.
+  Lemma endswith_refl {T} (xs : list T) : endswith xs xs.
+  Proof. exists nil; trivial. Qed.
+  Lemma endswith_cons_l {T} (x : T) xs ys :
+    endswith ys xs -> endswith (cons x ys) xs.
+  Proof. inversion 1; subst. eexists (cons x _). exact eq_refl. Qed.
+
+  Import coqutil.Tactics.Tactics.
+  Lemma interp_action_appendonly a s post :
+    interp_action a s post ->
+    interp_action a s (fun _ s' => endswith s'.(getLog) s.(getLog)).
+  Proof.
+    destruct s, a; cbn; cbv [load store]; cbn;
+      repeat destruct_one_match;
+      intuition eauto using endswith_refl, endswith_cons_l.
+  Qed.
+
+  Lemma interp_total {T} (p : M T) s post :
+    interp p s post -> exists v s, post v s.
+  Proof.
+    revert post; revert s; induction p.
+  Admitted.
+
+  Lemma interp_appendonly {T} (p : M T) s post :
+    interp p s post ->
+    interp p s (fun _ s' => startswith s'.(getLog) s.(getLog)).
+  Proof.
+  Admitted.
+
+
   Global Instance MinimalMMIOPrimitivesSane : PrimitivesSane MinimalMMIOPrimitivesParams.
+  Proof.
   Admitted.
 
   Global Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
