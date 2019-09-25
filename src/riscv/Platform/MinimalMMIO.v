@@ -300,11 +300,12 @@ Section Riscv.
     { symmetry; eapply interp_ret. }
   Qed.
 
+  Global Instance MinimalMMIOPrimitivesSane : PrimitivesSane MinimalMMIOPrimitivesParams.
+  Admitted.
+
   Global Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
   Proof.
     split; try exact _.
-    1: admit. (* sane *)
-    all : split; [|admit].
     all : cbv [mcomp_sat spec_load spec_store MinimalMMIOPrimitivesParams invalidateWrittenXAddrs].
     all: intros;
       repeat match goal with
@@ -319,6 +320,6 @@ Section Riscv.
       | |- context[match ?x with _ => _ end] => destruct x eqn:?
       | |-_ /\ _ => split
       end.
-  Admitted.
+  Qed.
 
 End Riscv.

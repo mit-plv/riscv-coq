@@ -97,7 +97,7 @@ Section Primitives.
       ((exists v, mem_load initialL.(getMem) addr = Some v /\
                   post v initialL) \/
        (mem_load initialL.(getMem) addr = None /\
-        nonmem_load n kind addr initialL post)) <->
+        nonmem_load n kind addr initialL post)) ->
       mcomp_sat (riscv_load kind addr) initialL post.
 
   Definition clear_lowest_two_bits(w: word): word :=
@@ -122,7 +122,7 @@ Section Primitives.
                   post tt (withXAddrs (invalidateWrittenXAddrs n addr initialL.(getXAddrs))
                           (withMem m' initialL))) \/
       (mem_store initialL.(getMem) addr v = None /\
-       nonmem_store n kind addr v initialL (post tt)) <->
+       nonmem_store n kind addr v initialL (post tt)) ->
       mcomp_sat (riscv_store kind addr v) initialL post.
 
   (* primitives_params is a paramater rather than a field because Primitives lives in Prop and
@@ -138,12 +138,12 @@ Section Primitives.
          | Some v => post v initialL
          | None => forall v, is_initial_register_value v -> post v initialL
          end) \/
-        (x = Register0 /\ post (word.of_Z 0) initialL) <->
+        (x = Register0 /\ post (word.of_Z 0) initialL) ->
         mcomp_sat (getRegister x) initialL post;
 
     spec_setRegister: forall initialL x v (post: unit -> RiscvMachine -> Prop),
       (valid_register x /\ post tt (withRegs (map.put initialL.(getRegs) x v) initialL) \/
-       x = Register0 /\ post tt initialL) <->
+       x = Register0 /\ post tt initialL) ->
       mcomp_sat (setRegister x v) initialL post;
 
     spec_loadByte: spec_load 1 (Machine.loadByte (RiscvProgram := RVM)) Memory.loadByte;
@@ -157,17 +157,17 @@ Section Primitives.
     spec_storeDouble: spec_store 8 (Machine.storeDouble (RiscvProgram := RVM)) Memory.storeDouble;
 
     spec_getPC: forall initialL (post: word -> RiscvMachine -> Prop),
-        post initialL.(getPc) initialL <->
+        post initialL.(getPc) initialL ->
         mcomp_sat getPC initialL post;
 
     spec_setPC: forall initialL v (post: unit -> RiscvMachine -> Prop),
-        post tt (withNextPc v initialL) <->
+        post tt (withNextPc v initialL) ->
         mcomp_sat (setPC v) initialL post;
 
     spec_step: forall initialL (post: unit -> RiscvMachine -> Prop),
         post tt (withPc     initialL.(getNextPc)
                 (withNextPc (word.add initialL.(getNextPc) (word.of_Z 4))
-                            initialL)) <->
+                            initialL)) ->
         mcomp_sat step initialL post;
   }.
 
