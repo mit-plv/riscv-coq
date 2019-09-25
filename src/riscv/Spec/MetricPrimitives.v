@@ -65,7 +65,7 @@ Section MetricPrimitives.
       ((exists v, mem_load initialL.(getMem) addr = Some v /\
                   post v (updateMetrics (addMetricLoads 1) initialL)) \/
        (mem_load initialL.(getMem) addr = None /\
-        nonmem_load n kind addr initialL (fun v m => post v (mkMetricRiscvMachine m initialL.(getMetrics))))) <->
+        nonmem_load n kind addr initialL (fun v m => post v (mkMetricRiscvMachine m (addMetricLoads 1 initialL.(getMetrics)))))) ->
       mcomp_sat (riscv_load kind addr) initialL post.
 
   Definition spec_store{p: PrimitivesParams M MetricRiscvMachine}(n: nat)
@@ -78,7 +78,7 @@ Section MetricPrimitives.
                   post tt (withXAddrs (invalidateWrittenXAddrs n addr initialL.(getXAddrs))
                           (withMem m' (updateMetrics (addMetricStores 1) initialL)))) \/
       (mem_store initialL.(getMem) addr v = None /\
-       nonmem_store n kind addr v initialL (fun m => post tt (mkMetricRiscvMachine m initialL.(getMetrics)))) <->
+       nonmem_store n kind addr v initialL (fun m => post tt (mkMetricRiscvMachine m (addMetricStores 1 initialL.(getMetrics))))) ->
       mcomp_sat (riscv_store kind addr v) initialL post.
 
   (* primitives_params is a paramater rather than a field because Primitives lives in Prop and
@@ -95,12 +95,12 @@ Section MetricPrimitives.
          | Some v => post v initialL
          | None => forall v, is_initial_register_value v -> post v initialL
          end) \/
-        (x = Register0 /\ post (word.of_Z 0) initialL) <->
+        (x = Register0 /\ post (word.of_Z 0) initialL) ->
         mcomp_sat (getRegister x) initialL post;
 
     spec_setRegister: forall (initialL: MetricRiscvMachine) x v (post: unit -> MetricRiscvMachine -> Prop),
       (valid_register x /\ post tt (withRegs (map.put initialL.(getRegs) x v) initialL) \/
-       x = Register0 /\ post tt initialL) <->
+       x = Register0 /\ post tt initialL) ->
       mcomp_sat (setRegister x v) initialL post;
 
     spec_loadByte: spec_load 1 (Machine.loadByte (RiscvProgram := RVM)) Memory.loadByte;
@@ -114,20 +114,20 @@ Section MetricPrimitives.
     spec_storeDouble: spec_store 8 (Machine.storeDouble (RiscvProgram := RVM)) Memory.storeDouble;
 
     spec_getPC: forall (initialL: MetricRiscvMachine) (post: word -> MetricRiscvMachine -> Prop),
-        post initialL.(getPc) initialL <->
+        post initialL.(getPc) initialL ->
         mcomp_sat getPC initialL post;
 
     spec_setPC: forall initialL v (post: unit -> MetricRiscvMachine -> Prop),
         post tt (withNextPc v
                 (updateMetrics (addMetricJumps 1)
-                               initialL)) <->
+                               initialL)) ->
         mcomp_sat (setPC v) initialL post;
 
     spec_step: forall (initialL: MetricRiscvMachine) (post: unit -> MetricRiscvMachine -> Prop),
         post tt (withPc     initialL.(getNextPc)
                 (withNextPc (word.add initialL.(getNextPc) (word.of_Z 4))
                 (updateMetrics (addMetricInstructions 1)
-                               initialL))) <->
+                               initialL))) ->
         mcomp_sat step initialL post;
   }.
 

@@ -23,6 +23,7 @@ Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
 Section Riscv.
+  Import List.
   Import free.
 
   Context {W: Words}.
@@ -51,7 +52,7 @@ Section Riscv.
     Machine.clearReservation a := act (id, clearReservation a) ret;
     Machine.checkReservation a := act (id, checkReservation a) ret;
     Machine.getPC := act (id, getPC) ret;
-    Machine.setPC a := act (id, setPC a) ret;
+    Machine.setPC a := act (addMetricJumps 1, setPC a) ret;
     Machine.step := act (addMetricInstructions 1, step) ret;
     Machine.raiseExceptionWithInfo a b c d := act (id, raiseExceptionWithInfo a b c d) ret;
   |}.
@@ -74,13 +75,64 @@ Section Riscv.
     Primitives.nonmem_store := @Primitives.nonmem_store _ _ _ _ _ MinimalMMIOPrimitivesParams;
   }.
 
+  Context
+    (mmio_load_weaken_post : forall n c a m t (post1 post2:_->_->Prop), (forall m r, post1 m r -> post2 m r) -> mmio_load n c a m t post1 -> mmio_load n c a m t post2)
+    (mmio_store_weaken_post : forall n c a v m t (post1 post2:_->Prop), (forall m, post1 m -> post2 m) -> mmio_store n c a v m t post1 -> mmio_store n c a v m t post2)
+    (mmio_load_total : forall n c a m t post, mmio_load n c a m t post -> exists v s, post v s)
+    (mmio_store_total : forall n c a v m t post, mmio_store n c a v m t post -> exists s, post s).
+
   Global Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MetricMinimalMMIOPrimitivesParams.
   Proof.
-  Admitted.
+    split; cbv [mcomp_sat MetricMinimalMMIOPrimitivesParams].
+    { symmetry. eapply interp_bind_ex_mid; intros.
+      eapply MinimalMMIO.interp_action_weaken_post; eauto; cbn; eauto. }
+    { symmetry. eapply interp_ret. }
+  Qed.
+
+  Lemma interp_action_weaken_post a (post1 post2:_->_->Prop)
+    (H: forall r s, post1 r s -> post2 r s) s
+    : interp_action a s post1 -> interp_action a s post2.
+  Proof. eapply MinimalMMIO.interp_action_weaken_post; eauto. Qed.
+  Lemma interp_action_appendonly a s post :
+    interp_action a s post ->
+    interp_action a s (fun _ s' => endswith s'.(getLog) s.(getLog)).
+  Proof. eapply MinimalMMIO.interp_action_appendonly; eauto. Qed.
+  Lemma interp_action_appendonly' a s post :
+    interp_action a s post ->
+    interp_action a s (fun v s' => post v s' /\ endswith s'.(getLog) s.(getLog)).
+  Proof. eapply MinimalMMIO.interp_action_appendonly'; eauto. Qed.
+  Lemma interp_action_total a s post :
+    interp_action a s post -> exists v s, post v s.
+  Proof.
+    intros H.
+    unshelve epose proof (MinimalMMIO.interp_action_total _ _ _ _ _ H) as H0; eauto.
+    destruct H0 as (?&?&?); eauto.
+  Qed.
+  Global Instance MetricMinimalMMIOPrimitivesSane : MetricPrimitivesSane MetricMinimalMMIOPrimitivesParams.
+  Proof.
+    split; cbv [mcomp_sane]; intros; 
+      exact (conj (interp_action_total _ st _ H)
+                  (interp_action_appendonly' _ _ _ H)).
+  Qed.
 
   Global Instance MetricMinimalMMIOSatisfiesPrimitives:
     MetricPrimitives MetricMinimalMMIOPrimitivesParams.
   Proof.
-  Admitted.
+    split; try exact _.
+    all : cbv [mcomp_sat spec_load spec_store MetricMinimalMMIOPrimitivesParams invalidateWrittenXAddrs].
+    all: intros; destruct initialL;
+      repeat match goal with
+      | _ => progress subst
+      | _ => Option.inversion_option
+      | _ => progress cbn -[Memory.load_bytes Memory.store_bytes HList.tuple] in *
+      | _ => progress cbv [id Register0 valid_register is_initial_register_value load store Memory.loadByte Memory.loadHalf Memory.loadWord Memory.loadDouble Memory.storeByte Memory.storeHalf Memory.storeWord Memory.storeDouble] in *
+      | H : exists _, _ |- _ => destruct H
+      | H : _ /\ _ |- _ => destruct H
+      | |- _ => solve [ intuition (eauto || Lia.lia) ]
+      | H : _ \/ _ |- _ => destruct H
+      | |- context[match ?x with _ => _ end] => destruct x eqn:?
+      | |-_ /\ _ => split
+      end.
+  Qed.
 
 End Riscv.
