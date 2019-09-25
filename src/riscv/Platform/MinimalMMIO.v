@@ -20,27 +20,15 @@ Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
 (* TODO: move *)
-Section WithMem.
-  Context {W: Words} {Mem: map.map word byte}.
-  Lemma not_load_fails_but_store_succeeds: forall {m: Mem} {addr: word} {n v m'},
-      Memory.load_bytes n m addr = None ->
-      Memory.store_bytes n m addr v = Some m' ->
-      False.
-  Proof.
-    intros. unfold Memory.store_bytes in *.
-    rewrite H in H0.
-    discriminate.
-  Qed.
-  Lemma not_store_fails_but_load_succeeds: forall {m: Mem} {addr: word} {n v0 v1},
-      Memory.load_bytes n m addr = Some v0 ->
-      Memory.store_bytes n m addr v1 = None ->
-      False.
-  Proof.
-    intros. unfold Memory.store_bytes in *.
-    rewrite H in H0.
-    discriminate.
-  Qed.
-End WithMem.
+Module Import List.
+  Definition endswith {T} (xs : list T) (suffix : list T) :=
+    exists prefix, xs = prefix ++ suffix.
+  Lemma endswith_refl {T} (xs : list T) : endswith xs xs.
+  Proof. exists nil; trivial. Qed.
+  Lemma endswith_cons_l {T} (x : T) xs ys :
+    endswith ys xs -> endswith (cons x ys) xs.
+  Proof. inversion 1; subst. eexists (cons x _). exact eq_refl. Qed.
+End List.
 
 (* TODO: move *)
 Module free.
@@ -312,14 +300,6 @@ Section Riscv.
     Unshelve. exact (word.of_Z 0).
   Qed.
 
-  Definition endswith {T} (xs : list T) (suffix : list T) :=
-    exists prefix, xs = prefix ++ suffix.
-  Lemma endswith_refl {T} (xs : list T) : endswith xs xs.
-  Proof. exists nil; trivial. Qed.
-  Lemma endswith_cons_l {T} (x : T) xs ys :
-    endswith ys xs -> endswith (cons x ys) xs.
-  Proof. inversion 1; subst. eexists (cons x _). exact eq_refl. Qed.
-
   Import coqutil.Tactics.Tactics.
   Lemma interp_action_appendonly a s post :
     interp_action a s post ->
@@ -330,22 +310,24 @@ Section Riscv.
       intuition eauto using endswith_refl, endswith_cons_l.
   Qed.
 
-  Lemma interp_total {T} (p : M T) s post :
-    interp p s post -> exists v s, post v s.
+  (* NOTE: maybe instead a generic lemma to push /\ into postondition? *)
+  Lemma interp_action_appendonly' a s post :
+    interp_action a s post ->
+    interp_action a s (fun v s' => post v s' /\ endswith s'.(getLog) s.(getLog)).
   Proof.
-    revert post; revert s; induction p.
-  Admitted.
-
-  Lemma interp_appendonly {T} (p : M T) s post :
-    interp p s post ->
-    interp p s (fun _ s' => startswith s'.(getLog) s.(getLog)).
-  Proof.
-  Admitted.
-
+    destruct s, a; cbn; cbv [load store]; cbn;
+      repeat destruct_one_match; intros; destruct_products; try split;
+        try (eapply mmio_load_weaken_post; eauto);
+        try (eapply mmio_store_weaken_post; eauto);
+        intuition eauto using endswith_refl, endswith_cons_l.
+  Qed.
 
   Global Instance MinimalMMIOPrimitivesSane : PrimitivesSane MinimalMMIOPrimitivesParams.
   Proof.
-  Admitted.
+    split; cbv [mcomp_sane]; intros; 
+      exact (conj (interp_action_total _ st _ H)
+                  (interp_action_appendonly' _ _ _ H)).
+  Qed.
 
   Global Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
   Proof.
