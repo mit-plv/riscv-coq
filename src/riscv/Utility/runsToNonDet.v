@@ -48,4 +48,8 @@ Section RunsTo.
     assumption.
   Qed.
 
+  Lemma runsToStep_cps initial P (H : step initial (fun s => runsTo s P))
+    : runsTo initial P.
+  Proof. eapply runsToStep; eauto. Qed.
+
 End RunsTo.

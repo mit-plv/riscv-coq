@@ -72,8 +72,12 @@ Module free.
 
       Definition interp {output} a s post := @interp_fix output post a s.
 
-      Lemma interp_ret {T} (x : T) m P : interp (ret x) m P <-> P x m. 
-      Proof. exact (iff_refl _). Qed.
+      Lemma interp_ret {T} (x : T) m P : interp (ret x) m P = P x m. 
+      Proof. exact eq_refl. Qed.
+      Lemma interp_act {T} a (k : _ -> free T) s post
+        : interp (act a k) s post
+        = interp_action a s (fun r s => interp (k r) s post).
+      Proof. exact eq_refl. Qed.
 
       Context (interp_action_weaken_post :
         forall a (post1 post2:_->_->Prop), (forall r s, post1 r s -> post2 r s) -> forall s, interp_action a s post1 -> interp_action a s post2).
@@ -235,10 +239,10 @@ Section Riscv.
         => fun _ => False
     end.
   
-  Definition interp {T} a mach post := @free.interp_fix action result RiscvMachine interp_action T post a mach.
+  Notation interp p mach post := (free.interp interp_action p mach post).
 
   Definition MinimalMMIOPrimitivesParams: PrimitivesParams M RiscvMachine := {|
-    Primitives.mcomp_sat := @interp;
+    Primitives.mcomp_sat := @free.interp _ _ _ interp_action;
     Primitives.is_initial_register_value x := True;
     Primitives.nonmem_load n ctxid a mach post :=
       mmio_load n ctxid a mach.(getMem) mach.(getLog) (fun m v =>
@@ -285,9 +289,9 @@ Section Riscv.
 
   Global Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MinimalMMIOPrimitivesParams.
   Proof.
-    split; cbv [mcomp_sat MinimalMMIOPrimitivesParams].
+    split; cbv [mcomp_sat MinimalMMIOPrimitivesParams Bind Return Monad_free].
     { symmetry. eapply interp_bind_ex_mid, interp_action_weaken_post. }
-    { symmetry; eapply interp_ret. }
+    { symmetry; intros. rewrite interp_ret; eapply iff_refl. }
   Qed.
 
   Lemma interp_action_total a s post :

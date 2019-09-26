@@ -61,7 +61,7 @@ Section Riscv.
     interp_action (snd a) (metmach.(getMachine)) (fun r mach =>
       post r (mkMetricRiscvMachine mach (fst a (metmach.(getMetrics))))).
 
-  Definition interp {T} a mach post := @free.interp_fix action result MetricRiscvMachine interp_action T post a mach.
+  Notation interp a mach post := (free.interp interp_action a mach post).
 
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
@@ -69,7 +69,7 @@ Section Riscv.
 
   Global Instance MetricMinimalMMIOPrimitivesParams: PrimitivesParams M MetricRiscvMachine :=
   {
-    Primitives.mcomp_sat := @interp;
+    Primitives.mcomp_sat := @free.interp _ _ _ interp_action;
     Primitives.is_initial_register_value x := True;
     Primitives.nonmem_load := @Primitives.nonmem_load _ _ _ _ _ MinimalMMIOPrimitivesParams;
     Primitives.nonmem_store := @Primitives.nonmem_store _ _ _ _ _ MinimalMMIOPrimitivesParams;
@@ -83,10 +83,10 @@ Section Riscv.
 
   Global Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MetricMinimalMMIOPrimitivesParams.
   Proof.
-    split; cbv [mcomp_sat MetricMinimalMMIOPrimitivesParams].
+    split; cbv [mcomp_sat MetricMinimalMMIOPrimitivesParams Monad_free Bind Return].
     { symmetry. eapply interp_bind_ex_mid; intros.
       eapply MinimalMMIO.interp_action_weaken_post; eauto; cbn; eauto. }
-    { symmetry. eapply interp_ret. }
+    { symmetry. rewrite interp_ret; eapply iff_refl. }
   Qed.
 
   Lemma interp_action_weaken_post a (post1 post2:_->_->Prop)
