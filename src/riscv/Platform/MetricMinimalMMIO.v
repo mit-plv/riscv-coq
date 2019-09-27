@@ -133,6 +133,8 @@ Section Riscv.
       | |- context[match ?x with _ => _ end] => destruct x eqn:?
       | |-_ /\ _ => split
       end.
+      (* setRegister *)
+      destruct getMachine; eassumption.
   Qed.
 
 End Riscv.

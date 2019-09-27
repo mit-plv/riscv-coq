@@ -207,20 +207,17 @@ Section Riscv.
   Definition interp_action (a : action) (mach : RiscvMachine) : (result a -> RiscvMachine -> Prop) -> Prop :=
     match a with
     | getRegister reg => fun post =>
-        if Z.eq_dec reg Register0
-        then post (ZToReg 0) mach
-        else
-          valid_register reg /\
-          match map.get mach.(getRegs) reg with
-          | Some v => post v mach
-          | None => forall v, post v mach
-          end
+        let v :=
+          if Z.eq_dec reg 0 then word.of_Z 0
+          else match map.get mach.(getRegs) reg with
+               | Some x => x
+               | None => word.of_Z 0 end in
+        post v mach
     | setRegister reg v => fun post =>
-        if Z.eq_dec reg Register0
-        then post tt mach
-        else
-          valid_register reg /\
-          post tt (withRegs (map.put mach.(getRegs) reg v) mach)
+      let regs := if Z.eq_dec reg Register0
+                  then mach.(getRegs)
+                  else map.put mach.(getRegs) reg v in
+      post tt (withRegs regs mach)
     | getPC => fun post => post mach.(getPc) mach
     | setPC newPC => fun post => post tt (withNextPc newPC mach)
     | step => fun post => post tt (withPc mach.(getNextPc) (withNextPc (word.add mach.(getNextPc) (word.of_Z 4)) mach))
@@ -282,8 +279,6 @@ Section Riscv.
     : interp_action a s post1 -> interp_action a s post2.
   Proof.
     destruct a; cbn; try solve [intuition eauto].
-    { destruct (Z.eq_dec r Register0), (map.get (getRegs s)); intuition eauto. }
-    { destruct (Z.eq_dec r Register0); intuition eauto. }
     all : eauto using load_weaken_post, store_weaken_post.
   Qed.
 
@@ -301,7 +296,6 @@ Section Riscv.
       repeat destruct_one_match; intuition eauto;
         try (eapply mmio_load_total in H1; destruct_products; eauto);
         try (eapply mmio_store_total in H; destruct_products; eauto).
-    Unshelve. exact (word.of_Z 0).
   Qed.
 
   Import coqutil.Tactics.Tactics.
@@ -350,6 +344,8 @@ Section Riscv.
       | |- context[match ?x with _ => _ end] => destruct x eqn:?
       | |-_ /\ _ => split
       end.
+      (* setRegister *)
+      destruct initialL; eassumption.
   Qed.
 
 End Riscv.
