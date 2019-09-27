@@ -13,26 +13,43 @@ ALL_VS := $(SPEC_VS) $(wildcard $(SRCDIR)/Proofs/*.v)
 SPEC_VOS := $(patsubst %.v,%.vo,$(SPEC_VS))
 ALL_VOS := $(patsubst %.v,%.vo,$(ALL_VOS))
 
+DEPS_DIR?=$(PARENT_DIR)
+
+# Note: make does not interpret "\n", and this is intended
+DEPFLAGS_NL=-Q $(DEPS_DIR)/coqutil/src/coqutil coqutil\n
+CURFLAGS_NL=-R $(SRCDIR) riscv\n
+
 EXTERNAL_DEPENDENCIES?=
 
+# If we get our dependencies externally, then we should not bind the local versions of things
 ifneq ($(EXTERNAL_DEPENDENCIES),1)
-COQPATH?=$(PARENT_DIR)/coqutil/src
-export COQPATH
+ALLDEPFLAGS_NL=$(CURFLAGS_NL)$(DEPFLAGS_NL)
+else
+ALLDEPFLAGS_NL=$(CURFLAGS_NL)
 endif
 
+ALLDEPFLAGS=$(subst \n, ,$(ALLDEPFLAGS_NL))
+
+_CoqProject:
+	printf -- '$(ALLDEPFLAGS_NL)' > _CoqProject
+
 spec: Makefile.coq.spec $(SPEC_VS)
+	rm -f .coqdeps.d
 	$(MAKE) -f Makefile.coq.spec
 
 all: Makefile.coq.all $(ALL_VS)
+	rm -f .coqdeps.d
 	$(MAKE) -f Makefile.coq.all
 
 COQ_MAKEFILE := $(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = riscv $(COQMF_ARGS)
 
-Makefile.coq.spec: force
-	 $(COQ_MAKEFILE) $(SPEC_VS) -o Makefile.coq.spec
+Makefile.coq.spec: _CoqProject force
+	@echo "Generating Makefile.coq.spec"
+	@$(COQ_MAKEFILE) $(SPEC_VS) -o Makefile.coq.spec
 
-Makefile.coq.all: force
-	$(COQ_MAKEFILE) $(ALL_VS) -o Makefile.coq.all
+Makefile.coq.all: _CoqProject force
+	@echo "Generating Makefile.coq.all"
+	@$(COQ_MAKEFILE) $(ALL_VS) -o Makefile.coq.all
 
 force:
 
