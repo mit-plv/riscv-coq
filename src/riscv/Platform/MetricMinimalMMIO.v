@@ -9,7 +9,6 @@ Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Primitives.
 Require Import riscv.Spec.MetricPrimitives.
 Require Import Coq.Lists.List. Import ListNotations.
-Require Export riscv.Utility.MMIOTrace.
 Require Export riscv.Platform.RiscvMachine.
 Require Export riscv.Platform.MetricRiscvMachine.
 Require Import riscv.Platform.MinimalMMIO.

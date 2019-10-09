@@ -9,7 +9,6 @@ Require Import riscv.Spec.Machine.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Primitives.
 Require Import Coq.Lists.List. Import ListNotations.
-Require Export riscv.Utility.MMIOTrace.
 Require Export riscv.Platform.RiscvMachine.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
@@ -181,10 +180,10 @@ Section Riscv.
     word.of_Z (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).
 
   Definition mmioLoadEvent(addr: word){n: nat}(v: HList.tuple byte n): LogItem :=
-    ((map.empty, MMInput, [addr]), (map.empty, [signedByteTupleToReg v])).
+    ((map.empty, "MMIOREAD"%string, [addr]), (map.empty, [signedByteTupleToReg v])).
 
   Definition mmioStoreEvent(addr: word){n: nat}(v: HList.tuple byte n): LogItem :=
-    ((map.empty, MMOutput, [addr; signedByteTupleToReg v]), (map.empty, [])).
+    ((map.empty, "MMIOWRITE"%string, [addr; signedByteTupleToReg v]), (map.empty, [])).
 
   Context {ext_spec: ExtSpec}.
 
