@@ -7,7 +7,6 @@ Require Import riscv.Platform.MinimalMMIO.
 Local Open Scope Z_scope.
 
 Section MMIO.
-  (* Context {p: unique! MMIO.parameters}. *)
   Context {W: Words}
           {Mem: map.map word byte}.
 
