@@ -18,9 +18,18 @@ Section MMIO.
   Definition isMMIOAddr(addr: word): Prop :=
     word.unsigned addr mod 4 = 0 /\ (isOTP addr \/ isPRCI addr \/ isGPIO0 addr \/ isUART0 addr).
 
-  Local Instance processor_mmio : ExtSpec := {|
-    mmio_load n ctxid a m t post := isMMIOAddr a /\ forall v, post m v;
-    mmio_store n ctxid a v m t post := isMMIOAddr a /\ post m;
-  |}.
+  Instance FE310_mmio (byte_addr_pred: nat -> word -> Prop): ExtSpec :=
+    {| mmio_load n ctxid a m t post :=
+         isMMIOAddr a /\ byte_addr_pred n a /\ forall v, post m v;
+       mmio_store n ctxid a v m t post :=
+         isMMIOAddr a /\ byte_addr_pred n a /\ post m;
+    |}.
+
+  (* Use the below predicate to ensure that mmio calls happen only by LW/SW 
+   * with aligned addresses. *)
+  Definition mmio_word_aligned (n: nat) (a: word): Prop :=
+    n = 4%nat /\ (word.unsigned a) mod 4 = 0.
 
 End MMIO.
+
+Hint Resolve (FE310_mmio mmio_word_aligned): typeclass_instances.
