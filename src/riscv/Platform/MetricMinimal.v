@@ -135,12 +135,13 @@ Section Riscv.
     Primitives.is_initial_register_value := eq (word.of_Z 0);
     Primitives.nonmem_load n kind addr _ _ := False;
     Primitives.nonmem_store n kind addr v _ _ := False;
+    Primitives.valid_machine mach := True;
   }.
 
   Instance MetricMinimalSatisfiesMetricPrimitives: MetricPrimitives MetricMinimalMetricPrimitivesParams.
   Proof.
     constructor.
-    all: try t.
+    (* all: try t. *)
   Admitted. (* TODO! *)
 
 End Riscv.

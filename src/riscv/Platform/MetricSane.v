@@ -1,5 +1,6 @@
 Require Import Coq.Lists.List.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
+Require Import coqutil.Tactics.Tactics.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Spec.Decode.
@@ -40,13 +41,14 @@ Section Sane.
       mcomp_sane (Return a).
   Proof.
     unfold mcomp_sane.
-    intros. eapply spec_Return in H.
+    intros. eapply spec_Return in H0.
     split.
     - eauto.
     - eapply (proj1 (spec_Return _ _ _)).
-      split.
+      ssplit.
       + assumption.
       + exists nil. reflexivity.
+      + assumption.
   Qed.
 
   Lemma Bind_sane: forall {A B: Type} (m: M A) (f: A -> M B),
@@ -58,23 +60,27 @@ Section Sane.
     intros S1 S2.
     unfold mcomp_sane in *.
     intros.
-    eapply (proj2 (spec_Bind _ _ _ _)) in H.
-    destruct H as (mid & C1 & C2).
+    eapply (proj2 (spec_Bind _ _ _ _)) in H0.
+    destruct H0 as (mid & C1 & C2).
     split.
-    - specialize S1 with (1 := C1). destruct S1 as ((a & middle & S1a) & S1b).
+    - specialize S1 with (1 := H) (2 := C1). destruct S1 as ((a & middle & S1a & S1b) & S1c).
       specialize C2 with (1 := S1a).
-      specialize S2 with (1 := C2). destruct S2 as ((b & final & S2a) & S2b).
+      specialize S2 with (1 := S1b) (2 := C2). destruct S2 as ((b & final & S2a) & S2b).
       eauto.
     - eapply spec_Bind.
-      exists (fun a middle => mid a middle /\ exists diff1, getLog middle = diff1 ++ getLog st).
+      exists (fun a middle => (mid a middle /\
+                               exists diff1, getLog middle = diff1 ++ getLog st) /\
+                              valid_machine middle).
       split.
-      + specialize S1 with (1 := C1). destruct S1 as ((a & middle & S1a) & S1b).
-        exact S1b.
-      + intros. destruct H as (HM & diff1 & E1).
+      + specialize S1 with (1 := H) (2 := C1). destruct S1 as ((a & middle & S1a & S1b) & S1c).
+        exact S1c.
+      + intros. destruct H0 as ((HM & (diff1 & E1)) & V1).
         specialize C2 with (1 := HM).
-        specialize S2 with (1 := C2). destruct S2 as ((b & final & S2a) & S2b).
-        eapply mcomp_sat_weaken; [|exact S2b].
-        simpl. intros. destruct H as (? & diff2 & E2). split; [assumption|].
+        specialize S2 with (1 := V1) (2 := C2). destruct S2 as ((b & final & S2a & S2b) & S2c).
+        eapply mcomp_sat_weaken; [|exact S2c].
+        simpl. intros. destruct H0 as ((? & (diff2 & E2)) & V2).
+        split; [|assumption].
+        split; [assumption|].
         rewrite E1 in E2.
         rewrite List.app_assoc in E2.
         eexists. exact E2.

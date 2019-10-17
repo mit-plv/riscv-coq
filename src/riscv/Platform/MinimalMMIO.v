@@ -12,6 +12,7 @@ Require Import Coq.Lists.List. Import ListNotations.
 Require Export riscv.Platform.RiscvMachine.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
+Require Import coqutil.Map.Properties.
 Require Import coqutil.Tactics.Tactics.
 Require Import riscv.Platform.Sane.
 
@@ -71,7 +72,7 @@ Module free.
 
       Definition interp {output} a s post := @interp_fix output post a s.
 
-      Lemma interp_ret {T} (x : T) m P : interp (ret x) m P = P x m. 
+      Lemma interp_ret {T} (x : T) m P : interp (ret x) m P = P x m.
       Proof. exact eq_refl. Qed.
       Lemma interp_act {T} a (k : _ -> free T) s post
         : interp (act a k) s post
@@ -95,7 +96,7 @@ Module free.
       Qed.
 
       Lemma interp_bind_ex_mid {A B} m0 post (a : free A) (b : A -> free B) :
-        interp (bind a b) m0 post <-> 
+        interp (bind a b) m0 post <->
         (exists mid, interp a m0 mid /\ forall x m1, mid x m1 -> interp (b x) m1 post).
       Proof.
         rewrite interp_bind.
@@ -109,9 +110,12 @@ Module free.
   Global Arguments free : clear implicits.
 End free. Notation free := free.free.
 
-Class ExtSpec{W: Words}{mem : map.map word byte} := {
-  mmio_load: forall (n: nat), SourceType -> word -> mem -> list LogItem -> (mem -> HList.tuple byte n -> Prop) -> Prop;
-  mmio_store: forall (n: nat), SourceType -> word -> HList.tuple byte n -> mem -> list LogItem -> (mem -> Prop) -> Prop;
+Class MMIOSpec{W: Words} := {
+  (* should not say anything about alignment, just whether it's in the MMIO range *)
+  isMMIOAddr: word -> Prop;
+
+  (* alignment and load size checks *)
+  isMMIOAligned: nat -> word -> Prop;
 }.
 
 Section Riscv.
@@ -185,22 +189,29 @@ Section Riscv.
   Definition mmioStoreEvent(addr: word){n: nat}(v: HList.tuple byte n): LogItem :=
     ((map.empty, "MMIOWRITE"%string, [addr; signedByteTupleToReg v]), (map.empty, [])).
 
-  Context {ext_spec: ExtSpec}.
+  Context {mmio_spec: MMIOSpec}.
 
-  Definition store n ctxid a v mach post :=
-    let XAddrs := invalidateWrittenXAddrs n a mach.(getXAddrs) in
+  Definition nonmem_store(n: nat)(ctxid: SourceType) a v mach post :=
+    isMMIOAddr a /\ isMMIOAligned n a /\
+    post (withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs))
+         (withLogItem (@mmioStoreEvent a n v)
+         mach)).
+
+  Definition store(n: nat)(ctxid: SourceType) a v mach post :=
     match Memory.store_bytes n mach.(getMem) a v with
-    | Some m => post (withXAddrs XAddrs (withMem m mach))
-    | None => mmio_store n ctxid a v mach.(getMem) mach.(getLog) (fun m =>
-      post (withXAddrs XAddrs (withMem m (withLogItem (mmioStoreEvent a v) mach))))
+    | Some m => post (withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs)) (withMem m mach))
+    | None => nonmem_store n ctxid a v mach post
     end.
 
-  Definition load n ctxid a mach post :=
+  Definition nonmem_load(n: nat)(ctxid: SourceType) a mach (post: _ -> _ -> Prop) :=
+    isMMIOAddr a /\ isMMIOAligned n a /\
+    forall v, post v (withLogItem (@mmioLoadEvent a n v) mach).
+
+  Definition load(n: nat)(ctxid: SourceType) a mach post :=
     (ctxid = Fetch -> isXAddr a mach.(getXAddrs)) /\
     match Memory.load_bytes n mach.(getMem) a with
     | Some v => post v mach
-    | None => mmio_load n ctxid a mach.(getMem) mach.(getLog) (fun m v =>
-      post v (withMem m (withLogItem (@mmioLoadEvent a n v) mach)))
+    | None => nonmem_load n ctxid a mach post
     end.
 
   Definition interp_action (a : action) (mach : RiscvMachine) : (result a -> RiscvMachine -> Prop) -> Prop :=
@@ -234,43 +245,31 @@ Section Riscv.
     | raiseExceptionWithInfo _ _ _ _
         => fun _ => False
     end.
-  
+
   Notation interp p mach post := (free.interp interp_action p mach post).
 
   Definition MinimalMMIOPrimitivesParams: PrimitivesParams M RiscvMachine := {|
     Primitives.mcomp_sat := @free.interp _ _ _ interp_action;
     Primitives.is_initial_register_value x := True;
-    Primitives.nonmem_load n ctxid a mach post :=
-      mmio_load n ctxid a mach.(getMem) mach.(getLog) (fun m v =>
-      post v (withMem m (withLogItem (@mmioLoadEvent a n v) mach)));
-    Primitives.nonmem_store n ctxid a v mach post :=
-      let XAddrs := invalidateWrittenXAddrs n a mach.(getXAddrs) in
-      mmio_store n ctxid a v mach.(getMem) mach.(getLog) (fun m =>
-      post (withXAddrs XAddrs (withMem m (withLogItem (mmioStoreEvent a v) mach))));
+    Primitives.nonmem_load := nonmem_load;
+    Primitives.nonmem_store := nonmem_store;
+    Primitives.valid_machine mach := map.undef_on mach.(getMem) isMMIOAddr;
   |}.
-
-  Context
-    (mmio_load_weaken_post : forall n c a m t (post1 post2:_->_->Prop), (forall m r, post1 m r -> post2 m r) -> mmio_load n c a m t post1 -> mmio_load n c a m t post2)
-    (mmio_store_weaken_post : forall n c a v m t (post1 post2:_->Prop), (forall m, post1 m -> post2 m) -> mmio_store n c a v m t post1 -> mmio_store n c a v m t post2)
-    (mmio_load_total : forall n c a m t post, mmio_load n c a m t post -> exists v s, post v s)
-    (mmio_store_total : forall n c a v m t post, mmio_store n c a v m t post -> exists s, post s).
 
   Lemma load_weaken_post n c a m (post1 post2:_->_->Prop)
     (H: forall r s, post1 r s -> post2 r s)
     : load n c a m post1 -> load n c a m post2.
   Proof.
-    cbv [load].
+    cbv [load nonmem_load].
     destruct (Memory.load_bytes n (getMem m) a); intuition eauto.
-    eapply mmio_load_weaken_post; eauto; intros. eapply H; eauto.
   Qed.
 
   Lemma store_weaken_post n c a v m (post1 post2:_->Prop)
     (H: forall s, post1 s -> post2 s)
     : store n c a v m post1 -> store n c a v m post2.
   Proof.
-    cbv [store].
+    cbv [store nonmem_store].
     destruct (Memory.store_bytes n (getMem m) a); intuition eauto.
-    eapply mmio_store_weaken_post; eauto; intros. eapply H; eauto.
   Qed.
 
   Lemma interp_action_weaken_post a (post1 post2:_->_->Prop)
@@ -288,13 +287,29 @@ Section Riscv.
     { symmetry; intros. rewrite interp_ret; eapply iff_refl. }
   Qed.
 
-  Lemma interp_action_total a s post :
-    interp_action a s post -> exists v s, post v s.
+  Lemma preserve_undef_on{memOk: map.ok Mem}: forall n (m m': Mem) a w s,
+      Memory.store_bytes n m a w = Some m' ->
+      map.undef_on m s ->
+      map.undef_on m' s.
   Proof.
-    destruct a; cbn -[HList.tuple]; cbv [load store]; cbn -[HList.tuple];
-      repeat destruct_one_match; intuition eauto;
-        try (eapply mmio_load_total in H1; destruct_products; eauto);
-        try (eapply mmio_store_total in H; destruct_products; eauto).
+    intros.
+    (* TODO why does this not solve the goal? *)
+    eauto using map.same_domain_preserves_undef_on, Memory.store_bytes_preserves_domain.
+    eapply map.same_domain_preserves_undef_on.
+    - eassumption.
+    - eapply Memory.store_bytes_preserves_domain. eassumption.
+  Qed.
+
+  Lemma interp_action_total{memOk: map.ok Mem} a s post :
+    map.undef_on s.(getMem) isMMIOAddr ->
+    interp_action a s post -> exists v s', post v s' /\ map.undef_on s'.(getMem) isMMIOAddr.
+  Proof.
+    destruct s, a; cbn -[HList.tuple];
+      cbv [load store nonmem_load nonmem_store]; cbn -[HList.tuple];
+        repeat destruct_one_match;
+        intuition eauto using preserve_undef_on.
+    Unshelve.
+    all: repeat constructor; exact (word.of_Z 0).
   Qed.
 
   Import coqutil.Tactics.Tactics.
@@ -302,7 +317,7 @@ Section Riscv.
     interp_action a s post ->
     interp_action a s (fun _ s' => endswith s'.(getLog) s.(getLog)).
   Proof.
-    destruct s, a; cbn; cbv [load store]; cbn;
+    destruct s, a; cbn; cbv [load store nonmem_load nonmem_store]; cbn;
       repeat destruct_one_match;
       intuition eauto using endswith_refl, endswith_cons_l.
   Qed.
@@ -312,21 +327,32 @@ Section Riscv.
     interp_action a s post ->
     interp_action a s (fun v s' => post v s' /\ endswith s'.(getLog) s.(getLog)).
   Proof.
-    destruct s, a; cbn; cbv [load store]; cbn;
+    destruct s, a; cbn; cbv [load store nonmem_load nonmem_store]; cbn;
       repeat destruct_one_match; intros; destruct_products; try split;
-        try (eapply mmio_load_weaken_post; eauto);
-        try (eapply mmio_store_weaken_post; eauto);
         intuition eauto using endswith_refl, endswith_cons_l.
   Qed.
 
-  Global Instance MinimalMMIOPrimitivesSane : PrimitivesSane MinimalMMIOPrimitivesParams.
+  Lemma interp_action_preserves_valid{memOk: map.ok Mem} a s post :
+    map.undef_on s.(getMem) isMMIOAddr ->
+    interp_action a s post ->
+    interp_action a s (fun v s' => post v s' /\ map.undef_on s'.(getMem) isMMIOAddr).
   Proof.
-    split; cbv [mcomp_sane]; intros; 
-      exact (conj (interp_action_total _ st _ H)
-                  (interp_action_appendonly' _ _ _ H)).
+    destruct s, a; cbn; cbv [load store nonmem_load nonmem_store]; cbn;
+      repeat destruct_one_match; intros; destruct_products; try split;
+        intuition eauto using preserve_undef_on.
   Qed.
 
-  Global Instance MinimalMMIOSatisfiesPrimitives: Primitives MinimalMMIOPrimitivesParams.
+  Global Instance MinimalMMIOPrimitivesSane{memOk: map.ok Mem} :
+    PrimitivesSane MinimalMMIOPrimitivesParams.
+  Proof.
+    split; cbv [mcomp_sane]; intros;
+      exact (conj (interp_action_total _ st _ H H0)
+                  (interp_action_preserves_valid _ st _ H
+                     (interp_action_appendonly' _ _ _ H0))).
+  Qed.
+
+  Global Instance MinimalMMIOSatisfiesPrimitives{memOk: map.ok Mem} :
+    Primitives MinimalMMIOPrimitivesParams.
   Proof.
     split; try exact _.
     all : cbv [mcomp_sat spec_load spec_store MinimalMMIOPrimitivesParams invalidateWrittenXAddrs].

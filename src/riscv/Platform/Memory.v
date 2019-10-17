@@ -5,6 +5,7 @@ Require Import coqutil.Word.Properties.
 Require Import coqutil.Datatypes.HList.
 Require Import coqutil.Datatypes.PrimitivePair.
 Require Import coqutil.Map.Interface.
+Require Import coqutil.Map.Properties.
 Require Import coqutil.Tactics.Tactics.
 Require Import coqutil.sanity.
 Require Import coqutil.Z.Lia.
@@ -38,6 +39,46 @@ Section MemAccess.
       map.put (unchecked_store_byte_list (word.add a (word.of_Z 1)) l m) a x.
   Proof.
     intros. reflexivity.
+  Qed.
+
+  Lemma lift_option_match{A B: Type}: forall (x: option A) (f: A -> B) (a: A),
+      match x with
+      | Some y => f y
+      | None => f a
+      end =
+      f (match x with
+         | Some y => y
+         | None => a
+         end).
+  Proof. intros. destruct x; reflexivity. Qed.
+
+  Lemma store_bytes_preserves_domain{wordOk: word.ok word}{memOk: map.ok mem}: forall n m a v m',
+      store_bytes n m a v = Some m' ->
+      map.same_domain m m'.
+  Proof.
+    unfold store_bytes, load_bytes.
+    induction n; intros.
+    - simpl in *.
+      change (unchecked_store_bytes 0 m a v) with m in H.
+      inversion H. apply map.same_domain_refl.
+    - destruct (map.getmany_of_tuple m (footprint a (S n))) eqn: E; [|discriminate].
+      inversion H. subst m'. clear H.
+      unfold map.getmany_of_tuple in *.
+      simpl in *.
+      destruct (map.get m a) eqn: E'; [|discriminate].
+      destruct_one_match_hyp; [|discriminate].
+      inversion E. subst t. clear E.
+      unfold unchecked_store_bytes in *. simpl.
+      destruct v as [v vs].
+      eapply map.same_domain_trans.
+      + eapply IHn. unfold map.getmany_of_tuple. rewrite E0. reflexivity.
+      + eapply map.same_domain_put_r.
+        * eapply map.same_domain_refl.
+        * rewrite map.putmany_of_tuple_to_putmany.
+          rewrite map.get_putmany_dec.
+          rewrite E'.
+          rewrite lift_option_match.
+          reflexivity.
   Qed.
 
 End MemAccess.

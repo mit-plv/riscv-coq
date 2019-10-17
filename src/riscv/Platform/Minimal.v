@@ -175,6 +175,7 @@ Section Riscv.
     Primitives.is_initial_register_value := eq (word.of_Z 0);
     Primitives.nonmem_load n kind addr _ _ := False;
     Primitives.nonmem_store n kind addr v _ _ := False;
+    Primitives.valid_machine _ := True;
   }.
 
   Instance MinimalSatisfies_mcomp_sat_spec: mcomp_sat_spec MinimalPrimitivesParams.
@@ -183,10 +184,12 @@ Section Riscv.
   Lemma get_sane: mcomp_sane get.
   Proof.
     unfold mcomp_sane, get. simpl. unfold computation_with_answer_satisfies. intros.
-    destruct H as (? & ? & ? & ?). inversion H. subst. clear H.
+    destruct H0 as (? & ? & ? & ?). inversion H0. subst. clear H0.
     split.
     - eauto.
-    - intros. do 2 eexists. split; [reflexivity|]. split; [assumption|].
+    - intros. do 2 eexists. split; [reflexivity|].
+      split; [|trivial].
+      split; [assumption|].
       exists nil. reflexivity.
   Qed.
 
@@ -196,7 +199,7 @@ Section Riscv.
   Lemma fail_hard_sane: forall A, mcomp_sane (fail_hard (A := A)).
   Proof.
     unfold mcomp_sane, fail_hard. simpl. unfold computation_with_answer_satisfies. intros.
-    destruct H as (? & ? & ? & ?). discriminate.
+    destruct H0 as (? & ? & ? & ?). discriminate.
   Qed.
 
   Lemma update_sane: forall f,
@@ -205,10 +208,10 @@ Section Riscv.
   Proof.
     unfold mcomp_sane, update, get, put. simpl. unfold computation_with_answer_satisfies. intros.
     split.
-    - edestruct H0 as (? & ? & ? & ?); eauto.
-    - intros. destruct H0 as (? & ? & ? & ?).
-      inversion H0. subst. clear H0.
-      eauto.
+    - edestruct H1 as (? & ? & ? & ?); eauto.
+    - intros. destruct H1 as (? & ? & ? & ?).
+      inversion H1. subst. clear H1.
+      eauto 10.
   Qed.
 
   Lemma logEvent_sane: forall e,

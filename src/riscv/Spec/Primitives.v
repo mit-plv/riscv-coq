@@ -37,6 +37,11 @@ Section Primitives.
 
     (* tells what happens if an n-byte write at a non-memory address is performed *)
     nonmem_store: forall (n: nat), SourceType -> word -> HList.tuple byte n -> RiscvMachine -> (RiscvMachine -> Prop) -> Prop;
+
+    (* an invariant which is preserved by each primitive operation
+       TODO it might also be useful to have invariants which are only preserved by whole
+       instructions, such as eg the concrete nextPc = pc + 4 *)
+    valid_machine: Machine -> Prop;
   }.
 
   Class mcomp_sat_spec{Machine: Type}(p: PrimitivesParams Machine): Prop := {
@@ -56,13 +61,14 @@ Section Primitives.
   (* monadic computations used for specifying the behavior of RiscvMachines should be "sane"
      in the sense that we never step to the empty set (that's not absence of failure, since
      failure is modeled as "steps to no set at all"), and that the trace of events is
-     append-only *)
+     append-only, and that valid_machine is preserved *)
   Definition mcomp_sane{p: PrimitivesParams RiscvMachine}{A: Type}(comp: M A): Prop :=
     forall (st: RiscvMachine) (post: A -> RiscvMachine -> Prop),
+      valid_machine st ->
       mcomp_sat comp st post ->
-      (exists a st', post a st') /\
+      (exists a st', post a st' /\ valid_machine st') /\
       (mcomp_sat comp st (fun a st' =>
-         post a st' /\ exists diff, st'.(getLog) = diff ++ st.(getLog))).
+         (post a st' /\ exists diff, st'.(getLog) = diff ++ st.(getLog)) /\ valid_machine st')).
 
   Context {RVM: RiscvProgram M word}.
   Context {RVS: @riscv.Spec.Machine.RiscvMachine M word _ _ RVM}.

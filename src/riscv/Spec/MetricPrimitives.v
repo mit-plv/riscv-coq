@@ -29,10 +29,11 @@ Section MetricPrimitives.
      append-only *)
   Definition mcomp_sane{p: PrimitivesParams M MetricRiscvMachine}{A: Type}(comp: M A): Prop :=
     forall (st: MetricRiscvMachine) (post: A -> MetricRiscvMachine -> Prop),
+      valid_machine st ->
       mcomp_sat comp st post ->
-      (exists a st', post a st') /\
+      (exists a st', post a st' /\ valid_machine st') /\
       (mcomp_sat comp st (fun a st' =>
-         post a st' /\ exists diff, st'.(getLog) = diff ++ st.(getLog))).
+         (post a st' /\ exists diff, st'.(getLog) = diff ++ st.(getLog)) /\ valid_machine st')).
 
   Class MetricPrimitivesSane(p: PrimitivesParams M MetricRiscvMachine): Prop := {
     getRegister_sane: forall r, mcomp_sane (getRegister r);

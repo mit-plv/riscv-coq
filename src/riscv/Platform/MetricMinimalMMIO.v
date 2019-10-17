@@ -30,7 +30,7 @@ Section Riscv.
   Context {Registers: map.map Register word}.
 
   (* note: ext_spec does not have access to the metrics *)
-  Context {ext_spec: ExtSpec}.
+  Context {mmio_spec: MMIOSpec}.
 
   Definition action : Type := (MetricLog -> MetricLog) * action.
   Definition result (a : action) := result (snd a).
@@ -72,13 +72,8 @@ Section Riscv.
     Primitives.is_initial_register_value x := True;
     Primitives.nonmem_load := @Primitives.nonmem_load _ _ _ _ _ MinimalMMIOPrimitivesParams;
     Primitives.nonmem_store := @Primitives.nonmem_store _ _ _ _ _ MinimalMMIOPrimitivesParams;
+    Primitives.valid_machine mach := map.undef_on mach.(getMem) isMMIOAddr;
   }.
-
-  Context
-    (mmio_load_weaken_post : forall n c a m t (post1 post2:_->_->Prop), (forall m r, post1 m r -> post2 m r) -> mmio_load n c a m t post1 -> mmio_load n c a m t post2)
-    (mmio_store_weaken_post : forall n c a v m t (post1 post2:_->Prop), (forall m, post1 m -> post2 m) -> mmio_store n c a v m t post1 -> mmio_store n c a v m t post2)
-    (mmio_load_total : forall n c a m t post, mmio_load n c a m t post -> exists v s, post v s)
-    (mmio_store_total : forall n c a v m t post, mmio_store n c a v m t post -> exists s, post s).
 
   Global Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MetricMinimalMMIOPrimitivesParams.
   Proof.
@@ -100,21 +95,33 @@ Section Riscv.
     interp_action a s post ->
     interp_action a s (fun v s' => post v s' /\ endswith s'.(getLog) s.(getLog)).
   Proof. eapply MinimalMMIO.interp_action_appendonly'; eauto. Qed.
-  Lemma interp_action_total a s post :
-    interp_action a s post -> exists v s, post v s.
+  Lemma interp_action_total{memOk: map.ok Mem} a s post :
+    map.undef_on s.(getMachine).(getMem) isMMIOAddr ->
+    interp_action a s post -> exists v s, post v s /\ map.undef_on s.(getMem) isMMIOAddr.
   Proof.
-    intros H.
-    unshelve epose proof (MinimalMMIO.interp_action_total _ _ _ _ _ H) as H0; eauto.
-    destruct H0 as (?&?&?); eauto.
+    intros H H1.
+    unshelve epose proof (MinimalMMIO.interp_action_total _ _ _ _ H1) as H0; eauto.
+    destruct H0 as (?&?&?&?); eauto.
   Qed.
-  Global Instance MetricMinimalMMIOPrimitivesSane : MetricPrimitivesSane MetricMinimalMMIOPrimitivesParams.
+  Lemma interp_action_preserves_valid{memOk: map.ok Mem} a s post :
+    map.undef_on s.(getMachine).(getMem) isMMIOAddr ->
+    interp_action a s post ->
+    interp_action a s (fun v s' => post v s' /\ map.undef_on s'.(getMem) isMMIOAddr).
   Proof.
-    split; cbv [mcomp_sane]; intros; 
-      exact (conj (interp_action_total _ st _ H)
-                  (interp_action_appendonly' _ _ _ H)).
+    intros U I.
+    unshelve epose proof (MinimalMMIO.interp_action_preserves_valid _ _ _ U I) as H0; eauto.
   Qed.
 
-  Global Instance MetricMinimalMMIOSatisfiesPrimitives:
+  Global Instance MetricMinimalMMIOPrimitivesSane{memOk: map.ok Mem} :
+    MetricPrimitivesSane MetricMinimalMMIOPrimitivesParams.
+  Proof.
+    split; cbv [mcomp_sane]; intros;
+      exact (conj (interp_action_total _ st _ H H0)
+                  (interp_action_preserves_valid _ st _ H
+                     (interp_action_appendonly' _ _ _ H0))).
+  Qed.
+
+  Global Instance MetricMinimalMMIOSatisfiesPrimitives{memOk: map.ok Mem}:
     MetricPrimitives MetricMinimalMMIOPrimitivesParams.
   Proof.
     split; try exact _.
