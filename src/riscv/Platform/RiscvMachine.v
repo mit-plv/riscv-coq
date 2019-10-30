@@ -21,33 +21,44 @@ Section Machine.
      while on others, only a specific range. And when an address is written, we might
      conservatively remove it from that set if we want to prove that our software does not
      depend on self-modifying code being possible.
-     The ifence instruction can will flush the instruction cache and therefore put back the
-     set of executable addresses to the whole range.
-     We only store 4-byte aligned addresses, and storeByte has to clear the two low bits. *)
+     The ifence instruction will flush the instruction cache and therefore put back the
+     set of executable addresses to the whole range. *)
   Definition XAddrs: Type := list word.
 
-  Definition isXAddrB(a: word)(xAddrs: XAddrs): bool :=
+  Definition isXAddr1B(a: word)(xAddrs: XAddrs): bool :=
     match List.find (word.eqb a) xAddrs with
     | Some _ => true
     | None => false
     end.
 
-  Definition isXAddr: word -> XAddrs -> Prop := @List.In word.
+  Definition isXAddr4B(a: word)(xAddrs: XAddrs): bool :=
+    isXAddr1B a xAddrs &&
+    isXAddr1B (word.add a (word.of_Z 1)) xAddrs &&
+    isXAddr1B (word.add a (word.of_Z 2)) xAddrs &&
+    isXAddr1B (word.add a (word.of_Z 3)) xAddrs.
 
-  Lemma isXAddrB_holds: forall a xAddrs,
-      isXAddrB a xAddrs = true -> isXAddr a xAddrs.
+  Definition isXAddr1: word -> XAddrs -> Prop := @List.In word.
+
+  Definition isXAddr4(a: word)(xAddrs: XAddrs): Prop :=
+    isXAddr1 a xAddrs /\
+    isXAddr1 (word.add a (word.of_Z 1)) xAddrs /\
+    isXAddr1 (word.add a (word.of_Z 2)) xAddrs /\
+    isXAddr1 (word.add a (word.of_Z 3)) xAddrs.
+
+  Lemma isXAddr1B_holds: forall a xAddrs,
+      isXAddr1B a xAddrs = true -> isXAddr1 a xAddrs.
   Proof.
-    unfold isXAddrB, isXAddr. intros.
+    unfold isXAddr1B, isXAddr1. intros.
     destruct (List.find (word.eqb a) xAddrs) eqn: E; [|discriminate].
     apply List.find_some in E. destruct E.
     apply Word.Properties.word.eqb_true in H1.
     subst. assumption.
   Qed.
 
-  Lemma isXAddrB_not: forall a xAddrs,
-      isXAddrB a xAddrs = false -> ~ isXAddr a xAddrs.
+  Lemma isXAddr1B_not: forall a xAddrs,
+      isXAddr1B a xAddrs = false -> ~ isXAddr1 a xAddrs.
   Proof.
-    unfold isXAddrB, isXAddr. intros.
+    unfold isXAddr1B, isXAddr1. intros.
     destruct (List.find (word.eqb a) xAddrs) eqn: E; [discriminate|].
     intro C.
     pose proof (List.find_none _ _ E _ C) as P.
@@ -55,18 +66,58 @@ Section Machine.
     discriminate.
   Qed.
 
-  Lemma isXAddrB_true: forall a xAddrs,
-      isXAddr a xAddrs -> isXAddrB a xAddrs = true.
+  Lemma isXAddr1B_true: forall a xAddrs,
+      isXAddr1 a xAddrs -> isXAddr1B a xAddrs = true.
   Proof.
-    intros. destruct (isXAddrB a xAddrs) eqn: E; [reflexivity|exfalso].
-    eapply isXAddrB_not; eassumption.
+    intros. destruct (isXAddr1B a xAddrs) eqn: E; [reflexivity|exfalso].
+    eapply isXAddr1B_not; eassumption.
   Qed.
 
-  Lemma isXAddrB_false: forall a xAddrs,
-      ~ isXAddr a xAddrs -> isXAddrB a xAddrs = false.
+  Lemma isXAddr1B_false: forall a xAddrs,
+      ~ isXAddr1 a xAddrs -> isXAddr1B a xAddrs = false.
   Proof.
-    intros. destruct (isXAddrB a xAddrs) eqn: E; [exfalso|reflexivity].
-    apply isXAddrB_holds in E. contradiction.
+    intros. destruct (isXAddr1B a xAddrs) eqn: E; [exfalso|reflexivity].
+    apply isXAddr1B_holds in E. contradiction.
+  Qed.
+
+  Lemma isXAddr4B_holds: forall a xAddrs,
+      isXAddr4B a xAddrs = true -> isXAddr4 a xAddrs.
+  Proof.
+    unfold isXAddr4B, isXAddr4. intros.
+    apply andb_prop in H. destruct H as [H ?].
+    apply andb_prop in H. destruct H as [H ?].
+    apply andb_prop in H. destruct H as [H ?].
+    apply isXAddr1B_holds in H.
+    apply isXAddr1B_holds in H0.
+    apply isXAddr1B_holds in H1.
+    apply isXAddr1B_holds in H2.
+    auto.
+  Qed.
+
+  Lemma isXAddr4B_not: forall a xAddrs,
+      isXAddr4B a xAddrs = false -> ~ isXAddr4 a xAddrs.
+  Proof.
+    unfold isXAddr4B, isXAddr4. intros.
+    intros [C0 [C1 [C2 C3]]].
+    apply isXAddr1B_true in C0. rewrite C0 in H.
+    apply isXAddr1B_true in C1. rewrite C1 in H.
+    apply isXAddr1B_true in C2. rewrite C2 in H.
+    apply isXAddr1B_true in C3. rewrite C3 in H.
+    discriminate H.
+  Qed.
+
+  Lemma isXAddr4B_true: forall a xAddrs,
+      isXAddr4 a xAddrs -> isXAddr4B a xAddrs = true.
+  Proof.
+    intros. destruct (isXAddr4B a xAddrs) eqn: E; [reflexivity|exfalso].
+    eapply isXAddr4B_not; eassumption.
+  Qed.
+
+  Lemma isXAddr4B_false: forall a xAddrs,
+      ~ isXAddr4 a xAddrs -> isXAddr4B a xAddrs = false.
+  Proof.
+    intros. destruct (isXAddr4B a xAddrs) eqn: E; [exfalso|reflexivity].
+    apply isXAddr4B_holds in E. contradiction.
   Qed.
 
   Definition removeXAddr(a: word): XAddrs -> XAddrs :=
@@ -74,10 +125,10 @@ Section Machine.
 
   Definition addXAddr: word -> XAddrs -> XAddrs := List.cons.
 
-  Fixpoint addXAddrRange(a: word)(nWords: nat)(xAddrs: XAddrs): XAddrs :=
-    match nWords with
+  Fixpoint addXAddrRange(a: word)(nBytes: nat)(xAddrs: XAddrs): XAddrs :=
+    match nBytes with
     | O => xAddrs
-    | S n => addXAddr a (addXAddrRange (word.add a (word.of_Z 4)) n xAddrs)
+    | S n => addXAddr a (addXAddrRange (word.add a (word.of_Z 1)) n xAddrs)
     end.
 
   Record RiscvMachine := mkRiscvMachine {
@@ -127,7 +178,7 @@ Section Machine.
   Definition putProgram(prog: list MachineInt)(addr: word)(ma: RiscvMachine): RiscvMachine :=
     (withPc addr
     (withNextPc (word.add addr (word.of_Z 4))
-    (withXAddrs (addXAddrRange addr (List.length prog) ma.(getXAddrs))
+    (withXAddrs (addXAddrRange addr (4 * List.length prog) ma.(getXAddrs))
     (withMem (unchecked_store_byte_list addr (Z32s_to_bytes prog) ma.(getMem)) ma)))).
 
 End Machine.

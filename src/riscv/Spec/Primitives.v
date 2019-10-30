@@ -99,24 +99,19 @@ Section Primitives.
              (mem_load: mem -> word -> option (HList.tuple byte n))
     : Prop :=
     forall initialL addr (kind: SourceType) (post: HList.tuple byte n -> RiscvMachine -> Prop),
-      (kind = Fetch -> isXAddr addr initialL.(getXAddrs)) /\
+      (kind = Fetch -> isXAddr4 addr initialL.(getXAddrs)) /\
       ((exists v, mem_load initialL.(getMem) addr = Some v /\
                   post v initialL) \/
        (mem_load initialL.(getMem) addr = None /\
         nonmem_load n kind addr initialL post)) ->
       mcomp_sat (riscv_load kind addr) initialL post.
 
-  Definition clear_lowest_two_bits(w: word): word :=
-    word.and w (word.not (word.of_Z 3)).
-
   (* After an address has been written, we make it non-executable, to make sure a processor
-     with an instruction cache won't execute a stale instruction.
-     Note: writes might be misaligned, but XAddrs only contains 4-byte aligned addresses. *)
+     with an instruction cache won't execute a stale instruction. *)
   Fixpoint invalidateWrittenXAddrs(nBytes: nat)(addr: word)(xAddrs: XAddrs): XAddrs :=
     match nBytes with
     | O => xAddrs
-    | S n => removeXAddr (clear_lowest_two_bits addr)
-                         (invalidateWrittenXAddrs n (word.add addr (word.of_Z 1)) xAddrs)
+    | S n => removeXAddr addr (invalidateWrittenXAddrs n (word.add addr (word.of_Z 1)) xAddrs)
     end.
 
   Definition spec_store{p: PrimitivesParams RiscvMachine}(n: nat)

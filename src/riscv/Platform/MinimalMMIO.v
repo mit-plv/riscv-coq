@@ -208,7 +208,7 @@ Section Riscv.
     forall v, post v (withLogItem (@mmioLoadEvent a n v) mach).
 
   Definition load(n: nat)(ctxid: SourceType) a mach post :=
-    (ctxid = Fetch -> isXAddr a mach.(getXAddrs)) /\
+    (ctxid = Fetch -> isXAddr4 a mach.(getXAddrs)) /\
     match Memory.load_bytes n mach.(getMem) a with
     | Some v => post v mach
     | None => nonmem_load n ctxid a mach post

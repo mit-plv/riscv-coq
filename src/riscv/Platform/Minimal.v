@@ -36,7 +36,7 @@ Section Riscv.
     mach <- get;
     v <- fail_if_None (Memory.load_bytes n mach.(getMem) a);
     match kind with
-    | Fetch => if isXAddrB a mach.(getXAddrs) then Return v else fail_hard
+    | Fetch => if isXAddr4B a mach.(getXAddrs) then Return v else fail_hard
     | _ => Return v
     end.
 
@@ -99,11 +99,11 @@ Section Riscv.
   Arguments Memory.store_bytes: simpl never.
 
   Lemma VirtualMemoryFetchP: forall addr xAddrs,
-      VirtualMemory = Fetch -> isXAddr addr xAddrs.
+      VirtualMemory = Fetch -> isXAddr4 addr xAddrs.
   Proof. intros. discriminate. Qed.
 
   Lemma ExecuteFetchP: forall addr xAddrs,
-      Execute = Fetch -> isXAddr addr xAddrs.
+      Execute = Fetch -> isXAddr4 addr xAddrs.
   Proof. intros. discriminate. Qed.
 
   Ltac t :=
@@ -137,8 +137,8 @@ Section Riscv.
        | H: (_, _) = (_, _) |- _ => inversion H; clear H; subst
        | H: _ && _ = true |- _ => apply andb_prop in H
        | H: _ && _ = false |- _ => apply Bool.andb_false_iff in H
-       | H: isXAddrB _ _ = false |- _ => apply isXAddrB_not in H
-       | H: isXAddrB _ _ = true  |- _ => apply isXAddrB_holds in H
+       | H: isXAddr4B _ _ = false |- _ => apply isXAddr4B_not in H
+       | H: isXAddr4B _ _ = true  |- _ => apply isXAddr4B_holds in H
        | H: ?x = ?x -> _ |- _ => specialize (H eq_refl)
        | |- _ * _ => constructor
        | |- option _ => exact None

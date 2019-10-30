@@ -62,7 +62,7 @@ Section MetricPrimitives.
     : Prop :=
     forall (initialL: MetricRiscvMachine) addr (kind: SourceType)
            (post: HList.tuple byte n -> MetricRiscvMachine -> Prop),
-      (kind = Fetch -> isXAddr addr initialL.(getXAddrs)) /\
+      (kind = Fetch -> isXAddr4 addr initialL.(getXAddrs)) /\
       ((exists v, mem_load initialL.(getMem) addr = Some v /\
                   post v (updateMetrics (addMetricLoads 1) initialL)) \/
        (mem_load initialL.(getMem) addr = None /\
