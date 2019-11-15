@@ -90,6 +90,10 @@ convert: riscv-semantics_version_check hs-to-coq_version_check $(HS_SOURCES) $(P
 	$(HS_TO_COQ) $(EXECUTE_OPTS) $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteA64.hs
 
 
+# Currently does not work because of https://github.com/coq/coq/issues/11129
+src/riscv/Spec/Decode.v.beautified:
+	make -f Makefile.coq.all $(SRCDIR)/Spec/Decode.v.beautified
+
 # coq-to-other languages conversion:
 
 # do not rm these intermediate files in a chain
