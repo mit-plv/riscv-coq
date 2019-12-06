@@ -9,26 +9,19 @@ Require Import riscv.Spec.Machine.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Primitives.
 Require Import Coq.Lists.List. Import ListNotations.
+Require Import coqutil.Datatypes.List.
+Require Import coqutil.Datatypes.ListSet.
 Require Export riscv.Platform.RiscvMachine.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Properties.
+Require Import coqutil.Datatypes.PropSet.
 Require Import coqutil.Tactics.Tactics.
 Require Import riscv.Platform.Sane.
 
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
-(* TODO: move *)
-Module Import List.
-  Definition endswith {T} (xs : list T) (suffix : list T) :=
-    exists prefix, xs = prefix ++ suffix.
-  Lemma endswith_refl {T} (xs : list T) : endswith xs xs.
-  Proof. exists nil; trivial. Qed.
-  Lemma endswith_cons_l {T} (x : T) xs ys :
-    endswith ys xs -> endswith (cons x ys) xs.
-  Proof. inversion 1; subst. eexists (cons x _). exact eq_refl. Qed.
-End List.
 
 (* TODO: move *)
 Module free.
@@ -253,7 +246,8 @@ Section Riscv.
     Primitives.is_initial_register_value x := True;
     Primitives.nonmem_load := nonmem_load;
     Primitives.nonmem_store := nonmem_store;
-    Primitives.valid_machine mach := map.undef_on mach.(getMem) isMMIOAddr;
+    Primitives.valid_machine mach :=
+      map.undef_on mach.(getMem) isMMIOAddr /\ disjoint (of_list mach.(getXAddrs)) isMMIOAddr;
   |}.
 
   Lemma load_weaken_post n c a m (post1 post2:_->_->Prop)
@@ -302,12 +296,19 @@ Section Riscv.
 
   Lemma interp_action_total{memOk: map.ok Mem} a s post :
     map.undef_on s.(getMem) isMMIOAddr ->
-    interp_action a s post -> exists v s', post v s' /\ map.undef_on s'.(getMem) isMMIOAddr.
+    disjoint (of_list s.(getXAddrs)) isMMIOAddr ->
+    interp_action a s post -> exists v s', post v s' /\ map.undef_on s'.(getMem) isMMIOAddr
+                                           /\ disjoint (of_list s'.(getXAddrs)) isMMIOAddr.
   Proof.
     destruct s, a; cbn -[HList.tuple];
       cbv [load store nonmem_load nonmem_store]; cbn -[HList.tuple];
         repeat destruct_one_match;
-        intuition eauto using preserve_undef_on.
+        intuition idtac;
+        do 2 eexists;
+        ssplit; eauto; simpl;
+        change removeXAddr with (@List.removeb word word.eqb _);
+        rewrite ?ListSet.of_list_removeb;
+        intuition eauto 10 using preserve_undef_on, disjoint_diff_l.
     Unshelve.
     all: repeat constructor; exact (word.of_Z 0).
   Qed.
@@ -334,21 +335,25 @@ Section Riscv.
 
   Lemma interp_action_preserves_valid{memOk: map.ok Mem} a s post :
     map.undef_on s.(getMem) isMMIOAddr ->
+    disjoint (of_list s.(getXAddrs)) isMMIOAddr ->
     interp_action a s post ->
-    interp_action a s (fun v s' => post v s' /\ map.undef_on s'.(getMem) isMMIOAddr).
+    interp_action a s (fun v s' => post v s' /\
+         map.undef_on s'.(getMem) isMMIOAddr /\ disjoint (of_list s'.(getXAddrs)) isMMIOAddr).
   Proof.
     destruct s, a; cbn; cbv [load store nonmem_load nonmem_store]; cbn;
       repeat destruct_one_match; intros; destruct_products; try split;
-        intuition eauto using preserve_undef_on.
+        change removeXAddr with (@List.removeb word word.eqb _);
+        rewrite ?ListSet.of_list_removeb;
+        intuition eauto 10 using preserve_undef_on, disjoint_diff_l.
   Qed.
 
   Global Instance MinimalMMIOPrimitivesSane{memOk: map.ok Mem} :
     PrimitivesSane MinimalMMIOPrimitivesParams.
   Proof.
-    split; cbv [mcomp_sane]; intros;
-      exact (conj (interp_action_total _ st _ H H0)
-                  (interp_action_preserves_valid _ st _ H
-                     (interp_action_appendonly' _ _ _ H0))).
+    split; cbv [mcomp_sane valid_machine MinimalMMIOPrimitivesParams]; intros *; intros [U D] M;
+      (split; [ exact (interp_action_total _ st _ U D M)
+              | eapply interp_action_preserves_valid; try eassumption;
+                eapply interp_action_appendonly'; try eassumption ]).
   Qed.
 
   Global Instance MinimalMMIOSatisfiesPrimitives{memOk: map.ok Mem} :

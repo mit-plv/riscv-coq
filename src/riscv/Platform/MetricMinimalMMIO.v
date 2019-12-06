@@ -72,7 +72,9 @@ Section Riscv.
     Primitives.is_initial_register_value x := True;
     Primitives.nonmem_load := @Primitives.nonmem_load _ _ _ _ _ MinimalMMIOPrimitivesParams;
     Primitives.nonmem_store := @Primitives.nonmem_store _ _ _ _ _ MinimalMMIOPrimitivesParams;
-    Primitives.valid_machine mach := map.undef_on mach.(getMem) isMMIOAddr;
+    Primitives.valid_machine mach :=
+      map.undef_on mach.(getMem) isMMIOAddr /\
+      PropSet.disjoint (PropSet.of_list mach.(getXAddrs)) isMMIOAddr;
   }.
 
   Global Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MetricMinimalMMIOPrimitivesParams.
@@ -97,28 +99,36 @@ Section Riscv.
   Proof. eapply MinimalMMIO.interp_action_appendonly'; eauto. Qed.
   Lemma interp_action_total{memOk: map.ok Mem} a s post :
     map.undef_on s.(getMachine).(getMem) isMMIOAddr ->
-    interp_action a s post -> exists v s, post v s /\ map.undef_on s.(getMem) isMMIOAddr.
+    PropSet.disjoint (PropSet.of_list s.(getMachine).(getXAddrs)) isMMIOAddr ->
+    interp_action a s post ->
+    exists v s, post v s /\ map.undef_on s.(getMem) isMMIOAddr /\
+                PropSet.disjoint (PropSet.of_list s.(getMachine).(getXAddrs)) isMMIOAddr.
   Proof.
-    intros H H1.
-    unshelve epose proof (MinimalMMIO.interp_action_total _ _ _ _ H1) as H0; eauto.
+    intros H D H1.
+    unshelve epose proof (MinimalMMIO.interp_action_total _ _ _ _ D H1) as H0; eauto.
     destruct H0 as (?&?&?&?); eauto.
   Qed.
   Lemma interp_action_preserves_valid{memOk: map.ok Mem} a s post :
     map.undef_on s.(getMachine).(getMem) isMMIOAddr ->
+    PropSet.disjoint (PropSet.of_list s.(getMachine).(getXAddrs)) isMMIOAddr ->
     interp_action a s post ->
-    interp_action a s (fun v s' => post v s' /\ map.undef_on s'.(getMem) isMMIOAddr).
+    interp_action a s (fun v s' =>
+        post v s' /\
+        map.undef_on s'.(getMem) isMMIOAddr /\
+        PropSet.disjoint (PropSet.of_list s'.(getMachine).(getXAddrs)) isMMIOAddr).
   Proof.
-    intros U I.
-    unshelve epose proof (MinimalMMIO.interp_action_preserves_valid _ _ _ U I) as H0; eauto.
+    intros U D I.
+    unshelve epose proof (MinimalMMIO.interp_action_preserves_valid _ _ _ U D I) as H0; eauto.
   Qed.
 
   Global Instance MetricMinimalMMIOPrimitivesSane{memOk: map.ok Mem} :
     MetricPrimitivesSane MetricMinimalMMIOPrimitivesParams.
   Proof.
-    split; cbv [mcomp_sane]; intros;
-      exact (conj (interp_action_total _ st _ H H0)
-                  (interp_action_preserves_valid _ st _ H
-                     (interp_action_appendonly' _ _ _ H0))).
+    split; cbv [mcomp_sane valid_machine MetricMinimalMMIOPrimitivesParams];
+      intros *; intros [U D] M;
+      (split; [ exact (interp_action_total _ st _ U D M)
+              | eapply interp_action_preserves_valid; try eassumption;
+                eapply interp_action_appendonly'; try eassumption ]).
   Qed.
 
   Global Instance MetricMinimalMMIOSatisfiesPrimitives{memOk: map.ok Mem}:
