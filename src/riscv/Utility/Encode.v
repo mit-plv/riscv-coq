@@ -156,6 +156,7 @@ Definition apply_InstructionMapper{T: Type}(mapper: InstructionMapper T)(inst: I
   | A64Instruction (Amomaxu_d rd rs1 rs2 aqrl) => mapper.(map_R_atomic) opcode_AMO rd rs1 rs2 funct3_AMOD aqrl funct5_AMOMAXU
   end.
 
+Declare Scope z_bitwise_scope.
 Notation "a <|> b" := (Z.lor a b) (at level 50, left associativity) : z_bitwise_scope.
 Open Scope z_bitwise_scope.
 
