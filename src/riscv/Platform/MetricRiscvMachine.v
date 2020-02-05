@@ -67,7 +67,7 @@ Section Machine.
 
 End Machine.
 
-Ltac destruct_RiscvMachine m :=
+Ltac only_destruct_RiscvMachine m :=
   lazymatch type of m with
   | MetricRiscvMachine =>
     let r := fresh m "_regs" in
@@ -77,7 +77,16 @@ Ltac destruct_RiscvMachine m :=
     let x := fresh m "_xaddrs" in
     let l := fresh m "_log" in
     let mc := fresh m "_metrics" in
-    destruct m as [ [r p n me x l] mc ];
-    simpl in *
+    destruct m as [ [r p n me x l] mc ]
   | _ => let expected := constr:(@MetricRiscvMachine) in fail "not a" expected
   end.
+
+Ltac unfold_RiscvMachine_get_set :=
+  unfold getMachine, getMetrics,
+         RiscvMachine.getRegs, RiscvMachine.getPc, RiscvMachine.getNextPc,
+         RiscvMachine.getMem, RiscvMachine.getXAddrs, RiscvMachine.getLog,
+         withMetrics, withRegs, withPc, withNextPc, withMem, withXAddrs, withLog, withLogItem, withLogItems.
+
+Ltac destr_RiscvMachine state := only_destruct_RiscvMachine state; unfold_RiscvMachine_get_set.
+
+Ltac destruct_RiscvMachine m := only_destruct_RiscvMachine m; simpl in *.
