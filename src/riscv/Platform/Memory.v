@@ -9,12 +9,13 @@ Require Import coqutil.Map.Properties.
 Require Import coqutil.Tactics.Tactics.
 Require Import coqutil.sanity.
 Require Import coqutil.Z.Lia.
+Require Import coqutil.Byte.
 
 Local Open Scope Z_scope.
 
 
 Section MemAccess.
-  Context {byte: word 8} {width: Z} {word: word width} {mem: map.map word byte}.
+  Context {width: Z} {word: Word.Interface.word width} {mem: map.map word byte}.
 
   Definition footprint(a: word)(sz: nat): tuple word sz :=
     tuple.unfoldn (fun w => word.add w (word.of_Z 1)) sz a.

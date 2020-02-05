@@ -9,7 +9,6 @@ Open Scope Z_scope.
 Existing Instance Naive.word.
 
 Instance Words64Naive: Words := {|
-  byte := word8;
   word := word64;
   width_cases := or_intror eq_refl;
 |}.

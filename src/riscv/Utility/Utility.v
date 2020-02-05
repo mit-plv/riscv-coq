@@ -2,6 +2,7 @@ Require Export Coq.ZArith.BinIntDef.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.setoid_ring.Ring_theory.
 Require Export coqutil.Word.Interface.
+Require Export coqutil.Byte.
 Require Import coqutil.Datatypes.HList.
 Require Import coqutil.sanity.
 Require Export coqutil.Z.BitOps.
@@ -14,17 +15,12 @@ Notation bitSlice := coqutil.Z.BitOps.bitSlice.
 Notation signExtend := coqutil.Z.BitOps.signExtend.
 
 (* when we don't need any operators, we just use tuples of bytes: *)
-Section ByteTuples.
-  Context {byte: word 8}.
-  Definition w8  := tuple byte 1.
-  Definition w16 := tuple byte 2.
-  Definition w32 := tuple byte 4.
-  Definition w64 := tuple byte 8.
-End ByteTuples.
+Definition w8  := tuple byte 1.
+Definition w16 := tuple byte 2.
+Definition w32 := tuple byte 4.
+Definition w64 := tuple byte 8.
 
 Class Words := {
-  byte :> word 8;
-  byte_ok :> word.ok byte;
   width : Z;
   width_cases: width = 32 \/ width = 64;
   word: word width;
@@ -37,7 +33,6 @@ Definition MachineInt := Z.
 
 (* t is a parameter rather than a field for Haskell compatibility *)
 Class MachineWidth(t: Type) := {
-  byte_Inst :> word.word 8;
 
   (* arithmetic operations (inherited from wegral in Haskell) *)
   add: t -> t -> t;
@@ -116,6 +111,8 @@ Section Derived.
   Definition lnot(x: t): t := xor x maxUnsigned.
 
 End Derived.
+
+Declare Scope alu_scope.
 
 Notation "a <|> b" := (or a b)  (at level 50, left associativity) : alu_scope.
 Notation "a <&> b" := (and a b) (at level 40, left associativity) : alu_scope.
