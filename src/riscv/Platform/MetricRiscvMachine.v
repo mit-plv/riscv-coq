@@ -82,10 +82,12 @@ Ltac only_destruct_RiscvMachine m :=
   end.
 
 Ltac unfold_RiscvMachine_get_set :=
-  unfold getMachine, getMetrics,
-         RiscvMachine.getRegs, RiscvMachine.getPc, RiscvMachine.getNextPc,
-         RiscvMachine.getMem, RiscvMachine.getXAddrs, RiscvMachine.getLog,
-         withMetrics, withRegs, withPc, withNextPc, withMem, withXAddrs, withLog, withLogItem, withLogItems.
+  cbv [getMachine getMetrics
+       RiscvMachine.getRegs RiscvMachine.getPc RiscvMachine.getNextPc
+       RiscvMachine.getMem RiscvMachine.getXAddrs RiscvMachine.getLog
+       withMetrics withRegs withPc withNextPc withMem withXAddrs withLog withLogItem withLogItems
+       RiscvMachine.withRegs RiscvMachine.withPc RiscvMachine.withNextPc RiscvMachine.withMem
+       RiscvMachine.withXAddrs RiscvMachine.withLog RiscvMachine.withLogItem RiscvMachine.withLogItems] in *.
 
 Ltac destr_RiscvMachine state := only_destruct_RiscvMachine state; unfold_RiscvMachine_get_set.
 
