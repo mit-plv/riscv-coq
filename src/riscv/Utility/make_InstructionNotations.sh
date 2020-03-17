@@ -10,7 +10,7 @@ echo 'Notation "!RISCV:! x  y  ..  z" := (@cons Instruction x (@cons Instruction
 echo "" >> "$F"
 
 cat ./src/riscv/Utility/PrintInstructions.v.redirect \
-    | coqtop -Q ../coqutil/src/coqutil coqutil -R ./src/riscv riscv \
+    | coqtop -Q ../coqutil/src/coqutil coqutil -Q ./src/riscv riscv \
     | grep -E -e '^  . .*Instruction(M64|M|I64|I|CSR|A64|A)$' \
     | grep -v 'Invalid' \
     | sed -E \
