@@ -56,7 +56,7 @@ force:
 clean:: Makefile.coq.all
 	$(MAKE) -f Makefile.coq.all clean
 	find . -type f \( -name '*~' -o -name '*.aux' -o -name '.lia.cache' -o -name '.nia.cache' \) -delete
-	rm -f Makefile.coq.all Makefile.coq.all.conf Makefile.coq.spec Makefile.coq.spec.conf
+	rm -f Makefile.coq.all Makefile.coq.all.conf Makefile.coq.spec Makefile.coq.spec.conf _CoqProject
 
 install:: Makefile.coq.all
 	$(MAKE) -f Makefile.coq.all install
