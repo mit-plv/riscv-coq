@@ -17,7 +17,7 @@ DEPS_DIR?=$(PARENT_DIR)
 
 # Note: make does not interpret "\n", and this is intended
 DEPFLAGS_NL=-Q $(DEPS_DIR)/coqutil/src/coqutil coqutil\n
-CURFLAGS_NL=-Q $(SRCDIR) riscv\n
+CURFLAGS_NL=-R $(SRCDIR) riscv\n
 
 EXTERNAL_DEPENDENCIES?=
 
@@ -106,7 +106,7 @@ src/riscv/Spec/Decode.v.beautified:
 .SECONDARY:
 
 export/extract.vo: export/extract.v spec
-	$(COQBIN)coqc -Q $(SRCDIR) riscv export/extract.v
+	$(COQBIN)coqc -R $(SRCDIR) riscv export/extract.v
 
 export/json/%.json: export/extract.vo src/riscv/%.vo
 	find . -maxdepth 1 -name '*.json' -type f -exec mv -t export/json -- {} +
