@@ -36,7 +36,7 @@ Section Riscv.
   Definition result (a : action) := result (snd a).
   Local Notation M := (free action result).
 
-  Instance IsRiscvMachine: RiscvProgram M word := {|
+  Global Instance IsRiscvMachine: RiscvProgram M word := {|
     Machine.getRegister a := act (id, getRegister a) ret;
     Machine.setRegister a b := act (id, setRegister a b) ret;
     Machine.loadByte a b := act (addMetricLoads 1, loadByte a b) ret;
