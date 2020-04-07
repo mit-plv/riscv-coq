@@ -7,6 +7,7 @@ Makefile.coq.*
 *~
 *.glob
 *.aux
+*.v.timing
 .depend
 .lia.cache
 .nia.cache
