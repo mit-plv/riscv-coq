@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Export Coq.ZArith.ZArith.
 Require Export Coq.Lists.List. Import ListNotations.
 Require Export riscv.Spec.Decode.
@@ -19,6 +20,7 @@ Require Import riscv.Proofs.invert_encode_FenceI.
 Local Open Scope bool_scope.
 Local Open Scope Z_scope.
 
+(*tag:obvious*)
 Lemma invert_encode_InvalidInstruction: forall i,
   verify_Invalid i ->
   forall inst,

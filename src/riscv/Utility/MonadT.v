@@ -1,3 +1,4 @@
+(*tag:unrelated*)
 Require Import Coq.Lists.List.
 
 Class Monad(M: Type -> Type) := mkMonad {

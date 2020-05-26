@@ -1,3 +1,4 @@
+(*tag:unrelated*)
 Require Extraction.
 
 Require Import riscv.Example.

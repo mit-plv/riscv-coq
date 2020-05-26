@@ -1,8 +1,10 @@
+(*tag:importboilerplate*)
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.Utility.Encode.
 Require Import coqutil.Z.BitOps.
 Require Import coqutil.Z.prove_Zeq_bitwise.
 
+(*tag:obvious*)
 Lemma invert_encode_UJ: forall {opcode rd jimm20},
   verify_UJ opcode rd jimm20 ->
   forall inst,

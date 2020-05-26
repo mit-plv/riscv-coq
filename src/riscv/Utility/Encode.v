@@ -1,4 +1,4 @@
-(* Need to define Register *)
+(*tag:importboilerplate*)
 Require Import Coq.ZArith.ZArith.
 Require Import coqutil.Z.HexNotation.
 Require Import riscv.Spec.Decode.
@@ -6,6 +6,7 @@ Require Import riscv.Utility.Utility.
 
 Local Open Scope Z_scope.
 
+(*tag:compiletimecode*)
 Definition funct3_JALR: MachineInt := 0. (* TODO why does Decode not define & check this? *)
 
 Record InstructionMapper{T: Type} := mkInstructionMapper {
@@ -274,6 +275,7 @@ Definition Encoder: InstructionMapper MachineInt := {|
 
 Definition encode: Instruction -> MachineInt := apply_InstructionMapper Encoder.
 
+(*tag:proof*)
 Hint Unfold
   encode
   encode_Fence
@@ -290,7 +292,7 @@ Hint Unfold
   encode_UJ
 : encoders.
 
-
+(*tag:spec*)
 Definition verify_Invalid(i: Z) :=
     False.
 
@@ -421,6 +423,7 @@ Definition verify_iset(inst: Instruction)(iset: InstructionSet): Prop :=
 Definition verify(inst: Instruction)(iset: InstructionSet): Prop :=
   respects_bounds (bitwidth iset) inst /\ verify_iset inst iset.
 
+(*tag:proof*)
 Hint Unfold
   map_Invalid
   map_R
@@ -440,13 +443,16 @@ Hint Unfold
   apply_InstructionMapper
 : mappers.
 
+(*tag:test*)
 Goal (respects_bounds 32 (IInstruction (Jal 0 3))).
   simpl. unfold verify_UJ.
   (* wrong, as expected *)
 Abort.
 
+(*tag:importboilerplate*)
 Require Import coqutil.Z.Lia.
 
+(*tag:test*)
 Goal (respects_bounds 32 (IInstruction (Jal 0 4))).
   simpl. unfold verify_UJ.
   unfold opcode_JAL.

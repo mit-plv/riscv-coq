@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Map.Interface.
@@ -9,8 +10,9 @@ Require Import riscv.Spec.Machine.
 Require Import riscv.Platform.RiscvMachine.
 Require Import riscv.Utility.MkMachineWidth.
 
-
+(*tag:doc*)
 (* Note: Register 0 is not considered valid because it cannot be written *)
+(*tag:spec*)
 Definition valid_register(r: Register): Prop := (0 < r < 32)%Z.
 
 Section Primitives.
@@ -23,24 +25,34 @@ Section Primitives.
   Context {MM: Monad M}.
 
   Class PrimitivesParams(Machine: Type) := {
+    (*tag:doc*)
     (* Abstract predicate specifying when a monadic computation satisfies a
        postcondition when run on given initial machine *)
+    (*tag:spec*)
     mcomp_sat: forall {A: Type}, M A -> Machine -> (A -> Machine -> Prop) -> Prop;
 
+    (*tag:doc*)
     (* Tells whether the given value can be found in an uninitialized register.
        On instances supporting non-determinism, it returns True for all values.
        On instances without non-determinism, it only accepts a default value, eg 0 *)
+    (*tag:spec*)
     is_initial_register_value: word -> Prop;
 
+    (*tag:doc*)
     (* tells what happens if an n-byte read at a non-memory address is performed *)
+    (*tag:spec*)
     nonmem_load : forall (n: nat), SourceType -> word -> RiscvMachine -> (HList.tuple byte n -> RiscvMachine -> Prop) -> Prop;
 
+    (*tag:doc*)
     (* tells what happens if an n-byte write at a non-memory address is performed *)
+    (*tag:spec*)
     nonmem_store: forall (n: nat), SourceType -> word -> HList.tuple byte n -> RiscvMachine -> (RiscvMachine -> Prop) -> Prop;
 
+    (*tag:doc*)
     (* an invariant which is preserved by each primitive operation
        TODO it might also be useful to have invariants which are only preserved by whole
        instructions, such as eg the concrete nextPc = pc + 4 *)
+    (*tag:spec*)
     valid_machine: Machine -> Prop;
   }.
 
@@ -58,10 +70,12 @@ Section Primitives.
         mcomp_sat (Return a) initialL post;
   }.
 
+  (*tag:doc*)
   (* monadic computations used for specifying the behavior of RiscvMachines should be "sane"
      in the sense that we never step to the empty set (that's not absence of failure, since
      failure is modeled as "steps to no set at all"), and that the trace of events is
      append-only, and that valid_machine is preserved *)
+  (*tag:spec*)
   Definition mcomp_sane{p: PrimitivesParams RiscvMachine}{A: Type}(comp: M A): Prop :=
     forall (st: RiscvMachine) (post: A -> RiscvMachine -> Prop),
       valid_machine st ->

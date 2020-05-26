@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 (* Default settings (from HsToCoq.Coq.Preamble) *)
 
 Generalizable All Variables.
@@ -30,6 +31,7 @@ Require Utility.Utility.
 
 (* Converted value declarations: *)
 
+(*tag:spec*)
 Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
    : Spec.Decode.InstructionI -> p unit :=
   fun arg_0__ =>
@@ -246,6 +248,7 @@ Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
     | inst => Return tt
     end.
 
+(*tag:unrelated*)
 (* External variables:
      Bind Return ZToReg and bool id lnot negb op_zgze__ op_zl__ op_zm__ op_zp__
      op_zsze__ or reg_eqb tt unit when xor Spec.Decode.Add Spec.Decode.Addi

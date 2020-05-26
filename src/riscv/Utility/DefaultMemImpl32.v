@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import Coq.ZArith.ZArith.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Word.Interface coqutil.Word.Properties coqutil.Word.Naive.
@@ -5,7 +6,7 @@ Require Import coqutil.Map.Interface.
 Require Import riscv.Utility.Words32Naive.
 Require coqutil.Map.SortedList coqutil.Map.SortedListWord.
 
-
+(*tag:administrivia*)
 Instance params: SortedList.parameters := {|
   SortedList.parameters.key := word32;
   SortedList.parameters.value := Byte.byte;

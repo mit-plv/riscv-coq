@@ -1,11 +1,14 @@
+(*tag:importboilerplate*)
 Require Import riscv.Spec.Decode.
 
+(*tag:spec*)
 Coercion IInstruction: InstructionI >-> Instruction.
 Coercion MInstruction: InstructionM >-> Instruction.
 Coercion I64Instruction: InstructionI64 >-> Instruction.
 Coercion M64Instruction: InstructionM64 >-> Instruction.
 Coercion CSRInstruction: InstructionCSR >-> Instruction.
 
+(*tag:workaround*)
 (* separate notation to make sure coercions kick in *)
 Declare Scope ilist_scope.
 Notation "[[ ]]" := (@nil Instruction) (format "[[ ]]") : ilist_scope.

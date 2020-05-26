@@ -1,3 +1,5 @@
+(*tag:unrelated*)
+(* referenced in lightbulb, but its functionality is not used *)
 Require Import Coq.Lists.List.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import coqutil.Tactics.Tactics.

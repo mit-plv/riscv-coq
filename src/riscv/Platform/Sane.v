@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import Coq.Lists.List.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import coqutil.Tactics.Tactics.
@@ -22,10 +23,12 @@ Section Sane.
   Context {PRParams: PrimitivesParams M RiscvMachine}.
   Context {mcomp_sat_ok: mcomp_sat_spec PRParams}.
 
+  (*tag:proof*)
   Lemma mcomp_sat_weaken: forall A initialL m (post1 post2: A -> RiscvMachine -> Prop),
       (forall a mach, post1 a mach -> post2 a mach) ->
       mcomp_sat m initialL post1 ->
       mcomp_sat m initialL post2.
+  (*tag:obvious*)
   Proof.
     intros.
     rewrite <- (@right_identity M MM A m).
@@ -35,8 +38,10 @@ Section Sane.
     - intros. simpl in *. apply spec_Return. eapply H. assumption.
   Qed.
 
+  (*tag:proof*)
   Lemma Return_sane: forall {A: Type} (a: A),
       mcomp_sane (Return a).
+  (*tag:obvious*)
   Proof.
     unfold mcomp_sane.
     intros. eapply spec_Return in H0.
@@ -49,11 +54,13 @@ Section Sane.
       + assumption.
   Qed.
 
+  (*tag:proof*)
   Lemma Bind_sane: forall {A B: Type} (m: M A) (f: A -> M B),
       mcomp_sane m ->
       (forall a, mcomp_sane (f a)) ->
       mcomp_sane (Bind m f).
   Proof.
+    (*tag:obvious*)
     intros *.
     intros S1 S2.
     unfold mcomp_sane in *.

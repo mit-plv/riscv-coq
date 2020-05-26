@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Export Coq.ZArith.BinIntDef.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.setoid_ring.Ring_theory.
@@ -11,6 +12,7 @@ Global Unset Universe Minimization ToSet.
 
 Local Open Scope Z_scope.
 
+(*tag:spec*)
 Notation bitSlice := coqutil.Z.BitOps.bitSlice.
 Notation signExtend := coqutil.Z.BitOps.signExtend.
 

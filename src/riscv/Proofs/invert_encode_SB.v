@@ -1,8 +1,10 @@
+(*tag:importboilerplate*)
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.Utility.Encode.
 Require Import coqutil.Z.BitOps.
 Require Import coqutil.Z.prove_Zeq_bitwise.
 
+(*tag:obvious*)
 Lemma invert_encode_SB: forall {opcode rs1 rs2 funct3 sbimm12},
   verify_SB opcode rs1 rs2 funct3 sbimm12 ->
   forall inst,

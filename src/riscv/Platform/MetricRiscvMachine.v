@@ -1,3 +1,5 @@
+(*tag:unrelated*)
+(* referenced in lightbulb, but its functionality is not used *)
 Require Import Coq.Strings.String.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.

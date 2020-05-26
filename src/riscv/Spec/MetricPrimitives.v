@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Map.Interface.
@@ -23,10 +24,12 @@ Section MetricPrimitives.
   Context {RVM: RiscvProgram M word}.
   Context {RVS: @RiscvMachine M word _ _ RVM}.
 
+  (*tag:doc*)
   (* monadic computations used for specifying the behavior of RiscvMachines should be "sane"
      in the sense that we never step to the empty set (that's not absence of failure, since
      failure is modeled as "steps to no set at all"), and that the trace of events is
      append-only *)
+  (*tag:spec*)
   Definition mcomp_sane{p: PrimitivesParams M MetricRiscvMachine}{A: Type}(comp: M A): Prop :=
     forall (st: MetricRiscvMachine) (post: A -> MetricRiscvMachine -> Prop),
       valid_machine st ->

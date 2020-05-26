@@ -1,10 +1,13 @@
+(*tag:importboilerplate*)
 Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.Machine.
 Require Import Coq.ZArith.BinInt.
 
 Open Scope Z_scope.
 
+(*tag:doc*)
 (* Table 20.2 in the standard *)
+(*tag:spec*)
 
 Local Notation x0 := Register0.
 
@@ -34,6 +37,7 @@ Definition Bleu(rs: Register)(rt: Register)(offset: Z) := Bgeu rt rs offset.
 Definition J(offset: Z) := Jal x0 offset.
 Definition Jr(rs: Register) := Jalr x0 rs 0.
 
+(*tag:obvious*)
 Hint Unfold
     Nop
     Mov

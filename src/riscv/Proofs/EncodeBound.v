@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import Coq.ZArith.ZArith.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Utility.Encode.
@@ -10,6 +11,7 @@ Require Import coqutil.Z.Lia.
 Local Open Scope bool_scope.
 Local Open Scope Z_scope.
 
+(*tag:obvious*)
 Lemma encode_Fence_bitSlice_idemp: forall opcode funct3 z z0 z1 z2 z3,
     bitSlice (encode_Fence opcode z z0 funct3 z1 z2 z3) 0 32 =
               encode_Fence opcode z z0 funct3 z1 z2 z3.
@@ -94,6 +96,7 @@ Proof.
     reflexivity.
 Qed.
 
+(*tag:proof*)
 Lemma encode_range: forall (i: Instruction),
     0 <= encode i < 2 ^ 32.
 Proof.

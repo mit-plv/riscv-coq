@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.Utility.Encode.
 Require Import coqutil.Z.BitOps.
@@ -5,6 +6,7 @@ Require Import coqutil.Z.prove_Zeq_bitwise.
 
 Local Open Scope bool_scope.
 
+(*tag:obvious*)
 Lemma invert_encode_I_shift_66: forall {bitwidth opcode rd rs1 shamt6 funct3 funct6},
   verify_I_shift_66 bitwidth opcode rd rs1 shamt6 funct3 funct6 ->
   forall inst,

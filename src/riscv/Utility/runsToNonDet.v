@@ -1,8 +1,10 @@
+(*tag:importboilerplate*)
 Require Import coqutil.sanity.
 Unset Universe Minimization ToSet.
 Require Export riscv.Utility.PowerFunc.
 
 
+(*tag:spec*)
 Section RunsTo.
 
   Context {State: Type}.
@@ -17,6 +19,7 @@ Section RunsTo.
         (forall mid, midset mid -> runsTo mid P) ->
         runsTo initial P.
 
+  (*tag:proof*)
   Hint Constructors runsTo : runsTo_hints.
 
   Lemma runsTo_trans: forall P Q initial,
@@ -41,6 +44,7 @@ Section RunsTo.
     step initialL (eq midL) ->
     runsTo midL P ->
     runsTo initialL P.
+  (*tag:obvious*)
   Proof.
     intros.
     eapply runsToStep; [eassumption|].
@@ -48,6 +52,7 @@ Section RunsTo.
     assumption.
   Qed.
 
+  (*tag:proof*)
   Lemma runsToStep_cps initial P (H : step initial (fun s => runsTo s P))
     : runsTo initial P.
   Proof. eapply runsToStep; eauto. Qed.

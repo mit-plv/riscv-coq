@@ -1,3 +1,4 @@
+(*tag:unrelated*)
 Require Import riscv.Proofs.DecodeEncodeProver.
 
 Lemma decodeCSR_encode: forall (inst: InstructionCSR) (iset: InstructionSet),

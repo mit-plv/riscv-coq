@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Import coqutil.Word.Interface.
@@ -17,6 +18,7 @@ Local Open Scope Z_scope.
 Section MemAccess.
   Context {width: Z} {word: Word.Interface.word width} {mem: map.map word byte}.
 
+  (*tag:spec*)
   Definition footprint(a: word)(sz: nat): tuple word sz :=
     tuple.unfoldn (fun w => word.add w (word.of_Z 1)) sz a.
 
@@ -42,6 +44,7 @@ Section MemAccess.
     intros. reflexivity.
   Qed.
 
+  (*tag:obvious*)
   Lemma lift_option_match{A B: Type}: forall (x: option A) (f: A -> B) (a: A),
       match x with
       | Some y => f y
@@ -53,12 +56,14 @@ Section MemAccess.
          end).
   Proof. intros. destruct x; reflexivity. Qed.
 
+  (*tag:proof*)
   Lemma store_bytes_preserves_domain{wordOk: word.ok word}{memOk: map.ok mem}: forall n m a v m',
       store_bytes n m a v = Some m' ->
       map.same_domain m m'.
   Proof.
     unfold store_bytes, load_bytes.
     induction n; intros.
+    (*tag:obvious*)
     - simpl in *.
       change (unchecked_store_bytes 0 m a v) with m in H.
       inversion H. apply map.same_domain_refl.
@@ -90,6 +95,7 @@ Require Import riscv.Utility.Utility.
 Section MemAccess2.
   Context {W: Words} {mem: map.map word byte}.
 
+  (*tag:spec*)
   Definition loadByte:   mem -> word -> option w8  := load_bytes 1.
   Definition loadHalf:   mem -> word -> option w16 := load_bytes 2.
   Definition loadWord:   mem -> word -> option w32 := load_bytes 4.
@@ -101,15 +107,17 @@ Section MemAccess2.
   Definition storeDouble: mem -> word -> w64 -> option mem := store_bytes 8.
 End MemAccess2.
 
-
+(*tag:workaround*)
 Local Unset Universe Polymorphism.
 
+(*tag:administrivia*)
 Section MemoryHelpers.
   Context {W: Words}.
   Add Ring wring: (@word.ring_theory width word word_ok).
 
   Goal forall (a: word), word.add a (word.of_Z 0) = a. intros. ring. Qed.
 
+  (*tag:library*)
   Lemma regToZ_unsigned_add: forall (a b: word),
       0 <= word.unsigned a + word.unsigned b < 2 ^ width ->
       word.unsigned (word.add a b) = word.unsigned a + word.unsigned b.

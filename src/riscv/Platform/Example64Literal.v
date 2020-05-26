@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import Coq.Lists.List.
 Require Import coqutil.Z.Lia.
 Import ListNotations.
@@ -22,7 +23,7 @@ Require coqutil.Map.SortedList.
 
 Existing Instance DefaultRiscvState.
 
-
+(*tag:test*)
 Definition foo7prog: list MachineInt := [
   Ox"400017b7"; (* lui    a5,0x40001 *)
   Ox"fff78793"  (* addi   a5,a5,-1 *)

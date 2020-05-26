@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import riscv.Proofs.DecodeEncodeProver.
 Require Import riscv.Proofs.DecodeEncodeI.
 Require Import riscv.Proofs.DecodeEncodeM.
@@ -7,9 +8,11 @@ Require Import riscv.Proofs.DecodeEncodeM64.
 Require Import riscv.Proofs.DecodeEncodeA64.
 Require Import riscv.Proofs.DecodeEncodeCSR.
 
+(*tag:proof*)
 Lemma decode_encode: forall (inst: Instruction) (iset: InstructionSet),
     verify inst iset ->
     decode iset (encode inst) = inst.
+(*tag:obvious*)
 Proof.
   destruct inst; intros.
   - apply decodeI_encode; assumption.

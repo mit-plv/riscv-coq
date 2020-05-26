@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Word.LittleEndian.
 Require Import riscv.Utility.Monads.
@@ -19,6 +20,7 @@ Section Riscv.
   Context {RVP: RiscvProgram M mword}.
   Context {RVS: RiscvMachine M mword}.
 
+  (*tag:spec*)
   Definition run1(iset: InstructionSet):
     M unit :=
     pc <- getPC;
@@ -26,6 +28,7 @@ Section Riscv.
     execute (decode iset (combine 4 inst));;
     step.
 
+  (*tag:unrelated*)
   Definition run(iset: InstructionSet)(n: nat): M unit :=
     power_func (fun m => run1 iset;; m) n (Return tt).
 

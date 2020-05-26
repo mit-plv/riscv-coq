@@ -1,9 +1,10 @@
+(*tag:importboilerplate*)
 Require Import Coq.ZArith.ZArith.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Decode.
 
-
+(*tag:spec*)
 Inductive AccessType: Type := Instr | Load | Store.
 Inductive SourceType: Type := VirtualMemory | Fetch | Execute.
 
@@ -44,7 +45,7 @@ Class RiscvMachine`{MP: RiscvProgram} := mkRiscvMachine {
   translate(accessType: AccessType)(alignment: t)(addr: t): M t;
 }.
 
-
+(*tag:unrelated*)
 Section Riscv.
   (* monad (will be instantiated with some kind of state monad) *)
   Context {M: Type -> Type}.
@@ -71,11 +72,14 @@ Section Riscv.
     then raiseException (ZToReg 0) (ZToReg 4)
     else Return addr.
 
+  (*tag:spec*)
   Instance DefaultRiscvState{MP: RiscvProgram}: RiscvMachine := {|
+    (*tag:doc*)
     (* riscv does allow misaligned memory access (but might emulate them in software),
        so for the compiler-facing side, we don't do alignment checks, but might add
        another riscv machine layer below to emulate turn misaligned accesses into two
        aligned accesses *)
+    (*tag:spec*)
     translate accessType alignment := @Return M MM t;
   |}.
 
@@ -83,6 +87,7 @@ End Riscv.
 
 Definition Register0: Register := 0%Z.
 
+(*tag:administrivia*)
 Arguments RiscvProgram: clear implicits.
 Arguments RiscvProgram (M) (t) {_} {_}.
 Arguments RiscvMachine: clear implicits.

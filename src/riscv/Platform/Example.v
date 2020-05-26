@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import Coq.Lists.List.
 Require Import coqutil.Z.Lia.
 Import ListNotations.
@@ -22,6 +23,7 @@ Require coqutil.Map.SortedList.
 
 Existing Instance DefaultRiscvState.
 
+(*tag:test*)
 Definition fib6_riscv: list MachineInt := [ (* TODO should be "word32", not MachineInt *)
   Ox"00600993";         (* li s3,6 *)
   Ox"00000a13";         (* li s4,0 *)

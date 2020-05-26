@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import Coq.ZArith.ZArith.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Z.HexNotation.
@@ -9,7 +10,9 @@ Local Open Scope Z_scope.
 Section MMIO.
   Context {W: Words}.
 
+  (*tag:doc*)
   (* Using the memory layout of FE310-G000 *)
+  (*tag:spec*)
   Definition isOTP  (addr: word): Prop := Ox"00020000" <= word.unsigned addr < Ox"00022000".
   Definition isPRCI (addr: word): Prop := Ox"10008000" <= word.unsigned addr < Ox"10010000".
   Definition isGPIO0(addr: word): Prop := Ox"10012000" <= word.unsigned addr < Ox"10013000".
@@ -21,6 +24,7 @@ Section MMIO.
     isMMIOAligned(n: nat)(addr: word) := n = 4%nat /\ (word.unsigned addr) mod 4 = 0;
   |}.
 
+  (*tag:administrivia*)
 End MMIO.
 
 Hint Resolve FE310_mmio: typeclass_instances.

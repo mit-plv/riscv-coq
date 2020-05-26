@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import Coq.ZArith.ZArith.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Z.BitOps.
@@ -6,6 +7,7 @@ Require Import coqutil.Datatypes.HList.
 Require Import riscv.Utility.Utility.
 Local Open Scope Z_scope.
 
+(*tag:spec*)
 Instance MachineWidth_XLEN{W: Words}: MachineWidth word := {|
   add := word.add;
   sub := word.sub;

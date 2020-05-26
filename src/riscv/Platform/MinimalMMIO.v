@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import Coq.Strings.String.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Logic.FunctionalExtensionality.
@@ -22,7 +23,7 @@ Require Import riscv.Platform.Sane.
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
-
+(*tag:library*)
 (* TODO: move *)
 Module free.
   Section WithInterface.
@@ -103,6 +104,7 @@ Module free.
   Global Arguments free : clear implicits.
 End free. Notation free := free.free.
 
+(*tag:spec*)
 Class MMIOSpec{W: Words} := {
   (* should not say anything about alignment, just whether it's in the MMIO range *)
   isMMIOAddr: word -> Prop;
@@ -250,25 +252,31 @@ Section Riscv.
       map.undef_on mach.(getMem) isMMIOAddr /\ disjoint (of_list mach.(getXAddrs)) isMMIOAddr;
   |}.
 
+  (*tag:proof*)
   Lemma load_weaken_post n c a m (post1 post2:_->_->Prop)
     (H: forall r s, post1 r s -> post2 r s)
     : load n c a m post1 -> load n c a m post2.
+  (*tag:obvious*)
   Proof.
     cbv [load nonmem_load].
     destruct (Memory.load_bytes n (getMem m) a); intuition eauto.
   Qed.
 
+  (*tag:proof*)
   Lemma store_weaken_post n c a v m (post1 post2:_->Prop)
     (H: forall s, post1 s -> post2 s)
     : store n c a v m post1 -> store n c a v m post2.
+  (*tag:obvious*)
   Proof.
     cbv [store nonmem_store].
     destruct (Memory.store_bytes n (getMem m) a); intuition eauto.
   Qed.
 
+  (*tag:proof*)
   Lemma interp_action_weaken_post a (post1 post2:_->_->Prop)
     (H: forall r s, post1 r s -> post2 r s) s
     : interp_action a s post1 -> interp_action a s post2.
+  (*tag:obvious*)
   Proof.
     destruct a; cbn; try solve [intuition eauto].
     all : eauto using load_weaken_post, store_weaken_post.
@@ -294,12 +302,14 @@ Section Riscv.
     - eapply Memory.store_bytes_preserves_domain. eassumption.
   Qed.
 
+  (*tag:proof*)
   Lemma interp_action_total{memOk: map.ok Mem} a s post :
     map.undef_on s.(getMem) isMMIOAddr ->
     disjoint (of_list s.(getXAddrs)) isMMIOAddr ->
     interp_action a s post -> exists v s', post v s' /\ map.undef_on s'.(getMem) isMMIOAddr
                                            /\ disjoint (of_list s'.(getXAddrs)) isMMIOAddr.
   Proof.
+    (*tag:obvious*)
     destruct s, a; cbn -[HList.tuple];
       cbv [load store nonmem_load nonmem_store]; cbn -[HList.tuple];
         repeat destruct_one_match;
@@ -313,32 +323,40 @@ Section Riscv.
     all: repeat constructor; exact (word.of_Z 0).
   Qed.
 
+  (*tag:importboilerplate*)
   Import coqutil.Tactics.Tactics.
+  (*tag:proof*)
   Lemma interp_action_appendonly a s post :
     interp_action a s post ->
     interp_action a s (fun _ s' => endswith s'.(getLog) s.(getLog)).
+  (*tag:obvious*)
   Proof.
     destruct s, a; cbn; cbv [load store nonmem_load nonmem_store]; cbn;
       repeat destruct_one_match;
       intuition eauto using endswith_refl, endswith_cons_l.
   Qed.
 
+  (*tag:doc*)
   (* NOTE: maybe instead a generic lemma to push /\ into postondition? *)
+  (*tag:proof*)
   Lemma interp_action_appendonly' a s post :
     interp_action a s post ->
     interp_action a s (fun v s' => post v s' /\ endswith s'.(getLog) s.(getLog)).
+  (*tag:obvious*)
   Proof.
     destruct s, a; cbn; cbv [load store nonmem_load nonmem_store]; cbn;
       repeat destruct_one_match; intros; destruct_products; try split;
         intuition eauto using endswith_refl, endswith_cons_l.
   Qed.
 
+  (*tag:proof*)
   Lemma interp_action_preserves_valid{memOk: map.ok Mem} a s post :
     map.undef_on s.(getMem) isMMIOAddr ->
     disjoint (of_list s.(getXAddrs)) isMMIOAddr ->
     interp_action a s post ->
     interp_action a s (fun v s' => post v s' /\
          map.undef_on s'.(getMem) isMMIOAddr /\ disjoint (of_list s'.(getXAddrs)) isMMIOAddr).
+  (*tag:obvious*)
   Proof.
     destruct s, a; cbn; cbv [load store nonmem_load nonmem_store]; cbn;
       repeat destruct_one_match; intros; destruct_products; try split;
@@ -347,17 +365,21 @@ Section Riscv.
         intuition eauto 10 using preserve_undef_on, disjoint_diff_l.
   Qed.
 
+  (*tag:proof*)
   Global Instance MinimalMMIOPrimitivesSane{memOk: map.ok Mem} :
     PrimitivesSane MinimalMMIOPrimitivesParams.
   Proof.
     split; cbv [mcomp_sane valid_machine MinimalMMIOPrimitivesParams]; intros *; intros [U D] M;
+      (*tag:obvious*)
       (split; [ exact (interp_action_total _ st _ U D M)
               | eapply interp_action_preserves_valid; try eassumption;
                 eapply interp_action_appendonly'; try eassumption ]).
   Qed.
 
+  (*tag:proof*)
   Global Instance MinimalMMIOSatisfiesPrimitives{memOk: map.ok Mem} :
     Primitives MinimalMMIOPrimitivesParams.
+  (*tag:obvious*)
   Proof.
     split; try exact _.
     all : cbv [mcomp_sat spec_load spec_store MinimalMMIOPrimitivesParams invalidateWrittenXAddrs].

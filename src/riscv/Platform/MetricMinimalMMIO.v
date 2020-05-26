@@ -1,3 +1,6 @@
+(*tag:unrelated*)
+(* Note: This file is referenced in the lightbulb development, but we do not make use of the metrics
+   it provides, so we count it as unrelated *)
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.PropExtensionality.

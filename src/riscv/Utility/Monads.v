@@ -1,3 +1,4 @@
+(*tag:unrelated*)
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.PropExtensionality.
 Require Import Coq.Lists.List.

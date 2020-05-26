@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 (* Default settings (from HsToCoq.Coq.Preamble) *)
 
 Generalizable All Variables.
@@ -25,6 +26,7 @@ Require Utility.Utility.
 
 (* Converted type declarations: *)
 
+(*tag:spec*)
 Definition RoundMode :=
   Utility.Utility.MachineInt%type.
 
@@ -1442,6 +1444,7 @@ Definition decode
     then InvalidInstruction inst
     else Coq.Lists.List.nth O results (InvalidInstruction inst).
 
+(*tag:unrelated*)
 (* Skipping instance `Spec.Decode.Eq___InstructionSet' of class
    `GHC.Base.Eq_' *)
 

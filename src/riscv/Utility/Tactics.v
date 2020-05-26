@@ -1,3 +1,4 @@
+(*tag:library*)
 Require Import Coq.ZArith.ZArith.
 
 (* Like "pose proof" but only if we don't yet have this hypothesis *)

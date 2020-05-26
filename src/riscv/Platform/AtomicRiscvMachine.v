@@ -1,3 +1,4 @@
+(*tag:unrelated*)
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
 Require Import riscv.Spec.Decode.

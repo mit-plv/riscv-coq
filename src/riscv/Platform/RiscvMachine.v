@@ -1,3 +1,4 @@
+(*tag:importboilerplate*)
 Require Import Coq.Strings.String.
 Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Map.Interface.
@@ -14,17 +15,23 @@ Section Machine.
   Context {Registers: map.map Register word}.
   Context {Mem: map.map word byte}.
 
+  (*tag:doc*)
   (* (memory before call, call name, arg values) and (memory after call, return values) *)
+  (*tag:spec*)
   Definition LogItem: Type := (Mem * string * list word) * (Mem * list word).
 
+  (*tag:doc*)
   (* set of executable addresses. On some processors, this could be the whole address range,
      while on others, only a specific range. And when an address is written, we might
      conservatively remove it from that set if we want to prove that our software does not
      depend on self-modifying code being possible.
      The ifence instruction will flush the instruction cache and therefore put back the
      set of executable addresses to the whole range. *)
+  (*tag:spec*)
   Definition XAddrs: Type := list word.
 
+  (*tag:unrelated*)
+  (* The lightbulb only uses the Prop version of isXAddr, but not the bool version *)
   Definition isXAddr1B(a: word)(xAddrs: XAddrs): bool :=
     match List.find (word.eqb a) xAddrs with
     | Some _ => true
@@ -120,6 +127,7 @@ Section Machine.
     apply isXAddr4B_holds in E. contradiction.
   Qed.
 
+  (*tag:spec*)
   Definition removeXAddr(a: word): XAddrs -> XAddrs :=
     List.filter (fun a' => negb (word.eqb a a')).
 
@@ -140,6 +148,8 @@ Section Machine.
     getLog: list LogItem;
   }.
 
+  (*tag:obvious*)
+  (* Setters should be a language feature *)
   Definition withRegs: Registers -> RiscvMachine -> RiscvMachine :=
     fun regs2 '(mkRiscvMachine regs1 pc nextPC mem xAddrs log) =>
                 mkRiscvMachine regs2 pc nextPC mem xAddrs log.
@@ -172,6 +182,7 @@ Section Machine.
     fun items '(mkRiscvMachine regs pc nextPC mem xAddrs log) =>
                 mkRiscvMachine regs pc nextPC mem xAddrs (items ++ log).
 
+  (*tag:spec*)
   Definition Z32s_to_bytes(l: list Z): list byte :=
     List.flat_map (fun z => HList.tuple.to_list (LittleEndian.split 4 z)) l.
 
