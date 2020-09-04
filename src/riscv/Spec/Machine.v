@@ -1,9 +1,13 @@
 Require Import Coq.ZArith.ZArith.
 Require Import riscv.Utility.Monads.
+Require riscv.Utility.MonadNotations.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.CSRField.
 
-
+(* Note that this is ordered: User < Supervisor < Machine *)
+Inductive PrivMode: Type := User | Supervisor | Machine.
+Scheme Equality for PrivMode. (* for PrivMode_beq : PrivMode -> PrivMode -> bool *)
 Inductive AccessType: Type := Instr | Load | Store.
 Inductive SourceType: Type := VirtualMemory | Fetch | Execute.
 
@@ -25,8 +29,13 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   clearReservation : t -> M unit;
   checkReservation : t -> M bool;
 
+  getCSRField : CSRField -> M MachineInt;
+  setCSRField : CSRField -> MachineInt -> M unit;
+
   getPC: M t;
   setPC: t -> M unit;
+  getPrivMode: M PrivMode;
+  setPrivMode: PrivMode -> M unit;
 
   step: M unit; (* updates PC *)
 
@@ -44,7 +53,6 @@ Class RiscvMachine`{MP: RiscvProgram} := mkRiscvMachine {
   translate(accessType: AccessType)(alignment: t)(addr: t): M t;
 }.
 
-
 Section Riscv.
   (* monad (will be instantiated with some kind of state monad) *)
   Context {M: Type -> Type}.
@@ -59,19 +67,29 @@ Section Riscv.
   Local Open Scope alu_scope.
   Local Open Scope Z_scope.
 
-  Definition raiseException{A: Type}{MP: RiscvProgram}
+  Import MonadNotations.
+
+  Context {MP: RiscvProgram}.
+
+  Definition getXLEN: M t :=
+    mxl <- getCSRField MXL;
+    if Z.eqb mxl 1 then Return (ZToReg 32)
+    else if Z.eqb mxl 2 then Return (ZToReg 64)
+    else Return (ZToReg 0).
+
+  Definition raiseException{A: Type}
              (isInterrupt: t)(exceptionCode: t): M A :=
     raiseExceptionWithInfo isInterrupt exceptionCode (ZToReg 0).
 
   (* in a system with virtual memory, this would also do the translation, but in our
      case, we only verify the alignment *)
-  Definition translate_with_alignment_check{MP: RiscvProgram}
+  Definition translate_with_alignment_check
     (accessType: AccessType)(alignment: t)(addr: t): M t :=
     if remu addr alignment /= ZToReg 0
     then raiseException (ZToReg 0) (ZToReg 4)
     else Return addr.
 
-  Instance DefaultRiscvState{MP: RiscvProgram}: RiscvMachine := {|
+  Instance DefaultRiscvState: RiscvMachine := {|
     (* riscv does allow misaligned memory access (but might emulate them in software),
        so for the compiler-facing side, we don't do alignment checks, but might add
        another riscv machine layer below to emulate turn misaligned accesses into two
