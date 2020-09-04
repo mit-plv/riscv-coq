@@ -35,7 +35,7 @@ Definition Opcode :=
   Utility.Utility.MachineInt%type.
 
 Inductive InstructionSet : Type
-  := RV32I : InstructionSet
+  := | RV32I : InstructionSet
   |  RV32IM : InstructionSet
   |  RV32IA : InstructionSet
   |  RV32IMA : InstructionSet
@@ -53,7 +53,7 @@ Inductive InstructionSet : Type
   |  RV64IMAF : InstructionSet.
 
 Inductive InstructionM64 : Type
-  := Mulw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM64
+  := | Mulw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM64
   |  Divw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM64
   |  Divuw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM64
   |  Remw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM64
@@ -61,7 +61,7 @@ Inductive InstructionM64 : Type
   |  InvalidM64 : InstructionM64.
 
 Inductive InstructionM : Type
-  := Mul (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
+  := | Mul (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
   |  Mulh (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
   |  Mulhsu (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
   |  Mulhu (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
@@ -72,7 +72,7 @@ Inductive InstructionM : Type
   |  InvalidM : InstructionM.
 
 Inductive InstructionI64 : Type
-  := Ld (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
+  := | Ld (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
    : InstructionI64
   |  Lwu (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
    : InstructionI64
@@ -91,7 +91,7 @@ Inductive InstructionI64 : Type
   |  InvalidI64 : InstructionI64.
 
 Inductive InstructionI : Type
-  := Lb (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
+  := | Lb (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
    : InstructionI
   |  Lh (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
    : InstructionI
@@ -155,7 +155,7 @@ Inductive InstructionI : Type
   |  InvalidI : InstructionI.
 
 Inductive InstructionCSR : Type
-  := Ecall : InstructionCSR
+  := | Ecall : InstructionCSR
   |  Ebreak : InstructionCSR
   |  Uret : InstructionCSR
   |  Sret : InstructionCSR
@@ -180,7 +180,7 @@ Inductive InstructionCSR : Type
   |  InvalidCSR : InstructionCSR.
 
 Inductive InstructionA64 : Type
-  := Lr_d (rd : Register) (rs1 : Register) (aqrl : Utility.Utility.MachineInt)
+  := | Lr_d (rd : Register) (rs1 : Register) (aqrl : Utility.Utility.MachineInt)
    : InstructionA64
   |  Sc_d (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
     : Utility.Utility.MachineInt)
@@ -215,7 +215,7 @@ Inductive InstructionA64 : Type
   |  InvalidA64 : InstructionA64.
 
 Inductive InstructionA : Type
-  := Lr_w (rd : Register) (rs1 : Register) (aqrl : Utility.Utility.MachineInt)
+  := | Lr_w (rd : Register) (rs1 : Register) (aqrl : Utility.Utility.MachineInt)
    : InstructionA
   |  Sc_w (rd : Register) (rs1 : Register) (rs2 : Register) (aqrl
     : Utility.Utility.MachineInt)
@@ -253,7 +253,8 @@ Definition FPRegister :=
   Utility.Utility.MachineInt%type.
 
 Inductive InstructionF : Type
-  := Flw (rd : FPRegister) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
+  := | Flw (rd : FPRegister) (rs1 : Register) (oimm12
+    : Utility.Utility.MachineInt)
    : InstructionF
   |  Fsw (rs1 : Register) (rs2 : FPRegister) (simm12 : Utility.Utility.MachineInt)
    : InstructionF
@@ -303,7 +304,8 @@ Inductive InstructionF : Type
   |  InvalidF : InstructionF.
 
 Inductive InstructionF64 : Type
-  := Fcvt_l_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode) : InstructionF64
+  := | Fcvt_l_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode)
+   : InstructionF64
   |  Fcvt_lu_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode)
    : InstructionF64
   |  Fcvt_s_l (rd : FPRegister) (rs1 : Register) (rm : RoundMode) : InstructionF64
@@ -312,7 +314,7 @@ Inductive InstructionF64 : Type
   |  InvalidF64 : InstructionF64.
 
 Inductive Instruction : Type
-  := IInstruction (iInstruction : InstructionI) : Instruction
+  := | IInstruction (iInstruction : InstructionI) : Instruction
   |  MInstruction (mInstruction : InstructionM) : Instruction
   |  AInstruction (aInstruction : InstructionA) : Instruction
   |  FInstruction (fInstruction : InstructionF) : Instruction
