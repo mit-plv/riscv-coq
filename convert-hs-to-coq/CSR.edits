@@ -1,0 +1,14 @@
+rewrite forall, GHC.Err.undefined = Return (-1)
+
+skip Spec.CSRField.Ord__CSRField
+skip Spec.CSRField.Ix__CSRField
+skip Spec.CSRField.Eq___CSRField
+skip Spec.CSRField.Show__CSRField
+skip Spec.CSRField.Default__CSRField
+
+skip Spec.CSRField.Eq___FieldType
+skip Spec.CSRField.Show__FieldType
+skip Spec.CSRField.Default__FieldType
+
+skip Spec.CSR.Default__CSR
+skip Spec.CSR.Eq___CSR

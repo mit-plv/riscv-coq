@@ -1,0 +1,15 @@
+rewrite forall, GHC.Num.negate = Utility.negate
+rewrite forall, GHC.Real.quot = Utility.div
+rewrite forall, GHC.Real.rem = Utility.rem
+# TODO check!
+rewrite forall x y, GHC.Real.mod_ x y = Utility.rem x y
+
+rename value Data.Bits..&. = Utility.and
+rename value Data.Bits.complement = Utility.lnot
+rename value Data.Bits.xor = Utility.xor
+rename value Data.Bits..|. = Utility.or
+
+rewrite forall x, GHC.Num.fromInteger x = ZToReg x
+
+rewrite forall x y, x GHC.Base.== y = Utility.reg_eqb x y
+rewrite forall x y, x GHC.Base./= y = x /= y
