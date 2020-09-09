@@ -134,7 +134,7 @@ Section Riscv.
   | setCSRField (_ : CSRField.CSRField) (_ : MachineInt)
   | getPrivMode
   | setPrivMode (_ : PrivMode)
-  | raiseExceptionWithInfo (_ : Type) (isInterrupt exceptionCode info : wxlen)
+  | endCycle (_ : Type)
   | getPC
   | setPC (_ : wxlen)
   | step
@@ -154,7 +154,7 @@ Section Riscv.
     | setCSRField _ _ => unit
     | getPrivMode => PrivMode
     | setPrivMode _ => unit
-    | raiseExceptionWithInfo T _ _ _ => T
+    | endCycle T => T
     | getPC => wxlen
     | setPC _ | step => unit
     end.
@@ -182,7 +182,7 @@ Section Riscv.
     Machine.getPC := act getPC ret;
     Machine.setPC a := act (setPC a) ret;
     Machine.step := act step ret;
-    Machine.raiseExceptionWithInfo a b c d := act (raiseExceptionWithInfo a b c d) ret;
+    Machine.endCycle A := act (endCycle A) ret;
   |}.
 
   Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
@@ -251,7 +251,7 @@ Section Riscv.
     | setCSRField _ _
     | getPrivMode
     | setPrivMode _
-    | raiseExceptionWithInfo _ _ _ _
+    | endCycle _
         => fun _ => False
     end.
 

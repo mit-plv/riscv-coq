@@ -96,7 +96,7 @@ Section Riscv.
 
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
-      raiseExceptionWithInfo{A: Type} _ _ _ := fail_hard;
+      endCycle{A: Type} := fail_hard;
   }.
 
   Arguments Memory.load_bytes: simpl never.

@@ -71,7 +71,7 @@ Section Riscv.
       setPrivMode := setPrivMode;
 
       step := step;
-      raiseExceptionWithInfo{A} := (raiseExceptionWithInfo (A := A));
+      endCycle{A} := @endCycle _ _ _ _ _ A;
   }.
 
 End Riscv.

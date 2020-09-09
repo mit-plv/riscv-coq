@@ -57,7 +57,7 @@ Section Riscv.
     Machine.getPC := act (id, getPC) ret;
     Machine.setPC a := act (addMetricJumps 1, setPC a) ret;
     Machine.step := act (addMetricInstructions 1, step) ret;
-    Machine.raiseExceptionWithInfo a b c d := act (id, raiseExceptionWithInfo a b c d) ret;
+    Machine.endCycle A := act (id, endCycle A) ret;
   |}.
 
   Definition interp_action a metmach post :=

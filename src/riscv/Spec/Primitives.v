@@ -87,11 +87,14 @@ Section Primitives.
     makeReservation_sane: forall addr, mcomp_sane (makeReservation addr);
     clearReservation_sane: forall addr, mcomp_sane (clearReservation addr);
     checkReservation_sane: forall addr, mcomp_sane (checkReservation addr);
+    getCSRField_sane: forall f, mcomp_sane (getCSRField f);
+    setCSRField_sane: forall f v, mcomp_sane (setCSRField f v);
+    getPrivMode_sane: mcomp_sane getPrivMode;
+    setPrivMode_sane: forall m, mcomp_sane (setPrivMode m);
+    endCycle_sane: forall A, mcomp_sane (@endCycle _ _ _ _ _ A);
     getPC_sane: mcomp_sane getPC;
     setPC_sane: forall newPc, mcomp_sane (setPC newPc);
     step_sane: mcomp_sane step;
-    raiseExceptionWithInfo_sane: forall A i1 i2 i3,
-        mcomp_sane (raiseExceptionWithInfo (A := A) i1 i2 i3);
   }.
 
   Definition spec_load{p: PrimitivesParams RiscvMachine}(n: nat)

@@ -56,14 +56,9 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   setPC: t -> M unit;
   getPrivMode: M PrivMode;
   setPrivMode: PrivMode -> M unit;
+  endCycle: forall A, M A;
 
   step: M unit; (* updates PC *)
-
-  (* Returns false on out of range addresses, on MMIO addresses, device addresses, etc
-  isPhysicalMemAddr: t -> M bool;
-     not needed at the moment because we expose state record *)
-
-  raiseExceptionWithInfo{A: Type}(isInterrupt: t)(exceptionCode: t)(info: t): M A;
 }.
 
 
@@ -101,8 +96,17 @@ Section Riscv.
     else if Z.eqb mxl 2 then Return 64
     else Return 0.
 
-  Definition raiseException{A: Type}
-             (isInterrupt: t)(exceptionCode: t): M A :=
+  Definition raiseExceptionWithInfo{A: Type}(isInterrupt exceptionCode info: t): M A :=
+    pc <- getPC;
+    (* here we hardcode that this simplified spec only supports machine mode and no interrupts *)
+    addr <- getCSRField MTVecBase;
+    setCSRField MTVal (regToZ_unsigned info);;
+    setCSRField MEPC (regToZ_unsigned pc);;
+    setCSRField MCauseCode (regToZ_unsigned exceptionCode);;
+    setPC (ZToReg (addr * 4));;
+    @endCycle M t MM MW MP A.
+
+  Definition raiseException{A: Type}(isInterrupt: t)(exceptionCode: t): M A :=
     raiseExceptionWithInfo isInterrupt exceptionCode (ZToReg 0).
 
   (* in a system with virtual memory, this would also do the translation, but in our

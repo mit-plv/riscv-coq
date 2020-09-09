@@ -58,7 +58,7 @@ Section Riscv.
         getPrivMode := liftL0 id getPrivMode;
         setPrivMode := liftL1 id setPrivMode;
       step := liftL0 id step;
-      raiseExceptionWithInfo{A} := liftL3 id (raiseExceptionWithInfo (A := A));
+      endCycle{A} := liftL0 id (@endCycle _ _ _ _ _ A);
     }.
 
   Instance AtomicMinimalPrimitivesParams: PrimitivesParams (OState AtomicRiscvMachine) AtomicRiscvMachine :=

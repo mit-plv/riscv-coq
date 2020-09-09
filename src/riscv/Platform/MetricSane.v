@@ -86,33 +86,44 @@ Section Sane.
         eexists. exact E2.
   Qed.
 
-  Ltac t :=
-    simpl; unfold when;
-    repeat first [ apply Bind_sane
-                 | apply Return_sane
-                 | apply getRegister_sane
-                 | apply setRegister_sane
-                 | apply loadByte_sane
-                 | apply loadHalf_sane
-                 | apply loadWord_sane
-                 | apply loadDouble_sane
-                 | apply storeByte_sane
-                 | apply storeHalf_sane
-                 | apply storeWord_sane
-                 | apply storeDouble_sane
-                 | apply makeReservation_sane
-                 | apply clearReservation_sane
-                 | apply checkReservation_sane
-                 | apply getPC_sane
-                 | apply setPC_sane
-                 | apply step_sane
-                 | apply raiseExceptionWithInfo_sane
-                 | match goal with
-                   | |- context [if ?b then _ else _] => destruct b
-                   end
-                 | progress intros ].
+  Ltac t_step :=
+    first [ progress intros
+          | apply Bind_sane
+          | apply Return_sane
+          | apply getRegister_sane
+          | apply setRegister_sane
+          | apply loadByte_sane
+          | apply loadHalf_sane
+          | apply loadWord_sane
+          | apply loadDouble_sane
+          | apply storeByte_sane
+          | apply storeHalf_sane
+          | apply storeWord_sane
+          | apply storeDouble_sane
+          | apply makeReservation_sane
+          | apply clearReservation_sane
+          | apply checkReservation_sane
+          | apply getCSRField_sane
+          | apply setCSRField_sane
+          | apply getPrivMode_sane
+          | apply setPrivMode_sane
+          | apply endCycle_sane
+          | apply getPC_sane
+          | apply setPC_sane
+          | apply step_sane
+          | match goal with
+            | |- context [if ?b then _ else _] => destruct b
+            end ].
 
   Context {PRSane: MetricPrimitivesSane PRParams}.
+
+  Lemma raiseExceptionWithInfo_sane: forall A i1 i2 i3,
+      mcomp_sane (raiseExceptionWithInfo (A := A) i1 i2 i3).
+  Proof.
+    unfold raiseExceptionWithInfo. repeat t_step.
+  Qed.
+
+  Ltac t := simpl; unfold when; repeat t_step.
 
   Lemma execute_sane: forall inst,
       mcomp_sane (Execute.execute inst).
