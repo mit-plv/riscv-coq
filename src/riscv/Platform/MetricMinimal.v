@@ -57,6 +57,10 @@ Section Riscv.
     makeReservation := liftL1 id makeReservation;
     clearReservation := liftL1 id clearReservation;
     checkReservation := liftL1 id checkReservation;
+    getCSRField := liftL1 id getCSRField;
+    setCSRField := liftL2 id setCSRField;
+    getPrivMode := liftL0 id getPrivMode;
+    setPrivMode := liftL1 id setPrivMode;
     step := liftL0 (addMetricInstructions 1) step;
     raiseExceptionWithInfo{A} := liftL3 id (raiseExceptionWithInfo (A := A));
   }.

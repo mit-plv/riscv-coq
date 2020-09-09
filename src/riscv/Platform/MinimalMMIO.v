@@ -130,6 +130,10 @@ Section Riscv.
   | makeReservation (_ : wxlen)
   | clearReservation (_ : wxlen)
   | checkReservation (_ : wxlen)
+  | getCSRField (_ : CSRField.CSRField)
+  | setCSRField (_ : CSRField.CSRField) (_ : MachineInt)
+  | getPrivMode
+  | setPrivMode (_ : PrivMode)
   | raiseExceptionWithInfo (_ : Type) (isInterrupt exceptionCode info : wxlen)
   | getPC
   | setPC (_ : wxlen)
@@ -146,6 +150,10 @@ Section Riscv.
     | loadDouble _ _ => w64
     | storeByte _ _ _ | storeHalf _ _ _ | storeWord _ _ _ | storeDouble _ _ _ | makeReservation _ | clearReservation _ => unit
     | checkReservation _ => bool
+    | getCSRField _ => MachineInt
+    | setCSRField _ _ => unit
+    | getPrivMode => PrivMode
+    | setPrivMode _ => unit
     | raiseExceptionWithInfo T _ _ _ => T
     | getPC => wxlen
     | setPC _ | step => unit
@@ -167,6 +175,10 @@ Section Riscv.
     Machine.makeReservation a := act (makeReservation a) ret;
     Machine.clearReservation a := act (clearReservation a) ret;
     Machine.checkReservation a := act (checkReservation a) ret;
+    Machine.getCSRField f := act (getCSRField f) ret;
+    Machine.setCSRField f v := act (setCSRField f v) ret;
+    Machine.getPrivMode := act getPrivMode ret;
+    Machine.setPrivMode m := act (setPrivMode m) ret;
     Machine.getPC := act getPC ret;
     Machine.setPC a := act (setPC a) ret;
     Machine.step := act step ret;
@@ -235,6 +247,10 @@ Section Riscv.
     | makeReservation _
     | clearReservation _
     | checkReservation _
+    | getCSRField _
+    | setCSRField _ _
+    | getPrivMode
+    | setPrivMode _
     | raiseExceptionWithInfo _ _ _ _
         => fun _ => False
     end.

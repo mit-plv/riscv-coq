@@ -50,6 +50,10 @@ Section Riscv.
     Machine.makeReservation a := act (id, makeReservation a) ret;
     Machine.clearReservation a := act (id, clearReservation a) ret;
     Machine.checkReservation a := act (id, checkReservation a) ret;
+    Machine.getCSRField f := act (id, getCSRField f) ret;
+    Machine.setCSRField f v := act (id, setCSRField f v) ret;
+    Machine.getPrivMode := act (id, getPrivMode) ret;
+    Machine.setPrivMode m := act (id, setPrivMode m) ret;
     Machine.getPC := act (id, getPC) ret;
     Machine.setPC a := act (addMetricJumps 1, setPC a) ret;
     Machine.step := act (addMetricInstructions 1, step) ret;

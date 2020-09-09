@@ -86,6 +86,10 @@ Section Riscv.
       makeReservation  addr := fail_hard;
       clearReservation addr := fail_hard;
       checkReservation addr := fail_hard;
+      getCSRField f := fail_hard;
+      setCSRField f v := fail_hard;
+      getPrivMode := fail_hard;
+      setPrivMode v := fail_hard;
 
       step := update (fun m => (withPc m.(getNextPc)
                                (withNextPc (word.add m.(getNextPc) (word.of_Z 4)) m)));

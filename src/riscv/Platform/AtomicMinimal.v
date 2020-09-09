@@ -53,6 +53,10 @@ Section Riscv.
         | None => Return false
         | Some addr' => Return (word.eqb addr addr')
         end;
+        getCSRField := liftL1 id getCSRField;
+        setCSRField := liftL2 id setCSRField;
+        getPrivMode := liftL0 id getPrivMode;
+        setPrivMode := liftL1 id setPrivMode;
       step := liftL0 id step;
       raiseExceptionWithInfo{A} := liftL3 id (raiseExceptionWithInfo (A := A));
     }.

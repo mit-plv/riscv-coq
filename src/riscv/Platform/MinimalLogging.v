@@ -65,6 +65,11 @@ Section Riscv.
       makeReservation := makeReservation;
       clearReservation := clearReservation;
       checkReservation := checkReservation;
+      getCSRField := getCSRField;
+      setCSRField := setCSRField;
+      getPrivMode := getPrivMode;
+      setPrivMode := setPrivMode;
+
       step := step;
       raiseExceptionWithInfo{A} := (raiseExceptionWithInfo (A := A));
   }.
