@@ -13,3 +13,7 @@ rewrite forall x, GHC.Num.fromInteger x = ZToReg x
 
 rewrite forall x y, x GHC.Base.== y = Utility.reg_eqb x y
 rewrite forall x y, x GHC.Base./= y = x /= y
+rewrite forall x y, x GHC.Base.< y = x < y
+rewrite forall x y, x GHC.Base.<= y = x <= y
+rewrite forall x y, x GHC.Base.> y = x > y
+rewrite forall x y, x GHC.Base.>= y = x >= y

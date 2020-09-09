@@ -2,6 +2,10 @@ rename value GHC.Num.- = Coq.ZArith.BinInt.Z.sub
 rename value GHC.Num.+ = Coq.ZArith.BinInt.Z.add
 rewrite forall, GHC.Num.negate = Coq.ZArith.BinInt.Z.neg
 rewrite forall x y, x GHC.Base.== y = Coq.ZArith.BinInt.Z.eqb x y
+rewrite forall x y, x GHC.Base.< y = Coq.ZArith.BinInt.Z.ltb x y
+rewrite forall x y, x GHC.Base.<= y = Coq.ZArith.BinInt.Z.leb x y
+rewrite forall x y, x GHC.Base.> y = Coq.ZArith.BinInt.Z.gtb x y
+rewrite forall x y, x GHC.Base.>= y = Coq.ZArith.BinInt.Z.geb x y
 
 rewrite forall x, GHC.Num.fromInteger x = x
 rewrite forall x, GHC.Real.fromInteger x = x

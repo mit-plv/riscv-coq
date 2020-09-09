@@ -1,0 +1,14 @@
+rename value GHC.Real.fromIntegral = ZToReg
+rewrite forall x y, x GHC.Base.< y = Spec.Machine.PrivMode_ltb x y
+
+rewrite forall x y, Spec.Machine.raiseException x y = Machine.raiseException (ZToReg x) (ZToReg y)
+
+rewrite forall x, GHC.Num.fromInteger x = x
+
+rewrite forall x y, x GHC.Base.== y = Coq.ZArith.BinInt.Z.eqb x y
+rewrite forall x y, x GHC.Base./= y = negb (Coq.ZArith.BinInt.Z.eqb x y)
+
+rename value Data.Bits..&. = Utility.and
+rename value Data.Bits.complement = Utility.lnot
+rename value Data.Bits.xor = Utility.xor
+rename value Data.Bits..|. = Utility.or

@@ -4,10 +4,30 @@ Require riscv.Utility.MonadNotations.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.CSRField.
+Local Open Scope Z_scope.
 
 (* Note that this is ordered: User < Supervisor < Machine *)
 Inductive PrivMode: Type := User | Supervisor | Machine.
-Scheme Equality for PrivMode. (* for PrivMode_beq : PrivMode -> PrivMode -> bool *)
+
+Definition decodePrivMode(m: MachineInt): PrivMode :=
+  match m with
+  | 0 => User
+  | 1 => Supervisor
+  | 3 => Machine
+  | _ => User (* error "Invalid privilege mode" *)
+  end.
+
+Definition encodePrivMode(m: PrivMode): MachineInt :=
+  match m with
+  | User => 0
+  | Supervisor => 1
+  | Machine => 3
+  end.
+
+Definition PrivMode_eqb(m1 m2: PrivMode): bool := Z.eqb (encodePrivMode m1) (encodePrivMode m2).
+
+Definition PrivMode_ltb(m1 m2: PrivMode): bool := Z.ltb (encodePrivMode m1) (encodePrivMode m2).
+
 Inductive AccessType: Type := Instr | Load | Store.
 Inductive SourceType: Type := VirtualMemory | Fetch | Execute.
 
@@ -51,6 +71,10 @@ Class RiscvMachine`{MP: RiscvProgram} := mkRiscvMachine {
   (* checks that addr is aligned, and translates the (possibly virtual) addr to a physical
      address, raising an exception if the address is invalid *)
   translate(accessType: AccessType)(alignment: t)(addr: t): M t;
+  flushTLB: M unit;
+  getCSR_InstRet: M MachineInt;
+  getCSR_Time: M MachineInt;
+  getCSR_Cycle: M MachineInt;
 }.
 
 Section Riscv.
@@ -71,11 +95,11 @@ Section Riscv.
 
   Context {MP: RiscvProgram}.
 
-  Definition getXLEN: M t :=
+  Definition getXLEN: M MachineInt :=
     mxl <- getCSRField MXL;
-    if Z.eqb mxl 1 then Return (ZToReg 32)
-    else if Z.eqb mxl 2 then Return (ZToReg 64)
-    else Return (ZToReg 0).
+    if Z.eqb mxl 1 then Return 32
+    else if Z.eqb mxl 2 then Return 64
+    else Return 0.
 
   Definition raiseException{A: Type}
              (isInterrupt: t)(exceptionCode: t): M A :=
@@ -95,6 +119,11 @@ Section Riscv.
        another riscv machine layer below to emulate turn misaligned accesses into two
        aligned accesses *)
     translate accessType alignment := @Return M MM t;
+    flushTLB := Return tt;
+    (* platform specific CSRs that we don't support at the moment: *)
+    getCSR_InstRet := raiseException (ZToReg 0) (ZToReg 2);
+    getCSR_Time    := raiseException (ZToReg 0) (ZToReg 2);
+    getCSR_Cycle   := raiseException (ZToReg 0) (ZToReg 2);
   |}.
 
 End Riscv.

@@ -5,14 +5,9 @@ import module Coq.ZArith.BinInt
 
 rename type Utility.MachineInt = Coq.ZArith.BinInt.Z
 rename type GHC.Types.Int = Coq.ZArith.BinInt.Z
-rename value GHC.Real.fromIntegral = id
 
 rename value GHC.Base.when = Utility.when
 
-rewrite forall x y, x GHC.Base.< y = x < y
-rewrite forall x y, x GHC.Base.<= y = x < y
-rewrite forall x y, x GHC.Base.> y = x >= y
-rewrite forall x y, x GHC.Base.>= y = x >= y
 rewrite forall x y, x GHC.Num.- y = x - y
 rewrite forall x y, x GHC.Num.+ y = x + y
 rewrite forall x y, x GHC.Num.* y = x * y
@@ -27,8 +22,6 @@ rewrite forall x y, (x GHC.Real.^ y) = Coq.ZArith.BinInt.Z.pow x y
 rewrite forall x y, x GHC.Base.>>= y = Monads.Bind x y
 rewrite forall x y, x GHC.Base.>> y = Monads.Bind x (fun _ => y)
 
-rewrite forall x l, Data.Foldable.elem x l = Coq.Lists.List.In x l
-
 rename value VirtualMemory.translate = Program.translate
 rename value VirtualMemory.Load = Program.Load
 rename value VirtualMemory.Instr = Program.Instr
@@ -36,6 +29,6 @@ rename value VirtualMemory.Store = Program.Store
 
 rewrite forall, GHC.Base.return_ = Return
 rename type Program.RiscvProgram = Program.RiscvState
-rewrite forall priv, priv GHC.Base.== Spec.Machine.User       = Spec.Machine.PrivMode_beq priv Spec.Machine.User
-rewrite forall priv, priv GHC.Base.== Spec.Machine.Supervisor = Spec.Machine.PrivMode_beq priv Spec.Machine.Supervisor
-rewrite forall priv, priv GHC.Base.== Spec.Machine.Machine    = Spec.Machine.PrivMode_beq priv Spec.Machine.Machine
+rewrite forall priv, priv GHC.Base.== Spec.Machine.User       = Spec.Machine.PrivMode_eqb priv Spec.Machine.User
+rewrite forall priv, priv GHC.Base.== Spec.Machine.Supervisor = Spec.Machine.PrivMode_eqb priv Spec.Machine.Supervisor
+rewrite forall priv, priv GHC.Base.== Spec.Machine.Machine    = Spec.Machine.PrivMode_eqb priv Spec.Machine.Machine

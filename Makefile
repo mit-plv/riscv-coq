@@ -82,20 +82,20 @@ EDIT_FILES = convert-hs-to-coq/Decode.edits convert-hs-to-coq/General.edits conv
 HS_TO_COQ = stack exec hs-to-coq -- -N -i $(RISCV_SEMANTICS_DIR)/src -o $(SRCDIR) --iface-dir $(SRCDIR) -e convert-hs-to-coq/General.edits -e convert-hs-to-coq/Base.edits
 DECODE_OPTS  = -p convert-hs-to-coq/Decode_preamble.v  -e convert-hs-to-coq/ZOps.edits        -e convert-hs-to-coq/Decode.edits
 EXECUTE_OPTS = -p convert-hs-to-coq/Execute_preamble.v -e convert-hs-to-coq/RegisterOps.edits
-CSR_OPTS     = -p convert-hs-to-coq/CSR_preamble.v     -e convert-hs-to-coq/ZOps.edits -e convert-hs-to-coq/CSR.edits
+CSR_OPTS     = -p convert-hs-to-coq/CSR_preamble.v     -e convert-hs-to-coq/CSR.edits
 
 convert: riscv-semantics_version_check hs-to-coq_version_check $(HS_SOURCES) $(PREAMBLES) $(EDIT_FILES)
-	$(HS_TO_COQ) $(CSR_OPTS)     $(RISCV_SEMANTICS_DIR)/src/Spec/CSRField.hs
-	$(HS_TO_COQ) $(CSR_OPTS)     $(RISCV_SEMANTICS_DIR)/src/Spec/CSR.hs
-	$(HS_TO_COQ) $(CSR_OPTS)     $(RISCV_SEMANTICS_DIR)/src/Spec/CSRSpec.hs
-	$(HS_TO_COQ) $(DECODE_OPTS)  $(RISCV_SEMANTICS_DIR)/src/Spec/Decode.hs
-	$(HS_TO_COQ) $(EXECUTE_OPTS) $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteI.hs
-	$(HS_TO_COQ) $(EXECUTE_OPTS) $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteCSR.hs
-	$(HS_TO_COQ) $(EXECUTE_OPTS) $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteI64.hs
-	$(HS_TO_COQ) $(EXECUTE_OPTS) $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteM.hs
-	$(HS_TO_COQ) $(EXECUTE_OPTS) $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteM64.hs
-	$(HS_TO_COQ) $(EXECUTE_OPTS) $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteA.hs
-	$(HS_TO_COQ) $(EXECUTE_OPTS) $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteA64.hs
+	$(HS_TO_COQ) $(CSR_OPTS)                             -e convert-hs-to-coq/ZOps.edits         $(RISCV_SEMANTICS_DIR)/src/Spec/CSRField.hs
+	$(HS_TO_COQ) $(CSR_OPTS)                             -e convert-hs-to-coq/ZOps.edits         $(RISCV_SEMANTICS_DIR)/src/Spec/CSR.hs
+	$(HS_TO_COQ) $(CSR_OPTS)                             -e convert-hs-to-coq/ZOps.edits         $(RISCV_SEMANTICS_DIR)/src/Spec/CSRGetSet.hs
+	$(HS_TO_COQ) $(DECODE_OPTS)                                                                  $(RISCV_SEMANTICS_DIR)/src/Spec/Decode.hs
+	$(HS_TO_COQ) $(EXECUTE_OPTS)                         -e convert-hs-to-coq/ExecuteI.edits     $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteI.hs
+	$(HS_TO_COQ) -p convert-hs-to-coq/Execute_preamble.v -e convert-hs-to-coq/ExecuteCSR.edits   $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteCSR.hs
+	$(HS_TO_COQ) $(EXECUTE_OPTS)                                                                 $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteI64.hs
+	$(HS_TO_COQ) $(EXECUTE_OPTS)                                                                 $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteM.hs
+	$(HS_TO_COQ) $(EXECUTE_OPTS)                                                                 $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteM64.hs
+	$(HS_TO_COQ) $(EXECUTE_OPTS)                                                                 $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteA.hs
+	$(HS_TO_COQ) $(EXECUTE_OPTS)                                                                 $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteA64.hs
 
 
 # Currently does not work because of https://github.com/coq/coq/issues/11129
