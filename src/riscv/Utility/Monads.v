@@ -370,18 +370,3 @@ Module OStateNDOperations.
 
 End OStateNDOperations.
 
-Inductive Outcome(A: Type): Type :=
-| Success(a: A)
-| Exception (* recoverable *)
-| HardFailure (* non-recoverable *).
-
-Class ErrorStateMonad(StM: Type -> Type -> Type) := {
-  get{S: Type}: StM S S;
-  put{S: Type}(s: S): StM S unit;
-  throw{S A: Type}: StM S A;
-  failHard{S A: Type}: StM S A;
-  (* not sure if needed here
-  evalState{S A: Type}(m: StM S A): Outcome A;
-  execState{S A: Type}(m: StM S A): Outcome S;
-  *)
-}.
