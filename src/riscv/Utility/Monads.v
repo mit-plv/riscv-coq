@@ -370,3 +370,31 @@ Module OStateNDOperations.
 
 End OStateNDOperations.
 
+(* The postcondition monad: if `m: Post S A` and `m s post` holds,
+   it means that running the computation m on initial state s
+   will return an answer and a final state that satisfy post. *)
+Definition Post(S A: Type) := S -> (A -> S -> Prop) -> Prop.
+
+Instance Post_Monad(S: Type): Monad (Post S). refine ({|
+  Bind A B (m: Post S A) (f : A -> Post S B) :=
+    fun s1 post => m s1 (fun a s2 => f a s2 post);
+  Return A (a : A) :=
+    fun s post => post a s
+|}).
+all: reflexivity.
+Defined.
+
+Module PostMonadOperations.
+
+  Definition get{S: Type}: Post S S := fun s post => post s s.
+
+  Definition put{S: Type}(new_s: S): Post S unit := fun s post => post tt s.
+
+  Definition fail_hard{S A: Type}: Post S A := fun s post => False.
+
+  Definition arbitrary{S: Type}(A: Type): Post S A := fun s post => forall a, post a s.
+
+  Definition weaken{S A: Type}(m: Post S A): Post S A :=
+    fun s post => exists stronger, m s stronger /\ forall a final, stronger a final -> post a final.
+
+End PostMonadOperations.
