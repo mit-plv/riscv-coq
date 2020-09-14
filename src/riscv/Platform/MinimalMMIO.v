@@ -1,7 +1,5 @@
 Require Import Coq.Strings.String.
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.Logic.FunctionalExtensionality.
-Require Import Coq.Logic.PropExtensionality.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Require Export riscv.Utility.FreeMonad.
@@ -13,6 +11,7 @@ Require Import Coq.Lists.List. Import ListNotations.
 Require Import coqutil.Datatypes.List.
 Require Import coqutil.Datatypes.ListSet.
 Require Export riscv.Platform.RiscvMachine.
+Require Export riscv.Platform.MaterializeRiscvProgram.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Properties.
@@ -35,76 +34,6 @@ Class MMIOSpec{W: Words} := {
 Section Riscv.
   Import free.
   Context {W: Words} {Mem: map.map word byte} {Registers: map.map Register word}.
-
-  Local Notation wxlen := word.
-  Variant action :=
-  | getRegister (_ : Register)
-  | setRegister (_ : Register) (_ : wxlen)
-  | loadByte (_ : SourceType) (_ : wxlen)
-  | loadHalf (_ : SourceType) (_ : wxlen)
-  | loadWord (_ : SourceType) (_ : wxlen)
-  | loadDouble (_ : SourceType) (_ : wxlen)
-  | storeByte (_ : SourceType) (_ : wxlen) (_ : w8)
-  | storeHalf (_ : SourceType) (_ : wxlen) (_ : w16)
-  | storeWord (_ : SourceType) (_ : wxlen) (_ : w32)
-  | storeDouble (_ : SourceType) (_ : wxlen) (_ : w64)
-  | makeReservation (_ : wxlen)
-  | clearReservation (_ : wxlen)
-  | checkReservation (_ : wxlen)
-  | getCSRField (_ : CSRField.CSRField)
-  | setCSRField (_ : CSRField.CSRField) (_ : MachineInt)
-  | getPrivMode
-  | setPrivMode (_ : PrivMode)
-  | endCycle (_ : Type)
-  | getPC
-  | setPC (_ : wxlen)
-  | step
-  .
-
-  Definition result (action : action) : Type :=
-    match action with
-    | getRegister _ => wxlen
-    | setRegister _ _ => unit
-    | loadByte _ _ => w8
-    | loadHalf _ _ => w16
-    | loadWord _ _ => w32
-    | loadDouble _ _ => w64
-    | storeByte _ _ _ | storeHalf _ _ _ | storeWord _ _ _ | storeDouble _ _ _ | makeReservation _ | clearReservation _ => unit
-    | checkReservation _ => bool
-    | getCSRField _ => MachineInt
-    | setCSRField _ _ => unit
-    | getPrivMode => PrivMode
-    | setPrivMode _ => unit
-    | endCycle T => T
-    | getPC => wxlen
-    | setPC _ | step => unit
-    end.
-
-  Local Notation M := (free action result).
-
-  Instance IsRiscvMachine: RiscvProgram M word := {|
-    Machine.getRegister a := act (getRegister a) ret;
-    Machine.setRegister a b := act (setRegister a b) ret;
-    Machine.loadByte a b := act (loadByte a b) ret;
-    Machine.loadHalf a b := act (loadHalf a b) ret;
-    Machine.loadWord a b := act (loadWord a b) ret;
-    Machine.loadDouble a b := act (loadDouble a b) ret;
-    Machine.storeByte a b c := act (storeByte a b c) ret;
-    Machine.storeHalf a b c := act (storeHalf a b c) ret;
-    Machine.storeWord a b c := act (storeWord a b c) ret;
-    Machine.storeDouble a b c := act (storeDouble a b c) ret;
-    Machine.makeReservation a := act (makeReservation a) ret;
-    Machine.clearReservation a := act (clearReservation a) ret;
-    Machine.checkReservation a := act (checkReservation a) ret;
-    Machine.getCSRField f := act (getCSRField f) ret;
-    Machine.setCSRField f v := act (setCSRField f v) ret;
-    Machine.getPrivMode := act getPrivMode ret;
-    Machine.setPrivMode m := act (setPrivMode m) ret;
-    Machine.getPC := act getPC ret;
-    Machine.setPC a := act (setPC a) ret;
-    Machine.step := act step ret;
-    Machine.endCycle A := act (endCycle A) ret;
-  |}.
 
   Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
     word.of_Z (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).
@@ -176,9 +105,7 @@ Section Riscv.
         => fun _ => False
     end.
 
-  Notation interp p mach post := (free.interp interp_action p mach post).
-
-  Definition MinimalMMIOPrimitivesParams: PrimitivesParams M RiscvMachine := {|
+  Definition MinimalMMIOPrimitivesParams: PrimitivesParams (free action result) RiscvMachine := {|
     Primitives.mcomp_sat := @free.interp _ _ _ interp_action;
     Primitives.is_initial_register_value x := True;
     Primitives.nonmem_load := nonmem_load;
