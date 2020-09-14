@@ -69,31 +69,34 @@ Section Riscv.
     | None => nonmem_load n ctxid a mach post
     end.
 
-  Definition interp_action (a : action) (mach : RiscvMachine) : (result a -> RiscvMachine -> Prop) -> Prop :=
+  Definition interpret_action (a : action) (mach : RiscvMachine) :
+    (result a -> RiscvMachine -> Prop) -> (RiscvMachine -> Prop) -> Prop :=
     match a with
-    | getRegister reg => fun post =>
+    | getRegister reg => fun (postF: word -> RiscvMachine -> Prop) postA =>
         let v :=
           if Z.eq_dec reg 0 then word.of_Z 0
           else match map.get mach.(getRegs) reg with
                | Some x => x
                | None => word.of_Z 0 end in
-        post v mach
-    | setRegister reg v => fun post =>
+        postF v mach
+    | setRegister reg v => fun postF postA =>
       let regs := if Z.eq_dec reg Register0
                   then mach.(getRegs)
                   else map.put mach.(getRegs) reg v in
-      post tt (withRegs regs mach)
-    | getPC => fun post => post mach.(getPc) mach
-    | setPC newPC => fun post => post tt (withNextPc newPC mach)
-    | step => fun post => post tt (withPc mach.(getNextPc) (withNextPc (word.add mach.(getNextPc) (word.of_Z 4)) mach))
-    | loadByte ctxid a => fun post => load 1 ctxid a mach post
-    | loadHalf ctxid a => fun post => load 2 ctxid a mach post
-    | loadWord ctxid a => fun post => load 4 ctxid a mach post
-    | loadDouble ctxid a => fun post => load 8 ctxid a mach post
-    | storeByte ctxid a v => fun post => store 1 ctxid a v mach (post tt)
-    | storeHalf ctxid a v => fun post => store 2 ctxid a v mach (post tt)
-    | storeWord ctxid a v => fun post => store 4 ctxid a v mach (post tt)
-    | storeDouble ctxid a v => fun post => store 8 ctxid a v mach (post tt)
+      postF tt (withRegs regs mach)
+    | getPC => fun postF postA => postF mach.(getPc) mach
+    | setPC newPC => fun postF postA => postF tt (withNextPc newPC mach)
+    | step => fun postF postA =>
+                postF tt (withPc mach.(getNextPc) (withNextPc (word.add mach.(getNextPc) (word.of_Z 4)) mach))
+    | loadByte ctxid a => fun postF postA => load 1 ctxid a mach postF
+    | loadHalf ctxid a => fun postF postA => load 2 ctxid a mach postF
+    | loadWord ctxid a => fun postF postA => load 4 ctxid a mach postF
+    | loadDouble ctxid a => fun postF postA => load 8 ctxid a mach postF
+    | storeByte ctxid a v => fun postF postA => store 1 ctxid a v mach (postF tt)
+    | storeHalf ctxid a v => fun postF postA => store 2 ctxid a v mach (postF tt)
+    | storeWord ctxid a v => fun postF postA => store 4 ctxid a v mach (postF tt)
+    | storeDouble ctxid a v => fun postF postA => store 8 ctxid a v mach (postF tt)
+    | endCycle _ => fun postF postA => postA mach (* ignores postF containing the continuation *)
     | makeReservation _
     | clearReservation _
     | checkReservation _
@@ -101,12 +104,12 @@ Section Riscv.
     | setCSRField _ _
     | getPrivMode
     | setPrivMode _
-    | endCycle _
-        => fun _ => False
+        => fun postF postA => False
     end.
 
   Definition MinimalMMIOPrimitivesParams: PrimitivesParams (free action result) RiscvMachine := {|
-    Primitives.mcomp_sat := @free.interp _ _ _ interp_action;
+    Primitives.mcomp_sat A m mach postF :=
+      @free.interpret _ _ _ interpret_action A m mach postF (fun _ => False);
     Primitives.is_initial_register_value x := True;
     Primitives.nonmem_load := nonmem_load;
     Primitives.nonmem_store := nonmem_store;
@@ -130,9 +133,10 @@ Section Riscv.
     destruct (Memory.store_bytes n (getMem m) a); intuition eauto.
   Qed.
 
-  Lemma interp_action_weaken_post a (post1 post2:_->_->Prop)
-    (H: forall r s, post1 r s -> post2 r s) s
-    : interp_action a s post1 -> interp_action a s post2.
+  Lemma interpret_action_weaken_post a (postF1 postF2: _ -> _ -> Prop) (postA1 postA2: _ -> Prop):
+    (forall r s, postF1 r s -> postF2 r s) ->
+    (forall s, postA1 s -> postA2 s) ->
+    forall s, interpret_action a s postF1 postA1 -> interpret_action a s postF2 postA2.
   Proof.
     destruct a; cbn; try solve [intuition eauto].
     all : eauto using load_weaken_post, store_weaken_post.
@@ -141,8 +145,8 @@ Section Riscv.
   Global Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MinimalMMIOPrimitivesParams.
   Proof.
     split; cbv [mcomp_sat MinimalMMIOPrimitivesParams Bind Return Monad_free].
-    { symmetry. eapply interp_bind_ex_mid, interp_action_weaken_post. }
-    { symmetry; intros. rewrite interp_ret; eapply iff_refl. }
+    { symmetry. eapply interpret_bind_ex_mid, interpret_action_weaken_post. }
+    { symmetry; intros. rewrite interpret_ret; eapply iff_refl. }
   Qed.
 
   Lemma preserve_undef_on{memOk: map.ok Mem}: forall n (m m': Mem) a w s,
@@ -158,11 +162,13 @@ Section Riscv.
     - eapply Memory.store_bytes_preserves_domain. eassumption.
   Qed.
 
-  Lemma interp_action_total{memOk: map.ok Mem} a s post :
+  Lemma interpret_action_total{memOk: map.ok Mem} a s postF postA :
     map.undef_on s.(getMem) isMMIOAddr ->
     disjoint (of_list s.(getXAddrs)) isMMIOAddr ->
-    interp_action a s post -> exists v s', post v s' /\ map.undef_on s'.(getMem) isMMIOAddr
-                                           /\ disjoint (of_list s'.(getXAddrs)) isMMIOAddr.
+    interpret_action a s postF postA ->
+    exists s', map.undef_on s'.(getMem) isMMIOAddr /\
+               disjoint (of_list s'.(getXAddrs)) isMMIOAddr /\
+               (postA s' \/ exists v', postF v' s').
   Proof.
     destruct s, a; cbn -[HList.tuple];
       cbv [load store nonmem_load nonmem_store]; cbn -[HList.tuple];
@@ -177,32 +183,64 @@ Section Riscv.
     all: repeat constructor; exact (word.of_Z 0).
   Qed.
 
+  Lemma interpret_action_total'{memOk: map.ok Mem} a s post :
+    map.undef_on s.(getMem) isMMIOAddr ->
+    disjoint (of_list s.(getXAddrs)) isMMIOAddr ->
+    interpret_action a s post (fun _ : RiscvMachine => False) ->
+    exists v s', post v s' /\ map.undef_on s'.(getMem) isMMIOAddr
+                           /\ disjoint (of_list s'.(getXAddrs)) isMMIOAddr.
+  Proof.
+    intros. pose proof interpret_action_total as P.
+    specialize P with (postA := (fun _ : RiscvMachine => False)). simpl in P.
+    specialize (P _ _ _ H H0 H1).
+    destruct P as (s' & ? & ? & ?).
+    destruct H4 as [[] | (v' & ?)].
+    eauto.
+  Qed.
+
   Import coqutil.Tactics.Tactics.
-  Lemma interp_action_appendonly a s post :
-    interp_action a s post ->
-    interp_action a s (fun _ s' => endswith s'.(getLog) s.(getLog)).
+
+  Lemma interpret_action_appendonly a s postF postA :
+    interpret_action a s postF postA ->
+    interpret_action a s (fun _ s' => endswith s'.(getLog) s.(getLog))
+                           (fun s' => endswith s'.(getLog) s.(getLog)).
   Proof.
     destruct s, a; cbn; cbv [load store nonmem_load nonmem_store]; cbn;
       repeat destruct_one_match;
       intuition eauto using endswith_refl, endswith_cons_l.
   Qed.
 
-  (* NOTE: maybe instead a generic lemma to push /\ into postondition? *)
-  Lemma interp_action_appendonly' a s post :
-    interp_action a s post ->
-    interp_action a s (fun v s' => post v s' /\ endswith s'.(getLog) s.(getLog)).
+  (* NOTE: maybe instead a generic lemma to push /\ into postcondition? *)
+  Lemma interpret_action_appendonly' a s postF postA :
+    interpret_action a s postF postA ->
+    interpret_action a s (fun v s' => postF v s' /\ endswith s'.(getLog) s.(getLog))
+                         (fun   s' => postA   s' /\ endswith s'.(getLog) s.(getLog)).
   Proof.
     destruct s, a; cbn; cbv [load store nonmem_load nonmem_store]; cbn;
       repeat destruct_one_match; intros; destruct_products; try split;
         intuition eauto using endswith_refl, endswith_cons_l.
   Qed.
 
-  Lemma interp_action_preserves_valid{memOk: map.ok Mem} a s post :
+  Lemma interpret_action_appendonly'' a s post :
+    interpret_action a s post (fun _ : RiscvMachine => False) ->
+    interpret_action a s (fun v s' => post v s' /\ endswith s'.(getLog) s.(getLog))
+                         (fun _ : RiscvMachine => False).
+  Proof.
+    intros. pose proof interpret_action_appendonly' as P.
+    specialize (P _ _ _ (fun _ : RiscvMachine => False) H). simpl in P.
+    eapply interpret_action_weaken_post. 3: exact P. all: simpl; intuition eauto.
+  Qed.
+
+  Lemma interpret_action_preserves_valid{memOk: map.ok Mem} a s postF postA :
     map.undef_on s.(getMem) isMMIOAddr ->
     disjoint (of_list s.(getXAddrs)) isMMIOAddr ->
-    interp_action a s post ->
-    interp_action a s (fun v s' => post v s' /\
-         map.undef_on s'.(getMem) isMMIOAddr /\ disjoint (of_list s'.(getXAddrs)) isMMIOAddr).
+    interpret_action a s postF postA ->
+    interpret_action a s (fun v s' => postF v s' /\
+                                      map.undef_on s'.(getMem) isMMIOAddr /\
+                                      disjoint (of_list s'.(getXAddrs)) isMMIOAddr)
+                         (fun s' => postA s' /\
+                                    map.undef_on s'.(getMem) isMMIOAddr /\
+                                    disjoint (of_list s'.(getXAddrs)) isMMIOAddr).
   Proof.
     destruct s, a; cbn; cbv [load store nonmem_load nonmem_store]; cbn;
       repeat destruct_one_match; intros; destruct_products; try split;
@@ -211,13 +249,26 @@ Section Riscv.
         intuition eauto 10 using preserve_undef_on, disjoint_diff_l.
   Qed.
 
+  Lemma interpret_action_preserves_valid'{memOk: map.ok Mem} a s post :
+    map.undef_on s.(getMem) isMMIOAddr ->
+    disjoint (of_list s.(getXAddrs)) isMMIOAddr ->
+    interpret_action a s post (fun _ : RiscvMachine => False) ->
+    interpret_action a s (fun v s' => post v s' /\ map.undef_on s'.(getMem) isMMIOAddr /\
+                                      disjoint (of_list s'.(getXAddrs)) isMMIOAddr)
+                         (fun _ : RiscvMachine => False).
+  Proof.
+    intros. pose proof interpret_action_preserves_valid as P.
+    specialize (P _ _ _ (fun _ : RiscvMachine => False) H H0 H1). simpl in P.
+    eapply interpret_action_weaken_post. 3: exact P. all: simpl; intuition eauto.
+  Qed.
+
   Global Instance MinimalMMIOPrimitivesSane{memOk: map.ok Mem} :
     PrimitivesSane MinimalMMIOPrimitivesParams.
   Proof.
     split; cbv [mcomp_sane valid_machine MinimalMMIOPrimitivesParams]; intros *; intros [U D] M;
-      (split; [ exact (interp_action_total _ st _ U D M)
-              | eapply interp_action_preserves_valid; try eassumption;
-                eapply interp_action_appendonly'; try eassumption ]).
+      (split; [ exact (interpret_action_total' _ st _ U D M)
+              | eapply interpret_action_preserves_valid'; try eassumption;
+                eapply interpret_action_appendonly''; try eassumption ]).
   Qed.
 
   Global Instance MinimalMMIOSatisfiesPrimitives{memOk: map.ok Mem} :

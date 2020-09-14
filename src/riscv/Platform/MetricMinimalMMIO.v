@@ -61,10 +61,8 @@ Section Riscv.
   |}.
 
   Definition interp_action a metmach post :=
-    interp_action (snd a) (metmach.(getMachine)) (fun r mach =>
-      post r (mkMetricRiscvMachine mach (fst a (metmach.(getMetrics))))).
-
-  Notation interp a mach post := (free.interp interp_action a mach post).
+    interpret_action (snd a) (metmach.(getMachine)) (fun r mach =>
+      post r (mkMetricRiscvMachine mach (fst a (metmach.(getMetrics))))) (fun _ => False).
 
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
@@ -85,22 +83,18 @@ Section Riscv.
   Proof.
     split; cbv [mcomp_sat MetricMinimalMMIOPrimitivesParams Monad_free Bind Return].
     { symmetry. eapply interp_bind_ex_mid; intros.
-      eapply MinimalMMIO.interp_action_weaken_post; eauto; cbn; eauto. }
+      eapply MinimalMMIO.interpret_action_weaken_post; eauto; cbn; eauto. }
     { symmetry. rewrite interp_ret; eapply iff_refl. }
   Qed.
 
   Lemma interp_action_weaken_post a (post1 post2:_->_->Prop)
     (H: forall r s, post1 r s -> post2 r s) s
     : interp_action a s post1 -> interp_action a s post2.
-  Proof. eapply MinimalMMIO.interp_action_weaken_post; eauto. Qed.
-  Lemma interp_action_appendonly a s post :
-    interp_action a s post ->
-    interp_action a s (fun _ s' => endswith s'.(getLog) s.(getLog)).
-  Proof. eapply MinimalMMIO.interp_action_appendonly; eauto. Qed.
+  Proof. eapply MinimalMMIO.interpret_action_weaken_post; eauto. Qed.
   Lemma interp_action_appendonly' a s post :
     interp_action a s post ->
     interp_action a s (fun v s' => post v s' /\ endswith s'.(getLog) s.(getLog)).
-  Proof. eapply MinimalMMIO.interp_action_appendonly'; eauto. Qed.
+  Proof. eapply MinimalMMIO.interpret_action_appendonly''; eauto. Qed.
   Lemma interp_action_total{memOk: map.ok Mem} a s post :
     map.undef_on s.(getMachine).(getMem) isMMIOAddr ->
     PropSet.disjoint (PropSet.of_list s.(getMachine).(getXAddrs)) isMMIOAddr ->
@@ -109,8 +103,8 @@ Section Riscv.
                 PropSet.disjoint (PropSet.of_list s.(getMachine).(getXAddrs)) isMMIOAddr.
   Proof.
     intros H D H1.
-    unshelve epose proof (MinimalMMIO.interp_action_total _ _ _ _ D H1) as H0; eauto.
-    destruct H0 as (?&?&?&?); eauto.
+    unshelve epose proof (MinimalMMIO.interpret_action_total _ _ _ _ _ D H1) as H0; eauto.
+    destruct H0 as (?&?&?&[[]|(?&?)]); eauto.
   Qed.
   Lemma interp_action_preserves_valid{memOk: map.ok Mem} a s post :
     map.undef_on s.(getMachine).(getMem) isMMIOAddr ->
@@ -122,7 +116,7 @@ Section Riscv.
         PropSet.disjoint (PropSet.of_list s'.(getMachine).(getXAddrs)) isMMIOAddr).
   Proof.
     intros U D I.
-    unshelve epose proof (MinimalMMIO.interp_action_preserves_valid _ _ _ U D I) as H0; eauto.
+    unshelve epose proof (MinimalMMIO.interpret_action_preserves_valid' _ _ _ U D I) as H0; eauto.
   Qed.
 
   Global Instance MetricMinimalMMIOPrimitivesSane{memOk: map.ok Mem} :
