@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
-Require Import riscv.Utility.Monads. Import OStateOperations.
+Require Import riscv.Utility.Monads. Import StateAbortFailOperations.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.Machine.
@@ -44,25 +44,25 @@ Section Riscv.
 
   Import HnatmapNotations. Open Scope hnatmap_scope.
 
-  Definition fail_if_None{R}(o: option R): OState State R :=
+  Definition fail_if_None{R}(o: option R): StateAbortFail State R :=
     match o with
     | Some x => Return x
     | None => fail_hard
     end.
 
-  Local Notation get := (@OStateOperations.get State). (* to improve type inference *)
+  Local Notation get := (@StateAbortFailOperations.get State). (* to improve type inference *)
 
-  Definition loadN(n: nat)(kind: SourceType)(a: word): OState State (HList.tuple byte n) :=
+  Definition loadN(n: nat)(kind: SourceType)(a: word): StateAbortFail State (HList.tuple byte n) :=
     mach <- get;
     v <- fail_if_None (Memory.load_bytes n mach[mem] a);
     Return v.
 
-  Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n): OState State unit :=
+  Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n): StateAbortFail State unit :=
     mach <- get;
     m <- fail_if_None (Memory.store_bytes n mach[mem] a v);
     put mach[mem := m].
 
-  Instance IsRiscvMachine: RiscvProgram (OState State) word := {
+  Instance IsRiscvMachine: RiscvProgram (StateAbortFail State) word := {
       getRegister reg :=
         if Z.eq_dec reg Register0 then
           Return (ZToReg 0)
@@ -109,7 +109,7 @@ Section Riscv.
 
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
-      endCycle{A: Type} := fail_hard;
+      endCycle{A: Type} := abort;
   }.
 
 End Riscv.

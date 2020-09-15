@@ -399,3 +399,30 @@ Module PostMonadOperations.
     fun s post => exists stronger, m s stronger /\ forall a final, stronger a final -> post a final.
 
 End PostMonadOperations.
+
+(* outer option is for failure, inner option is for early return (abort) *)
+Definition StateAbortFail(S A: Type) := S -> (option (option A) * S).
+
+Instance StateAbortFail_Monad(S: Type): Monad (StateAbortFail S). refine ({|
+  Bind A B (m: StateAbortFail S A) (f: A -> StateAbortFail S B) (s1 : S) :=
+    match m s1 with
+    | (Some (Some a), s2) => f a s2
+    | (Some None, s2) => (Some None, s2)
+    | (None, s2) => (None, s2)
+    end;
+  Return A (a: A) (s1: S) := (Some (Some a), s1);
+|}).
+all: prove_monad_law.
+Defined.
+
+Module StateAbortFailOperations.
+
+  Definition get{S: Type}: StateAbortFail S S := fun (s: S) => (Some (Some s), s).
+
+  Definition put{S: Type}(s: S): StateAbortFail S unit := fun _ => (Some (Some tt), s).
+
+  Definition abort{S A: Type}: StateAbortFail S A := fun (s: S) => (Some None, s).
+
+  Definition fail_hard{S A: Type}: StateAbortFail S A := fun (s: S) => (None, s).
+
+End StateAbortFailOperations.
