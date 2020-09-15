@@ -4,7 +4,7 @@ Require Import Coq.ZArith.BinInt.
 
 Open Scope Z_scope.
 
-(* Table 20.2 in the standard *)
+(* "Table 26.2: RISC-V pseudoinstructions" in the standard *)
 
 Local Notation x0 := Register0.
 
@@ -34,6 +34,16 @@ Definition Bleu(rs: Register)(rt: Register)(offset: Z) := Bgeu rt rs offset.
 Definition J(offset: Z) := Jal x0 offset.
 Definition Jr(rs: Register) := Jalr x0 rs 0.
 
+(* "Table 26.3: Pseudoinstructions for accessing control and status registers" in the standard *)
+
+Definition Csrr  rd  csr := Csrrs  rd x0 csr.
+Definition Csrw  rs  csr := Csrrw  x0 rs csr.
+Definition Csrs  rs  csr := Csrrs  x0 rs csr.
+Definition Csrc  rs  csr := Csrrc  x0 rs csr.
+Definition Csrwi imm csr := Csrrwi x0 imm csr.
+Definition Csrsi imm csr := Csrrsi x0 imm csr.
+Definition Csrci imm csr := Csrrci x0 imm csr.
+
 Hint Unfold
     Nop
     Mov
@@ -57,4 +67,11 @@ Hint Unfold
     Bleu
     J
     Jr
+    Csrr
+    Csrw
+    Csrs
+    Csrc
+    Csrwi
+    Csrsi
+    Csrci
   : unf_pseudo.
