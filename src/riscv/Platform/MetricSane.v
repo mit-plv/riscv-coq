@@ -112,7 +112,7 @@ Section Sane.
           | apply setPC_sane
           | apply step_sane
           | match goal with
-            | |- context [if ?b then _ else _] => destruct b
+            | |- context [match ?x with _ => _ end] => destruct x
             end ].
 
   Context {PRSane: MetricPrimitivesSane PRParams}.
@@ -123,7 +123,32 @@ Section Sane.
     unfold raiseExceptionWithInfo. repeat t_step.
   Qed.
 
-  Ltac t := simpl; unfold when; repeat t_step.
+  Lemma raiseException_sane: forall A i1 i2,
+      mcomp_sane (raiseException (A := A) i1 i2).
+  Proof.
+    unfold raiseException. intros. apply raiseExceptionWithInfo_sane.
+  Qed.
+
+  Lemma getCSR_sane: forall f,
+      mcomp_sane (CSRGetSet.getCSR f).
+  Proof.
+    intros. destruct f; simpl; unfold when; repeat t_step.
+  Qed.
+
+  Lemma setCSR_sane: forall f v,
+      mcomp_sane (CSRSpec.setCSR f v).
+  Proof.
+    intros. destruct f; simpl; unfold when; repeat t_step.
+  Qed.
+
+  Ltac t_step' :=
+    first [ apply raiseException_sane
+          | apply raiseExceptionWithInfo_sane
+          | apply getCSR_sane
+          | apply setCSR_sane
+          | t_step ].
+
+  Ltac t := repeat (simpl; unfold when; repeat t_step').
 
   Lemma execute_sane: forall inst,
       mcomp_sane (Execute.execute inst).
