@@ -8,7 +8,7 @@ SRCDIR := $(shell cygpath -m "$$(pwd)" 2>/dev/null || pwd)/src/riscv
 PARENT_DIR := $(shell cd .. && (cygpath -m "$$(pwd)" 2>/dev/null || pwd))
 
 SPEC_VS := $(wildcard $(SRCDIR)/Spec/*.v $(SRCDIR)/Utility/*.v $(SRCDIR)/Platform/*.v)
-ALL_VS := $(SPEC_VS) $(wildcard $(SRCDIR)/Proofs/*.v)
+ALL_VS := $(SPEC_VS) $(wildcard $(SRCDIR)/Proofs/*.v) $(wildcard $(SRCDIR)/Examples/*.v)
 
 SPEC_VOS := $(patsubst %.v,%.vo,$(SPEC_VS))
 ALL_VOS := $(patsubst %.v,%.vo,$(ALL_VOS))
