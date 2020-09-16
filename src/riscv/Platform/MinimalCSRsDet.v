@@ -87,7 +87,7 @@ Section Riscv.
 
       getPC := mach <- get; Return mach[pc];
 
-      setPC newPC := mach <- get; put mach[pc := newPC];
+      setPC newPC := mach <- get; put mach[nextPc := newPC];
 
       loadByte   := loadN 1;
       loadHalf   := loadN 2;
@@ -105,8 +105,12 @@ Section Riscv.
       makeReservation  addr := fail_hard;
       clearReservation addr := fail_hard;
       checkReservation addr := fail_hard;
-      getPrivMode := fail_hard;
-      setPrivMode v := fail_hard;
+      getPrivMode := Return Machine;
+      setPrivMode mode :=
+        match mode with
+        | Machine => Return tt
+        | User | Supervisor => fail_hard
+        end;
 
       endCycleNormal := mach <- get; put (updatePc mach);
       endCycleEarly{A: Type} := mach <- get; put (updatePc mach);; abort;

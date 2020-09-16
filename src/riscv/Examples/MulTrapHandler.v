@@ -71,11 +71,11 @@ Definition handler_insts :=
   save_regs_insts handler_stack_start ++ [[
   Csrr t1 MTVal                    ; (* t1 := the invalid instruction i that caused the exception *)
   Srli t1 t1 7                     ; (* t1 := t1 >> 7                                             *)
-  Ori s3 t1 31                     ; (* s3 := i[7:12]   // rd of the MUL                          *)
+  Andi s3 t1 31                    ; (* s3 := i[7:12]   // rd of the MUL                          *)
   Srli t1 t1 3                     ; (* t1 := t1 >> 3                                             *)
-  Ori s1 t1 31                     ; (* s1 := i[15:20]  // rs1 of the MUL                         *)
+  Andi s1 t1 31                    ; (* s1 := i[15:20]  // rs1 of the MUL                         *)
   Srli t1 t1 5                     ; (* t1 := t1 >> 5                                             *)
-  Ori s2 t1 31                     ; (* s2 := i[20:25]  // rs2 of the MUL                         *)
+  Andi s2 t1 31                    ; (* s2 := i[20:25]  // rs2 of the MUL                         *)
   Lw a1 s1 handler_stack_start     ; (* a1 := stack[s1]                                           *)
   Lw a2 s2 handler_stack_start       (* a2 := stack[s2]                                           *)
   ]] ++ softmul_insts ++ [[          (* a3 := softmul(a1, a2)                                     *)
@@ -103,13 +103,18 @@ Definition FieldNames: natmap Type := MinimalCSRsDet.Fields (natmap.put nil exec
 
 Definition State: Type := hnatmap FieldNames.
 
+Notation Registers := (@SortedList.rep (Zkeyed_map_params (@Naive.rep 32))).
+
+Definition initial_regs: Registers :=
+  map.of_tuple (HList.tuple.unfoldn (Z.add 1) 31 1) (HList.tuple.unfoldn id 31 (word.of_Z 0)).
+
 Definition initial_state: State := HNil
-  [regs := map.empty]
+  [regs := initial_regs]
   [pc := word.of_Z 0]
   [nextPc := word.of_Z 4]
   [mem := initial_mem]
   [log := nil]
-  [csrs := map.empty]
+  [csrs := map.put map.empty CSRField.MTVecBase (handler_start/4)]
   [exectrace := nil].
 
 Instance IsRiscvMachine: RiscvProgram (StateAbortFail State) word :=
@@ -130,3 +135,5 @@ Definition trace(fuel: nat): bool * ExecTrace :=
   | (isSuccess, final) => (isSuccess, final[exectrace])
   end.
 
+Eval vm_compute in trace 83.
+(* oh no, Mret jumps back to the Mul that caused the exception instead of one past the Mul *)

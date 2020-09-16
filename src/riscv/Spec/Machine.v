@@ -105,6 +105,9 @@ Section Riscv.
     (* here we hardcode that this simplified spec only supports machine mode and no interrupts *)
     addr <- getCSRField MTVecBase;
     setCSRField MTVal (regToZ_unsigned info);;
+    (* these two need to be set just so that Mret will succeed at restoring them *)
+    setCSRField MPP (encodePrivMode Machine);;
+    setCSRField MPIE 0;;
     setCSRField MEPC (regToZ_unsigned pc);;
     setCSRField MCauseCode (regToZ_unsigned exceptionCode);;
     setPC (ZToReg (addr * 4));;
