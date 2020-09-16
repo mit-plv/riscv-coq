@@ -27,10 +27,10 @@ Section Riscv.
   | setCSRField (_ : CSRField.CSRField) (_ : MachineInt)
   | getPrivMode
   | setPrivMode (_ : PrivMode)
-  | endCycle (_ : Type)
   | getPC
   | setPC (_ : word)
-  | step
+  | endCycleNormal
+  | endCycleEarly (_ : Type)
   .
 
   Definition result (action : action) : Type :=
@@ -48,9 +48,10 @@ Section Riscv.
     | setCSRField _ _ => unit
     | getPrivMode => PrivMode
     | setPrivMode _ => unit
-    | endCycle T => T
     | getPC => word
-    | setPC _ | step => unit
+    | setPC _ => unit
+    | endCycleNormal => unit
+    | endCycleEarly T => T
     end.
 
   Global Instance Materialize: RiscvProgram (free action result) word := {|
@@ -73,8 +74,8 @@ Section Riscv.
     Machine.setPrivMode m := act (setPrivMode m) ret;
     Machine.getPC := act getPC ret;
     Machine.setPC a := act (setPC a) ret;
-    Machine.step := act step ret;
-    Machine.endCycle A := act (endCycle A) ret;
+    Machine.endCycleNormal := act endCycleNormal ret;
+    Machine.endCycleEarly A := act (endCycleEarly A) ret;
   |}.
 
 End Riscv.

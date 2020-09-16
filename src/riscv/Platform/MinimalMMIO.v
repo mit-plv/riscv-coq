@@ -69,6 +69,9 @@ Section Riscv.
     | None => nonmem_load n ctxid a mach post
     end.
 
+  Definition updatePc(mach: RiscvMachine): RiscvMachine :=
+    withPc mach.(getNextPc) (withNextPc (word.add mach.(getNextPc) (word.of_Z 4)) mach).
+
   Definition interpret_action (a : action) (mach : RiscvMachine) :
     (result a -> RiscvMachine -> Prop) -> (RiscvMachine -> Prop) -> Prop :=
     match a with
@@ -86,8 +89,6 @@ Section Riscv.
       postF tt (withRegs regs mach)
     | getPC => fun postF postA => postF mach.(getPc) mach
     | setPC newPC => fun postF postA => postF tt (withNextPc newPC mach)
-    | step => fun postF postA =>
-                postF tt (withPc mach.(getNextPc) (withNextPc (word.add mach.(getNextPc) (word.of_Z 4)) mach))
     | loadByte ctxid a => fun postF postA => load 1 ctxid a mach postF
     | loadHalf ctxid a => fun postF postA => load 2 ctxid a mach postF
     | loadWord ctxid a => fun postF postA => load 4 ctxid a mach postF
@@ -96,7 +97,8 @@ Section Riscv.
     | storeHalf ctxid a v => fun postF postA => store 2 ctxid a v mach (postF tt)
     | storeWord ctxid a v => fun postF postA => store 4 ctxid a v mach (postF tt)
     | storeDouble ctxid a v => fun postF postA => store 8 ctxid a v mach (postF tt)
-    | endCycle _ => fun postF postA => postA mach (* ignores postF containing the continuation *)
+    | endCycleNormal => fun postF postA => postF tt (updatePc mach)
+    | endCycleEarly _ => fun postF postA => postA (updatePc mach) (* ignores postF containing the continuation *)
     | makeReservation _
     | clearReservation _
     | checkReservation _

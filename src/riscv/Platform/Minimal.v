@@ -91,12 +91,12 @@ Section Riscv.
       getPrivMode := fail_hard;
       setPrivMode v := fail_hard;
 
-      step := update (fun m => (withPc m.(getNextPc)
-                               (withNextPc (word.add m.(getNextPc) (word.of_Z 4)) m)));
+      endCycleNormal := update (fun m => (withPc m.(getNextPc)
+                                         (withNextPc (word.add m.(getNextPc) (word.of_Z 4)) m)));
 
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
-      endCycle{A: Type} := fail_hard;
+      endCycleEarly{A: Type} := fail_hard;
   }.
 
   Arguments Memory.load_bytes: simpl never.
@@ -232,7 +232,7 @@ Section Riscv.
          loadByte, loadHalf, loadWord, loadDouble,
          storeByte, storeHalf, storeWord, storeDouble,
          getPC, setPC,
-         step, raiseExceptionWithInfo,
+         endCycleNormal, endCycleEarly, raiseExceptionWithInfo,
          IsRiscvMachine,
          loadN, storeN, fail_if_None.
 

@@ -70,8 +70,8 @@ Section Riscv.
       getPrivMode := getPrivMode;
       setPrivMode := setPrivMode;
 
-      step := step;
-      endCycle{A} := @endCycle _ _ _ _ _ A;
+      endCycleNormal := endCycleNormal;
+      endCycleEarly{A} := @endCycleEarly _ _ _ _ _ A;
   }.
 
 End Riscv.

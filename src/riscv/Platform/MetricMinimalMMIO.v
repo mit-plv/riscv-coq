@@ -56,8 +56,8 @@ Section Riscv.
     Machine.setPrivMode m := act (id, setPrivMode m) ret;
     Machine.getPC := act (id, getPC) ret;
     Machine.setPC a := act (addMetricJumps 1, setPC a) ret;
-    Machine.step := act (addMetricInstructions 1, step) ret;
-    Machine.endCycle A := act (id, endCycle A) ret;
+    Machine.endCycleNormal := act (addMetricInstructions 1, endCycleNormal) ret;
+    Machine.endCycleEarly A := act (addMetricInstructions 1, endCycleEarly A) ret;
   |}.
 
   Definition interp_action a metmach post :=

@@ -52,7 +52,15 @@ Definition zeroedRiscvMachine: RiscvMachine := {|
 Definition initialRiscvMachine(imem: list MachineInt): RiscvMachine :=
   putProgram imem (ZToReg 0) zeroedRiscvMachine.
 
-Definition run: nat -> RiscvMachine -> (option unit) * RiscvMachine := run RV64IM.
+(* success flag * final state *)
+Fixpoint run(fuel: nat)(s: RiscvMachine): bool * RiscvMachine :=
+  match fuel with
+  | O => (true, s)
+  | S fuel' => match Run.run1 RV64IM s with
+               | (Some _, s') => run fuel' s'
+               | (None, s') => (false, s')
+               end
+  end.
 
 Definition literaltest_final(fuel: nat): RiscvMachine :=
   match run fuel (initialRiscvMachine literaltest_riscv) with

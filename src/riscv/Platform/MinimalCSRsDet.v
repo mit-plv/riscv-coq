@@ -62,6 +62,9 @@ Section Riscv.
     m <- fail_if_None (Memory.store_bytes n mach[mem] a v);
     put mach[mem := m].
 
+  Definition updatePc(mach: State): State :=
+    mach[pc := mach[nextPc]][nextPc := word.add mach[nextPc] (word.of_Z 4)].
+
   Instance IsRiscvMachine: RiscvProgram (StateAbortFail State) word := {
       getRegister reg :=
         if Z.eq_dec reg Register0 then
@@ -105,11 +108,8 @@ Section Riscv.
       getPrivMode := fail_hard;
       setPrivMode v := fail_hard;
 
-      step := mach <- get; put mach[pc := mach[nextPc]][nextPc := word.add mach[nextPc] (word.of_Z 4)];
-
-      (* fail hard if exception is thrown because at the moment, we want to prove that
-         code output by the compiler never throws exceptions *)
-      endCycle{A: Type} := abort;
+      endCycleNormal := mach <- get; put (updatePc mach);
+      endCycleEarly{A: Type} := mach <- get; put (updatePc mach);; abort;
   }.
 
 End Riscv.

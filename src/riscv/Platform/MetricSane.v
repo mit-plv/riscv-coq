@@ -107,10 +107,10 @@ Section Sane.
           | apply setCSRField_sane
           | apply getPrivMode_sane
           | apply setPrivMode_sane
-          | apply endCycle_sane
+          | apply endCycleNormal_sane
+          | apply endCycleEarly_sane
           | apply getPC_sane
           | apply setPC_sane
-          | apply step_sane
           | match goal with
             | |- context [match ?x with _ => _ end] => destruct x
             end ].
@@ -165,7 +165,7 @@ Section Sane.
     apply Bind_sane; [apply getPC_sane|intros].
     apply Bind_sane; [apply loadWord_sane|intros].
     apply Bind_sane; [apply execute_sane|intros].
-    apply step_sane.
+    apply endCycleNormal_sane.
   Qed.
 
 End Sane.

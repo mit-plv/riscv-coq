@@ -6,7 +6,6 @@ Require Import riscv.Spec.Decode.
 Require Import riscv.Platform.Memory. (* should go before Program because both define loadByte etc *)
 Require Import riscv.Spec.Machine.
 Require Import riscv.Spec.Execute.
-Require Import riscv.Utility.PowerFunc.
 Require Import riscv.Utility.Utility.
 
 Section Riscv.
@@ -24,9 +23,14 @@ Section Riscv.
     pc <- getPC;
     inst <- loadWord Fetch pc;
     execute (decode iset (combine 4 inst));;
-    step.
+    endCycleNormal.
 
-  Definition run(iset: InstructionSet)(n: nat): M unit :=
-    power_func (fun m => run1 iset;; m) n (Return tt).
+  (* Note: We cannot use
+     power_func (fun m => run1 iset;; m) n (Return tt)
+     to obtain a monadic computation executing n instructions,
+     because if one cycle ends early (due to an exception),
+     all the remaining operations are skipped.
+     The lifting from run1 to run-many has to be done in a
+     monad-specific way. *)
 
 End Riscv.

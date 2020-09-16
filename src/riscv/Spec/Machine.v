@@ -56,9 +56,13 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   setPC: t -> M unit;
   getPrivMode: M PrivMode;
   setPrivMode: PrivMode -> M unit;
-  endCycle: forall A, M A;
 
-  step: M unit; (* updates PC *)
+  (* Both of these update the PC at the end of a cycle.
+     Every instance must support endCycleNormal.
+     All operations following endCycleEarly are skipped.
+     Some instances may not support endCycleEarly and fail instead. *)
+  endCycleNormal: M unit;
+  endCycleEarly: forall A, M A;
 }.
 
 
@@ -104,7 +108,7 @@ Section Riscv.
     setCSRField MEPC (regToZ_unsigned pc);;
     setCSRField MCauseCode (regToZ_unsigned exceptionCode);;
     setPC (ZToReg (addr * 4));;
-    @endCycle M t MM MW MP A.
+    @endCycleEarly M t MM MW MP A.
 
   Definition raiseException{A: Type}(isInterrupt: t)(exceptionCode: t): M A :=
     raiseExceptionWithInfo isInterrupt exceptionCode (ZToReg 0).

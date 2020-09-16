@@ -53,10 +53,10 @@ Section MetricPrimitives.
     setCSRField_sane: forall f v, mcomp_sane (setCSRField f v);
     getPrivMode_sane: mcomp_sane getPrivMode;
     setPrivMode_sane: forall m, mcomp_sane (setPrivMode m);
-    endCycle_sane: forall A, mcomp_sane (@endCycle _ _ _ _ _ A);
     getPC_sane: mcomp_sane getPC;
     setPC_sane: forall newPc, mcomp_sane (setPC newPc);
-    step_sane: mcomp_sane step;
+    endCycleNormal_sane: mcomp_sane endCycleNormal;
+    endCycleEarly_sane: forall A, mcomp_sane (@endCycleEarly _ _ _ _ _ A);
   }.
 
   Definition spec_load{p: PrimitivesParams M MetricRiscvMachine}(n: nat)
@@ -127,12 +127,12 @@ Section MetricPrimitives.
                                initialL)) ->
         mcomp_sat (setPC v) initialL post;
 
-    spec_step: forall (initialL: MetricRiscvMachine) (post: unit -> MetricRiscvMachine -> Prop),
+    spec_endCycleNormal: forall (initialL: MetricRiscvMachine) (post: unit -> MetricRiscvMachine -> Prop),
         post tt (withPc     initialL.(getNextPc)
                 (withNextPc (word.add initialL.(getNextPc) (word.of_Z 4))
                 (updateMetrics (addMetricInstructions 1)
                                initialL))) ->
-        mcomp_sat step initialL post;
+        mcomp_sat endCycleNormal initialL post;
   }.
 
 End MetricPrimitives.

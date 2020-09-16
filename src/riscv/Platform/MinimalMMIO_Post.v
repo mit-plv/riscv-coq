@@ -86,8 +86,8 @@ Section Riscv.
     setCSRField _ _    := fun _ _ => False;
     getPrivMode        := fun _ _ => False;
     setPrivMode _      := fun _ _ => False;
-    endCycle _         := fun _ _ => False;
-    step := fun mach post => _;
+    endCycleEarly _    := fun _ _ => False;
+    endCycleNormal     := fun mach post => _;
   |}).
   (* TODO: inline the terms below into the holes above while keeping Coq's typechecker happy *)
   - exact (let v :=

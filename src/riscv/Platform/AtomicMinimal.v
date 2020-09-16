@@ -57,8 +57,8 @@ Section Riscv.
         setCSRField := liftL2 id setCSRField;
         getPrivMode := liftL0 id getPrivMode;
         setPrivMode := liftL1 id setPrivMode;
-      step := liftL0 id step;
-      endCycle{A} := liftL0 id (@endCycle _ _ _ _ _ A);
+      endCycleNormal := liftL0 id endCycleNormal;
+      endCycleEarly{A} := liftL0 id (@endCycleEarly _ _ _ _ _ A);
     }.
 
   Instance AtomicMinimalPrimitivesParams: PrimitivesParams (OState AtomicRiscvMachine) AtomicRiscvMachine :=

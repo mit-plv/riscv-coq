@@ -112,19 +112,15 @@ Definition initial_state: State := HNil
 
 Instance IsRiscvMachine: RiscvProgram (StateAbortFail State) word := MinimalCSRsDet.IsRiscvMachine FieldNames.
 
-Definition run: nat -> State -> (option (option unit)) * State := run RV32I.
-
-Definition final_state(fuel: nat): State :=
-  match run fuel initial_state with
-  | (answer, state) => state
+(* success flag * final state *)
+Fixpoint run(fuel: nat)(s: State): bool * State :=
+  match fuel with
+  | O => (true, s)
+  | S fuel' => match Run.run1 RV32I s with
+               | (Some _, s') => run fuel' s'
+               | (None, s') => (false, s')
+               end
   end.
 
-Definition final_res(fuel: nat): Byte.byte :=
-  match map.get (final_state fuel)[mem] (word.of_Z (heap_start+8)) with
-  | Some v => v
-  | None => Byte.xff
-  end.
-
-Eval vm_compute in (final_res 100000). (* returns Byte.x00 instead of Byte.x0c, TODO debug *)
 
 Definition exectrace: nat := 8.
