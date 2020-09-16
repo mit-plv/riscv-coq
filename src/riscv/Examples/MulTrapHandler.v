@@ -23,6 +23,7 @@ Require Import riscv.Utility.DefaultMemImpl32.
 Require Import coqutil.Map.Z_keyed_SortedListMap.
 Require Import riscv.Utility.ExtensibleRecords. Import HnatmapNotations. Open Scope hnatmap_scope.
 Require coqutil.Map.SortedList.
+Require Import riscv.Platform.LogInstructionTrace.
 
 (* note: these numbers must fit into a 12bit immediate, and should be small if we want to simulate
    execution inside Coq *)
@@ -98,9 +99,9 @@ Definition initial_datamem: Mem := Eval vm_compute in
 Definition initial_mem: Mem := Eval vm_compute in
   unchecked_store_byte_list (word.of_Z 0) (RiscvMachine.Z32s_to_bytes insts_as_Zs) initial_datamem.
 
-Definition FieldNames: natmap Type := MinimalCSRsDet.Fields nil.
+Definition FieldNames: natmap Type := MinimalCSRsDet.Fields (natmap.put nil exectrace ExecTrace).
 
-Definition State: Type := MinimalCSRsDet.State FieldNames.
+Definition State: Type := hnatmap FieldNames.
 
 Definition initial_state: State := HNil
   [regs := map.empty]
@@ -108,9 +109,11 @@ Definition initial_state: State := HNil
   [nextPc := word.of_Z 4]
   [mem := initial_mem]
   [log := nil]
-  [csrs := map.empty].
+  [csrs := map.empty]
+  [exectrace := nil].
 
-Instance IsRiscvMachine: RiscvProgram (StateAbortFail State) word := MinimalCSRsDet.IsRiscvMachine FieldNames.
+Instance IsRiscvMachine: RiscvProgram (StateAbortFail State) word :=
+  AddExecTrace FieldNames (MinimalCSRsDet.IsRiscvMachine FieldNames).
 
 (* success flag * final state *)
 Fixpoint run(fuel: nat)(s: State): bool * State :=
@@ -122,5 +125,8 @@ Fixpoint run(fuel: nat)(s: State): bool * State :=
                end
   end.
 
+Definition trace(fuel: nat): bool * ExecTrace :=
+  match run fuel initial_state with
+  | (isSuccess, final) => (isSuccess, final[exectrace])
+  end.
 
-Definition exectrace: nat := 8.
