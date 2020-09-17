@@ -47,16 +47,17 @@ Section Riscv.
     loadHalf := loadHalf;
     loadWord kind addr :=
       v <- loadWord kind addr;
-      match kind with
-      | Fetch => mach <- get;
-                 let i := match Memory.loadWord mach[mem] mach[pc] with
-                          | Some i => LittleEndian.combine 4 i
-                          | None => -1
-                          end in
-                 put mach[exectrace := (word.unsigned mach[pc], decode RV64IMAF i) :: mach[exectrace]];;
-                 Return v
-      | _ => Return v
-      end;
+      mach <- get;
+      let i := match Memory.loadWord mach[mem] addr with
+               | Some i => LittleEndian.combine 4 i
+               | None => -1
+               end in
+      let i' := match kind with
+                | Fetch => decode RV64IMAF i
+                | _ => InvalidInstruction i
+                end in
+      put mach[exectrace := (word.unsigned addr, i') :: mach[exectrace]];;
+      Return v;
     loadDouble := loadDouble;
     storeByte := storeByte;
     storeHalf := storeHalf;
