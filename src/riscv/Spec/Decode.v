@@ -15,6 +15,10 @@ Require Coq.Program.Wf.
 Require Coq.ZArith.BinInt.
 Local Open Scope Z_scope.
 
+Notation Register := BinInt.Z (only parsing).
+Notation FPRegister := BinInt.Z (only parsing).
+Notation RoundMode := BinInt.Z (only parsing).
+Notation Opcode := BinInt.Z (only parsing).
 
 (* Converted imports: *)
 
@@ -24,15 +28,6 @@ Require Import Coq.ZArith.BinInt.
 Require Utility.Utility.
 
 (* Converted type declarations: *)
-
-Definition RoundMode :=
-  Utility.Utility.MachineInt%type.
-
-Definition Register :=
-  Utility.Utility.MachineInt%type.
-
-Definition Opcode :=
-  Utility.Utility.MachineInt%type.
 
 Inductive InstructionSet : Type
   := | RV32I : InstructionSet
@@ -154,6 +149,67 @@ Inductive InstructionI : Type
   |  Jal (rd : Register) (jimm20 : Utility.Utility.MachineInt) : InstructionI
   |  InvalidI : InstructionI.
 
+Inductive InstructionF64 : Type
+  := | Fcvt_l_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode)
+   : InstructionF64
+  |  Fcvt_lu_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode)
+   : InstructionF64
+  |  Fcvt_s_l (rd : FPRegister) (rs1 : Register) (rm : RoundMode) : InstructionF64
+  |  Fcvt_s_lu (rd : FPRegister) (rs1 : Register) (rm : RoundMode)
+   : InstructionF64
+  |  InvalidF64 : InstructionF64.
+
+Inductive InstructionF : Type
+  := | Flw (rd : FPRegister) (rs1 : Register) (oimm12
+    : Utility.Utility.MachineInt)
+   : InstructionF
+  |  Fsw (rs1 : Register) (rs2 : FPRegister) (simm12 : Utility.Utility.MachineInt)
+   : InstructionF
+  |  Fmadd_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rs3
+    : FPRegister) (rm : RoundMode)
+   : InstructionF
+  |  Fmsub_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rs3
+    : FPRegister) (rm : RoundMode)
+   : InstructionF
+  |  Fnmsub_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rs3
+    : FPRegister) (rm : RoundMode)
+   : InstructionF
+  |  Fnmadd_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rs3
+    : FPRegister) (rm : RoundMode)
+   : InstructionF
+  |  Fadd_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rm
+    : RoundMode)
+   : InstructionF
+  |  Fsub_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rm
+    : RoundMode)
+   : InstructionF
+  |  Fmul_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rm
+    : RoundMode)
+   : InstructionF
+  |  Fdiv_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rm
+    : RoundMode)
+   : InstructionF
+  |  Fsqrt_s (rd : FPRegister) (rs1 : FPRegister) (rm : RoundMode) : InstructionF
+  |  Fsgnj_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister)
+   : InstructionF
+  |  Fsgnjn_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister)
+   : InstructionF
+  |  Fsgnjx_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister)
+   : InstructionF
+  |  Fmin_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
+  |  Fmax_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
+  |  Fcvt_w_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode) : InstructionF
+  |  Fcvt_wu_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode) : InstructionF
+  |  Fmv_x_w (rd : Register) (rs1 : FPRegister) : InstructionF
+  |  Feq_s (rd : Register) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
+  |  Flt_s (rd : Register) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
+  |  Fle_s (rd : Register) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
+  |  Fclass_s (rd : Register) (rs1 : FPRegister) : InstructionF
+  |  Fcvt_s_w (rd : FPRegister) (rs1 : Register) (rm : RoundMode) : InstructionF
+  |  Fcvt_s_wu (rd : FPRegister) (rs1 : Register) (rm : RoundMode) : InstructionF
+  |  Fmv_w_x (rd : FPRegister) (rs1 : Register) : InstructionF
+  |  InvalidF : InstructionF.
+
 Inductive InstructionCSR : Type
   := | Ecall : InstructionCSR
   |  Ebreak : InstructionCSR
@@ -248,70 +304,6 @@ Inductive InstructionA : Type
     : Utility.Utility.MachineInt)
    : InstructionA
   |  InvalidA : InstructionA.
-
-Definition FPRegister :=
-  Utility.Utility.MachineInt%type.
-
-Inductive InstructionF : Type
-  := | Flw (rd : FPRegister) (rs1 : Register) (oimm12
-    : Utility.Utility.MachineInt)
-   : InstructionF
-  |  Fsw (rs1 : Register) (rs2 : FPRegister) (simm12 : Utility.Utility.MachineInt)
-   : InstructionF
-  |  Fmadd_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rs3
-    : FPRegister) (rm : RoundMode)
-   : InstructionF
-  |  Fmsub_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rs3
-    : FPRegister) (rm : RoundMode)
-   : InstructionF
-  |  Fnmsub_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rs3
-    : FPRegister) (rm : RoundMode)
-   : InstructionF
-  |  Fnmadd_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rs3
-    : FPRegister) (rm : RoundMode)
-   : InstructionF
-  |  Fadd_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rm
-    : RoundMode)
-   : InstructionF
-  |  Fsub_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rm
-    : RoundMode)
-   : InstructionF
-  |  Fmul_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rm
-    : RoundMode)
-   : InstructionF
-  |  Fdiv_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) (rm
-    : RoundMode)
-   : InstructionF
-  |  Fsqrt_s (rd : FPRegister) (rs1 : FPRegister) (rm : RoundMode) : InstructionF
-  |  Fsgnj_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister)
-   : InstructionF
-  |  Fsgnjn_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister)
-   : InstructionF
-  |  Fsgnjx_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister)
-   : InstructionF
-  |  Fmin_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
-  |  Fmax_s (rd : FPRegister) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
-  |  Fcvt_w_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode) : InstructionF
-  |  Fcvt_wu_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode) : InstructionF
-  |  Fmv_x_w (rd : Register) (rs1 : FPRegister) : InstructionF
-  |  Feq_s (rd : Register) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
-  |  Flt_s (rd : Register) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
-  |  Fle_s (rd : Register) (rs1 : FPRegister) (rs2 : FPRegister) : InstructionF
-  |  Fclass_s (rd : Register) (rs1 : FPRegister) : InstructionF
-  |  Fcvt_s_w (rd : FPRegister) (rs1 : Register) (rm : RoundMode) : InstructionF
-  |  Fcvt_s_wu (rd : FPRegister) (rs1 : Register) (rm : RoundMode) : InstructionF
-  |  Fmv_w_x (rd : FPRegister) (rs1 : Register) : InstructionF
-  |  InvalidF : InstructionF.
-
-Inductive InstructionF64 : Type
-  := | Fcvt_l_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode)
-   : InstructionF64
-  |  Fcvt_lu_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode)
-   : InstructionF64
-  |  Fcvt_s_l (rd : FPRegister) (rs1 : Register) (rm : RoundMode) : InstructionF64
-  |  Fcvt_s_lu (rd : FPRegister) (rs1 : Register) (rm : RoundMode)
-   : InstructionF64
-  |  InvalidF64 : InstructionF64.
 
 Inductive Instruction : Type
   := | IInstruction (iInstruction : InstructionI) : Instruction
@@ -1534,8 +1526,9 @@ Definition decode
 (* Skipping instance `Spec.Decode.Show__Instruction' of class `GHC.Show.Show' *)
 
 (* External variables:
-     O Z Z.eqb Z.gtb Z.lor Z.of_nat Z.shiftl andb bool cons false list nil orb true
-     Coq.Init.Datatypes.app Coq.Lists.List.length Coq.Lists.List.nth
-     Utility.Utility.MachineInt Utility.Utility.bitSlice
-     Utility.Utility.machineIntToShamt Utility.Utility.signExtend
+     FPRegister O Opcode Register RoundMode Z Z.eqb Z.gtb Z.lor Z.of_nat Z.shiftl
+     andb bool cons false list nil orb true Coq.Init.Datatypes.app
+     Coq.Lists.List.length Coq.Lists.List.nth Utility.Utility.MachineInt
+     Utility.Utility.bitSlice Utility.Utility.machineIntToShamt
+     Utility.Utility.signExtend
 *)

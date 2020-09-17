@@ -29,7 +29,7 @@ Class Words := {
 
 (* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
    no matter whether it's a 32-bit or 64-bit machine. *)
-Definition MachineInt := Z.
+Notation MachineInt := Z (only parsing).
 
 (* t is a parameter rather than a field for Haskell compatibility *)
 Class MachineWidth(t: Type) := {

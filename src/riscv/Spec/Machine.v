@@ -139,7 +139,7 @@ Section Riscv.
 
 End Riscv.
 
-Definition Register0: Register := 0%Z.
+Notation Register0 := 0%Z (only parsing).
 
 Arguments RiscvProgram: clear implicits.
 Arguments RiscvProgram (M) (t) {_} {_}.

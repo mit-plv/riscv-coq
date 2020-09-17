@@ -283,7 +283,7 @@ Section Riscv.
       | _ => progress subst
       | _ => Option.inversion_option
       | _ => progress cbn -[Memory.load_bytes Memory.store_bytes HList.tuple]
-      | _ => progress cbv [Register0 valid_register is_initial_register_value load store Memory.loadByte Memory.loadHalf Memory.loadWord Memory.loadDouble Memory.storeByte Memory.storeHalf Memory.storeWord Memory.storeDouble] in *
+      | _ => progress cbv [valid_register is_initial_register_value load store Memory.loadByte Memory.loadHalf Memory.loadWord Memory.loadDouble Memory.storeByte Memory.storeHalf Memory.storeWord Memory.storeDouble] in *
       | H : exists _, _ |- _ => destruct H
       | H : _ /\ _ |- _ => destruct H
       | |- _ => solve [ intuition (eauto || Lia.lia) ]

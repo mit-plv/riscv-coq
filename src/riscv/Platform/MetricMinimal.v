@@ -74,7 +74,7 @@ Section Riscv.
        | |- _ => progress (
                      unfold computation_satisfies, computation_with_answer_satisfies,
                             IsRiscvMachine,
-                            valid_register, Register0,
+                            valid_register,
                             is_initial_register_value,
                             get, put, fail_hard,
                             Memory.loadByte, Memory.storeByte,

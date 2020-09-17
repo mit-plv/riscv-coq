@@ -10,6 +10,11 @@ rewrite forall x, x GHC.Base./= Spec.Decode.InvalidA64 = match x with | Spec.Dec
 rewrite forall x, x GHC.Base./= Spec.Decode.InvalidF = match x with | Spec.Decode.InvalidF => false | _ => true end
 rewrite forall x, x GHC.Base./= Spec.Decode.InvalidF64 = match x with | Spec.Decode.InvalidF64 => false | _ => true end
 
+skip Spec.Decode.Register
+skip Spec.Decode.FPRegister
+skip Spec.Decode.RoundMode
+skip Spec.Decode.Opcode
+
 rewrite forall, Spec.Decode.head_default = Coq.Lists.List.nth O
 rewrite forall x, Spec.Decode.isAmbiguous x = Coq.ZArith.BinInt.Z.gtb (Coq.ZArith.BinInt.Z.of_nat (Coq.Lists.List.length x)) 1
 skip Spec.Decode.head_default
