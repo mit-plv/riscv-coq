@@ -5,7 +5,7 @@ Local Set Universe Polymorphism.
 
 Inductive record: list (string * Type) -> Type :=
 | Nil: record nil
-| Cons{V: Type}{T: list (string * Type)}(p: string * V)(tail: record T): record ((fst p, V) :: T).
+| Cons{V: Type}{T: list (string * Type)}(n: string)(v: V)(tail: record T): record ((n, V) :: T).
 
 Fixpoint get_type(T: list (string * Type))(n: string): Type :=
   match T with
@@ -16,7 +16,7 @@ Fixpoint get_type(T: list (string * Type))(n: string): Type :=
 Fixpoint get{T: list (string * Type)}(r: record T)(n: string): get_type T n :=
   match r in (record l) return (get_type l n) with
   | Nil => tt
-  | @Cons V U (s, v) tail =>
+  | @Cons V U s v tail =>
     match String.eqb n s as b return (if b then V else get_type U n) with
     | true => v
     | false => get tail n
@@ -57,7 +57,7 @@ Definition set_rec{T: list (string * Type)}(r: record T)(n: string)(v: get_type 
   destruct Suffix as [|[x A] U].
   - exact Nil.
   - simpl.
-    refine (Cons (x, _) (rec _)).
+    refine (Cons x _ (rec _)).
     destruct (String.eqb n x) eqn: E.
     + apply (cast_get_type E T v).
     + apply (get r x).
@@ -79,16 +79,17 @@ Notation "[@ x ; y ; .. ; z ]" :=
      format "[@  x ;  y ;  .. ;  z  ]")
   : type_scope.
 
-Declare Custom Entry value_entry.
-Notation "s := v" := (@pair string _ s v)
-  (in custom value_entry at level 5, s constr at level 0, v constr at level 100).
-Notation "{@ x }" := (Cons x Nil) (x custom type_entry at level 5, format "{@  x  }").
-Notation "{@ x ; y ; .. ; z }" := (Cons x (Cons y .. (Cons z Nil) ..))
-    (x custom value_entry at level 5, y custom value_entry at level 5, z custom value_entry at level 5,
-     format "{@  x ;  y ;  .. ;  z  }").
+Declare Custom Entry record_value.
+Notation "s := v" := (Cons s v Nil)
+  (in custom record_value at level 5, s constr at level 0, v constr at level 100).
+Notation "s := v ; tail" := (Cons s v tail)
+  (in custom record_value at level 5, s constr at level 0, v constr at level 100,
+   tail custom record_value at level 5).
+Notation "{@ x }" := x (x custom record_value at level 5, format "{@  x  }").
 
 Notation "m @ f" := (get m f) (left associativity, at level 8, format "m @ f").
 Notation "m (@ f := v )" := (set m f v) (left associativity, at level 11, format "m (@ f  :=  v )").
+
 
 Ltac simpl_records :=
   cbn [get_type get destruct_types_rec destruct_types cast_get_type set_rec set
@@ -98,5 +99,6 @@ Goal forall s: [@ "a": nat * nat; "b": string; "c": list nat; "d": [@ "fst": nat
   intros.
   pose s@"d"@"fst" as x.
   pose (s(@"b" := "hi")(@"a" := (1, 2))(@"c" := 1 :: s@"c")(@"b" := "new hi")) as y.
+  pose {@ "a" := 1 ; "b" := {@ "l" := true; "r" := false } } as z.
   simpl_records.
 Abort.
