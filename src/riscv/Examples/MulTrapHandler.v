@@ -23,6 +23,7 @@ Require Import riscv.Utility.DefaultMemImpl32.
 Require Import coqutil.Map.Z_keyed_SortedListMap.
 Require Import riscv.Utility.ExtensibleRecords. Import HnatmapNotations. Open Scope hnatmap_scope.
 Require coqutil.Map.SortedList.
+Require Import riscv.Examples.SoftmulInsts.
 Require Import riscv.Platform.LogInstructionTrace.
 
 (* note: these numbers must fit into a 12bit immediate, and should be small if we want to simulate
@@ -40,56 +41,6 @@ Definition main_insts := [[
   Sw zero t3 (heap_start+8)
 ]].
 
-(* a3 := a1 * a2
-   without using mul, but with a naive loop:
-   a3 := 0;
-   while (0 != a1) {
-     a3 := a3 + a2;
-     a1 := a1 - 1;
-   } *)
-Definition softmul_insts := [[
-  Addi a3 zero 0;
-  Beq zero a1 16;
-  Add a3 a3 a2;
-  Addi a1 a1 (-1);
-  J (-12)
-]].
-
-(* We also save the constant register 0 on the stack, so that we can conveniently index into an
-   array of all registers *)
-Definition all_reg_names: list Register := List.unfoldn (Z.add 1) 32 0.
-
-Definition save_regs_insts(addr: Z) :=
-  @List.map Register Instruction (fun r => Sw zero r (addr + 4 * r)) all_reg_names.
-Definition restore_regs_insts(addr: Z) :=
-  @List.map Register Instruction (fun r => Lw r zero (addr + 4 * r)) all_reg_names.
-
-(* TODO write encoder (so far there's only a decoder called CSR.lookupCSR) *)
-Definition MTVal: MachineInt := 835.
-Remark MTVal_correct: CSR.lookupCSR MTVal = CSR.MTVal. reflexivity. Qed.
-Definition MEPC: MachineInt := 833.
-Remark MEPC_correct: CSR.lookupCSR MEPC = CSR.MEPC. reflexivity. Qed.
-
-Definition handler_insts :=
-  save_regs_insts handler_stack_start ++ [[
-  Csrr t1 MTVal                    ; (* t1 := the invalid instruction i that caused the exception *)
-  Srli t1 t1 5                     ; (* t1 := t1 >> 5                                             *)
-  Andi s3 t1 (31*4)                ; (* s3 := i[7:12]<<2   // (rd of the MUL)*4                   *)
-  Srli t1 t1 8                     ; (* t1 := t1 >> 8                                             *)
-  Andi s1 t1 (31*4)                ; (* s1 := i[15:20]<<2  // (rs1 of the MUL)*4                  *)
-  Srli t1 t1 5                     ; (* t1 := t1 >> 5                                             *)
-  Andi s2 t1 (31*4)                ; (* s2 := i[20:25]<<2  // (rs2 of the MUL)*4                  *)
-  Lw a1 s1 handler_stack_start     ; (* a1 := stack[s1]                                           *)
-  Lw a2 s2 handler_stack_start       (* a2 := stack[s2]                                           *)
-  ]] ++ softmul_insts ++ [[          (* a3 := softmul(a1, a2)                                     *)
-  Sw s3 a3 handler_stack_start       (* stack[s3] := a3                                           *)
-  ]] ++ restore_regs_insts handler_stack_start ++ [[
-  Csrr t1 MEPC                     ;
-  Addi t1 t1 4                     ;
-  Csrw t1 MEPC                     ; (* MEPC := MEPC + 4                                          *)
-  Mret
-  ]].
-
 Definition input1: Z := 5.
 Definition input2: Z := 13.
 
@@ -103,7 +54,8 @@ Definition putProgram(m: Mem)(addr: Z)(prog: list Instruction): Mem :=
   unchecked_store_byte_list (word.of_Z addr) (RiscvMachine.Z32s_to_bytes (List.map encode prog)) m.
 
 Definition initial_mem: Mem := Eval vm_compute in
-  putProgram (putProgram initial_datamem main_start main_insts) handler_start handler_insts.
+      putProgram (putProgram initial_datamem main_start main_insts)
+                 handler_start (handler_insts handler_stack_start).
 
 Definition FieldNames: natmap Type := MinimalCSRsDet.Fields (natmap.put nil exectrace ExecTrace).
 
