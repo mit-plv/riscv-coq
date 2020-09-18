@@ -69,14 +69,14 @@ Definition set{T: list (string * Type)}(r: record T)(n: string)(v: get_type T n)
 Declare Custom Entry type_entry.
 Notation "s : T" := (@pair string Type s T%type)
  (in custom type_entry at level 5, s constr at level 0, T constr at level 100, format "s :  T").
-Notation "[@ x ]" := (record (@cons (string * Type) x)) (x custom type_entry at level 5): type_scope.
-Notation "[@ x ; y ; .. ; z ]" :=
+Notation "[# x ]" := (record (@cons (string * Type) x)) (x custom type_entry at level 5): type_scope.
+Notation "[# x ; y ; .. ; z ]" :=
   (record (@cons (string * Type) x
           (@cons (string * Type) y
           ..
           (@cons (string * Type) z nil) ..)))
     (x custom type_entry at level 5, y custom type_entry at level 5, z custom type_entry at level 5,
-     format "[@  x ;  y ;  .. ;  z  ]")
+     format "[#  x ;  y ;  .. ;  z  ]")
   : type_scope.
 
 Declare Custom Entry record_value.
@@ -85,20 +85,20 @@ Notation "s := v" := (Cons s v Nil)
 Notation "s := v ; tail" := (Cons s v tail)
   (in custom record_value at level 5, s constr at level 0, v constr at level 100,
    tail custom record_value at level 5).
-Notation "{@ x }" := x (x custom record_value at level 5, format "{@  x  }").
+Notation "{# x }" := x (x custom record_value at level 5, format "{#  x  }").
 
-Notation "m @ f" := (get m f) (left associativity, at level 8, format "m @ f").
-Notation "m (@ f := v )" := (set m f v) (left associativity, at level 11, format "m (@ f  :=  v )").
+Notation "m # f" := (get m f) (left associativity, at level 8, format "m # f").
+Notation "m (# f := v )" := (set m f v) (left associativity, at level 11, format "m (# f  :=  v )").
 
 
 Ltac simpl_records :=
   cbn [get_type get destruct_types_rec destruct_types cast_get_type set_rec set
        String.eqb Ascii.eqb Bool.eqb] in *.
 
-Goal forall s: [@ "a": nat * nat; "b": string; "c": list nat; "d": [@ "fst": nat; "snd": nat ]], False.
+Goal forall s: [# "a": nat * nat; "b": string; "c": list nat; "d": [# "fst": nat; "snd": nat ]], False.
   intros.
-  pose s@"d"@"fst" as x.
-  pose (s(@"b" := "hi")(@"a" := (1, 2))(@"c" := 1 :: s@"c")(@"b" := "new hi")) as y.
-  pose {@ "a" := 1 ; "b" := {@ "l" := true; "r" := false } } as z.
+  pose s#"d"#"fst" as x.
+  pose (s(#"b" := "hi")(#"a" := (1, 2))(#"c" := 1 :: s#"c")(#"b" := "new hi")) as y.
+  pose {# "a" := 1 ; "b" := {# "l" := true; "r" := false } } as z.
   simpl_records.
 Abort.
