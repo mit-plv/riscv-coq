@@ -9,7 +9,7 @@ Section Riscv.
   Import free.
   Context {W: Words}.
 
-  Variant action :=
+  Variant riscv_primitive :=
   | getRegister (_ : Register)
   | setRegister (_ : Register) (_ : word)
   | loadByte (_ : SourceType) (_ : word)
@@ -33,7 +33,7 @@ Section Riscv.
   | endCycleEarly (_ : Type)
   .
 
-  Definition result (action : action) : Type :=
+  Definition primitive_result (action : riscv_primitive) : Type :=
     match action with
     | getRegister _ => word
     | setRegister _ _ => unit
@@ -54,7 +54,7 @@ Section Riscv.
     | endCycleEarly T => T
     end.
 
-  Global Instance Materialize: RiscvProgram (free action result) word := {|
+  Global Instance Materialize: RiscvProgram (free riscv_primitive primitive_result) word := {|
     Machine.getRegister a := act (getRegister a) ret;
     Machine.setRegister a b := act (setRegister a b) ret;
     Machine.loadByte a b := act (loadByte a b) ret;

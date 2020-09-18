@@ -32,8 +32,8 @@ Section Riscv.
   (* note: ext_spec does not have access to the metrics *)
   Context {mmio_spec: MMIOSpec}.
 
-  Definition action : Type := (MetricLog -> MetricLog) * action.
-  Definition result (a : action) := result (snd a).
+  Definition action : Type := (MetricLog -> MetricLog) * riscv_primitive.
+  Definition result (a : action) := primitive_result (snd a).
   Local Notation M := (free action result).
 
   Global Instance IsRiscvMachine: RiscvProgram M word := {|

@@ -72,8 +72,8 @@ Section Riscv.
   Definition updatePc(mach: RiscvMachine): RiscvMachine :=
     withPc mach.(getNextPc) (withNextPc (word.add mach.(getNextPc) (word.of_Z 4)) mach).
 
-  Definition interpret_action (a : action) (mach : RiscvMachine) :
-    (result a -> RiscvMachine -> Prop) -> (RiscvMachine -> Prop) -> Prop :=
+  Definition interpret_action (a : riscv_primitive) (mach : RiscvMachine) :
+    (primitive_result a -> RiscvMachine -> Prop) -> (RiscvMachine -> Prop) -> Prop :=
     match a with
     | getRegister reg => fun (postF: word -> RiscvMachine -> Prop) postA =>
         let v :=
@@ -109,7 +109,9 @@ Section Riscv.
         => fun postF postA => False
     end.
 
-  Definition MinimalMMIOPrimitivesParams: PrimitivesParams (free action result) RiscvMachine := {|
+  Definition MinimalMMIOPrimitivesParams:
+    PrimitivesParams (free riscv_primitive primitive_result) RiscvMachine :=
+  {|
     Primitives.mcomp_sat A m mach postF :=
       @free.interpret _ _ _ interpret_action A m mach postF (fun _ => False);
     Primitives.is_initial_register_value x := True;
