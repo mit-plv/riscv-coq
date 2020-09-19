@@ -54,8 +54,7 @@ Definition putProgram(m: Mem)(addr: Z)(prog: list Instruction): Mem :=
   unchecked_store_byte_list (word.of_Z addr) (RiscvMachine.Z32s_to_bytes (List.map encode prog)) m.
 
 Definition initial_mem: Mem := Eval vm_compute in
-      putProgram (putProgram initial_datamem main_start main_insts)
-                 handler_start (handler_insts handler_stack_start).
+      putProgram (putProgram initial_datamem main_start main_insts) handler_start handler_insts.
 
 Definition FieldNames: natmap Type := MinimalCSRsDet.Fields (natmap.put nil exectrace ExecTrace).
 
@@ -72,7 +71,8 @@ Definition initial_state: State := HNil
   [nextPc := word.of_Z 4]
   [mem := initial_mem]
   [log := nil]
-  [csrs := map.put map.empty CSRField.MTVecBase (handler_start/4)]
+  [csrs := map.of_list ((CSRField.MTVecBase, (handler_start/4)) ::
+                        (CSRField.MScratch, handler_stack_start) :: nil)]
   [exectrace := nil].
 
 Instance IsRiscvMachine: RiscvProgram (StateAbortFail State) word :=
