@@ -96,8 +96,11 @@ Module RecordNotations.
      tail custom record_value at level 5).
   Notation "{# x }" := x (x custom record_value at level 5, format "{#  x  }").
 
-  Notation "m # f" := (get m f) (left associativity, at level 8, format "m # f").
-  Notation "m (# f := v )" := (set m f v) (left associativity, at level 8, format "m (# f  :=  v )").
+  Declare Scope record_scope.
+  Notation "m # f" := (get m f) (left associativity, at level 8, format "m # f") : record_scope.
+  Notation "m (# f := v )" := (set m f v) (left associativity, at level 8, format "m (# f  :=  v )")
+    : record_scope.
+  Open Scope record_scope.
 End RecordNotations.
 
 Import RecordNotations.
