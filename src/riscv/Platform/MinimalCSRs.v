@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith. Local Open Scope Z_scope.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List. Import ListNotations.
+Require Import coqutil.Tactics.Tactics.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Platform.Memory.
 Require Import riscv.Spec.CSRFile.
@@ -90,5 +91,28 @@ Section Riscv.
     | checkReservation _
         => fun postF postA => False
     end.
+
+  Lemma weaken_load: forall n c a m (post1 post2:_->_->Prop),
+      (forall r s, post1 r s -> post2 r s) ->
+      load n c a m post1 -> load n c a m post2.
+  Proof.
+    unfold load. intros. destruct (load_bytes n m#"mem" a); intuition eauto.
+  Qed.
+
+  Lemma weaken_store: forall n c a v m (post1 post2:_->Prop),
+      (forall s, post1 s -> post2 s) ->
+      store n c a v m post1 -> store n c a v m post2.
+  Proof.
+    unfold store. intros. destruct (store_bytes n m#"mem" a v); intuition eauto.
+  Qed.
+
+  Lemma weaken_run_primitive: forall a (postF1 postF2: _ -> _ -> Prop) (postA1 postA2: _ -> Prop),
+    (forall r s, postF1 r s -> postF2 r s) ->
+    (forall s, postA1 s -> postA2 s) ->
+    forall s, run_primitive a s postF1 postA1 -> run_primitive a s postF2 postA2.
+  Proof.
+    destruct a; cbn; intros; try solve [intuition eauto using weaken_load, weaken_store];
+      destruct_one_match; eauto.
+  Qed.
 
 End Riscv.
