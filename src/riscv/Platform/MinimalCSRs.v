@@ -79,7 +79,12 @@ Section Riscv.
                          | Some v => postF v mach
                          | None => False
                          end
-    | setCSRField f v => fun postF postA => postF tt mach(#"csrs" := map.put mach#"csrs" f v)
+    | setCSRField f v => fun postF postA =>
+                           (* only allow setting CSR fields that are supported (not None) on this machine *)
+                           match map.get mach#"csrs" f with
+                           | Some _ => postF tt mach(#"csrs" := map.put mach#"csrs" f v)
+                           | None => False
+                           end
     | getPrivMode => fun postF postA => postF Machine mach
     | setPrivMode mode => fun postF postA =>
                             match mode with
