@@ -47,21 +47,21 @@ Section Riscv.
   Definition updatePc(mach: State): State :=
     mach(#"pc" := mach#"nextPc")(#"nextPc" := word.add mach#"nextPc" (word.of_Z 4)).
 
+  Definition getReg(regs: Registers)(reg: Z): word :=
+    if Z.eq_dec reg 0 then word.of_Z 0
+    else match map.get regs reg with
+         | Some x => x
+         | None => word.of_Z 0
+         end.
+
+  Definition setReg(regs: Registers)(reg: Z)(v: word): Registers :=
+    if Z.eq_dec reg Register0 then regs else map.put regs reg v.
+
   Definition run_primitive(a: riscv_primitive)(mach: State):
              (primitive_result a -> State -> Prop) -> (State -> Prop) -> Prop :=
     match a with
-    | getRegister reg => fun postF postA =>
-        let v :=
-          if Z.eq_dec reg 0 then word.of_Z 0
-          else match map.get mach#"regs" reg with
-               | Some x => x
-               | None => word.of_Z 0 end in
-        postF v mach
-    | setRegister reg v => fun postF postA =>
-      let regs := if Z.eq_dec reg Register0
-                  then mach#"regs"
-                  else map.put mach#"regs" reg v in
-      postF tt mach(#"regs" := regs)
+    | getRegister reg => fun postF postA => postF (getReg mach#"regs" reg) mach
+    | setRegister reg v => fun postF postA => postF tt mach(#"regs" := setReg mach#"regs" reg v)
     | getPC => fun postF postA => postF mach#"pc" mach
     | setPC newPC => fun postF postA => postF tt mach(#"nextPc" := newPC)
     | loadByte ctxid a => fun postF postA => load 1 ctxid a mach postF
