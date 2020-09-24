@@ -75,37 +75,37 @@ Section Riscv.
   Definition interpret_action (a : riscv_primitive) (mach : RiscvMachine) :
     (primitive_result a -> RiscvMachine -> Prop) -> (RiscvMachine -> Prop) -> Prop :=
     match a with
-    | getRegister reg => fun (postF: word -> RiscvMachine -> Prop) postA =>
+    | GetRegister reg => fun (postF: word -> RiscvMachine -> Prop) postA =>
         let v :=
           if Z.eq_dec reg 0 then word.of_Z 0
           else match map.get mach.(getRegs) reg with
                | Some x => x
                | None => word.of_Z 0 end in
         postF v mach
-    | setRegister reg v => fun postF postA =>
+    | SetRegister reg v => fun postF postA =>
       let regs := if Z.eq_dec reg Register0
                   then mach.(getRegs)
                   else map.put mach.(getRegs) reg v in
       postF tt (withRegs regs mach)
-    | getPC => fun postF postA => postF mach.(getPc) mach
-    | setPC newPC => fun postF postA => postF tt (withNextPc newPC mach)
-    | loadByte ctxid a => fun postF postA => load 1 ctxid a mach postF
-    | loadHalf ctxid a => fun postF postA => load 2 ctxid a mach postF
-    | loadWord ctxid a => fun postF postA => load 4 ctxid a mach postF
-    | loadDouble ctxid a => fun postF postA => load 8 ctxid a mach postF
-    | storeByte ctxid a v => fun postF postA => store 1 ctxid a v mach (postF tt)
-    | storeHalf ctxid a v => fun postF postA => store 2 ctxid a v mach (postF tt)
-    | storeWord ctxid a v => fun postF postA => store 4 ctxid a v mach (postF tt)
-    | storeDouble ctxid a v => fun postF postA => store 8 ctxid a v mach (postF tt)
-    | endCycleNormal => fun postF postA => postF tt (updatePc mach)
-    | endCycleEarly _ => fun postF postA => postA (updatePc mach) (* ignores postF containing the continuation *)
-    | makeReservation _
-    | clearReservation _
-    | checkReservation _
-    | getCSRField _
-    | setCSRField _ _
-    | getPrivMode
-    | setPrivMode _
+    | GetPC => fun postF postA => postF mach.(getPc) mach
+    | SetPC newPC => fun postF postA => postF tt (withNextPc newPC mach)
+    | LoadByte ctxid a => fun postF postA => load 1 ctxid a mach postF
+    | LoadHalf ctxid a => fun postF postA => load 2 ctxid a mach postF
+    | LoadWord ctxid a => fun postF postA => load 4 ctxid a mach postF
+    | LoadDouble ctxid a => fun postF postA => load 8 ctxid a mach postF
+    | StoreByte ctxid a v => fun postF postA => store 1 ctxid a v mach (postF tt)
+    | StoreHalf ctxid a v => fun postF postA => store 2 ctxid a v mach (postF tt)
+    | StoreWord ctxid a v => fun postF postA => store 4 ctxid a v mach (postF tt)
+    | StoreDouble ctxid a v => fun postF postA => store 8 ctxid a v mach (postF tt)
+    | EndCycleNormal => fun postF postA => postF tt (updatePc mach)
+    | EndCycleEarly _ => fun postF postA => postA (updatePc mach) (* ignores postF containing the continuation *)
+    | MakeReservation _
+    | ClearReservation _
+    | CheckReservation _
+    | GetCSRField _
+    | SetCSRField _ _
+    | GetPrivMode
+    | SetPrivMode _
         => fun postF postA => False
     end.
 

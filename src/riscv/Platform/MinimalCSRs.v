@@ -60,40 +60,40 @@ Section Riscv.
   Definition run_primitive(a: riscv_primitive)(mach: State):
              (primitive_result a -> State -> Prop) -> (State -> Prop) -> Prop :=
     match a with
-    | getRegister reg => fun postF postA => postF (getReg mach#"regs" reg) mach
-    | setRegister reg v => fun postF postA => postF tt mach(#"regs" := setReg mach#"regs" reg v)
-    | getPC => fun postF postA => postF mach#"pc" mach
-    | setPC newPC => fun postF postA => postF tt mach(#"nextPc" := newPC)
-    | loadByte ctxid a => fun postF postA => load 1 ctxid a mach postF
-    | loadHalf ctxid a => fun postF postA => load 2 ctxid a mach postF
-    | loadWord ctxid a => fun postF postA => load 4 ctxid a mach postF
-    | loadDouble ctxid a => fun postF postA => load 8 ctxid a mach postF
-    | storeByte ctxid a v => fun postF postA => store 1 ctxid a v mach (postF tt)
-    | storeHalf ctxid a v => fun postF postA => store 2 ctxid a v mach (postF tt)
-    | storeWord ctxid a v => fun postF postA => store 4 ctxid a v mach (postF tt)
-    | storeDouble ctxid a v => fun postF postA => store 8 ctxid a v mach (postF tt)
-    | endCycleNormal => fun postF postA => postF tt (updatePc mach)
-    | endCycleEarly _ => fun postF postA => postA (updatePc mach) (* ignores postF containing the continuation *)
-    | getCSRField f => fun postF postA =>
+    | GetRegister reg => fun postF postA => postF (getReg mach#"regs" reg) mach
+    | SetRegister reg v => fun postF postA => postF tt mach(#"regs" := setReg mach#"regs" reg v)
+    | GetPC => fun postF postA => postF mach#"pc" mach
+    | SetPC newPC => fun postF postA => postF tt mach(#"nextPc" := newPC)
+    | LoadByte ctxid a => fun postF postA => load 1 ctxid a mach postF
+    | LoadHalf ctxid a => fun postF postA => load 2 ctxid a mach postF
+    | LoadWord ctxid a => fun postF postA => load 4 ctxid a mach postF
+    | LoadDouble ctxid a => fun postF postA => load 8 ctxid a mach postF
+    | StoreByte ctxid a v => fun postF postA => store 1 ctxid a v mach (postF tt)
+    | StoreHalf ctxid a v => fun postF postA => store 2 ctxid a v mach (postF tt)
+    | StoreWord ctxid a v => fun postF postA => store 4 ctxid a v mach (postF tt)
+    | StoreDouble ctxid a v => fun postF postA => store 8 ctxid a v mach (postF tt)
+    | EndCycleNormal => fun postF postA => postF tt (updatePc mach)
+    | EndCycleEarly _ => fun postF postA => postA (updatePc mach) (* ignores postF containing the continuation *)
+    | GetCSRField f => fun postF postA =>
                          match map.get mach#"csrs" f with
                          | Some v => postF v mach
                          | None => False
                          end
-    | setCSRField f v => fun postF postA =>
+    | SetCSRField f v => fun postF postA =>
                            (* only allow setting CSR fields that are supported (not None) on this machine *)
                            match map.get mach#"csrs" f with
                            | Some _ => postF tt mach(#"csrs" := map.put mach#"csrs" f v)
                            | None => False
                            end
-    | getPrivMode => fun postF postA => postF Machine mach
-    | setPrivMode mode => fun postF postA =>
+    | GetPrivMode => fun postF postA => postF Machine mach
+    | SetPrivMode mode => fun postF postA =>
                             match mode with
                             | Machine => postF tt mach
                             | User | Supervisor => False
                             end
-    | makeReservation _
-    | clearReservation _
-    | checkReservation _
+    | MakeReservation _
+    | ClearReservation _
+    | CheckReservation _
         => fun postF postA => False
     end.
 

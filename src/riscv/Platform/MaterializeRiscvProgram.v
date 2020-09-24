@@ -10,72 +10,72 @@ Section Riscv.
   Context {W: Words}.
 
   Variant riscv_primitive :=
-  | getRegister (_ : Register)
-  | setRegister (_ : Register) (_ : word)
-  | loadByte (_ : SourceType) (_ : word)
-  | loadHalf (_ : SourceType) (_ : word)
-  | loadWord (_ : SourceType) (_ : word)
-  | loadDouble (_ : SourceType) (_ : word)
-  | storeByte (_ : SourceType) (_ : word) (_ : w8)
-  | storeHalf (_ : SourceType) (_ : word) (_ : w16)
-  | storeWord (_ : SourceType) (_ : word) (_ : w32)
-  | storeDouble (_ : SourceType) (_ : word) (_ : w64)
-  | makeReservation (_ : word)
-  | clearReservation (_ : word)
-  | checkReservation (_ : word)
-  | getCSRField (_ : CSRField.CSRField)
-  | setCSRField (_ : CSRField.CSRField) (_ : MachineInt)
-  | getPrivMode
-  | setPrivMode (_ : PrivMode)
-  | getPC
-  | setPC (_ : word)
-  | endCycleNormal
-  | endCycleEarly (_ : Type)
+  | GetRegister (_ : Register)
+  | SetRegister (_ : Register) (_ : word)
+  | LoadByte (_ : SourceType) (_ : word)
+  | LoadHalf (_ : SourceType) (_ : word)
+  | LoadWord (_ : SourceType) (_ : word)
+  | LoadDouble (_ : SourceType) (_ : word)
+  | StoreByte (_ : SourceType) (_ : word) (_ : w8)
+  | StoreHalf (_ : SourceType) (_ : word) (_ : w16)
+  | StoreWord (_ : SourceType) (_ : word) (_ : w32)
+  | StoreDouble (_ : SourceType) (_ : word) (_ : w64)
+  | MakeReservation (_ : word)
+  | ClearReservation (_ : word)
+  | CheckReservation (_ : word)
+  | GetCSRField (_ : CSRField.CSRField)
+  | SetCSRField (_ : CSRField.CSRField) (_ : MachineInt)
+  | GetPrivMode
+  | SetPrivMode (_ : PrivMode)
+  | GetPC
+  | SetPC (_ : word)
+  | EndCycleNormal
+  | EndCycleEarly (_ : Type)
   .
 
   Definition primitive_result (action : riscv_primitive) : Type :=
     match action with
-    | getRegister _ => word
-    | setRegister _ _ => unit
-    | loadByte _ _ => w8
-    | loadHalf _ _ => w16
-    | loadWord _ _ => w32
-    | loadDouble _ _ => w64
-    | storeByte _ _ _ | storeHalf _ _ _ | storeWord _ _ _ | storeDouble _ _ _ => unit
-    | makeReservation _ | clearReservation _ => unit
-    | checkReservation _ => bool
-    | getCSRField _ => MachineInt
-    | setCSRField _ _ => unit
-    | getPrivMode => PrivMode
-    | setPrivMode _ => unit
-    | getPC => word
-    | setPC _ => unit
-    | endCycleNormal => unit
-    | endCycleEarly T => T
+    | GetRegister _ => word
+    | SetRegister _ _ => unit
+    | LoadByte _ _ => w8
+    | LoadHalf _ _ => w16
+    | LoadWord _ _ => w32
+    | LoadDouble _ _ => w64
+    | StoreByte _ _ _ | StoreHalf _ _ _ | StoreWord _ _ _ | StoreDouble _ _ _ => unit
+    | MakeReservation _ | ClearReservation _ => unit
+    | CheckReservation _ => bool
+    | GetCSRField _ => MachineInt
+    | SetCSRField _ _ => unit
+    | GetPrivMode => PrivMode
+    | SetPrivMode _ => unit
+    | GetPC => word
+    | SetPC _ => unit
+    | EndCycleNormal => unit
+    | EndCycleEarly T => T
     end.
 
   Global Instance Materialize: RiscvProgram (free riscv_primitive primitive_result) word := {|
-    Machine.getRegister a := act (getRegister a) ret;
-    Machine.setRegister a b := act (setRegister a b) ret;
-    Machine.loadByte a b := act (loadByte a b) ret;
-    Machine.loadHalf a b := act (loadHalf a b) ret;
-    Machine.loadWord a b := act (loadWord a b) ret;
-    Machine.loadDouble a b := act (loadDouble a b) ret;
-    Machine.storeByte a b c := act (storeByte a b c) ret;
-    Machine.storeHalf a b c := act (storeHalf a b c) ret;
-    Machine.storeWord a b c := act (storeWord a b c) ret;
-    Machine.storeDouble a b c := act (storeDouble a b c) ret;
-    Machine.makeReservation a := act (makeReservation a) ret;
-    Machine.clearReservation a := act (clearReservation a) ret;
-    Machine.checkReservation a := act (checkReservation a) ret;
-    Machine.getCSRField f := act (getCSRField f) ret;
-    Machine.setCSRField f v := act (setCSRField f v) ret;
-    Machine.getPrivMode := act getPrivMode ret;
-    Machine.setPrivMode m := act (setPrivMode m) ret;
-    Machine.getPC := act getPC ret;
-    Machine.setPC a := act (setPC a) ret;
-    Machine.endCycleNormal := act endCycleNormal ret;
-    Machine.endCycleEarly A := act (endCycleEarly A) ret;
+    getRegister a := act (GetRegister a) ret;
+    setRegister a b := act (SetRegister a b) ret;
+    loadByte a b := act (LoadByte a b) ret;
+    loadHalf a b := act (LoadHalf a b) ret;
+    loadWord a b := act (LoadWord a b) ret;
+    loadDouble a b := act (LoadDouble a b) ret;
+    storeByte a b c := act (StoreByte a b c) ret;
+    storeHalf a b c := act (StoreHalf a b c) ret;
+    storeWord a b c := act (StoreWord a b c) ret;
+    storeDouble a b c := act (StoreDouble a b c) ret;
+    makeReservation a := act (MakeReservation a) ret;
+    clearReservation a := act (ClearReservation a) ret;
+    checkReservation a := act (CheckReservation a) ret;
+    getCSRField f := act (GetCSRField f) ret;
+    setCSRField f v := act (SetCSRField f v) ret;
+    getPrivMode := act GetPrivMode ret;
+    setPrivMode m := act (SetPrivMode m) ret;
+    getPC := act GetPC ret;
+    setPC a := act (SetPC a) ret;
+    endCycleNormal := act EndCycleNormal ret;
+    endCycleEarly A := act (EndCycleEarly A) ret;
   |}.
 
 End Riscv.
