@@ -16,7 +16,7 @@ ALL_VOS := $(patsubst %.v,%.vo,$(ALL_VOS))
 DEPS_DIR?=$(PARENT_DIR)
 
 # Note: make does not interpret "\n", and this is intended
-DEPFLAGS_NL=-Q $(DEPS_DIR)/coqutil/src/coqutil coqutil\n
+DEPFLAGS_NL=-Q $(DEPS_DIR)/coqutil/src/coqutil coqutil\n-Q $(DEPS_DIR)/coq-record-update/src RecordUpdate\n
 CURFLAGS_NL=-R $(SRCDIR) riscv\n
 
 EXTERNAL_DEPENDENCIES?=

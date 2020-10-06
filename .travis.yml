@@ -22,4 +22,5 @@ env:
 
 script:
   - (cd .. && git clone https://github.com/mit-plv/coqutil.git && make -C coqutil)
+  - (cd .. && git clone https://github.com/tchajed/coq-record-update.git && make -C coq-record-update)
   - make all
