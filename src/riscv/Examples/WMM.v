@@ -3,10 +3,10 @@ Require Import Coq.Lists.List. Import ListNotations.
 Require Import coqutil.Tactics.Tactics.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.Machine.
+Require Import riscv.Spec.Execute.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Utility.Utility.
-Require Import riscv.Platform.Run.
 Require Import RecordUpdate.RecordUpdate.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
@@ -52,7 +52,11 @@ Section Orders.
 End Orders.
 
 (* Weak memory formalization following
-   Kokologiannakis and Vafeiadis: HMC Model Checking for Hardware Memory Models, ASPLOS 2020 *)
+   Kokologiannakis and Vafeiadis: HMC Model Checking for Hardware Memory Models, ASPLOS 2020
+
+Errata:
+- Algorithm 1, line 18: `\Phi(r);` should be `\Phi(r) <- v;`
+*)
 
 (* thread id *)
 Definition Tid := nat.
@@ -91,7 +95,7 @@ Inductive AccessMode := oR | oW. (* QUESTION: seems to duplicate Read/Write info
 
 Inductive Label :=
 | ReadLabel(o: AccessMode)(s: Exclusiveness)(x: word)
-| WriteLabel(o: AccessMode)(s: Exclusiveness)(x: word)(v: byte)
+| WriteLabel(o: AccessMode)(s: Exclusiveness)(x: word)(v: w8)
 | FenceLabel(o: AccessMode)
 | ErrorLabel.
 
@@ -169,6 +173,17 @@ Definition Loc(G: Graph)(e: Event): option word :=
   | None => None
   end.
 
+Definition Val(G: Graph)(e: Event): option w8 :=
+  match G.(Lab) e with
+  | Some l => match l with
+              | ReadLabel o s x => None
+              | WriteLabel o s x v => Some v
+              | FenceLabel o => None
+              | ErrorLabel => None
+              end
+  | None => None
+  end.
+
 (* reads-from relation: `RfRel g e1 e2` means "e2 reads from e1" *)
 Inductive RfRel(G: Graph): Event -> Event -> Prop :=
   mkRfRel: forall r, r \in ReadEvents G -> RfRel G (G.(Rf) r) r.
@@ -225,12 +240,12 @@ Record ThreadState := mkThreadState {
   Pc: word;
   NextPc: word;
   Prog: list w32;
-  EventCount: nat;
+  CurrentEvent: Event;
   Deps: Register -> set Event;
 }.
 
 Instance ThreadStateSettable : Settable ThreadState :=
-  settable! mkThreadState <Regs; Pc; NextPc; Prog; EventCount; Deps>.
+  settable! mkThreadState <Regs; Pc; NextPc; Prog; CurrentEvent; Deps>.
 
 (* Tracking dependencies:
 
@@ -301,10 +316,33 @@ Definition loadInstruction(n: nat)(a: word): M (HList.tuple byte n) :=
   | _ => fail_hard
   end.
 
+(* load_byte and store_byte do everything that GEN from the paper does except the
+   {addr,data,ctrl} assertions in the for loop, because for these, we need to know
+   the register names, so we move these assertions into preExec *)
+Definition load_byte(addr: word): M w8 :=
+  s <- get;
+  G <- ask;
+  assert (G.(Lab) s.(CurrentEvent) = Some (ReadLabel oR NotExclusive addr));;
+  v <- extractOption (Val G (Rf G s.(CurrentEvent)));
+  put (s <| CurrentEvent ::= NextEvent |>);;
+  Return v.
+
+Definition store_byte(addr: word)(v: w8): M unit :=
+  s <- get;
+  G <- ask;
+  assert (G.(Lab) s.(CurrentEvent) = Some (WriteLabel oW NotExclusive addr v)).
+
+(* only 1-byte loads and stores are supported at the moment *)
 Definition loadData(n: nat)(a: word): M (HList.tuple byte n) :=
   match n with
-  | 1 => s <- get; put (s <| EventCount ::= S |>);; fail_hard
+  | 1 => load_byte a
   | _ => fail_hard
+  end.
+
+Definition storeData(n: nat)(a: word): HList.tuple byte n -> M unit :=
+  match n with
+  | 1 => store_byte a
+  | _ => fun _ => fail_hard
   end.
 
 Definition loadN(n: nat)(kind: SourceType)(a: word): M (HList.tuple byte n) :=
@@ -318,7 +356,7 @@ Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n): M u
   s <- get;
   match kind with
   | Fetch => fail_hard
-  | Execute => fail_hard
+  | Execute => storeData n a v
   | VirtualMemory => fail_hard
   end.
 
@@ -334,6 +372,29 @@ Definition setDeps(D: Register -> set Event)(r: Register)(s: set Event): Registe
 
 Notation "D <[ r ]>" := (getDeps D r) (at level 8, left associativity, format "D <[ r ]>").
 Notation "D <[ r := s ]>" := (setDeps D r s) (at level 8, left associativity, format "D <[ r  :=  s ]>").
+
+Definition checkDepsI(inst: InstructionI): M unit :=
+  match inst with
+  (* only loading/storing one byte at a time is supported, the others will fail in load/storeData *)
+  | Lb rd rs1 oimm12 => s <- get; G <- ask; assert (
+       G.(Addr) s.(CurrentEvent) = s.(Deps)<[rs1]> /\
+       G.(Data) s.(CurrentEvent) = empty_set /\
+       G.(Ctrl) s.(CurrentEvent) = s.(Deps)<[pc]>
+    )
+  | Sb rs1 rs2 simm12 => s <- get; G <- ask; assert (
+       G.(Addr) s.(CurrentEvent) = s.(Deps)<[rs1]> /\
+       G.(Data) s.(CurrentEvent) = s.(Deps)<[rs2]> /\
+       G.(Ctrl) s.(CurrentEvent) = s.(Deps)<[pc]>
+    )
+  (* instructions other than load/store need no dependency checking *)
+  | _ => Return tt
+  end.
+
+Definition checkDeps(inst: Instruction): M unit :=
+  match inst with
+  | IInstruction i => checkDepsI i
+  | _ => fail_hard (* only I is supported at the moment *)
+  end.
 
 Definition updateDepsI(inst: InstructionI)(D: Register -> set Event): Register -> set Event :=
   match inst with
@@ -387,11 +448,6 @@ Definition updateDeps(inst: Instruction): (Register -> set Event) -> (Register -
   | _ => id (* only I is supported at the moment *)
   end.
 
-Definition currentInstruction: M Instruction :=
-  s <- get;
-  w <- extractOption (nth_error s.(Prog) (Z.to_nat (word.unsigned s.(Pc))));
-  Return (decode RV32I (LittleEndian.combine 4 w)).
-
 Instance IsRiscvMachine: RiscvProgram M word :=  {
   getRegister reg := s <- get; Return (getReg s.(Regs) reg);
   setRegister reg v := s <- get; put (s<|Regs := setReg s.(Regs) reg v|>);
@@ -408,6 +464,7 @@ Instance IsRiscvMachine: RiscvProgram M word :=  {
   storeWord   := storeN 4;
   storeDouble := storeN 8;
 
+  (* atomics, CSRs, and non-machine modes are not supported *)
   makeReservation  addr := fail_hard;
   clearReservation addr := fail_hard;
   checkReservation addr := fail_hard;
@@ -416,14 +473,25 @@ Instance IsRiscvMachine: RiscvProgram M word :=  {
   getPrivMode := fail_hard;
   setPrivMode v := fail_hard;
 
-  endCycleNormal :=
-    s <- get;
-    inst <- currentInstruction;
-    put (s<|Pc := s.(NextPc)|>
-          <|NextPc := word.add s.(NextPc) (word.of_Z 4)|>
-          <|Deps := updateDeps inst s.(Deps)|>);
+  endCycleNormal := s <- get; put (s<|Pc := s.(NextPc)|><|NextPc := word.add s.(NextPc) (word.of_Z 4)|>);
+
+  (* exceptions are not supported *)
   endCycleEarly{A: Type} := fail_hard;
 }.
+
+Definition post_execute(inst: Instruction): M unit :=
+  s <- get; put (s<|Deps := updateDeps inst s.(Deps)|>).
+
+Definition pre_execute(inst: Instruction): M unit := checkDeps inst.
+
+Definition run1: M unit :=
+  pc <- getPC;
+  w <- loadWord Fetch pc;
+  let inst := decode RV32I (LittleEndian.combine 4 w) in
+  pre_execute inst;;
+  execute inst;;
+  post_execute inst;;
+  endCycleNormal.
 
 (* alternative: free monad based: *)
 Definition run_primitive(a: riscv_primitive)(s: ThreadState)(G: Graph)(s': ThreadState):
