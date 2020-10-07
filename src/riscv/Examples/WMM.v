@@ -7,6 +7,7 @@ Require Import riscv.Spec.Execute.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Utility.Utility.
+Require Import riscv.Utility.Encode.
 Require Import RecordUpdate.RecordUpdate.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
@@ -312,7 +313,7 @@ Definition extractOption{A: Type}(o: option A): M A :=
 
 Definition loadInstruction(n: nat)(a: word): M (HList.tuple byte n) :=
   match n with
-  | 4 => s <- get; extractOption (nth_error s.(Prog) (Z.to_nat (word.unsigned a)))
+  | 4 => s <- get; extractOption (nth_error s.(Prog) (Z.to_nat (word.unsigned a) / 4))
   | _ => fail_hard
   end.
 
@@ -492,6 +493,56 @@ Definition run1: M unit :=
   execute inst;;
   post_execute inst;;
   endCycleNormal.
+
+(* the end of an execution is reached when the pc points one past the last instruction
+   in the list of instructions *)
+Inductive runToEnd(G: Graph): ThreadState -> ThreadState -> Prop :=
+| RDone: forall s,
+    Z.to_nat (word.unsigned s.(Pc) / 4) = length s.(Prog) ->
+    runToEnd G s s
+| RStep: forall s1 s2 s3,
+    run1 G s1 s2 tt ->
+    runToEnd G s2 s3 ->
+    runToEnd G s1 s3.
+
+Definition initialState(id: Tid)(prog: list Instruction): ThreadState := {|
+  Regs := map.empty;
+  Pc := word.of_Z 0;
+  NextPc := word.of_Z 4;
+  Prog := List.map (fun inst => LittleEndian.split 4 (encode inst)) prog;
+  CurrentEvent := ThreadEvent id 0;
+  Deps := fun reg => empty_set;
+|}.
+
+Require Import riscv.Utility.InstructionCoercions. Open Scope ilist_scope.
+Require Import riscv.Utility.RegisterNames.
+Require Import riscv.Spec.PseudoInstructions.
+
+(* register a0 contains the address of the one-element FIFO,
+   register a1 contains the address of the isEmpty flag,
+   register s0 contains the value to be put into the FIFO *)
+Definition writerProg := [[
+  Sb a0 s0 0;   (* store the value into the FIFO *)
+  Sb a1 zero 0  (* set the isEmpty flag to false *)
+]].
+
+Definition readerProg := [[
+  Lb t0 a1 0;   (* start: t0 := isEmpty *)
+  Beqz t0 (-4); (* if (isEmpty) { goto start } *)
+  Lb s0 a0 0    (* read value from FIFO *)
+]].
+
+(* TODO more setup/preconditions on initial state will be needed (a0, a1) *)
+Definition initialReaderState := initialState 0%nat writerProg.
+Definition initialWriterState := initialState 1%nat readerProg.
+
+Lemma message_passing_works: forall G finalReaderState finalWriterState,
+    wellPrefixed G ->
+    runToEnd G initialReaderState finalReaderState ->
+    runToEnd G initialWriterState finalWriterState ->
+    getReg finalWriterState.(Regs) s0 = getReg initialWriterState.(Regs) s0.
+Proof.
+Abort.
 
 (* alternative: free monad based: *)
 Definition run_primitive(a: riscv_primitive)(s: ThreadState)(G: Graph)(s': ThreadState):
