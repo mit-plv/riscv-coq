@@ -19,6 +19,38 @@ Require Import coqutil.Datatypes.PropSet.
 Definition subrel{A B: Type}(R1 R2: A -> B -> Prop): Prop :=
   forall a b, R1 a b -> R2 a b.
 
+Definition unionrel{A B: Type}(R1 R2: A -> B -> Prop): A -> B -> Prop :=
+  fun a b => R1 a b \/ R2 a b.
+
+Definition invrel{A B: Type}(R: A -> B -> Prop): B -> A -> Prop := fun b a => R a b.
+
+Section Orders.
+  Context {A: Type} (R: A -> A -> Prop).
+
+  Definition irreflexive := forall a, ~ R a a.
+  Definition asymmetric := forall a b, R a b -> ~ R b a.
+  Definition transitive := forall a b c, R a b -> R b c -> R a c.
+
+  Record strictPartialOrder := mkStrictPartialOrder {
+    strictPartialOrder_irreflexive: irreflexive;
+    strictPartialOrder_transitive: transitive;
+  }.
+  Lemma strictPartialOrder_asymmetric: strictPartialOrder -> asymmetric.
+  Proof.
+    intros [IR TR]. unfold irreflexive, transitive, asymmetric in *.
+    intros. intro C. eapply IR. eauto.
+  Qed.
+
+  (* transitive (but not reflexive) closure *)
+  Inductive trcl : A -> A -> Prop :=
+  | TrclOne: forall a1 a2, R a1 a2 -> trcl a1 a2
+  | TrclCons: forall a1 a2 a3, R a1 a2 -> trcl a2 a3 -> trcl a1 a3.
+
+  Definition hasCycle := exists a, trcl a a.
+
+  Definition acyclic := ~ hasCycle.
+End Orders.
+
 (* Weak memory formalization following
    Kokologiannakis and Vafeiadis: HMC Model Checking for Hardware Memory Models, ASPLOS 2020 *)
 
@@ -87,46 +119,104 @@ Record Graph := mkGraph {
   Ctrl: Event -> (set Event);
 }.
 
-Definition Events(g: Graph): set Event :=
-  fun e => exists l, g.(Lab) e = Some l.
+Definition Events(G: Graph): set Event :=
+  fun e => exists l, G.(Lab) e = Some l.
 
-Definition InitializationEvents(g: Graph): set Event :=
-  fun e => exists x o v, e = InitEvent x /\ g.(Lab) e = Some (WriteLabel o NotExclusive x v).
+Definition InitializationEvents(G: Graph): set Event :=
+  fun e => exists x o v, e = InitEvent x /\ G.(Lab) e = Some (WriteLabel o NotExclusive x v).
 
-Definition ThreadEvents(g: Graph): set Event :=
-  fun e => exists l t i, e = ThreadEvent t i /\ g.(Lab) e = Some l.
+Definition ThreadEvents(G: Graph): set Event :=
+  fun e => exists l t i, e = ThreadEvent t i /\ G.(Lab) e = Some l.
 
-Definition ReadEvents(g: Graph): set Event :=
-  fun e => exists o s x, g.(Lab) e = Some (ReadLabel o s x).
+Definition ReadEvents(G: Graph): set Event :=
+  fun e => exists o s x, G.(Lab) e = Some (ReadLabel o s x).
 
-Definition WriteEvents(g: Graph): set Event :=
-  fun e => exists o s x v, g.(Lab) e = Some (WriteLabel o s x v).
+Definition ExclusiveReadEvents(G: Graph): set Event :=
+  fun e => exists o x, G.(Lab) e = Some (ReadLabel o Exclusive x).
 
-Definition FenceEvents(g: Graph): set Event :=
-  fun e => exists o, g.(Lab) e = Some (FenceLabel o).
+Definition NotExclusiveReadEvents(G: Graph): set Event :=
+  fun e => exists o x, G.(Lab) e = Some (ReadLabel o NotExclusive x).
 
-Definition ErrorEvents(g: Graph): set Event :=
-  fun e => g.(Lab) e = Some ErrorLabel.
+Definition WriteEvents(G: Graph): set Event :=
+  fun e => exists o s x v, G.(Lab) e = Some (WriteLabel o s x v).
 
-Definition Typ(g: Graph)(e: Event): EventTyp :=
-  match g.(Lab) e with
+Definition ExclusiveWriteEvents(G: Graph): set Event :=
+  fun e => exists o x v, G.(Lab) e = Some (WriteLabel o Exclusive x v).
+
+Definition NotExclusiveWriteEvents(G: Graph): set Event :=
+  fun e => exists o x v, G.(Lab) e = Some (WriteLabel o NotExclusive x v).
+
+Definition FenceEvents(G: Graph): set Event :=
+  fun e => exists o, G.(Lab) e = Some (FenceLabel o).
+
+Definition ErrorEvents(G: Graph): set Event :=
+  fun e => G.(Lab) e = Some ErrorLabel.
+
+Definition Typ(G: Graph)(e: Event): EventTyp :=
+  match G.(Lab) e with
   | Some l => LabelTyp l
   | None => ErrorEvent
   end.
 
+Definition Loc(G: Graph)(e: Event): option word :=
+  match G.(Lab) e with
+  | Some l => match l with
+              | ReadLabel o s x => Some x
+              | WriteLabel o s x v => Some x
+              | FenceLabel o => None
+              | ErrorLabel => None
+              end
+  | None => None
+  end.
+
 (* reads-from relation: `RfRel g e1 e2` means "e2 reads from e1" *)
-Inductive RfRel(g: Graph): Event -> Event -> Prop :=
-  mkRfRel: forall r, r \in ReadEvents g -> RfRel g (g.(Rf) r) r.
+Inductive RfRel(G: Graph): Event -> Event -> Prop :=
+  mkRfRel: forall r, r \in ReadEvents G -> RfRel G (G.(Rf) r) r.
 
 (* address dependency relation: `AddrRel g e1 e2` means "e2 has an address dependency on e1" *)
-Definition AddrRel(g: Graph)(r e: Event): Prop := r \in Addr g e.
-Definition DataRel(g: Graph)(r e: Event): Prop := r \in Data g e.
-Definition CtrlRel(g: Graph)(r e: Event): Prop := r \in Ctrl g e.
+Definition AddrRel(G: Graph)(r e: Event): Prop := r \in G.(Addr) e.
+Definition DataRel(G: Graph)(r e: Event): Prop := r \in G.(Data) e.
+Definition CtrlRel(G: Graph)(r e: Event): Prop := r \in G.(Ctrl) e.
 
-Definition DependencyEdgesInProgramOrder(g: Graph): Prop :=
-  subrel (AddrRel g) po /\ subrel (DataRel g) po /\ subrel (CtrlRel g) po.
+Definition dependencyEdgesInProgramOrder(G: Graph): Prop :=
+  subrel (AddrRel G) po /\ subrel (DataRel G) po /\ subrel (CtrlRel G) po.
 
+Definition modificationOrder(G: Graph)(R: Event -> Event -> Prop): Prop :=
+  strictPartialOrder R /\
+  (forall e1 e2, R e1 e2 -> Typ G e1 = WriteEvent /\ Typ G e2 = WriteEvent /\ Loc G e1 = Loc G e2) /\
+  (forall e1 e2, e1 \in WriteEvents G -> e2 \in WriteEvents G -> R e1 e2 \/ R e2 e1).
 
+Definition NextEvent(e: Event): Event :=
+  match e with
+  | InitEvent x => e
+  | ThreadEvent t i => ThreadEvent t (S i)
+  end.
+
+Definition RMW_Atomicity(G: Graph): Prop :=
+  forall r1 r2,
+    r1 \in ExclusiveReadEvents G ->
+    r2 \in ExclusiveReadEvents G ->
+    r1 <> r2 ->
+    NextEvent r1 \in ExclusiveWriteEvents G ->
+    NextEvent r2 \in ExclusiveWriteEvents G ->
+    G.(Rf) r1 = G.(Rf) r2 ->
+    False.
+
+(* sequential consistency *)
+Definition consSC(G: Graph): Prop :=
+  RMW_Atomicity G /\
+  exists mo, modificationOrder G mo /\ acyclic (unionrel po (unionrel (RfRel G) (invrel (RfRel G)))).
+
+(* Examples of porf-acyclic models are SC, TSO, PSO, and RC11 *)
+Definition porf_acyclic(G: Graph): Prop := acyclic (unionrel po (RfRel G)).
+
+Definition prefix(G: Graph)(e: Event): set Event :=
+  fun e' => e \in ThreadEvents G /\
+            trcl (unionrel (RfRel G) (unionrel (AddrRel G) (unionrel (DataRel G) (CtrlRel G)))) e' e.
+
+(* Well-prefixed models include all the porf-acyclic ones,
+   as well as ARMv7, ARMv8, IMM, LKMM, POWER, and RISC-V. *)
+Definition wellPrefixed(G: Graph): Prop := forall e, ~ e \in prefix G e.
 
 Instance Registers: map.map Z word := _.
 
