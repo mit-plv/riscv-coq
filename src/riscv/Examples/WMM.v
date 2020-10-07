@@ -1,10 +1,12 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import coqutil.Tactics.Tactics.
+Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Utility.Utility.
+Require Import riscv.Platform.Run.
 Require Import RecordUpdate.RecordUpdate.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
@@ -131,12 +133,32 @@ Instance Registers: map.map Z word := _.
 Record ThreadState := mkThreadState {
   Regs: Registers;
   Pc: word;
+  NextPc: word;
   Prog: list w32;
   EventCount: nat;
+  Deps: Register -> set Event;
 }.
 
 Instance ThreadStateSettable : Settable ThreadState :=
-  settable! mkThreadState <Regs; Pc; Prog; EventCount>.
+  settable! mkThreadState <Regs; Pc; NextPc; Prog; EventCount; Deps>.
+
+(* Tracking dependencies:
+
+   Solution A (not chosen)
+   Tracking data dependencies:
+   - new MachineWidth instance where t is (t * Dependencies),
+   - ternary if that tracks dependencies, and regular ifs that want
+     to drop dependencies need to do regToBool
+   - shift amount uses t
+   - load and store return/take t instead of word8/16/32/64
+   - allows us to remove some regToInt etc functions from MachineWidth
+   Tracking control dependencies:
+   - add an addCtrlDependency method to the RiscvProgram typeclass?
+
+   Solution B (chosen)
+   The dependency tracking is static, so we don't need to run execute to know what it does.
+   Separate dependency update function that we run in endCycleNormal.
+*)
 
 (* If we have a primitive program `p` of type `M A`, then `p G s1 s2 a` means that
    under the global given graph G, starting in thread state s1 can end in state s2
@@ -212,11 +234,79 @@ Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n): M u
 
 Definition TODO{T: Type}: T. Admitted.
 
+Definition pc: Register := -1%Z.
+
+Definition getDeps(D: Register -> set Event)(r: Register): set Event :=
+  if Z.eqb r 0 then empty_set else D r.
+
+Definition setDeps(D: Register -> set Event)(r: Register)(s: set Event): Register -> set Event :=
+  if Z.eqb r 0 then D else fun r0 => if Z.eqb r0 r then s else D r0.
+
+Notation "D <[ r ]>" := (getDeps D r) (at level 8, left associativity, format "D <[ r ]>").
+Notation "D <[ r := s ]>" := (setDeps D r s) (at level 8, left associativity, format "D <[ r  :=  s ]>").
+
+Definition updateDepsI(inst: InstructionI)(D: Register -> set Event): Register -> set Event :=
+  match inst with
+  | Lui rd imm20 => D
+  (* QUESTION: here, and in jump instructions, control dependencies become data dependencies? *)
+  | Auipc rd oimm20 => D<[rd := D<[pc]>]>
+  (* Note: dependencies of pc remain unchanged because a constant is added *)
+  | Jal rd jimm20 => D<[rd := D<[pc]>]>
+  | Jalr rd rs1 oimm12 => D<[rd := D<[pc]>]><[pc := union D<[pc]> D<[rs1]>]>
+  | Beq  rs1 rs2 sbimm12
+  | Bne  rs1 rs2 sbimm12
+  | Blt  rs1 rs2 sbimm12
+  | Bge  rs1 rs2 sbimm12
+  | Bltu rs1 rs2 sbimm12
+  | Bgeu rs1 rs2 sbimm12 => D<[pc := union D<[pc]> (union D<[rs1]> D<[rs2]>)]>
+  | Lb  rd rs1 oimm12
+  | Lh  rd rs1 oimm12
+  | Lw  rd rs1 oimm12
+  | Lbu rd rs1 oimm12
+  | Lhu rd rs1 oimm12 => D (* Note: D<[rd := {event from which value was read}]> was already done in loadN *)
+  | Sb rs1 rs2 simm12
+  | Sh rs1 rs2 simm12
+  | Sw rs1 rs2 simm12 => D
+  | Addi  rd rs1 _
+  | Slti  rd rs1 _
+  | Sltiu rd rs1 _
+  | Xori  rd rs1 _
+  | Ori   rd rs1 _
+  | Andi  rd rs1 _
+  | Slli  rd rs1 _
+  | Srli  rd rs1 _
+  | Srai  rd rs1 _ => D<[rd := D<[rs1]>]>
+  | Add  rd rs1 rs2
+  | Sub  rd rs1 rs2
+  | Sll  rd rs1 rs2
+  | Slt  rd rs1 rs2
+  | Sltu rd rs1 rs2
+  | Xor  rd rs1 rs2
+  | Or   rd rs1 rs2
+  | Srl  rd rs1 rs2
+  | Sra  rd rs1 rs2
+  | And  rd rs1 rs2 => D<[rd := union D<[rs1]> D<[rs2]>]>
+  | Fence pred succ => D (* QUESTION: any dependencies here? *)
+  | Fence_i => D
+  | InvalidI => D
+  end.
+
+Definition updateDeps(inst: Instruction): (Register -> set Event) -> (Register -> set Event) :=
+  match inst with
+  | IInstruction i => updateDepsI i
+  | _ => id (* only I is supported at the moment *)
+  end.
+
+Definition currentInstruction: M Instruction :=
+  s <- get;
+  w <- extractOption (nth_error s.(Prog) (Z.to_nat (word.unsigned s.(Pc))));
+  Return (decode RV32I (LittleEndian.combine 4 w)).
+
 Instance IsRiscvMachine: RiscvProgram M word :=  {
   getRegister reg := s <- get; Return (getReg s.(Regs) reg);
   setRegister reg v := s <- get; put (s<|Regs := setReg s.(Regs) reg v|>);
   getPC := s <- get; Return s.(Pc);
-  setPC newPc := s <- get; put (s<|Pc := newPc|>);
+  setPC newPc := s <- get; put (s<|NextPc := newPc|>);
 
   loadByte   := loadN 1;
   loadHalf   := loadN 2;
@@ -236,7 +326,12 @@ Instance IsRiscvMachine: RiscvProgram M word :=  {
   getPrivMode := fail_hard;
   setPrivMode v := fail_hard;
 
-  endCycleNormal := Return tt; (* nothing to do because pc was already eagerly updated *)
+  endCycleNormal :=
+    s <- get;
+    inst <- currentInstruction;
+    put (s<|Pc := s.(NextPc)|>
+          <|NextPc := word.add s.(NextPc) (word.of_Z 4)|>
+          <|Deps := updateDeps inst s.(Deps)|>);
   endCycleEarly{A: Type} := fail_hard;
 }.
 
