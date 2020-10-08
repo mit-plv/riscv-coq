@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import coqutil.Tactics.Tactics.
+Require Import coqutil.Tactics.Simp.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Spec.Execute.
@@ -313,7 +314,7 @@ Definition extractOption{A: Type}(o: option A): M A :=
 
 Definition loadInstruction(n: nat)(a: word): M (HList.tuple byte n) :=
   match n with
-  | 4 => s <- get; extractOption (nth_error s.(Prog) (Z.to_nat (word.unsigned a) / 4))
+  | 4 => s <- get; extractOption (nth_error s.(Prog) (Z.to_nat ((word.unsigned a) / 4)))
   | _ => fail_hard
   end.
 
@@ -536,12 +537,48 @@ Definition readerProg := [[
 Definition initialReaderState := initialState 0%nat writerProg.
 Definition initialWriterState := initialState 1%nat readerProg.
 
+Ltac inv H := inversion H; clear H; subst.
+
 Lemma message_passing_works: forall G finalReaderState finalWriterState,
-    wellPrefixed G ->
+    consSC G ->
     runToEnd G initialReaderState finalReaderState ->
     runToEnd G initialWriterState finalWriterState ->
     getReg finalWriterState.(Regs) s0 = getReg initialWriterState.(Regs) s0.
 Proof.
+  intros *. intros Co RR RW.
+  inv RW. 1: discriminate H.
+  unfold run1, initialWriterState, initialState in H.
+  cbn -[w32 map.empty word.of_Z word.unsigned] in H.
+  simp.
+  unfold extractOption in *. simp.
+  cbn -[w32 map.empty word.of_Z word.unsigned getReg setReg] in *.
+  simp.
+  unfold pre_execute, checkDeps in *.
+  simp.
+  unfold get in *.
+  simp.
+  cbn -[w32 map.empty word.of_Z word.unsigned getReg setReg] in *.
+  cbv in E.
+  simp.
+  cbv in E0.
+  simp.
+  cbn -[w32 map.empty word.of_Z word.unsigned getReg setReg] in *.
+  simp.
+  unfold get in *.
+  simp.
+  unfold assert, ask in *.
+  cbn -[w32 map.empty word.of_Z word.unsigned getReg setReg] in *.
+  simp.
+  unfold extractOption in *.
+  simp.
+  cbn -[w32 map.empty word.of_Z word.unsigned getReg setReg] in *.
+  simp.
+  unfold put in *.
+  subst.
+  cbn -[w32 map.empty word.of_Z word.unsigned getReg setReg] in *.
+  cbv delta [RecordSet.set] in H0;
+  cbn -[w32 map.empty word.of_Z word.unsigned getReg setReg] in *.
+
 Abort.
 
 (* alternative: free monad based: *)
