@@ -1,4 +1,3 @@
-Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import coqutil.Tactics.Tactics.
 Require Import coqutil.Tactics.Simp.
@@ -16,6 +15,10 @@ Require Import riscv.Platform.MaterializeRiscvProgram.
 Require Import riscv.Utility.Words32Naive.
 Require Import coqutil.Map.Z_keyed_SortedListMap.
 Require Import coqutil.Datatypes.PropSet.
+Require Import coqutil.Map.OfFunc.
+Require Import coqutil.Word.Properties.
+Require Import coqutil.Z.prove_Zeq_bitwise.
+Require Import Coq.ZArith.ZArith.
 
 (* sub-relation *)
 Definition subrel{A B: Type}(R1 R2: A -> B -> Prop): Prop :=
@@ -332,7 +335,8 @@ Definition load_byte(addr: word): M w8 :=
 Definition store_byte(addr: word)(v: w8): M unit :=
   s <- get;
   G <- ask;
-  assert (G.(Lab) s.(CurrentEvent) = Some (WriteLabel oW NotExclusive addr v)).
+  assert (G.(Lab) s.(CurrentEvent) = Some (WriteLabel oW NotExclusive addr v));;
+  put (s <| CurrentEvent ::= NextEvent |>).
 
 (* only 1-byte loads and stores are supported at the moment *)
 Definition loadData(n: nat)(a: word): M (HList.tuple byte n) :=
@@ -506,8 +510,10 @@ Inductive runToEnd(G: Graph): ThreadState -> ThreadState -> Prop :=
     runToEnd G s2 s3 ->
     runToEnd G s1 s3.
 
+Definition initialRegs: Registers := map.of_list_Z_at 1 (List.repeat (word.of_Z 0) 31).
+
 Definition initialState(id: Tid)(prog: list Instruction): ThreadState := {|
-  Regs := map.empty;
+  Regs := initialRegs;
   Pc := word.of_Z 0;
   NextPc := word.of_Z 4;
   Prog := List.map (fun inst => LittleEndian.split 4 (encode inst)) prog;
@@ -515,9 +521,144 @@ Definition initialState(id: Tid)(prog: list Instruction): ThreadState := {|
   Deps := fun reg => empty_set;
 |}.
 
+Ltac inv H := inversion H; clear H; subst.
+
 Require Import riscv.Utility.InstructionCoercions. Open Scope ilist_scope.
 Require Import riscv.Utility.RegisterNames.
 Require Import riscv.Spec.PseudoInstructions.
+
+(* s1 := s0 by making a detour throug memory *)
+Definition readAfterWriteProg := [[
+  Sb a0 s0 0;
+  Lb s1 a0 0
+]].
+
+Ltac simpl_exec :=
+  cbn -[w8 w32 map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs] in *.
+
+Lemma ownedReadAfterWrite: forall G iid1 iid2 thr loc val,
+    consSC G ->
+    (iid1 < iid2)%nat ->
+    Lab G (ThreadEvent thr iid1) = Some (WriteLabel oW NotExclusive loc val) ->
+    Lab G (ThreadEvent thr iid2) = Some (ReadLabel oR NotExclusive loc) ->
+    (* between (ThreadEvent thr iid1) and (ThreadEvent thr iid2), only reads happened events at this location *)
+    (forall e, e \in ThreadEvents G -> Loc G e = Loc G (ThreadEvent thr iid2) ->
+               po (ThreadEvent thr iid1) e -> po e (ThreadEvent thr iid2) -> Typ G e = ReadEvent) ->
+    (* the current thread owns this location, ie. no other thread ever accesses it *)
+    (forall e, e \in ThreadEvents G -> Loc G e = Loc G (ThreadEvent thr iid2) -> tid e = thr) ->
+    Rf G (ThreadEvent thr iid2) = (ThreadEvent thr iid1).
+Proof.
+  intros. unfold PropSet.elem_of in *.
+  (* Note: SC (sequential consistency) is not strong enough to prove this,
+     because it allows reordering of events, we need *strict* consistency *)
+Admitted.
+
+Lemma readAfterWriteWorks: forall G final,
+    consSC G ->
+    runToEnd G (initialState 0%nat readAfterWriteProg) final ->
+    word.and (getReg final.(Regs) s1) (word.of_Z 255) =
+    word.and (getReg final.(Regs) s0) (word.of_Z 255).
+Proof.
+  unfold initialState, s0, s1. intros.
+
+  (* Sb a0 s0 0 *)
+  inv H0. 1: discriminate H1.
+  unfold run1 in H1.
+  simpl_exec.
+  simp.
+  unfold extractOption, pre_execute, get, put in *.
+  simp.
+  subst.
+  simpl_exec.
+  simp.
+  cbv in E.
+  eassert (decode RV32I (LittleEndian.combine 4 w) = _) as A. {
+    apply Option.eq_of_eq_Some in E. subst w. cbv. reflexivity.
+  }
+  rewrite A in *.
+  clear E A w.
+  simpl_exec.
+  simp.
+  unfold extractOption, pre_execute, get, put, assert, ask in *.
+  simp.
+  simpl_exec.
+
+  (* Lb s1 a0 0 *)
+  inv H2. 1: discriminate H0.
+  unfold run1 in H0.
+  simpl_exec.
+  simp.
+  unfold extractOption, pre_execute, get, put in *.
+  simp.
+  subst.
+  simpl_exec.
+  simp.
+  cbv in E.
+  eassert (decode RV32I (LittleEndian.combine 4 w) = _) as A. {
+    apply Option.eq_of_eq_Some in E. subst w. cbv. reflexivity.
+  }
+  rewrite A in *.
+  clear E A w.
+  simpl_exec.
+  simp.
+  unfold extractOption, pre_execute, get, put, assert, ask in *.
+  simp.
+  simpl_exec.
+  simp.
+  subst.
+  simpl_exec.
+  cbv delta [RecordSet.set] in H1.
+  simpl_exec.
+
+  inv H1. 2: {
+    (* running one more instruction is contradictory *)
+    unfold run1 in H0.
+    simpl_exec.
+    simp.
+    unfold extractOption, pre_execute, get, put in *.
+    simp.
+    discriminate E0.
+  }
+
+  cbv in H0. clear H0.
+  simpl_exec.
+
+  (* memory model business starts *)
+  rename a9 into G.
+  replace (Rf G (ThreadEvent 0%nat 1)) with (ThreadEvent 0%nat 0) in *. 2: {
+    symmetry. eapply ownedReadAfterWrite; try eassumption.
+    - cbv. reflexivity.
+    - intros. unfold po in *. destruct e; try contradiction. simp. blia.
+    - case (@TODO False). (* ownership of this location needs to become a hypothesis *)
+  }
+  unfold Val in *.
+  match goal with
+  | Hp: Lab G ?e = Some _ |- _ => rewrite Hp in *
+  end.
+  apply Option.eq_of_eq_Some in E. subst w.
+  rewrite LittleEndian.combine_split.
+  unfold getReg. simpl (Z.eq_dec 9 0). simpl (Z.eq_dec 8 0). cbv [id].
+  rewrite map.get_put_same by reflexivity.
+  rewrite map.get_put_diff by congruence.
+  remember (match map.get initialRegs 8 with
+            | Some x => x
+            | None => word.of_Z 0
+            end) as v0.
+  rewrite signExtend_alt_bitwise by (reflexivity || assumption).
+  match goal with
+  | |- ?x = ?y => refine (@word.unsigned_inj _ _ _ x y _)
+  end.
+  rewrite !word.unsigned_and. unfold word.wrap.
+  unfold signExtend_bitwise.
+  remember (@word.unsigned 32 (Naive.word 32) v0) as V.
+  clear.
+  rewrite !word.unsigned_of_Z. unfold word.wrap.
+  change (8 - 1) with 7.
+  change (Z.of_nat 1 * 8) with 8.
+  rewrite <- !Z.land_ones by discriminate.
+  change 255 with (Z.ones 8).
+  prove_Zeq_bitwise.
+Time Qed. (* 13s *)
 
 (* register a0 contains the address of the one-element FIFO,
    register a1 contains the address of the isEmpty flag,
@@ -537,8 +678,6 @@ Definition readerProg := [[
 Definition initialReaderState := initialState 0%nat writerProg.
 Definition initialWriterState := initialState 1%nat readerProg.
 
-Ltac inv H := inversion H; clear H; subst.
-
 Lemma message_passing_works: forall G finalReaderState finalWriterState,
     consSC G ->
     runToEnd G initialReaderState finalReaderState ->
@@ -548,36 +687,36 @@ Proof.
   intros *. intros Co RR RW.
   inv RW. 1: discriminate H.
   unfold run1, initialWriterState, initialState in H.
-  cbn -[w32 map.empty word.of_Z word.unsigned] in H.
+  simpl_exec.
   simp.
   unfold extractOption in *. simp.
-  cbn -[w32 map.empty word.of_Z word.unsigned getReg setReg] in *.
+  simpl_exec.
   simp.
   unfold pre_execute, checkDeps in *.
   simp.
   unfold get in *.
   simp.
-  cbn -[w32 map.empty word.of_Z word.unsigned getReg setReg] in *.
+  simpl_exec.
   cbv in E.
   simp.
   cbv in E0.
   simp.
-  cbn -[w32 map.empty word.of_Z word.unsigned getReg setReg] in *.
+  simpl_exec.
   simp.
   unfold get in *.
   simp.
   unfold assert, ask in *.
-  cbn -[w32 map.empty word.of_Z word.unsigned getReg setReg] in *.
+  simpl_exec.
   simp.
   unfold extractOption in *.
   simp.
-  cbn -[w32 map.empty word.of_Z word.unsigned getReg setReg] in *.
+  simpl_exec.
   simp.
   unfold put in *.
   subst.
-  cbn -[w32 map.empty word.of_Z word.unsigned getReg setReg] in *.
-  cbv delta [RecordSet.set] in H0;
-  cbn -[w32 map.empty word.of_Z word.unsigned getReg setReg] in *.
+  simpl_exec.
+  cbv delta [RecordSet.set] in H0.
+  simpl_exec.
 
 Abort.
 
