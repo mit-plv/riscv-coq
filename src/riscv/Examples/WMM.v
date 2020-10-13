@@ -29,6 +29,9 @@ Definition unionrel{A B: Type}(R1 R2: A -> B -> Prop): A -> B -> Prop :=
 
 Definition invrel{A B: Type}(R: A -> B -> Prop): B -> A -> Prop := fun b a => R a b.
 
+Definition composerel{A B C: Type}(R1: A -> B -> Prop)(R2: B -> C -> Prop): A -> C -> Prop :=
+  fun a c => exists b, R1 a b /\ R2 b c.
+
 Section Orders.
   Context {A: Type} (R: A -> A -> Prop).
 
@@ -212,6 +215,7 @@ Definition NextEvent(e: Event): Event :=
   | ThreadEvent t i => ThreadEvent t (S i)
   end.
 
+(* not used at the moment *)
 Definition RMW_Atomicity(G: Graph): Prop :=
   forall r1 r2,
     r1 \in ExclusiveReadEvents G ->
@@ -222,10 +226,15 @@ Definition RMW_Atomicity(G: Graph): Prop :=
     G.(Rf) r1 = G.(Rf) r2 ->
     False.
 
+Infix "\U" := unionrel (at level 50, left associativity).
+Infix "\;" := composerel (at level 41, right associativity).
+Notation "R ^-1" := (invrel R) (at level 7).
+
 (* sequential consistency *)
 Definition consSC(G: Graph): Prop :=
   RMW_Atomicity G /\
-  exists mo, modificationOrder G mo /\ acyclic (unionrel po (unionrel (RfRel G) (invrel (RfRel G)))).
+  exists mo, modificationOrder G mo /\
+             acyclic (po \U (RfRel G) \U mo \U ((RfRel G)^-1 \; mo)).
 
 (* Examples of porf-acyclic models are SC, TSO, PSO, and RC11 *)
 Definition porf_acyclic(G: Graph): Prop := acyclic (unionrel po (RfRel G)).
@@ -536,30 +545,64 @@ Definition readAfterWriteProg := [[
 Ltac simpl_exec :=
   cbn -[w8 w32 map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs] in *.
 
+(* ensures codomains of functions are correct etc *)
+Record Wf(G: Graph) := mkWf {
+  WfRfWrite: forall e, Rf G e \in WriteEvents G;
+  WfLabInit: forall x, Lab G (InitEvent x) = None \/
+                       exists v, Lab G (InitEvent x) = Some (WriteLabel oW NotExclusive x v);
+  WfRfLocMatches: forall e, Loc G (Rf G e) = Loc G e;
+}.
+
 Lemma ownedReadAfterWrite: forall G iid1 iid2 thr loc val,
+    Wf G ->
     consSC G ->
     (iid1 < iid2)%nat ->
     Lab G (ThreadEvent thr iid1) = Some (WriteLabel oW NotExclusive loc val) ->
     Lab G (ThreadEvent thr iid2) = Some (ReadLabel oR NotExclusive loc) ->
-    (* between (ThreadEvent thr iid1) and (ThreadEvent thr iid2), only reads happened events at this location *)
+    (* between (ThreadEvent thr iid1) and (ThreadEvent thr iid2), only reads happened at this location *)
     (forall e, e \in ThreadEvents G -> Loc G e = Loc G (ThreadEvent thr iid2) ->
                po (ThreadEvent thr iid1) e -> po e (ThreadEvent thr iid2) -> Typ G e = ReadEvent) ->
     (* the current thread owns this location, ie. no other thread ever accesses it *)
     (forall e, e \in ThreadEvents G -> Loc G e = Loc G (ThreadEvent thr iid2) -> tid e = thr) ->
     Rf G (ThreadEvent thr iid2) = (ThreadEvent thr iid1).
 Proof.
-  intros. unfold PropSet.elem_of in *.
-  (* Note: SC (sequential consistency) is not strong enough to prove this,
-     because it allows reordering of events, we need *strict* consistency *)
+  intros *. intros W Co Iidlt L1 L2 TyR Th. intros. unfold PropSet.elem_of in *.
+  destruct (Rf G (ThreadEvent thr iid2)) as [x|thr' iid1'] eqn: E.
+  1: case (@TODO False). (* init event case *)
+  assert (Rf G (ThreadEvent thr iid2) \in ThreadEvents G) as I1 by case (@TODO False). unfold elem_of in I1.
+  pose proof (WfRfLocMatches G W (ThreadEvent thr iid2)) as I2.
+  rewrite E in I1, I2.
+  specialize (Th _ I1 I2). simpl in Th. subst thr'.
+  f_equal.
+  unfold consSC in *. destruct Co as [_ [mo [MO AC] ] ].
+  unfold acyclic, hasCycle in AC.
+  destruct MO as [MOStrict [MOWrite MODec] ].
+  specialize (MODec (ThreadEvent thr iid1) (ThreadEvent thr iid1')).
+  pose proof (WfRfWrite G W (ThreadEvent thr iid2)) as A1.
+  rewrite E in A1. specialize MODec with (2 := A1). clear A1.
+  unfold elem_of, WriteEvents in MODec.
+  rewrite L1 in MODec.
+  exfalso. apply AC.
+  destruct MODec as [MODec | MODec]. 1: clear; eauto.
+  - (* case 1: the fake iid' is after iid1. Contradicts assumption that only read-events are
+     between iid1 and iid2 *)
+    exfalso.
+    specialize (TyR (ThreadEvent thr iid1') I1 I2).
+    simpl in TyR.
+    admit.
+
+  - (* case 2: the fake iid' is before iid1 *)
+    admit.
 Admitted.
 
 Lemma readAfterWriteWorks: forall G final,
+    Wf G ->
     consSC G ->
     runToEnd G (initialState 0%nat readAfterWriteProg) final ->
     word.and (getReg final.(Regs) s1) (word.of_Z 255) =
     word.and (getReg final.(Regs) s0) (word.of_Z 255).
 Proof.
-  unfold initialState, s0, s1. intros.
+  unfold initialState, s0, s1. intros *. intro W. intros.
 
   (* Sb a0 s0 0 *)
   inv H0. 1: discriminate H1.
