@@ -20,6 +20,7 @@ Require Import coqutil.Word.Properties.
 Require Import coqutil.Z.prove_Zeq_bitwise.
 Require Import Coq.ZArith.ZArith.
 Require Import riscv.Utility.PowerFunc.
+Require Import Coq.Logic.FunctionalExtensionality.
 
 (* sub-relation *)
 Definition subrel{A B: Type}(R1 R2: A -> B -> Prop): Prop :=
@@ -59,6 +60,8 @@ Section Orders.
 
   Definition acyclic := ~ hasCycle.
 End Orders.
+
+Definition TODO{T: Type}: T. Admitted.
 
 (* Weak memory formalization following
    Kokologiannakis and Vafeiadis: HMC Model Checking for Hardware Memory Models, ASPLOS 2020
@@ -255,33 +258,66 @@ Instance ThreadStateSettable : Settable ThreadState :=
    Separate dependency update function that we run in endCycleNormal.
 *)
 
-(* If we have a primitive program `p` of type `M A`, then `p G s1 s2 a` means that
-   under the global given graph G, starting in thread state s1 can end in state s2
-   and produce answer a.
-   In monadspeak: M is the combination of the reader monad (for the graph), the
-   state monad (for ThreadState and A) and some "assertion monad" (the ... -> Prop). *)
-Definition M(A: Type) := Graph -> ThreadState -> ThreadState -> A -> Prop.
+Inductive M: Type -> Type :=
+| Get{A: Type}(k: ThreadState -> M A): M A
+| Put(s: ThreadState){A: Type}(k: M A): M A
+| Ask{A: Type}(k: Graph -> M A): M A
+| ConstrainGraph(P: Prop){A: Type}(k: M A): M A
+| Ret{A: Type}(a: A): M A
+(* could halt because the graph is rejected, because the program failed, or because the program is done *)
+| HaltThread{A: Type}: M A.
+
+Fixpoint bind{A B: Type}(m: M A){struct m}: (A -> M B) -> M B :=
+  match m in (M T) return ((T -> M B) -> M B) with
+  | Get k => fun f => Get (fun s => bind (k s) f)
+  | Put s k => fun f => Put s (bind k f)
+  | Ask k => fun f => Ask (fun G => bind (k G) f)
+  | ConstrainGraph P k => fun f => ConstrainGraph P (bind k f)
+  | Ret a => fun f => f a
+  | HaltThread => fun f => HaltThread (* Note: Drops the continuation in f *)
+  end.
 
 Instance M_Monad: Monad M. refine ({|
-  Bind A B (m: M A) (f: A -> M B) :=
-    fun (G: Graph) (s1 s3: ThreadState) (b: B) =>
-      exists a s2, m G s1 s2 a /\ f a G s2 s3 b;
-  Return A (a : A) :=
-    fun (G: Graph) (s1 s2: ThreadState) (a': A) =>
-      s1 = s2 /\ a' = a;
+  Bind := @bind;
+  Return := @Ret
 |}).
-all: prove_monad_law.
+all: intros.
+- reflexivity.
+- induction m; simpl; try congruence; f_equal; extensionality s; apply H.
+- revert B C f g.
+  induction m; intros; simpl; try congruence; f_equal;
+    try extensionality s; eauto.
 Defined.
 
 (* state monad: *)
-Definition get: M ThreadState := fun G s1 s2 a => s1 = s2 /\ a = s2.
-Definition put(s: ThreadState): M unit := fun G s1 s2 a => s2 = s.
+Definition get: M ThreadState := Get Ret.
+Definition put(s: ThreadState): M unit := Put s (Ret tt).
 
 (* reader monad: *)
-Definition ask: M Graph := fun G s1 s2 a => s1 = s2 /\ G = a.
+Definition ask: M Graph := Ask Ret.
 
 (* assertion monad: *)
-Definition assert_graph(P: Prop): M unit := fun G s1 s2 a => s1 = s2 /\ P.
+Definition assert_graph(P: Prop): M unit := ConstrainGraph P (Ret tt).
+
+Definition halt_thread{A: Type}: M A := HaltThread.
+
+Definition reject_program{A: Type}: M A :=
+  G <- ask; s <- get; assert_graph (G.(Lab) s.(CurrentEvent) = Some ErrorLabel);; halt_thread.
+
+Definition reject_graph{A: Type}: M A := assert_graph False;; halt_thread.
+
+(* If we have a primitive program `p` of type `M A`, then `interp p G s1 s2 a` means that
+   under the global given graph G, starting in thread state s1 can end in state s2
+   and produce answer a. *)
+Fixpoint interp{A: Type}(p: M A): Graph -> ThreadState -> ThreadState -> A -> Prop :=
+  match p in (M T) return (Graph -> ThreadState -> ThreadState -> T -> Prop) with
+  | Get k => fun G s1 s2 a => interp (k s1) G s1 s2 a
+  | Put s k => fun G s1 s2 a => interp k G s s2 a (* s1 is discarded and replaced by s *)
+  | Ask k => fun G s1 s2 a => interp (k G) G s1 s2 a
+  | ConstrainGraph P k => fun G s1 s2 a => P /\ interp k G s1 s2 a
+  | Ret v => fun G s1 s2 a => s1 = s2 /\ a = v
+  | HaltThread => fun G s1 s2 a => s1 = s2
+  end.
 
 Definition getReg(regs: Registers)(reg: Z): word :=
   if Z.eq_dec reg 0 then word.of_Z 0
@@ -292,12 +328,6 @@ Definition getReg(regs: Registers)(reg: Z): word :=
 
 Definition setReg(regs: Registers)(reg: Z)(v: word): Registers :=
   if Z.eq_dec reg Register0 then regs else map.put regs reg v.
-
-Definition reject_program{A: Type}: M A :=
-  fun G s1 s2 a => G.(Lab) s1.(CurrentEvent) = Some ErrorLabel.
-
-Definition reject_graph{A: Type}: M A :=
-  fun G s1 s2 a => False.
 
 Definition loadInstruction(n: nat)(a: word): M (HList.tuple byte n) :=
   match n with
@@ -357,8 +387,6 @@ Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n): M u
   | Execute => storeData n a v
   | VirtualMemory => reject_program
   end.
-
-Definition TODO{T: Type}: T. Admitted.
 
 Definition pc: Register := -1%Z.
 
@@ -503,7 +531,7 @@ Inductive runToEnd(G: Graph): ThreadState -> ThreadState -> Prop :=
     Z.to_nat (word.unsigned s.(Pc) / 4) = length s.(Prog) ->
     runToEnd G s s
 | RStep: forall s1 s2 s3,
-    run1 G s1 s2 tt ->
+    interp run1 G s1 s2 tt ->
     runToEnd G s2 s3 ->
     runToEnd G s1 s3.
 
@@ -533,16 +561,28 @@ Definition readAfterWriteProg := [[
 Ltac simpl_exec :=
   cbn -[w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs] in *.
 
+Ltac step H :=
+  match type of H with
+  | context [@nth_error ?A ?l ?i] =>
+    progress let r := eval cbv in i in change i with r in H
+  | context [decode ?iset (LittleEndian.combine 4 (LittleEndian.split 4 ?v))] =>
+    lazymatch isZcst v with
+    | true => idtac
+    end;
+    progress let r := eval cbv in
+             (decode iset (LittleEndian.combine 4 (LittleEndian.split 4 v))) in
+      change (decode iset (LittleEndian.combine 4 (LittleEndian.split 4 v))) with r in H
+  | _ => progress simpl_exec
+  end.
+
 Lemma print_symbolically_executed: forall G final,
-    runN 2 G (initialState 0%nat readAfterWriteProg) final tt ->
+    interp (runN 2) G (initialState 0%nat readAfterWriteProg) final tt ->
     True.
 Proof.
   intros.
-  simpl_exec.
-  unfold get, put, reject_program, pre_execute, checkDeps in *.
-  simpl_exec.
-  unfold get, put, reject_program, pre_execute, checkDeps in *.
-  simpl_exec.
+  repeat step H.
+  (* first argument of `bind` is a match that depends on G, so we'd need to
+     teach the SMT solve how to typecheck `bind`... *)
 
 Abort.
 
@@ -717,6 +757,7 @@ Proof.
     simp.
     unfold pre_execute, get, put in *.
     simp.
+(*
     discriminate E0.
   }
 
@@ -759,6 +800,8 @@ Proof.
   change 255 with (Z.ones 8).
   prove_Zeq_bitwise.
 Time Qed. (* 20s *)
+*)
+Abort.
 
 (* register a0 contains the address of the one-element FIFO,
    register a1 contains the address of the isEmpty flag,
