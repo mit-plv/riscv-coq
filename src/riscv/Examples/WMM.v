@@ -97,23 +97,19 @@ Definition po(e1 e2: Event): Prop :=
     end
   end.
 
-Inductive Exclusiveness := NotExclusive | Exclusive.
-
-Inductive AccessMode := oR | oW. (* QUESTION: seems to duplicate Read/Write info of Label? *)
-
 Inductive Label :=
-| ReadLabel(o: AccessMode)(s: Exclusiveness)(x: word)
-| WriteLabel(o: AccessMode)(s: Exclusiveness)(x: word)(v: w8)
-| FenceLabel(o: AccessMode)
+| ReadLabel(x: word)
+| WriteLabel(x: word)(v: w8)
+| FenceLabel
 | ErrorLabel.
 
 Inductive EventTyp := ReadEvent | WriteEvent | FenceEvent | ErrorEvent.
 
 Definition LabelTyp(l: Label): EventTyp :=
   match l with
-  | ReadLabel _ _ _ => ReadEvent
-  | WriteLabel _ _ _ _ => WriteEvent
-  | FenceLabel _ => FenceEvent
+  | ReadLabel _ => ReadEvent
+  | WriteLabel _ _ => WriteEvent
+  | FenceLabel => FenceEvent
   | ErrorLabel => ErrorEvent
   end.
 
@@ -135,31 +131,19 @@ Definition Events(G: Graph): set Event :=
   fun e => exists l, G.(Lab) e = Some l.
 
 Definition InitializationEvents(G: Graph): set Event :=
-  fun e => exists x o v, e = InitEvent x /\ G.(Lab) e = Some (WriteLabel o NotExclusive x v).
+  fun e => exists x v, e = InitEvent x /\ G.(Lab) e = Some (WriteLabel x v).
 
 Definition ThreadEvents(G: Graph): set Event :=
   fun e => exists l t i, e = ThreadEvent t i /\ G.(Lab) e = Some l.
 
 Definition ReadEvents(G: Graph): set Event :=
-  fun e => exists o s x, G.(Lab) e = Some (ReadLabel o s x).
-
-Definition ExclusiveReadEvents(G: Graph): set Event :=
-  fun e => exists o x, G.(Lab) e = Some (ReadLabel o Exclusive x).
-
-Definition NotExclusiveReadEvents(G: Graph): set Event :=
-  fun e => exists o x, G.(Lab) e = Some (ReadLabel o NotExclusive x).
+  fun e => exists x, G.(Lab) e = Some (ReadLabel x).
 
 Definition WriteEvents(G: Graph): set Event :=
-  fun e => exists o s x v, G.(Lab) e = Some (WriteLabel o s x v).
-
-Definition ExclusiveWriteEvents(G: Graph): set Event :=
-  fun e => exists o x v, G.(Lab) e = Some (WriteLabel o Exclusive x v).
-
-Definition NotExclusiveWriteEvents(G: Graph): set Event :=
-  fun e => exists o x v, G.(Lab) e = Some (WriteLabel o NotExclusive x v).
+  fun e => exists x v, G.(Lab) e = Some (WriteLabel x v).
 
 Definition FenceEvents(G: Graph): set Event :=
-  fun e => exists o, G.(Lab) e = Some (FenceLabel o).
+  fun e => G.(Lab) e = Some FenceLabel.
 
 Definition ErrorEvents(G: Graph): set Event :=
   fun e => G.(Lab) e = Some ErrorLabel.
@@ -173,9 +157,9 @@ Definition Typ(G: Graph)(e: Event): EventTyp :=
 Definition Loc(G: Graph)(e: Event): option word :=
   match G.(Lab) e with
   | Some l => match l with
-              | ReadLabel o s x => Some x
-              | WriteLabel o s x v => Some x
-              | FenceLabel o => None
+              | ReadLabel x => Some x
+              | WriteLabel x v => Some x
+              | FenceLabel => None
               | ErrorLabel => None
               end
   | None => None
@@ -184,9 +168,9 @@ Definition Loc(G: Graph)(e: Event): option word :=
 Definition Val(G: Graph)(e: Event): option w8 :=
   match G.(Lab) e with
   | Some l => match l with
-              | ReadLabel o s x => None
-              | WriteLabel o s x v => Some v
-              | FenceLabel o => None
+              | ReadLabel x => None
+              | WriteLabel x v => Some v
+              | FenceLabel => None
               | ErrorLabel => None
               end
   | None => None
@@ -215,24 +199,12 @@ Definition NextEvent(e: Event): Event :=
   | ThreadEvent t i => ThreadEvent t (S i)
   end.
 
-(* not used at the moment *)
-Definition RMW_Atomicity(G: Graph): Prop :=
-  forall r1 r2,
-    r1 \in ExclusiveReadEvents G ->
-    r2 \in ExclusiveReadEvents G ->
-    r1 <> r2 ->
-    NextEvent r1 \in ExclusiveWriteEvents G ->
-    NextEvent r2 \in ExclusiveWriteEvents G ->
-    G.(Rf) r1 = G.(Rf) r2 ->
-    False.
-
 Infix "\U" := unionrel (at level 50, left associativity).
 Infix "\;" := composerel (at level 41, right associativity).
 Notation "R ^-1" := (invrel R) (at level 7).
 
 (* sequential consistency *)
 Definition consSC(G: Graph): Prop :=
-  RMW_Atomicity G /\
   exists mo, modificationOrder G mo /\
              acyclic (po \U (RfRel G) \U mo \U ((RfRel G)^-1 \; mo)).
 
@@ -336,7 +308,7 @@ Definition loadInstruction(n: nat)(a: word): M (HList.tuple byte n) :=
 Definition load_byte(addr: word): M w8 :=
   s <- get;
   G <- ask;
-  assert (G.(Lab) s.(CurrentEvent) = Some (ReadLabel oR NotExclusive addr));;
+  assert (G.(Lab) s.(CurrentEvent) = Some (ReadLabel addr));;
   v <- extractOption (Val G (Rf G s.(CurrentEvent)));
   put (s <| CurrentEvent ::= NextEvent |>);;
   Return v.
@@ -344,7 +316,7 @@ Definition load_byte(addr: word): M w8 :=
 Definition store_byte(addr: word)(v: w8): M unit :=
   s <- get;
   G <- ask;
-  assert (G.(Lab) s.(CurrentEvent) = Some (WriteLabel oW NotExclusive addr v));;
+  assert (G.(Lab) s.(CurrentEvent) = Some (WriteLabel addr v));;
   put (s <| CurrentEvent ::= NextEvent |>).
 
 (* only 1-byte loads and stores are supported at the moment *)
@@ -549,7 +521,7 @@ Ltac simpl_exec :=
 Record Wf(G: Graph) := mkWf {
   WfRfWrite: forall e, Rf G e \in WriteEvents G;
   WfLabInit: forall x, Lab G (InitEvent x) = None \/
-                       exists v, Lab G (InitEvent x) = Some (WriteLabel oW NotExclusive x v);
+                       exists v, Lab G (InitEvent x) = Some (WriteLabel x v);
   WfRfLocMatches: forall e, Loc G (Rf G e) = Loc G e;
 }.
 
@@ -557,8 +529,8 @@ Lemma ownedReadAfterWrite: forall G iid1 iid2 thr loc val,
     Wf G ->
     consSC G ->
     (iid1 < iid2)%nat ->
-    Lab G (ThreadEvent thr iid1) = Some (WriteLabel oW NotExclusive loc val) ->
-    Lab G (ThreadEvent thr iid2) = Some (ReadLabel oR NotExclusive loc) ->
+    Lab G (ThreadEvent thr iid1) = Some (WriteLabel loc val) ->
+    Lab G (ThreadEvent thr iid2) = Some (ReadLabel loc) ->
     (* between (ThreadEvent thr iid1) and (ThreadEvent thr iid2), only reads happened at this location *)
     (forall e, e \in ThreadEvents G -> Loc G e = Loc G (ThreadEvent thr iid2) ->
                po (ThreadEvent thr iid1) e -> po e (ThreadEvent thr iid2) -> Typ G e = ReadEvent) ->
@@ -574,7 +546,7 @@ Proof.
   rewrite E in I1, I2.
   specialize (Th _ I1 I2). simpl in Th. subst thr'.
   f_equal.
-  unfold consSC in *. destruct Co as [_ [mo [MO AC] ] ].
+  unfold consSC in *. destruct Co as [mo [MO AC] ].
   unfold acyclic, hasCycle in AC.
   destruct MO as [MOStrict [MOWrite MODec] ].
   specialize (MODec (ThreadEvent thr iid1) (ThreadEvent thr iid1')).
