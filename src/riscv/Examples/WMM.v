@@ -176,6 +176,8 @@ Definition Val(G: Graph)(e: Event): option w8 :=
   | None => None
   end.
 
+Definition errorFree(G: Graph): Prop := forall e, Lab G e <> Some ErrorLabel.
+
 (* reads-from relation: `RfRel g e1 e2` means "e2 reads from e1" *)
 Inductive RfRel(G: Graph): Event -> Event -> Prop :=
   mkRfRel: forall r, r \in ReadEvents G -> RfRel G (G.(Rf) r) r.
@@ -278,8 +280,7 @@ Definition put(s: ThreadState): M unit := fun G s1 s2 a => s2 = s.
 Definition ask: M Graph := fun G s1 s2 a => s1 = s2 /\ G = a.
 
 (* assertion monad: *)
-Definition assert(P: Prop): M unit := fun G s1 s2 a => s1 = s2 /\ P.
-Definition fail_hard{A: Type}: M A := fun G s1 s2 a => False.
+Definition assert_graph(P: Prop): M unit := fun G s1 s2 a => s1 = s2 /\ P.
 
 Definition getReg(regs: Registers)(reg: Z): word :=
   if Z.eq_dec reg 0 then word.of_Z 0
@@ -291,16 +292,20 @@ Definition getReg(regs: Registers)(reg: Z): word :=
 Definition setReg(regs: Registers)(reg: Z)(v: word): Registers :=
   if Z.eq_dec reg Register0 then regs else map.put regs reg v.
 
-Definition extractOption{A: Type}(o: option A): M A :=
-  match o with
-  | Some a => Return a
-  | None => fail_hard
-  end.
+Definition reject_program{A: Type}: M A :=
+  fun G s1 s2 a => G.(Lab) s1.(CurrentEvent) = Some ErrorLabel.
+
+Definition reject_graph{A: Type}: M A :=
+  fun G s1 s2 a => False.
 
 Definition loadInstruction(n: nat)(a: word): M (HList.tuple byte n) :=
   match n with
-  | 4 => s <- get; extractOption (nth_error s.(Prog) (Z.to_nat ((word.unsigned a) / 4)))
-  | _ => fail_hard
+  | 4 => s <- get;
+         match nth_error s.(Prog) (Z.to_nat ((word.unsigned a) / 4)) with
+         | Some w => Return w
+         | None => reject_program
+         end
+  | _ => reject_program
   end.
 
 (* load_byte and store_byte do everything that GEN from the paper does except the
@@ -309,43 +314,47 @@ Definition loadInstruction(n: nat)(a: word): M (HList.tuple byte n) :=
 Definition load_byte(addr: word): M w8 :=
   s <- get;
   G <- ask;
-  assert (G.(Lab) s.(CurrentEvent) = Some (ReadLabel addr));;
-  v <- extractOption (Val G (Rf G s.(CurrentEvent)));
-  put (s <| CurrentEvent ::= NextEvent |>);;
-  Return v.
+  assert_graph (G.(Lab) s.(CurrentEvent) = Some (ReadLabel addr));;
+  match Val G (Rf G s.(CurrentEvent)) with
+  | Some v => put (s <| CurrentEvent ::= NextEvent |>);; Return v
+  (* Note: invalid memory accesses (such as array out of bounds) are not rejected here,
+     but just recorded as constraints on the graph, and program correctness proofs will
+     have to prove that all accesses in the graph are within the desired memory address range *)
+  | None => reject_graph
+  end.
 
 Definition store_byte(addr: word)(v: w8): M unit :=
   s <- get;
   G <- ask;
-  assert (G.(Lab) s.(CurrentEvent) = Some (WriteLabel addr v));;
+  assert_graph (G.(Lab) s.(CurrentEvent) = Some (WriteLabel addr v));;
   put (s <| CurrentEvent ::= NextEvent |>).
 
 (* only 1-byte loads and stores are supported at the moment *)
 Definition loadData(n: nat)(a: word): M (HList.tuple byte n) :=
   match n with
   | 1 => load_byte a
-  | _ => fail_hard
+  | _ => reject_program
   end.
 
 Definition storeData(n: nat)(a: word): HList.tuple byte n -> M unit :=
   match n with
   | 1 => store_byte a
-  | _ => fun _ => fail_hard
+  | _ => fun _ => reject_program
   end.
 
 Definition loadN(n: nat)(kind: SourceType)(a: word): M (HList.tuple byte n) :=
   match kind with
   | Fetch => loadInstruction n a
   | Execute => loadData n a
-  | VirtualMemory => fail_hard
+  | VirtualMemory => reject_program
   end.
 
 Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n): M unit :=
   s <- get;
   match kind with
-  | Fetch => fail_hard
+  | Fetch => reject_program
   | Execute => storeData n a v
-  | VirtualMemory => fail_hard
+  | VirtualMemory => reject_program
   end.
 
 Definition TODO{T: Type}: T. Admitted.
@@ -364,12 +373,12 @@ Notation "D <[ r := s ]>" := (setDeps D r s) (at level 8, left associativity, fo
 Definition checkDepsI(inst: InstructionI): M unit :=
   match inst with
   (* only loading/storing one byte at a time is supported, the others will fail in load/storeData *)
-  | Lb rd rs1 oimm12 => s <- get; G <- ask; assert (
+  | Lb rd rs1 oimm12 => s <- get; G <- ask; assert_graph (
        G.(Addr) s.(CurrentEvent) = s.(Deps)<[rs1]> /\
        G.(Data) s.(CurrentEvent) = empty_set /\
        G.(Ctrl) s.(CurrentEvent) = s.(Deps)<[pc]>
     )
-  | Sb rs1 rs2 simm12 => s <- get; G <- ask; assert (
+  | Sb rs1 rs2 simm12 => s <- get; G <- ask; assert_graph (
        G.(Addr) s.(CurrentEvent) = s.(Deps)<[rs1]> /\
        G.(Data) s.(CurrentEvent) = s.(Deps)<[rs2]> /\
        G.(Ctrl) s.(CurrentEvent) = s.(Deps)<[pc]>
@@ -381,7 +390,7 @@ Definition checkDepsI(inst: InstructionI): M unit :=
 Definition checkDeps(inst: Instruction): M unit :=
   match inst with
   | IInstruction i => checkDepsI i
-  | _ => fail_hard (* only I is supported at the moment *)
+  | _ => reject_program (* only I is supported at the moment *)
   end.
 
 Definition updateDepsI(inst: InstructionI)(D: Register -> set Event): Register -> set Event :=
@@ -453,18 +462,18 @@ Instance IsRiscvMachine: RiscvProgram M word :=  {
   storeDouble := storeN 8;
 
   (* atomics, CSRs, and non-machine modes are not supported *)
-  makeReservation  addr := fail_hard;
-  clearReservation addr := fail_hard;
-  checkReservation addr := fail_hard;
-  getCSRField f := fail_hard;
-  setCSRField f v := fail_hard;
-  getPrivMode := fail_hard;
-  setPrivMode v := fail_hard;
+  makeReservation  addr := reject_program;
+  clearReservation addr := reject_program;
+  checkReservation addr := reject_program;
+  getCSRField f := reject_program;
+  setCSRField f v := reject_program;
+  getPrivMode := reject_program;
+  setPrivMode v := reject_program;
 
   endCycleNormal := s <- get; put (s<|Pc := s.(NextPc)|><|NextPc := word.add s.(NextPc) (word.of_Z 4)|>);
 
   (* exceptions are not supported *)
-  endCycleEarly{A: Type} := fail_hard;
+  endCycleEarly{A: Type} := reject_program;
 }.
 
 Definition post_execute(inst: Instruction): M unit :=
@@ -624,20 +633,21 @@ Proof.
 Qed.
 
 Lemma readAfterWriteWorks: forall G final,
+    errorFree G ->
     Wf G ->
     consSC G ->
     runToEnd G (initialState 0%nat readAfterWriteProg) final ->
     word.and (getReg final.(Regs) s1) (word.of_Z 255) =
     word.and (getReg final.(Regs) s0) (word.of_Z 255).
 Proof.
-  unfold initialState, s0, s1. intros *. intro W. intros.
+  unfold initialState, s0, s1. intros *. intros EF W. intros.
 
   (* Sb a0 s0 0 *)
   inv H0. 1: discriminate H1.
   unfold run1 in H1.
   simpl_exec.
   simp.
-  unfold extractOption, pre_execute, get, put in *.
+  unfold pre_execute, get, put in *.
   simp.
   subst.
   simpl_exec.
@@ -650,7 +660,7 @@ Proof.
   clear E A w.
   simpl_exec.
   simp.
-  unfold extractOption, pre_execute, get, put, assert, ask in *.
+  unfold pre_execute, get, put, assert_graph, ask in *.
   simp.
   simpl_exec.
 
@@ -659,7 +669,7 @@ Proof.
   unfold run1 in H0.
   simpl_exec.
   simp.
-  unfold extractOption, pre_execute, get, put in *.
+  unfold pre_execute, get, put in *.
   simp.
   subst.
   simpl_exec.
@@ -672,7 +682,7 @@ Proof.
   clear E A w.
   simpl_exec.
   simp.
-  unfold extractOption, pre_execute, get, put, assert, ask in *.
+  unfold pre_execute, get, put, assert_graph, ask in *.
   simp.
   simpl_exec.
   simp.
@@ -686,7 +696,7 @@ Proof.
     unfold run1 in H0.
     simpl_exec.
     simp.
-    unfold extractOption, pre_execute, get, put in *.
+    unfold pre_execute, get, put in *.
     simp.
     discriminate E0.
   }
@@ -729,7 +739,7 @@ Proof.
   rewrite <- !Z.land_ones by discriminate.
   change 255 with (Z.ones 8).
   prove_Zeq_bitwise.
-Time Qed. (* 13s *)
+Time Qed. (* 20s *)
 
 (* register a0 contains the address of the one-element FIFO,
    register a1 contains the address of the isEmpty flag,
@@ -760,7 +770,6 @@ Proof.
   unfold run1, initialWriterState, initialState in H.
   simpl_exec.
   simp.
-  unfold extractOption in *. simp.
   simpl_exec.
   simp.
   unfold pre_execute, checkDeps in *.
@@ -770,16 +779,16 @@ Proof.
   simpl_exec.
   cbv in E.
   simp.
+  (*
   cbv in E0.
   simp.
   simpl_exec.
   simp.
   unfold get in *.
   simp.
-  unfold assert, ask in *.
+  unfold assert_graph, ask in *.
   simpl_exec.
   simp.
-  unfold extractOption in *.
   simp.
   simpl_exec.
   simp.
@@ -788,7 +797,7 @@ Proof.
   simpl_exec.
   cbv delta [RecordSet.set] in H0.
   simpl_exec.
-
+  *)
 Abort.
 
 (* alternative: free monad based: *)
