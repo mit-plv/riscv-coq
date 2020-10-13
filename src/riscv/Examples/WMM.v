@@ -203,10 +203,11 @@ Infix "\U" := unionrel (at level 50, left associativity).
 Infix "\;" := composerel (at level 41, right associativity).
 Notation "R ^-1" := (invrel R) (at level 7).
 
+Definition SC_acyclicity(G: Graph)(mo: Event -> Event -> Prop): Prop :=
+  acyclic (po \U (RfRel G) \U mo \U ((RfRel G)^-1 \; mo)).
+
 (* sequential consistency *)
-Definition consSC(G: Graph): Prop :=
-  exists mo, modificationOrder G mo /\
-             acyclic (po \U (RfRel G) \U mo \U ((RfRel G)^-1 \; mo)).
+Definition consSC(G: Graph): Prop := exists mo, modificationOrder G mo /\ SC_acyclicity G mo.
 
 (* Examples of porf-acyclic models are SC, TSO, PSO, and RC11 *)
 Definition porf_acyclic(G: Graph): Prop := acyclic (unionrel po (RfRel G)).
@@ -525,6 +526,48 @@ Record Wf(G: Graph) := mkWf {
   WfRfLocMatches: forall e, Loc G (Rf G e) = Loc G e;
 }.
 
+Lemma mo_implies_po_within_same_thread: forall {G thr iid1 iid2 mo},
+    modificationOrder G mo ->
+    SC_acyclicity G mo ->
+    mo (ThreadEvent thr iid1) (ThreadEvent thr iid2) ->
+    (iid1 < iid2)%nat.
+Proof.
+  intros *. intros [ MOStrict [MOWrite MODec] ] Ac Comp.
+  assert (iid1 < iid2 \/ iid1 = iid2 \/ iid2 < iid1)%nat as A by blia.
+  destruct A as [ A | [A | A] ].
+  - assumption.
+  - subst. exfalso. eapply strictPartialOrder_irreflexive; eassumption.
+  - exfalso. unfold SC_acyclicity, acyclic, hasCycle in Ac.
+    apply Ac.
+    exists (ThreadEvent thr iid1).
+    unfold unionrel.
+    eapply TrclCons with (a2 := ThreadEvent thr iid2).
+    2: eapply TrclOne.
+    all: cbn.
+    all: auto.
+Qed.
+
+Lemma rf_implies_po_within_same_thread: forall {G thr iid1 iid2 mo},
+    modificationOrder G mo ->
+    SC_acyclicity G mo ->
+    RfRel G (ThreadEvent thr iid1) (ThreadEvent thr iid2) ->
+    (iid1 < iid2)%nat.
+Proof.
+  intros *. intros [ MOStrict [MOWrite MODec] ] Ac R.
+  unfold SC_acyclicity, acyclic, hasCycle in Ac.
+  assert (iid1 < iid2 \/ iid1 = iid2 \/ iid2 < iid1)%nat as A by blia.
+  destruct A as [ A | [A | A] ].
+  - assumption.
+  - subst. exfalso. apply Ac. exists (ThreadEvent thr iid2).
+    unfold unionrel. apply TrclOne. auto.
+  - subst. exfalso. apply Ac. exists (ThreadEvent thr iid1).
+    unfold unionrel.
+    eapply TrclCons with (a2 := ThreadEvent thr iid2).
+    2: eapply TrclOne.
+    all: cbn.
+    all: auto.
+Qed.
+
 Lemma ownedReadAfterWrite: forall G iid1 iid2 thr loc val,
     Wf G ->
     consSC G ->
@@ -548,24 +591,37 @@ Proof.
   f_equal.
   unfold consSC in *. destruct Co as [mo [MO AC] ].
   unfold acyclic, hasCycle in AC.
-  destruct MO as [MOStrict [MOWrite MODec] ].
+  pose proof MO as MO'.
+  destruct MO' as [MOStrict [MOWrite MODec] ].
   specialize (MODec (ThreadEvent thr iid1) (ThreadEvent thr iid1')).
   pose proof (WfRfWrite G W (ThreadEvent thr iid2)) as A1.
   rewrite E in A1. specialize MODec with (2 := A1). clear A1.
   unfold elem_of, WriteEvents in MODec.
   rewrite L1 in MODec.
   exfalso. apply AC.
+  assert (RfRel G (ThreadEvent thr iid1') (ThreadEvent thr iid2)). {
+    rewrite <- E. constructor. unfold ReadEvents, elem_of. eauto.
+  }
   destruct MODec as [MODec | MODec]. 1: clear; eauto.
   - (* case 1: the fake iid' is after iid1. Contradicts assumption that only read-events are
      between iid1 and iid2 *)
     exfalso.
     specialize (TyR (ThreadEvent thr iid1') I1 I2).
     simpl in TyR.
-    admit.
-
-  - (* case 2: the fake iid' is before iid1 *)
-    admit.
-Admitted.
+    specialize MOWrite with (1 := MODec). simp.
+    rewrite MOWritep1 in TyR.
+    eenough _.
+    2: eapply TyR. 1: discriminate.
+    all: eauto using mo_implies_po_within_same_thread, rf_implies_po_within_same_thread.
+  - (* case 2: the fake iid' is before iid1: Contradicts SC_acyclicity *)
+    unfold hasCycle.
+    exists (ThreadEvent thr iid1).
+    unfold unionrel, invrel, composerel.
+    eapply TrclCons with (a2 := ThreadEvent thr iid2).
+    2: eapply TrclOne.
+    all: cbn.
+    all: eauto.
+Qed.
 
 Lemma readAfterWriteWorks: forall G final,
     Wf G ->
