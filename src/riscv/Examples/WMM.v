@@ -19,6 +19,7 @@ Require Import coqutil.Map.OfFunc.
 Require Import coqutil.Word.Properties.
 Require Import coqutil.Z.prove_Zeq_bitwise.
 Require Import Coq.ZArith.ZArith.
+Require Import riscv.Utility.PowerFunc.
 
 (* sub-relation *)
 Definition subrel{A B: Type}(R1 R2: A -> B -> Prop): Prop :=
@@ -490,6 +491,11 @@ Definition run1: M unit :=
   post_execute inst;;
   endCycleNormal.
 
+(* Note: this only works as long as we don't use endCycleEarly, because otherwise
+   all the remaining cycles (instead of just all the remaining operations *within*
+   the current cycle) are skipped. *)
+Definition runN(n: nat): M unit := power_func (fun m => run1;; m) n (Return tt).
+
 (* the end of an execution is reached when the pc points one past the last instruction
    in the list of instructions *)
 Inductive runToEnd(G: Graph): ThreadState -> ThreadState -> Prop :=
@@ -525,7 +531,20 @@ Definition readAfterWriteProg := [[
 ]].
 
 Ltac simpl_exec :=
-  cbn -[w8 w32 map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs] in *.
+  cbn -[w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs] in *.
+
+Lemma print_symbolically_executed: forall G final,
+    runN 2 G (initialState 0%nat readAfterWriteProg) final tt ->
+    True.
+Proof.
+  intros.
+  simpl_exec.
+  unfold get, put, reject_program, pre_execute, checkDeps in *.
+  simpl_exec.
+  unfold get, put, reject_program, pre_execute, checkDeps in *.
+  simpl_exec.
+
+Abort.
 
 (* ensures codomains of functions are correct etc *)
 Record Wf(G: Graph) := mkWf {
