@@ -581,6 +581,8 @@ Lemma print_symbolically_executed: forall G final,
 Proof.
   intros.
   repeat step H.
+  cbv [interp bind] in H.
+
   (* first argument of `bind` is a match that depends on G, so we'd need to
      teach the SMT solve how to typecheck `bind`... *)
 
