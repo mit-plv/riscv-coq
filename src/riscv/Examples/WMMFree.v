@@ -262,7 +262,8 @@ Inductive M: Type -> Type :=
 | Get{A: Type}(k: ThreadState -> M A): M A
 | Put(s: ThreadState){A: Type}(k: M A): M A
 | Ask{A: Type}(k: Graph -> M A): M A
-| ConstrainGraph(P: Prop){A: Type}(k: M A): M A
+(* picks a value satisfying P, or if none exists, rejects the graph *)
+| Pick{T: Type}(P: T -> Prop){A: Type}(k: T -> M A): M A
 | Ret{A: Type}(a: A): M A
 (* could halt because the graph is rejected, because the program failed, or because the program is done *)
 | HaltThread{A: Type}: M A.
@@ -272,7 +273,7 @@ Fixpoint bind{A B: Type}(m: M A){struct m}: (A -> M B) -> M B :=
   | Get k => fun f => Get (fun s => bind (k s) f)
   | Put s k => fun f => Put s (bind k f)
   | Ask k => fun f => Ask (fun G => bind (k G) f)
-  | ConstrainGraph P k => fun f => ConstrainGraph P (bind k f)
+  | Pick P k => fun f => Pick P (fun v => (bind (k v) f))
   | Ret a => fun f => f a
   | HaltThread => fun f => HaltThread (* Note: Drops the continuation in f *)
   end.
@@ -297,7 +298,9 @@ Definition put(s: ThreadState): M unit := Put s (Ret tt).
 Definition ask: M Graph := Ask Ret.
 
 (* assertion monad: *)
-Definition assert_graph(P: Prop): M unit := ConstrainGraph P (Ret tt).
+Definition assert_graph(P: Prop): M unit := Pick (fun _ : unit => P) Ret.
+
+Definition pick{T: Type}(P: T -> Prop): M T := Pick P Ret.
 
 Definition halt_thread{A: Type}: M A := HaltThread.
 
@@ -314,7 +317,7 @@ Fixpoint interp{A: Type}(p: M A): Graph -> ThreadState -> ThreadState -> A -> Pr
   | Get k => fun G s1 s2 a => interp (k s1) G s1 s2 a
   | Put s k => fun G s1 s2 a => interp k G s s2 a (* s1 is discarded and replaced by s *)
   | Ask k => fun G s1 s2 a => interp (k G) G s1 s2 a
-  | ConstrainGraph P k => fun G s1 s2 a => P /\ interp k G s1 s2 a
+  | Pick P k => fun G s1 s2 a => exists v, P v /\ interp (k v) G s1 s2 a
   | Ret v => fun G s1 s2 a => s1 = s2 /\ a = v
   | HaltThread => fun G s1 s2 a => s1 = s2
   end.
@@ -346,13 +349,12 @@ Definition load_byte(addr: word): M w8 :=
   s <- get;
   G <- ask;
   assert_graph (G.(Lab) s.(CurrentEvent) = Some (ReadLabel addr));;
-  match Val G (Rf G s.(CurrentEvent)) with
-  | Some v => put (s <| CurrentEvent ::= NextEvent |>);; Return v
+  v <- pick (fun v => Val G (Rf G s.(CurrentEvent)) = Some v);
+  put (s <| CurrentEvent ::= NextEvent |>);;
+  Return v.
   (* Note: invalid memory accesses (such as array out of bounds) are not rejected here,
      but just recorded as constraints on the graph, and program correctness proofs will
      have to prove that all accesses in the graph are within the desired memory address range *)
-  | None => reject_graph
-  end.
 
 Definition store_byte(addr: word)(v: w8): M unit :=
   s <- get;
@@ -558,11 +560,35 @@ Definition readAfterWriteProg := [[
   Lb s1 a0 0
 ]].
 
+(* register a0 contains the address of the one-element FIFO,
+   register a1 contains the address of the isEmpty flag,
+   register s0 contains the value to be put into the FIFO *)
+Definition writerProg := [[
+  Sb a0 s0 0;   (* store the value into the FIFO *)
+  Sb a1 zero 0  (* set the isEmpty flag to false *)
+]].
+
+Definition readerProg := [[
+  Lb t0 a1 0;   (* start: t0 := isEmpty *)
+  Beqz t0 (-4); (* if (isEmpty) { goto start } *)
+  Lb s0 a0 0    (* read value from FIFO *)
+]].
+
+(* TODO more setup/preconditions on initial state will be needed (a0, a1) *)
+Definition initialReaderState := initialState 0%nat writerProg.
+Definition initialWriterState := initialState 1%nat readerProg.
+
 Ltac simpl_exec :=
   cbn -[w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs] in *.
 
+Lemma remove_exists_unit: forall (P: Prop),
+    (exists _: unit, P) <-> P.
+Proof. split; intros. 1: destruct H. 2: exists tt. all: assumption. Qed.
+
 Ltac step H :=
   match type of H with
+  | _ => progress cbv delta [RecordSet.set] in H
+  | _ => rewrite !remove_exists_unit in H
   | context [@nth_error ?A ?l ?i] =>
     progress let r := eval cbv in i in change i with r in H
   | context [decode ?iset (LittleEndian.combine 4 (LittleEndian.split 4 ?v))] =>
@@ -579,13 +605,26 @@ Lemma print_symbolically_executed: forall G final,
     interp (runN 2) G (initialState 0%nat readAfterWriteProg) final tt ->
     True.
 Proof.
-  intros.
+  intros. unfold initialState, readAfterWriteProg in H.
   repeat step H.
-  cbv [interp bind] in H.
+Abort.
 
-  (* first argument of `bind` is a match that depends on G, so we'd need to
-     teach the SMT solve how to typecheck `bind`... *)
+Lemma print_symbolically_executed: forall G final,
+    interp (runN 2) G initialReaderState final tt ->
+    True.
+Proof.
+  intros. unfold initialReaderState, initialState, readerProg in H.
+  repeat step H.
+Abort.
 
+Lemma print_symbolically_executed: forall G final,
+    interp (runN 2) G initialWriterState final tt ->
+    True.
+Proof.
+  intros. unfold initialWriterState, initialState, writerProg in H.
+  repeat step H.
+  unfold when in *.
+  (* need to push bind into branches of if *)
 Abort.
 
 (* ensures codomains of functions are correct etc *)
@@ -804,24 +843,6 @@ Proof.
 Time Qed. (* 20s *)
 *)
 Abort.
-
-(* register a0 contains the address of the one-element FIFO,
-   register a1 contains the address of the isEmpty flag,
-   register s0 contains the value to be put into the FIFO *)
-Definition writerProg := [[
-  Sb a0 s0 0;   (* store the value into the FIFO *)
-  Sb a1 zero 0  (* set the isEmpty flag to false *)
-]].
-
-Definition readerProg := [[
-  Lb t0 a1 0;   (* start: t0 := isEmpty *)
-  Beqz t0 (-4); (* if (isEmpty) { goto start } *)
-  Lb s0 a0 0    (* read value from FIFO *)
-]].
-
-(* TODO more setup/preconditions on initial state will be needed (a0, a1) *)
-Definition initialReaderState := initialState 0%nat writerProg.
-Definition initialWriterState := initialState 1%nat readerProg.
 
 Lemma message_passing_works: forall G finalReaderState finalWriterState,
     consSC G ->
