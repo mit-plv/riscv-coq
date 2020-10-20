@@ -575,8 +575,8 @@ Definition readerProg := [[
 ]].
 
 (* TODO more setup/preconditions on initial state will be needed (a0, a1) *)
-Definition initialReaderState := initialState 0%nat writerProg.
-Definition initialWriterState := initialState 1%nat readerProg.
+Definition initialReaderState := initialState 0%nat readerProg.
+Definition initialWriterState := initialState 1%nat writerProg.
 
 Ltac simpl_exec :=
   cbn -[w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs] in *.
@@ -610,18 +610,18 @@ Proof.
 Abort.
 
 Lemma print_symbolically_executed: forall G final,
-    interp (runN 2) G initialReaderState final tt ->
-    True.
-Proof.
-  intros. unfold initialReaderState, initialState, readerProg in H.
-  repeat step H.
-Abort.
-
-Lemma print_symbolically_executed: forall G final,
     interp (runN 2) G initialWriterState final tt ->
     True.
 Proof.
   intros. unfold initialWriterState, initialState, writerProg in H.
+  repeat step H.
+Abort.
+
+Lemma print_symbolically_executed: forall G final,
+    interp (runN 2) G initialReaderState final tt ->
+    True.
+Proof.
+  intros. unfold initialReaderState, initialState, readerProg in H.
   repeat step H.
   unfold when in *.
   (* need to push bind into branches of if *)
