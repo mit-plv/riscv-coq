@@ -129,7 +129,7 @@ Section MemoryHelpers.
     rewrite word.unsigned_of_Z.
     pose proof (word.unsigned_range b).
     unfold word.wrap.
-    rewrite (Z.mod_small a) by bomega.
+    rewrite (Z.mod_small a) by blia.
     rewrite Z.mod_small by assumption.
     reflexivity.
   Qed.
@@ -144,7 +144,7 @@ Section MemoryHelpers.
     rewrite word.unsigned_of_Z.
     pose proof (word.unsigned_range a).
     unfold word.wrap.
-    rewrite (Z.mod_small b) by bomega.
+    rewrite (Z.mod_small b) by blia.
     rewrite Z.mod_small by assumption.
     reflexivity.
   Qed.

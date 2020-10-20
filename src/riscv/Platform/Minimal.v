@@ -148,10 +148,10 @@ Section Riscv.
        | |- option _ => exact None
        | |- _ => discriminate
        | |- _ => congruence
-       | |- _ => solve [exfalso; bomega]
+       | |- _ => solve [exfalso; blia]
        | |- _ => solve [eauto 15 using VirtualMemoryFetchP, ExecuteFetchP]
        | |- _ => progress (rewrite? Z.ltb_nlt in *; rewrite? Z.ltb_lt in * )
-       | |- _ => bomega
+       | |- _ => blia
        | H: context[let (_, _) := ?y in _] |- _ => let E := fresh "E" in destruct y eqn: E
        | E: ?x = Some _, H: context[match ?x with _ => _ end] |- _ => rewrite E in H
        | E: ?x = Some _  |- context[match ?x with _ => _ end]      => rewrite E

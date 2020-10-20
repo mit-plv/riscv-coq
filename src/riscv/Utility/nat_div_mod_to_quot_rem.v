@@ -22,7 +22,7 @@ Ltac nat_div_mod_to_quot_rem_step :=
   | context [?a mod ?b] =>
       let Ne := fresh "Ne" in
       let P := fresh "P" in
-      assert (b <> 0) as Ne by bomega;
+      assert (b <> 0) as Ne by blia;
       pose proof (rewrite_div_mod a b Ne) as P;
       clear Ne;
       let q := fresh "q" in
