@@ -21,6 +21,8 @@ Require Import coqutil.Z.prove_Zeq_bitwise.
 Require Import Coq.ZArith.ZArith.
 Require Import riscv.Utility.PowerFunc.
 Require Import Coq.Logic.FunctionalExtensionality.
+Require Import Coq.Logic.PropExtensionality.
+Require Import Coq.derive.Derive.
 
 (* sub-relation *)
 Definition subrel{A B: Type}(R1 R2: A -> B -> Prop): Prop :=
@@ -581,48 +583,60 @@ Definition initialWriterState := initialState 1%nat writerProg.
 Ltac simpl_exec :=
   cbn -[w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs] in *.
 
-Lemma remove_exists_unit: forall (P: Prop),
+Lemma remove_exists_unit_iff: forall (P: Prop),
     (exists _: unit, P) <-> P.
 Proof. split; intros. 1: destruct H. 2: exists tt. all: assumption. Qed.
 
-Ltac step H :=
-  match type of H with
-  | _ => progress cbv delta [RecordSet.set] in H
-  | _ => rewrite !remove_exists_unit in H
-  | context [@nth_error ?A ?l ?i] =>
-    progress let r := eval cbv in i in change i with r in H
-  | context [decode ?iset (LittleEndian.combine 4 (LittleEndian.split 4 ?v))] =>
+Lemma remove_exists_unit: forall (P: Prop),
+    (exists _: unit, P) = P.
+Proof. intros. apply propositional_extensionality. apply remove_exists_unit_iff. Qed.
+
+Ltac step :=
+  match goal with
+  | |- _ => progress cbv delta [RecordSet.set]
+  | |- _ => rewrite !remove_exists_unit
+  | |- context [@nth_error ?A ?l ?i] =>
+    progress let r := eval cbv in i in change i with r
+  | |- context [decode ?iset (LittleEndian.combine 4 (LittleEndian.split 4 ?v))] =>
     lazymatch isZcst v with
     | true => idtac
     end;
     progress let r := eval cbv in
              (decode iset (LittleEndian.combine 4 (LittleEndian.split 4 v))) in
-      change (decode iset (LittleEndian.combine 4 (LittleEndian.split 4 v))) with r in H
-  | _ => progress simpl_exec
+      change (decode iset (LittleEndian.combine 4 (LittleEndian.split 4 v))) with r
+  | |- _ => progress simpl_exec
   end.
 
-Lemma print_symbolically_executed: forall G final,
-    interp (runN 2) G (initialState 0%nat readAfterWriteProg) final tt ->
-    True.
+Derive readAfterWriteGraphConditions
+  SuchThat (forall G final, readAfterWriteGraphConditions G final =
+                            interp (runN 2) G (initialState 0%nat readAfterWriteProg) final tt)
+  As readAfterWriteGraphConditions_correct.
 Proof.
-  intros. unfold initialState, readAfterWriteProg in H.
-  repeat step H.
-Abort.
+  intros.
+  unfold initialState, readAfterWriteProg.
+  repeat step.
+  subst readAfterWriteGraphConditions.
+  reflexivity.
+Defined.
 
-Lemma print_symbolically_executed: forall G final,
-    interp (runN 2) G initialWriterState final tt ->
-    True.
+Derive writerGraphConditions
+  SuchThat (forall G final, writerGraphConditions G final =
+                            interp (runN 2) G initialWriterState final tt)
+  As writerGraphConditions_correct.
 Proof.
-  intros. unfold initialWriterState, initialState, writerProg in H.
-  repeat step H.
-Abort.
+  intros. unfold initialWriterState, initialState, writerProg.
+  repeat step.
+  subst writerGraphConditions.
+  reflexivity.
+Defined.
 
-Lemma print_symbolically_executed: forall G final,
-    interp (runN 2) G initialReaderState final tt ->
-    True.
+Derive readerGraphConditions
+  SuchThat (forall G final, readerGraphConditions G final =
+                            interp (runN 2) G initialReaderState final tt)
+  As readerGraphConditions_correct.
 Proof.
-  intros. unfold initialReaderState, initialState, readerProg in H.
-  repeat step H.
+  intros. unfold initialReaderState, initialState, readerProg.
+  repeat step.
   unfold when in *.
   (* need to push bind into branches of if *)
 Abort.
