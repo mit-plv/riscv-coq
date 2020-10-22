@@ -134,7 +134,7 @@ Record Graph := mkGraph {
 }.
 
 Definition Events(G: Graph): set Event :=
-  fun e => exists l, G.(Lab) e = Some l.
+  fun e => G.(Lab) e <> None.
 
 Definition InitializationEvents(G: Graph): set Event :=
   fun e => exists x v, e = InitEvent x /\ G.(Lab) e = Some (WriteLabel x v).
@@ -606,6 +606,104 @@ Ltac step :=
       change (decode iset (LittleEndian.combine 4 (LittleEndian.split 4 v))) with r
   | |- _ => progress simpl_exec
   end.
+
+Derive InstructionI_elim
+  SuchThat (forall (T: Type), InstructionI_elim T = InstructionI_rect (fun _ => T))
+  As InstructionI_elim_correct.
+Proof.
+  intros.
+  repeat let branch := fresh "branch0" in extensionality branch.
+  match goal with
+  | b: InstructionI |- _ => rename b into inst
+  end.
+  unfold InstructionI_rect.
+  subst InstructionI_elim.
+  reflexivity.
+Defined.
+
+Definition match_marker{T: Type}(f: T): T := f.
+
+Derive simplified_executeI
+  SuchThat (forall inst G s1 s2, simplified_executeI inst G s1 s2 =
+                                 interp (ExecuteI.execute inst) G s1 s2 tt)
+  As simplified_executeI_correct.
+Proof.
+  intros.
+  unfold ExecuteI.execute.
+  symmetry.
+  etransitivity. {
+    instantiate (1 := ltac:(destruct inst)).
+    destruct inst; reflexivity.
+  }
+  etransitivity. {
+    cbn -[w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
+    instantiate (1 := ltac:(destruct inst)).
+    destruct inst.
+    all: try lazymatch goal with
+         | |- interp ?M _ _ _ _ = _ => fail
+         | |- _ => reflexivity
+         end.
+    all: unfold when.
+    all: match goal with
+         | |- interp (if ?B then _ else _) _ _ _ _ = _ =>
+           instantiate (1 := ltac:(destruct B)); destruct B
+         end.
+    all: cbn -[w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
+    all: try lazymatch goal with
+         | |- interp ?M _ _ _ _ = _ => fail
+         | |- _ => reflexivity
+         end.
+    all: match goal with
+         | |- interp (if ?B then _ else _) _ _ _ _ = _ =>
+           instantiate (1 := ltac:(destruct B)); destruct B
+         end.
+    all: cbn -[w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
+    all: try lazymatch goal with
+         | |- interp ?M _ _ _ _ = _ => fail
+         | |- _ => reflexivity
+         end.
+  }
+  cbn -[w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
+  etransitivity. {
+    instantiate (1 := match_marker (InstructionI_elim Prop) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+                                        _ _ _ _ _ _ _ _ _ _ _ _ _ _ inst).
+    unfold match_marker.
+    destruct inst.
+    all: unfold InstructionI_elim.
+    all: try (match goal with
+              | |- ?L = ?R ?a1 ?a2 ?a3 =>
+                let L' := eval pattern a1, a2, a3 in L in change L with L'
+              end;
+              match goal with
+              | |- ?L ?a1 ?a2 ?a3 = ?R ?a1 ?a2 ?a3 => unify L R; reflexivity
+              end).
+    all: try (match goal with
+              | |- ?L = ?R ?a1 ?a2 =>
+                let L' := eval pattern a1, a2 in L in change L with L'
+              end;
+              match goal with
+              | |- ?L ?a1 ?a2 = ?R ?a1 ?a2 => unify L R; reflexivity
+              end).
+    all: try (match goal with
+              | |- ?L = ?R ?a1 =>
+                let L' := eval pattern a1 in L in change L with L'
+              end;
+              match goal with
+              | |- ?L ?a1 ?a2 = ?R ?a1 => unify L R; reflexivity
+              end).
+    all: try reflexivity.
+  }
+  subst simplified_executeI.
+  reflexivity.
+Qed.
+
+Goal forall inst G s1 s2, simplified_executeI inst G s1 s2 = True.
+Proof.
+  intros.
+  unfold simplified_executeI.
+  (* using match_marker and InstructionI_elim, we might be able to create a notation for
+     match, but how can we get the constructor names for the branches? *)
+Abort.
 
 Derive readAfterWriteGraphConditions
   SuchThat (forall G final, readAfterWriteGraphConditions G final =
