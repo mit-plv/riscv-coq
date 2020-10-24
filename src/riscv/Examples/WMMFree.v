@@ -1,4 +1,5 @@
 Require Import Coq.Lists.List. Import ListNotations.
+Require Import coqutil.Decidable.
 Require Import coqutil.Tactics.Tactics.
 Require Import coqutil.Tactics.Simp.
 Require Import riscv.Spec.Decode.
@@ -105,9 +106,10 @@ Inductive Label :=
 | ReadLabel(x: word)
 | WriteLabel(x: word)(v: w8)
 | FenceLabel
-| ErrorLabel.
+| ErrorLabel
+| AbsentLabel.
 
-Inductive EventTyp := ReadEvent | WriteEvent | FenceEvent | ErrorEvent.
+Inductive EventTyp := ReadEvent | WriteEvent | FenceEvent | ErrorEvent | AbsentEvent.
 
 Definition LabelTyp(l: Label): EventTyp :=
   match l with
@@ -115,6 +117,7 @@ Definition LabelTyp(l: Label): EventTyp :=
   | WriteLabel _ _ => WriteEvent
   | FenceLabel => FenceEvent
   | ErrorLabel => ErrorEvent
+  | AbsentLabel => AbsentEvent
   end.
 
 Inductive Array(T U: Type): Type := mkArray (f: T -> U).
@@ -127,13 +130,16 @@ Definition Array2Fun{T U: Type}(a: Array T U): T -> U :=
   match a with
   | mkArray f => f
   end.
+Definition store{T U: Type}{eqbT: T -> T -> bool}{eqbT_spec: EqDecider eqbT}(a: Array T U)(i: T)(u: U):
+  Array T U := mkArray (fun j => if eqbT i j then u else Array2Fun a j).
+Definition constArray(T U: Type)(u: U): Array T U := mkArray (fun _ => u).
 
 (*Definition store{T U: Type}(a: Array T U)(i: T)(v: U): Array T U := *)
 Definition set(T: Type) := Array T Prop.
 
 Record Graph := mkGraph {
-  (* label of each event, None means the event is not part of the graph *)
-  Lab: Array Event (option Label);
+  (* label of each event, AbsentLabel means the event is not part of the graph *)
+  Lab: Array Event Label;
   (* reads-from function: maps each read event to the write event of the same location
      that determines the read's value *)
   Rf: Array Event Event;
@@ -146,55 +152,49 @@ Record Graph := mkGraph {
 }.
 
 Definition Events(G: Graph): set Event :=
-  mkArray (fun e => select G.(Lab) e <> None).
+  mkArray (fun e => select G.(Lab) e <> AbsentLabel).
 
 Definition InitializationEvents(G: Graph): set Event :=
-  mkArray (fun e => exists x v, e = InitEvent x /\ select G.(Lab) e = Some (WriteLabel x v)).
+  mkArray (fun e => exists x v, e = InitEvent x /\ select G.(Lab) e = WriteLabel x v).
 
 Definition ThreadEvents(G: Graph): set Event :=
-  mkArray (fun e => exists l t i, e = ThreadEvent t i /\ select G.(Lab) e = Some l).
+  mkArray (fun e => exists t i, e = ThreadEvent t i /\ select G.(Lab) e <> AbsentLabel).
 
 Definition ReadEvents(G: Graph): set Event :=
-  mkArray (fun e => exists x, select G.(Lab) e = Some (ReadLabel x)).
+  mkArray (fun e => exists x, select G.(Lab) e = ReadLabel x).
 
 Definition WriteEvents(G: Graph): set Event :=
-  mkArray (fun e => exists x v, select G.(Lab) e = Some (WriteLabel x v)).
+  mkArray (fun e => exists x v, select G.(Lab) e = WriteLabel x v).
 
 Definition FenceEvents(G: Graph): set Event :=
-  mkArray (fun e => select G.(Lab) e = Some FenceLabel).
+  mkArray (fun e => select G.(Lab) e = FenceLabel).
 
 Definition ErrorEvents(G: Graph): set Event :=
-  mkArray (fun e => select G.(Lab) e = Some ErrorLabel).
+  mkArray (fun e => select G.(Lab) e = ErrorLabel).
 
-Definition Typ(G: Graph)(e: Event): EventTyp :=
-  match select G.(Lab) e with
-  | Some l => LabelTyp l
-  | None => ErrorEvent
-  end.
+Definition Typ(G: Graph)(e: Event): EventTyp := LabelTyp (select G.(Lab) e).
 
 Definition Loc(G: Graph)(e: Event): option word :=
   match select G.(Lab) e with
-  | Some l => match l with
-              | ReadLabel x => Some x
-              | WriteLabel x v => Some x
-              | FenceLabel => None
-              | ErrorLabel => None
-              end
-  | None => None
+  | ReadLabel x => Some x
+  | WriteLabel x v => Some x
+  | FenceLabel => None
+  | ErrorLabel => None
+  | AbsentLabel => None
   end.
 
-Definition Val(G: Graph)(e: Event): option w8 :=
+Definition w8zero: w8 := PrimitivePair.pair.mk Byte.x00 tt.
+
+Definition Val(G: Graph)(e: Event): w8 :=
   match select G.(Lab) e with
-  | Some l => match l with
-              | ReadLabel x => None
-              | WriteLabel x v => Some v
-              | FenceLabel => None
-              | ErrorLabel => None
-              end
-  | None => None
+  | ReadLabel x => w8zero
+  | WriteLabel x v => v
+  | FenceLabel => w8zero
+  | ErrorLabel => w8zero
+  | AbsentLabel => w8zero
   end.
 
-Definition errorFree(G: Graph): Prop := forall e, select G.(Lab) e <> Some ErrorLabel.
+Definition errorFree(G: Graph): Prop := forall e, select G.(Lab) e <> ErrorLabel.
 
 Notation "x '\in' s" := (Array2Fun s x) (at level 70, no associativity).
 
@@ -202,7 +202,7 @@ Notation "x '\in' s" := (Array2Fun s x) (at level 70, no associativity).
 Inductive RfRel(G: Graph): Event -> Event -> Prop :=
   mkRfRel: forall r, r \in ReadEvents G -> RfRel G (select G.(Rf) r) r.
 
-(* address dependency relation: `AddrRel g e1 e2` means "e2 has an address dependency on e1" *)
+(* address dependency relation: `AddrRel e1 e2` means "e2 has an address dependency on e1" *)
 Definition AddrRel(G: Graph)(r e: Event): Prop := r \in (select G.(Addr) e).
 Definition DataRel(G: Graph)(r e: Event): Prop := r \in (select G.(Data) e).
 Definition CtrlRel(G: Graph)(r e: Event): Prop := r \in (select G.(Ctrl) e).
@@ -242,15 +242,13 @@ Definition prefix(G: Graph)(e: Event): set Event :=
    as well as ARMv7, ARMv8, IMM, LKMM, POWER, and RISC-V. *)
 Definition wellPrefixed(G: Graph): Prop := forall e, ~ e \in prefix G e.
 
-Instance Registers: map.map Z word := _.
-
 Record ThreadState := mkThreadState {
-  Regs: Registers;
+  Regs: Array Register word;
   Pc: word;
   NextPc: word;
-  Prog: list w32;
+  Prog: Array word InstructionI;
   CurrentEvent: Event;
-  Deps: Register -> set Event;
+  Deps: Array Register (set Event);
 }.
 
 Definition withRegs         x s := mkThreadState x        (Pc s) (NextPc s) (Prog s) (CurrentEvent s) (Deps s).
@@ -265,7 +263,7 @@ Inductive M: Type -> Type :=
 | Put(s: ThreadState){A: Type}(k: M A): M A
 | Ask{A: Type}(k: Graph -> M A): M A
 (* picks a value satisfying P, or if none exists, rejects the graph *)
-| Pick{T: Type}(P: T -> Prop){A: Type}(k: T -> M A): M A
+| RestrictGraph(P: Prop){A: Type}(k: M A): M A
 | Ret{A: Type}(a: A): M A
 (* could halt because the graph is rejected, because the program failed, or because the program is done *)
 | HaltThread{A: Type}: M A.
@@ -275,7 +273,7 @@ Fixpoint bind{A B: Type}(m: M A){struct m}: (A -> M B) -> M B :=
   | Get k => fun f => Get (fun s => bind (k s) f)
   | Put s k => fun f => Put s (bind k f)
   | Ask k => fun f => Ask (fun G => bind (k G) f)
-  | Pick P k => fun f => Pick P (fun v => (bind (k v) f))
+  | RestrictGraph P k => fun f => RestrictGraph P (bind k f)
   | Ret a => fun f => f a
   | HaltThread => fun f => HaltThread (* Note: Drops the continuation in f *)
   end.
@@ -300,14 +298,12 @@ Definition put(s: ThreadState): M unit := Put s (Ret tt).
 Definition ask: M Graph := Ask Ret.
 
 (* assertion monad: *)
-Definition assert_graph(P: Prop): M unit := Pick (fun _ : unit => P) Ret.
-
-Definition pick{T: Type}(P: T -> Prop): M T := Pick P Ret.
+Definition assert_graph(P: Prop): M unit := RestrictGraph P (Ret tt).
 
 Definition halt_thread{A: Type}: M A := HaltThread.
 
 Definition reject_program{A: Type}: M A :=
-  G <- ask; s <- get; assert_graph (select G.(Lab) s.(CurrentEvent) = Some ErrorLabel);; halt_thread.
+  G <- ask; s <- get; assert_graph (select G.(Lab) s.(CurrentEvent) = ErrorLabel);; halt_thread.
 
 Definition reject_graph{A: Type}: M A := assert_graph False;; halt_thread.
 
@@ -319,30 +315,18 @@ Fixpoint interp{A: Type}(p: M A): Graph -> ThreadState -> ThreadState -> A -> Pr
   | Get k => fun G s1 s2 a => interp (k s1) G s1 s2 a
   | Put s k => fun G s1 s2 a => interp k G s s2 a (* s1 is discarded and replaced by s *)
   | Ask k => fun G s1 s2 a => interp (k G) G s1 s2 a
-  | Pick P k => fun G s1 s2 a => exists v, P v /\ interp (k v) G s1 s2 a
+  | RestrictGraph P k => fun G s1 s2 a => P /\ interp k G s1 s2 a
   | Ret v => fun G s1 s2 a => s1 = s2 /\ a = v
   | HaltThread => fun G s1 s2 a => s1 = s2
   end.
 
-Definition getReg(regs: Registers)(reg: Z): word :=
-  if Z.eq_dec reg 0 then word.of_Z 0
-  else match map.get regs reg with
-       | Some x => x
-       | None => word.of_Z 0
-       end.
+Definition getReg(regs: Array Register word)(reg: Z): word :=
+  if Z.eq_dec reg 0 then word.of_Z 0 else select regs reg.
 
-Definition setReg(regs: Registers)(reg: Z)(v: word): Registers :=
-  if Z.eq_dec reg Register0 then regs else map.put regs reg v.
+Definition setReg(regs: Array Register word)(reg: Z)(v: word): Array Register word :=
+  if Z.eq_dec reg Register0 then regs else store regs reg v.
 
-Definition loadInstruction(n: nat)(a: word): M (HList.tuple byte n) :=
-  match n with
-  | 4 => s <- get;
-         match nth_error s.(Prog) (Z.to_nat ((word.unsigned a) / 4)) with
-         | Some w => Return w
-         | None => reject_program
-         end
-  | _ => reject_program
-  end.
+Definition loadInstruction(a: word): M Instruction := s <- get; Return (IInstruction (select s.(Prog) a)).
 
 (* load_byte and store_byte do everything that GEN from the paper does except the
    {addr,data,ctrl} assertions in the for loop, because for these, we need to know
@@ -350,8 +334,9 @@ Definition loadInstruction(n: nat)(a: word): M (HList.tuple byte n) :=
 Definition load_byte(addr: word): M w8 :=
   s <- get;
   G <- ask;
-  assert_graph (select G.(Lab) s.(CurrentEvent) = Some (ReadLabel addr));;
-  v <- pick (fun v => Val G (select (Rf G) s.(CurrentEvent)) = Some v);
+  assert_graph (select G.(Lab) s.(CurrentEvent) = ReadLabel addr /\
+                Typ G (select (Rf G) s.(CurrentEvent)) = WriteEvent);;
+  let v := Val G (select (Rf G) s.(CurrentEvent)) in
   put (withCurrentEvent (NextEvent s.(CurrentEvent)) s);;
   Return v.
   (* Note: invalid memory accesses (such as array out of bounds) are not rejected here,
@@ -361,7 +346,7 @@ Definition load_byte(addr: word): M w8 :=
 Definition store_byte(addr: word)(v: w8): M unit :=
   s <- get;
   G <- ask;
-  assert_graph (select G.(Lab) s.(CurrentEvent) = Some (WriteLabel addr v));;
+  assert_graph (select G.(Lab) s.(CurrentEvent) = WriteLabel addr v);;
   put (withCurrentEvent (NextEvent s.(CurrentEvent)) s).
 
 (* only 1-byte loads and stores are supported at the moment *)
@@ -379,7 +364,7 @@ Definition storeData(n: nat)(a: word): HList.tuple byte n -> M unit :=
 
 Definition loadN(n: nat)(kind: SourceType)(a: word): M (HList.tuple byte n) :=
   match kind with
-  | Fetch => loadInstruction n a
+  | Fetch => reject_program (* instructions are loaded directly, not through loadWord *)
   | Execute => loadData n a
   | VirtualMemory => reject_program
   end.
@@ -392,27 +377,31 @@ Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n): M u
   | VirtualMemory => reject_program
   end.
 
-Definition pc: Register := -1%Z.
+Definition minusone: Z := -1.
+Definition pc: Register := minusone.
 
-Definition empty_set{U: Type}: set U := mkArray (fun _ => False).
+Definition emptyEvents: set Event := mkArray (fun _ => False).
+Definition emptyDeps: Array Register (set Event) := mkArray (fun _ => emptyEvents).
 Definition union{U: Type}(s1 s2: set U) :=
   mkArray (fun x => Array2Fun s1 x \/ Array2Fun s2 x).
 
-Definition getDeps(D: Register -> set Event)(r: Register): set Event :=
-  if Z.eqb r 0 then empty_set else D r.
+Definition getDeps(D: Array Register (set Event))(r: Register): set Event :=
+  if Z.eqb r 0 then emptyEvents else select D r.
 
-Definition setDeps(D: Register -> set Event)(r: Register)(s: set Event): Register -> set Event :=
-  if Z.eqb r 0 then D else fun r0 => if Z.eqb r0 r then s else D r0.
+Definition setDeps(D: Array Register (set Event))(r: Register)(s: set Event): Array Register (set Event) :=
+  if Z.eqb r 0 then D else store D r s.
 
-Notation "D <[ r ]>" := (getDeps D r) (at level 8, left associativity, format "D <[ r ]>").
-Notation "D <[ r := s ]>" := (setDeps D r s) (at level 8, left associativity, format "D <[ r  :=  s ]>").
+Notation "D <[ r ]>" := (getDeps D r)
+  (at level 8, left associativity, format "D <[ r ]>", only parsing).
+Notation "D <[ r := s ]>" := (setDeps D r s)
+  (at level 8, left associativity, format "D <[ r  :=  s ]>", only parsing).
 
 Definition checkDepsI(inst: InstructionI): M unit :=
   match inst with
   (* only loading/storing one byte at a time is supported, the others will fail in load/storeData *)
   | Lb rd rs1 oimm12 => s <- get; G <- ask; assert_graph (
        select G.(Addr) s.(CurrentEvent) = s.(Deps)<[rs1]> /\
-       select G.(Data) s.(CurrentEvent) = empty_set /\
+       select G.(Data) s.(CurrentEvent) = emptyEvents /\
        select G.(Ctrl) s.(CurrentEvent) = s.(Deps)<[pc]>
     )
   | Sb rs1 rs2 simm12 => s <- get; G <- ask; assert_graph (
@@ -430,7 +419,7 @@ Definition checkDeps(inst: Instruction): M unit :=
   | _ => reject_program (* only I is supported at the moment *)
   end.
 
-Definition updateDepsI(inst: InstructionI)(D: Register -> set Event): Register -> set Event :=
+Definition updateDepsI(inst: InstructionI)(D: Array Register (set Event)): Array Register (set Event) :=
   match inst with
   | Lui rd imm20 => D
   (* QUESTION: here, and in jump instructions, control dependencies become data dependencies? *)
@@ -476,7 +465,7 @@ Definition updateDepsI(inst: InstructionI)(D: Register -> set Event): Register -
   | InvalidI => D
   end.
 
-Definition updateDeps(inst: Instruction): (Register -> set Event) -> (Register -> set Event) :=
+Definition updateDeps(inst: Instruction): Array Register (set Event) -> Array Register (set Event) :=
   match inst with
   | IInstruction i => updateDepsI i
   | _ => id (* only I is supported at the moment *)
@@ -520,8 +509,7 @@ Definition pre_execute(inst: Instruction): M unit := checkDeps inst.
 
 Definition run1: M unit :=
   pc <- getPC;
-  w <- loadWord Fetch pc;
-  let inst := decode RV32I (LittleEndian.combine 4 w) in
+  inst <- loadInstruction pc;
   pre_execute inst;;
   execute inst;;
   post_execute inst;;
@@ -532,26 +520,21 @@ Definition run1: M unit :=
    the current cycle) are skipped. *)
 Definition runN(n: nat): M unit := power_func (fun m => run1;; m) n (Return tt).
 
-(* the end of an execution is reached when the pc points one past the last instruction
-   in the list of instructions *)
-Inductive runToEnd(G: Graph): ThreadState -> ThreadState -> Prop :=
-| RDone: forall s,
-    Z.to_nat (word.unsigned s.(Pc) / 4) = length s.(Prog) ->
-    runToEnd G s s
-| RStep: forall s1 s2 s3,
-    interp run1 G s1 s2 tt ->
-    runToEnd G s2 s3 ->
-    runToEnd G s1 s3.
+Definition initialRegs: Array Register word := mkArray (fun _ => word.of_Z 0).
 
-Definition initialRegs: Registers := map.of_list_Z_at 1 (List.repeat (word.of_Z 0) 31).
+Fixpoint prog2Array(l: list InstructionI)(start: word): Array word InstructionI :=
+  match l with
+  | nil => constArray word InstructionI InvalidI
+  | i :: rest => store (prog2Array rest (word.add start (word.of_Z 4))) start i
+  end.
 
-Definition initialState(id: Tid)(prog: list Instruction): ThreadState := {|
+Definition initialState(id: Tid)(prog: list InstructionI): ThreadState := {|
   Regs := initialRegs;
   Pc := word.of_Z 0;
   NextPc := word.of_Z 4;
-  Prog := List.map (fun inst => LittleEndian.split 4 (encode inst)) prog;
+  Prog := prog2Array prog (word.of_Z 0);
   CurrentEvent := ThreadEvent id 0;
-  Deps := fun reg => empty_set;
+  Deps := emptyDeps
 |}.
 
 Ltac inv H := inversion H; clear H; subst.
@@ -561,24 +544,24 @@ Require Import riscv.Utility.RegisterNames.
 Require Import riscv.Spec.PseudoInstructions.
 
 (* s1 := s0 by making a detour throug memory *)
-Definition readAfterWriteProg := [[
+Definition readAfterWriteProg := [
   Sb a0 s0 0;
   Lb s1 a0 0
-]].
+].
 
 (* register a0 contains the address of the one-element FIFO,
    register a1 contains the address of the isEmpty flag,
    register s0 contains the value to be put into the FIFO *)
-Definition writerProg := [[
+Definition writerProg := [
   Sb a0 s0 0;   (* store the value into the FIFO *)
   Sb a1 zero 0  (* set the isEmpty flag to false *)
-]].
+].
 
-Definition readerProg := [[
+Definition readerProg := [
   Lb t0 a1 0;   (* start: t0 := isEmpty *)
   Beqz t0 (-4); (* if (isEmpty) { goto start } *)
   Lb s0 a0 0    (* read value from FIFO *)
-]].
+].
 
 (* TODO more setup/preconditions on initial state will be needed (a0, a1) *)
 Definition initialReaderState := initialState 0%nat readerProg.
@@ -621,92 +604,81 @@ Proof.
     instantiate (1 := ltac:(destruct inst)).
 Abort.
 
-Derive simplified_executeI
-  SuchThat (forall inst G s1 s2, simplified_executeI inst G s1 s2 =
-                                 interp (ExecuteI.execute inst) G s1 s2 tt)
-  As simplified_executeI_correct.
+Derive simplified_run1
+  SuchThat (forall G s1 s2, simplified_run1 G s1 s2 =
+                            interp run1 G s1 s2 tt)
+  As run1_correct.
 Proof.
   intros.
-  unfold ExecuteI.execute.
+  unfold run1, loadInstruction, pre_execute, execute, post_execute, checkDeps, checkDepsI,
+    updateDeps, updateDepsI, ExecuteI.execute, pc.
   symmetry.
+  cbn [getPC IsRiscvMachine bind Return Bind M_Monad get interp].
   etransitivity. {
-    instantiate (1 := ltac:(destruct inst)).
-    destruct inst; reflexivity.
-  }
-  etransitivity. {
-    cbn -[w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
-    instantiate (1 := ltac:(destruct inst)).
-    destruct inst.
+    instantiate (1 := ltac:(destruct (select (Prog s1) (Pc s1)))).
+    destruct (select (Prog s1) (Pc s1)).
+    all: cbn -[minusone w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
     all: try lazymatch goal with
          | |- interp ?M _ _ _ _ = _ => fail
          | |- _ => reflexivity
          end.
     all: unfold when.
     all: match goal with
-         | |- interp (if ?B then _ else _) _ _ _ _ = _ =>
+         | |- interp (bind (if ?B then _ else _) _) _ _ _ _ = _ =>
            instantiate (1 := ltac:(destruct B)); destruct B
          end.
-    all: cbn -[w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
+    all: cbn -[minusone w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
     all: try lazymatch goal with
          | |- interp ?M _ _ _ _ = _ => fail
          | |- _ => reflexivity
          end.
     all: match goal with
-         | |- interp (if ?B then _ else _) _ _ _ _ = _ =>
+         | |- interp (bind (if ?B then _ else _) _) _ _ _ _ = _ =>
            instantiate (1 := ltac:(destruct B)); destruct B
          end.
-    all: cbn -[w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
+    all: cbn -[minusone w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
     all: try lazymatch goal with
          | |- interp ?M _ _ _ _ = _ => fail
          | |- _ => reflexivity
          end.
   }
-  cbn -[w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
-  subst simplified_executeI.
+  cbn -[minusone w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
+  subst simplified_run1.
   reflexivity.
 Qed.
 
-Notation "'(match'  inst (
-   ( '(Lb'  rd_Lb rs1_Lb oimm12_Lb ) branchLb )
-   ( '(Lh'  rd_Lh rs1_Lh oimm12_Lh ) branchLh )
-   ( '(Lw'  rd_Lw rs1_Lw oimm12_Lw ) branchLw )
-   ( '(Lbu'  rd_Lbu rs1_Lbu oimm12_Lbu ) branchLbu )
-   ( '(Lhu'  rd_Lhu rs1_Lhu oimm12_Lhu ) branchLhu )
-   ( '(Fence'  pred_Fence succ_Fence ) branchFence )
-   ( '(Fence_i'  ) branchFence_i )
-   ( '(Addi'  rd_Addi rs1_Addi imm12_Addi ) branchAddi )
-   ( '(Slli'  rd_Slli rs1_Slli shamt6_Slli ) branchSlli )
-   ( '(Slti'  rd_Slti rs1_Slti imm12_Slti ) branchSlti )
-   ( '(Sltiu'  rd_Sltiu rs1_Sltiu imm12_Sltiu ) branchSltiu )
-   ( '(Xori'  rd_Xori rs1_Xori imm12_Xori ) branchXori )
-   ( '(Ori'  rd_Ori rs1_Ori imm12_Ori ) branchOri )
-   ( '(Andi'  rd_Andi rs1_Andi imm12_Andi ) branchAndi )
-   ( '(Srli'  rd_Srli rs1_Srli shamt6_Srli ) branchSrli )
-   ( '(Srai'  rd_Srai rs1_Srai shamt6_Srai ) branchSrai )
-   ( '(Auipc'  rd_Auipc oimm20_Auipc ) branchAuipc )
-   ( '(Sb'  rs1_Sb rs2_Sb simm12_Sb ) branchSb )
-   ( '(Sh'  rs1_Sh rs2_Sh simm12_Sh ) branchSh )
-   ( '(Sw'  rs1_Sw rs2_Sw simm12_Sw ) branchSw )
-   ( '(Add'  rd_Add rs1_Add rs2_Add ) branchAdd )
-   ( '(Sub'  rd_Sub rs1_Sub rs2_Sub ) branchSub )
-   ( '(Sll'  rd_Sll rs1_Sll rs2_Sll ) branchSll )
-   ( '(Slt'  rd_Slt rs1_Slt rs2_Slt ) branchSlt )
-   ( '(Sltu'  rd_Sltu rs1_Sltu rs2_Sltu ) branchSltu )
-   ( '(Xor'  rd_Xor rs1_Xor rs2_Xor ) branchXor )
-   ( '(Srl'  rd_Srl rs1_Srl rs2_Srl ) branchSrl )
-   ( '(Sra'  rd_Sra rs1_Sra rs2_Sra ) branchSra )
-   ( '(Or'  rd_Or rs1_Or rs2_Or ) branchOr )
-   ( '(And'  rd_And rs1_And rs2_And ) branchAnd )
-   ( '(Lui'  rd_Lui imm20_Lui ) branchLui )
-   ( '(Beq'  rs1_Beq rs2_Beq sbimm12_Beq ) branchBeq )
-   ( '(Bne'  rs1_Bne rs2_Bne sbimm12_Bne ) branchBne )
-   ( '(Blt'  rs1_Blt rs2_Blt sbimm12_Blt ) branchBlt )
-   ( '(Bge'  rs1_Bge rs2_Bge sbimm12_Bge ) branchBge )
-   ( '(Bltu'  rs1_Bltu rs2_Bltu sbimm12_Bltu ) branchBltu )
-   ( '(Bgeu'  rs1_Bgeu rs2_Bgeu sbimm12_Bgeu ) branchBgeu )
-   ( '(Jalr'  rd_Jalr rs1_Jalr oimm12_Jalr ) branchJalr )
-   ( '(Jal'  rd_Jal jimm20_Jal ) branchJal )
-   ( '(InvalidI'  ) branchInvalidI )))"
+Print simplified_run1.
+
+Local Set Warnings "-notation-both-format-and-spaces".
+
+Notation "(_ 'bv2nat' 32) A" := (word.unsigned A) (at level 10, A at level 0).
+Notation "(_ 'int2bv' 32) A" := (word.of_Z A) (at level 10, A at level 0).
+Notation "'bvadd' A B" := (word.add A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvsub' A B" := (word.sub A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvneg' A" := (word.opp A) (at level 10, A at level 0).
+Notation "'bvor' A B" := (word.or A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvand' A B" := (word.and A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvxor' A B" := (word.xor A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvnot' A" := (word.not A) (at level 10, A at level 0).
+Notation "'bvmul' A B" := (word.mul A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvurem' A B" := (word.modu A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvshl' A B" := (word.slu A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvlshr' A B" := (word.sru A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvashr' A B" := (word.srs A B) (at level 10, A at level 0, B at level 0).
+Notation "= A B" := (word.eqb A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvult' A B" := (word.ltu A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvslt' A B" := (word.lts A B) (at level 10, A at level 0, B at level 0).
+
+Notation "(_ 'sign_extend' 24) A" := (word.of_Z (signExtend 8 (LittleEndian.combine 1 A)))
+  (at level 10, A at level 0).
+Notation "(_ 'zero_extend' 24) A" := (word.of_Z (LittleEndian.combine 1 A))
+  (at level 10, A at level 0).
+Notation "(_ 'extract' 7 0) A" := (LittleEndian.split 1 (word.unsigned A))
+  (at level 10, A at level 0).
+
+
+Notation "'(match'  inst ( ( '(Lb'  rd_Lb rs1_Lb oimm12_Lb ) branchLb ) ( '(Lh'  rd_Lh rs1_Lh oimm12_Lh ) branchLh ) ( '(Lw'  rd_Lw rs1_Lw oimm12_Lw ) branchLw ) ( '(Lbu'  rd_Lbu rs1_Lbu oimm12_Lbu ) branchLbu ) ( '(Lhu'  rd_Lhu rs1_Lhu oimm12_Lhu ) branchLhu ) ( '(Fence'  pred_Fence succ_Fence ) branchFence ) ( '(Fence_i'  ) branchFence_i ) ( '(Addi'  rd_Addi rs1_Addi imm12_Addi ) branchAddi ) ( '(Slli'  rd_Slli rs1_Slli shamt6_Slli ) branchSlli ) ( '(Slti'  rd_Slti rs1_Slti imm12_Slti ) branchSlti ) ( '(Sltiu'  rd_Sltiu rs1_Sltiu imm12_Sltiu ) branchSltiu ) ( '(Xori'  rd_Xori rs1_Xori imm12_Xori ) branchXori ) ( '(Ori'  rd_Ori rs1_Ori imm12_Ori ) branchOri ) ( '(Andi'  rd_Andi rs1_Andi imm12_Andi ) branchAndi ) ( '(Srli'  rd_Srli rs1_Srli shamt6_Srli ) branchSrli ) ( '(Srai'  rd_Srai rs1_Srai shamt6_Srai ) branchSrai ) ( '(Auipc'  rd_Auipc oimm20_Auipc ) branchAuipc ) ( '(Sb'  rs1_Sb rs2_Sb simm12_Sb ) branchSb ) ( '(Sh'  rs1_Sh rs2_Sh simm12_Sh ) branchSh ) ( '(Sw'  rs1_Sw rs2_Sw simm12_Sw ) branchSw ) ( '(Add'  rd_Add rs1_Add rs2_Add ) branchAdd ) ( '(Sub'  rd_Sub rs1_Sub rs2_Sub ) branchSub ) ( '(Sll'  rd_Sll rs1_Sll rs2_Sll ) branchSll ) ( '(Slt'  rd_Slt rs1_Slt rs2_Slt ) branchSlt ) ( '(Sltu'  rd_Sltu rs1_Sltu rs2_Sltu ) branchSltu ) ( '(Xor'  rd_Xor rs1_Xor rs2_Xor ) branchXor ) ( '(Srl'  rd_Srl rs1_Srl rs2_Srl ) branchSrl ) ( '(Sra'  rd_Sra rs1_Sra rs2_Sra ) branchSra ) ( '(Or'  rd_Or rs1_Or rs2_Or ) branchOr ) ( '(And'  rd_And rs1_And rs2_And ) branchAnd ) ( '(Lui'  rd_Lui imm20_Lui ) branchLui ) ( '(Beq'  rs1_Beq rs2_Beq sbimm12_Beq ) branchBeq ) ( '(Bne'  rs1_Bne rs2_Bne sbimm12_Bne ) branchBne ) ( '(Blt'  rs1_Blt rs2_Blt sbimm12_Blt ) branchBlt ) ( '(Bge'  rs1_Bge rs2_Bge sbimm12_Bge ) branchBge ) ( '(Bltu'  rs1_Bltu rs2_Bltu sbimm12_Bltu ) branchBltu ) ( '(Bgeu'  rs1_Bgeu rs2_Bgeu sbimm12_Bgeu ) branchBgeu ) ( '(Jalr'  rd_Jalr rs1_Jalr oimm12_Jalr ) branchJalr ) ( '(Jal'  rd_Jal jimm20_Jal ) branchJal ) ( '(InvalidI'  ) branchInvalidI )))"
+
 := match inst with
    | Lb rd_Lb rs1_Lb oimm12_Lb => branchLb
    | Lh rd_Lh rs1_Lh oimm12_Lh => branchLh
@@ -749,7 +721,9 @@ Notation "'(match'  inst (
    | Jal rd_Jal jimm20_Jal => branchJal
    | InvalidI => branchInvalidI
    end
+
 (at level 10,
+   inst at level 0,
    branchLb at level 0,
    branchLh at level 0,
    branchLw at level 0,
@@ -789,7 +763,9 @@ Notation "'(match'  inst (
    branchBgeu at level 0,
    branchJalr at level 0,
    branchJal at level 0,
-   branchInvalidI at level 0).
+   branchInvalidI at level 0,
+
+format "'(match'  inst  ( '//' ( '(Lb'  rd_Lb  rs1_Lb  oimm12_Lb )  branchLb ) '//' ( '(Lh'  rd_Lh  rs1_Lh  oimm12_Lh )  branchLh ) '//' ( '(Lw'  rd_Lw  rs1_Lw  oimm12_Lw )  branchLw ) '//' ( '(Lbu'  rd_Lbu  rs1_Lbu  oimm12_Lbu )  branchLbu ) '//' ( '(Lhu'  rd_Lhu  rs1_Lhu  oimm12_Lhu )  branchLhu ) '//' ( '(Fence'  pred_Fence  succ_Fence )  branchFence ) '//' ( '(Fence_i' )  branchFence_i ) '//' ( '(Addi'  rd_Addi  rs1_Addi  imm12_Addi )  branchAddi ) '//' ( '(Slli'  rd_Slli  rs1_Slli  shamt6_Slli )  branchSlli ) '//' ( '(Slti'  rd_Slti  rs1_Slti  imm12_Slti )  branchSlti ) '//' ( '(Sltiu'  rd_Sltiu  rs1_Sltiu  imm12_Sltiu )  branchSltiu ) '//' ( '(Xori'  rd_Xori  rs1_Xori  imm12_Xori )  branchXori ) '//' ( '(Ori'  rd_Ori  rs1_Ori  imm12_Ori )  branchOri ) '//' ( '(Andi'  rd_Andi  rs1_Andi  imm12_Andi )  branchAndi ) '//' ( '(Srli'  rd_Srli  rs1_Srli  shamt6_Srli )  branchSrli ) '//' ( '(Srai'  rd_Srai  rs1_Srai  shamt6_Srai )  branchSrai ) '//' ( '(Auipc'  rd_Auipc  oimm20_Auipc )  branchAuipc ) '//' ( '(Sb'  rs1_Sb  rs2_Sb  simm12_Sb )  branchSb ) '//' ( '(Sh'  rs1_Sh  rs2_Sh  simm12_Sh )  branchSh ) '//' ( '(Sw'  rs1_Sw  rs2_Sw  simm12_Sw )  branchSw ) '//' ( '(Add'  rd_Add  rs1_Add  rs2_Add )  branchAdd ) '//' ( '(Sub'  rd_Sub  rs1_Sub  rs2_Sub )  branchSub ) '//' ( '(Sll'  rd_Sll  rs1_Sll  rs2_Sll )  branchSll ) '//' ( '(Slt'  rd_Slt  rs1_Slt  rs2_Slt )  branchSlt ) '//' ( '(Sltu'  rd_Sltu  rs1_Sltu  rs2_Sltu )  branchSltu ) '//' ( '(Xor'  rd_Xor  rs1_Xor  rs2_Xor )  branchXor ) '//' ( '(Srl'  rd_Srl  rs1_Srl  rs2_Srl )  branchSrl ) '//' ( '(Sra'  rd_Sra  rs1_Sra  rs2_Sra )  branchSra ) '//' ( '(Or'  rd_Or  rs1_Or  rs2_Or )  branchOr ) '//' ( '(And'  rd_And  rs1_And  rs2_And )  branchAnd ) '//' ( '(Lui'  rd_Lui  imm20_Lui )  branchLui ) '//' ( '(Beq'  rs1_Beq  rs2_Beq  sbimm12_Beq )  branchBeq ) '//' ( '(Bne'  rs1_Bne  rs2_Bne  sbimm12_Bne )  branchBne ) '//' ( '(Blt'  rs1_Blt  rs2_Blt  sbimm12_Blt )  branchBlt ) '//' ( '(Bge'  rs1_Bge  rs2_Bge  sbimm12_Bge )  branchBge ) '//' ( '(Bltu'  rs1_Bltu  rs2_Bltu  sbimm12_Bltu )  branchBltu ) '//' ( '(Bgeu'  rs1_Bgeu  rs2_Bgeu  sbimm12_Bgeu )  branchBgeu ) '//' ( '(Jalr'  rd_Jalr  rs1_Jalr  oimm12_Jalr )  branchJalr ) '//' ( '(Jal'  rd_Jal  jimm20_Jal )  branchJal ) '//' ( '(InvalidI' )  branchInvalidI )))").
 
 
 Notation "'and' A B" := (Logic.and A B) (at level 10, A at level 0, B at level 0).
@@ -798,25 +774,21 @@ Notation "+ A B" := (Z.add A B) (at level 10, A at level 0, B at level 0).
 Notation "< A B" := (Z.lt A B) (at level 10, A at level 0, B at level 0).
 Notation "<= A B" := (Z.le A B) (at level 10, A at level 0, B at level 0).
 Notation "- A B" := (Z.sub A B) (at level 10, A at level 0, B at level 0).
+(* Notation "- 1" := minusone (at level 10, format "-  1"). omits space, why? *)
 Notation "* A B" := (Z.mul A B) (at level 10, A at level 0, B at level 0, format " *  A  B").
+Notation "'mod' A B" := (Z.modulo A B) (at level 10, A at level 0, B at level 0).
 Notation "^ A B" := (Z.pow A B) (at level 10, A at level 0, B at level 0).
 Notation "= A B" := (@eq _ A B) (at level 10, A at level 0, B at level 0).
 Notation "'exists' ( ( x T ) ) b" := (exists x: T, b) (at level 10, T at level 0, b at level 0).
+Notation "'not' A" := (negb A) (at level 10, A at level 0).
 Notation "'ite' b thn els" := (if b then thn else els)
   (at level 10, b at level 0, thn at level 0, els at level 0).
 
-Notation "'bvadd' A B" := (word.add A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvurem' A B" := (word.modu A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvand' A B" := (word.and A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvxor' A B" := (word.xor A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvltu' A B" := (word.ltu A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvlts' A B" := (word.lts A B) (at level 10, A at level 0, B at level 0).
-Notation "= A B" := (word.eqb A B) (at level 10, A at level 0, B at level 0).
-Notation "(_ 'int2bv' 32) A" := (word.of_Z A) (at level 10, A at level 0).
+Notation "'as'  'None'  '(option'  T )" := (@None T) (at level 10, T at level 0).
 
-Print simplified_executeI.
+Print simplified_run1.
 
-
+word.word
 Goal forall inst G s1 s2, simplified_executeI inst G s1 s2 = True.
 Proof.
   intros.
@@ -965,6 +937,17 @@ Proof.
     all: cbn.
     all: eauto.
 Qed.
+
+(* the end of an execution is reached when the pc points one past the last instruction
+   in the list of instructions *)
+Inductive runToEnd(G: Graph): ThreadState -> ThreadState -> Prop :=
+| RDone: forall s,
+    Z.to_nat (word.unsigned s.(Pc) / 4) = length s.(Prog) ->
+    runToEnd G s s
+| RStep: forall s1 s2 s3,
+    interp run1 G s1 s2 tt ->
+    runToEnd G s2 s3 ->
+    runToEnd G s1 s3.
 
 Lemma readAfterWriteWorks: forall G final,
     errorFree G ->
