@@ -786,13 +786,12 @@ Notation "'ite' b thn els" := (if b then thn else els)
 
 Notation "'as'  'None'  '(option'  T )" := (@None T) (at level 10, T at level 0).
 
-Print simplified_run1.
+(* Print simplified_run1. *)
 
-word.word
-Goal forall inst G s1 s2, simplified_executeI inst G s1 s2 = True.
+Goal forall G s1 s2, simplified_run1 G s1 s2 = True.
 Proof.
   intros.
-  unfold simplified_executeI.
+  unfold simplified_run1.
 
   (* using match_marker and InstructionI_elim, we might be able to create a notation for
      match, but how can we get the constructor names for the branches? *)
