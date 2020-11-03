@@ -1,6 +1,6 @@
 default_target: spec
 
-.PHONY: clean install force spec all convert
+.PHONY: clean install force spec all convert convert_loc_counts
 
 # absolute paths so that emacs compile mode knows where to find error
 # use cygpath -m because Coq on Windows cannot handle cygwin paths
@@ -97,6 +97,9 @@ convert: riscv-semantics_version_check hs-to-coq_version_check $(HS_SOURCES) $(P
 	$(HS_TO_COQ) $(EXECUTE_OPTS)                                                                 $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteA.hs
 	$(HS_TO_COQ) $(EXECUTE_OPTS)                                                                 $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteA64.hs
 
+convert_loc_counts:
+	wc -l $(RISCV_SEMANTICS_DIR)/src/Spec/CSRField.hs $(RISCV_SEMANTICS_DIR)/src/Spec/CSR.hs $(RISCV_SEMANTICS_DIR)/src/Spec/CSRGetSet.hs $(RISCV_SEMANTICS_DIR)/src/Spec/Decode.hs $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteI.hs $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteCSR.hs $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteI64.hs $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteM.hs $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteM64.hs $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteA.hs $(RISCV_SEMANTICS_DIR)/src/Spec/ExecuteA64.hs
+	wc -l convert-hs-to-coq/*.edits
 
 # Currently does not work because of https://github.com/coq/coq/issues/11129
 src/riscv/Spec/Decode.v.beautified:
