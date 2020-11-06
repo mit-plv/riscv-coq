@@ -10,6 +10,8 @@ Class Monad(M: Type -> Type) := mkMonad {
 Definition bind{M: Type -> Type}{MM: Monad M}{A B: Type}(m: M A)(f: A -> M B): M B :=
   join (mmap f m).
 
+Declare Scope monad_scope.
+
 Notation "x <- m1 ; m2" := (bind m1 (fun x => m2))
   (right associativity, at level 60) : monad_scope.
 Notation "m1 ;; m2" := (bind m1 (fun _ => m2))
@@ -21,7 +23,7 @@ Definition Id: Type -> Type := id.
 
 Instance Id_monad: Monad Id := {|
   ret := @id;
-  mmap{A B} := @id (A -> B);
+  mmap A B := @id (A -> B);
   join := @id;
 |}.
 
@@ -47,11 +49,11 @@ Definition flattenOption{A}(ooa: option (option A)): option A :=
   end.
 
 Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
-  ret{A}(a: A) := mkOptionT (ret (retOption a));
-  mmap{A B}(f: A -> B)(oma: optionT M A) :=
+  ret A (a: A) := mkOptionT (ret (retOption a));
+  mmap A B (f: A -> B)(oma: optionT M A) :=
     mkOptionT (mmap (mapOption f)
                     (runOptionT oma));
-  join{A}(omoma: (optionT M) ((optionT M) A)) :=
+  join A (omoma: (optionT M) ((optionT M) A)) :=
     mkOptionT (join (mmap (fun (ooma: option (optionT M A)) =>
                              match ooma with
                              | Some oma => runOptionT oma
@@ -74,11 +76,11 @@ Arguments mkListT {M} {A} (_).
 Arguments runListT {M} {A} (_).
 
 Instance listT_Monad(M: Type -> Type){MM: Monad M}: Monad (listT M) := {|
-  ret{A}(a: A) := mkListT (ret (retList a));
-  mmap{A B}(f: A -> B)(nma: listT M A) :=
+  ret A (a: A) := mkListT (ret (retList a));
+  mmap A B (f: A -> B)(nma: listT M A) :=
     mkListT (mmap (mapList f)
                   (runListT nma));
-  join{A}(nmnma: (listT M) ((listT M) A)) :=
+  join A (nmnma: (listT M) ((listT M) A)) :=
     mkListT (join (mmap (fun nnma =>
                            fold_left
                              (fun (acc: M (list A)) (elem: listT M A) =>
@@ -97,10 +99,10 @@ Arguments mkStateT {S} {M} {A} (_).
 Arguments runStateT {S} {M} {A} (_).
 
 Instance StateT_Monad(S: Type)(M: Type -> Type){MM: Monad M}: Monad (StateT S M) := {|
-  ret{A}(a: A) := mkStateT (fun s => ret (a, s));
-  mmap{A B}(f: A -> B)(sma: StateT S M A) :=
+  ret A (a: A) := mkStateT (fun s => ret (a, s));
+  mmap A B (f: A -> B)(sma: StateT S M A) :=
     mkStateT (fun s => mmap (fun '(a, s0) => (f a, s0)) (runStateT sma s));
-  join{A}(smsma: (StateT S M) ((StateT S M) A)) :=
+  join A (smsma: (StateT S M) ((StateT S M) A)) :=
     mkStateT (fun s1 => p <- runStateT smsma s1; let '(ssma, s2) := p in runStateT ssma s2);
 |}.
 
@@ -170,11 +172,11 @@ Instance NDStateT_Monad(S: Type)(M: Type -> Type){MM: Monad M}: Monad (NDStateT 
 
 (* note: no "pick" is needed as argument here *)
 Instance NDS_Monad(S: Type): Monad (NDS S) := {|
-  ret{A}(a: A) :=
+  ret A (a: A) :=
     fun s => cons (a, s) nil;
-  mmap{A B}(f: A -> B)(m: NDS S A) :=
+  mmap A B (f: A -> B)(m: NDS S A) :=
     fun s => List.map (fun '(a, s) => (f a, s)) (m s);
-  join{A}(mm: NDS S (NDS S A)) :=
+  join A (mm: NDS S (NDS S A)) :=
     fun s1 => List.concat (List.map (fun '(m, s2) => m s2) (mm s1));
 |}.
 
