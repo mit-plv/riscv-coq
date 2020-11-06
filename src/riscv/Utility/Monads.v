@@ -63,10 +63,10 @@ Defined.
 Definition State(S A: Type) := S -> (A * S).
 
 Instance State_Monad(S: Type): Monad (State S). refine ({|
-  Bind := fun A B (m: State S A) (f: A -> State S B) =>
-            fun (s: S) => let (a, s') := m s in f a s' ;
-  Return := fun A (a: A) =>
-              fun (s: S) => (a, s)
+  Bind A B (m: State S A) (f: A -> State S B) :=
+    fun (s: S) => let (a, s') := m s in f a s' ;
+  Return A (a: A) :=
+    fun (s: S) => (a, s)
 |}).
 all: prove_monad_law.
 Defined.
@@ -81,13 +81,12 @@ End StateOperations.
 Definition OState(S A: Type) := S -> (option A) * S.
 
 Instance OState_Monad(S: Type): Monad (OState S). refine ({|
-  Bind := fun A B (m: OState S A) (f: A -> OState S B) =>
-            fun (s: S) => match m s with
-            | (Some a, s') => f a s'
-            | (None, s') => (None, s')
-            end;
-  Return := fun A (a: A) =>
-              fun (s: S) => (Some a, s)
+  Bind A B (m: OState S A) (f: A -> OState S B) :=
+    fun (s: S) => match m s with
+                  | (Some a, s') => f a s'
+                  | (None, s') => (None, s')
+                  end;
+  Return A (a: A) := fun (s: S) => (Some a, s)
 |}).
 all: prove_monad_law.
 Defined.
