@@ -90,6 +90,7 @@ Section Riscv.
       setCSRField f v := fail_hard;
       getPrivMode := fail_hard;
       setPrivMode v := fail_hard;
+      fence _ _ := fail_hard;
 
       endCycleNormal := update (fun m => (withPc m.(getNextPc)
                                          (withNextPc (word.add m.(getNextPc) (word.of_Z 4)) m)));

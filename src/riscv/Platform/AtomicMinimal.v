@@ -53,10 +53,11 @@ Section Riscv.
         | None => Return false
         | Some addr' => Return (word.eqb addr addr')
         end;
-        getCSRField := liftL1 id getCSRField;
-        setCSRField := liftL2 id setCSRField;
-        getPrivMode := liftL0 id getPrivMode;
-        setPrivMode := liftL1 id setPrivMode;
+      getCSRField := liftL1 id getCSRField;
+      setCSRField := liftL2 id setCSRField;
+      getPrivMode := liftL0 id getPrivMode;
+      setPrivMode := liftL1 id setPrivMode;
+      fence := liftL2 id fence;
       endCycleNormal := liftL0 id endCycleNormal;
       endCycleEarly{A} := liftL0 id (@endCycleEarly _ _ _ _ _ A);
     }.

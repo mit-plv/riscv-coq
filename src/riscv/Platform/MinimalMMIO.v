@@ -106,6 +106,7 @@ Section Riscv.
     | SetCSRField _ _
     | GetPrivMode
     | SetPrivMode _
+    | Fence _ _
         => fun postF postA => False
     end.
 

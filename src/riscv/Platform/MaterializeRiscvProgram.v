@@ -27,6 +27,7 @@ Section Riscv.
   | SetCSRField (_ : CSRField.CSRField) (_ : MachineInt)
   | GetPrivMode
   | SetPrivMode (_ : PrivMode)
+  | Fence (_ : MachineInt) (_ : MachineInt)
   | GetPC
   | SetPC (_ : word)
   | EndCycleNormal
@@ -48,6 +49,7 @@ Section Riscv.
     | SetCSRField _ _ => unit
     | GetPrivMode => PrivMode
     | SetPrivMode _ => unit
+    | Fence _ _ => unit
     | GetPC => word
     | SetPC _ => unit
     | EndCycleNormal => unit
@@ -72,6 +74,7 @@ Section Riscv.
     setCSRField f v := act (SetCSRField f v) ret;
     getPrivMode := act GetPrivMode ret;
     setPrivMode m := act (SetPrivMode m) ret;
+    fence a b := act (Fence a b) ret;
     getPC := act GetPC ret;
     setPC a := act (SetPC a) ret;
     endCycleNormal := act EndCycleNormal ret;

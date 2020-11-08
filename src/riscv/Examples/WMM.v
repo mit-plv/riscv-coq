@@ -1,7 +1,6 @@
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import coqutil.Tactics.Tactics.
 Require Import coqutil.Tactics.Simp.
-Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Spec.Execute.
 Require Import riscv.Utility.Monads.
@@ -20,6 +19,7 @@ Require Import coqutil.Word.Properties.
 Require Import coqutil.Z.prove_Zeq_bitwise.
 Require Import Coq.ZArith.ZArith.
 Require Import riscv.Utility.PowerFunc.
+Require Import riscv.Spec.Decode.
 
 (* sub-relation *)
 Definition subrel{A B: Type}(R1 R2: A -> B -> Prop): Prop :=
@@ -471,6 +471,8 @@ Instance IsRiscvMachine: RiscvProgram M word :=  {
   getPrivMode := reject_program;
   setPrivMode v := reject_program;
 
+  fence a b := TODO;
+
   endCycleNormal := s <- get; put (s<|Pc := s.(NextPc)|><|NextPc := word.add s.(NextPc) (word.of_Z 4)|>);
 
   (* exceptions are not supported *)
@@ -818,31 +820,3 @@ Proof.
   simpl_exec.
   *)
 Abort.
-
-(* alternative: free monad based: *)
-Definition run_primitive(a: riscv_primitive)(s: ThreadState)(G: Graph)(s': ThreadState):
-  primitive_result a -> Prop :=
-  match a with
-  | GetRegister reg => TODO
-  | SetRegister reg v => TODO
-  | GetPC => TODO
-  | SetPC newPC => TODO
-  | LoadByte ctxid a => TODO
-  | LoadHalf ctxid a => TODO
-  | LoadWord ctxid a => TODO
-  | LoadDouble ctxid a => TODO
-  | StoreByte ctxid a v => TODO
-  | StoreHalf ctxid a v => TODO
-  | StoreWord ctxid a v => TODO
-  | StoreDouble ctxid a v => TODO
-  | EndCycleNormal => TODO
-  | EndCycleEarly _ => TODO
-  | GetCSRField f => TODO
-  | SetCSRField f v => TODO
-  | GetPrivMode => TODO
-  | SetPrivMode mode => TODO
-  | MakeReservation _
-  | ClearReservation _
-  | CheckReservation _
-    => TODO
-  end.

@@ -86,6 +86,7 @@ Section Riscv.
     setCSRField _ _    := fun _ _ => False;
     getPrivMode        := fun _ _ => False;
     setPrivMode _      := fun _ _ => False;
+    fence _ _          := fun _ _ => False;
     endCycleEarly _    := fun _ _ => False;
     endCycleNormal     := fun mach post => _;
   |}).

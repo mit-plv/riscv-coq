@@ -56,6 +56,7 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   setPC: t -> M unit;
   getPrivMode: M PrivMode;
   setPrivMode: PrivMode -> M unit;
+  fence: MachineInt -> MachineInt -> M unit;
 
   (* Both of these update the PC at the end of a cycle.
      Every instance must support endCycleNormal.

@@ -94,6 +94,7 @@ Section Riscv.
     | MakeReservation _
     | ClearReservation _
     | CheckReservation _
+    | Fence _ _
         => fun postF postA => False
     end.
 

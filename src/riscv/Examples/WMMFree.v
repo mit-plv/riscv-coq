@@ -2,7 +2,6 @@ Require Import Coq.Lists.List. Import ListNotations.
 Require Import coqutil.Decidable.
 Require Import coqutil.Tactics.Tactics.
 Require Import coqutil.Tactics.Simp.
-Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Spec.Execute.
 Require Import riscv.Utility.Monads.
@@ -22,6 +21,7 @@ Require Import riscv.Utility.PowerFunc.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.PropExtensionality.
 Require Import Coq.derive.Derive.
+Require Import riscv.Spec.Decode.
 
 (* sub-relation *)
 Definition subrel{A B: Type}(R1 R2: A -> B -> Prop): Prop :=
@@ -495,6 +495,12 @@ Instance IsRiscvMachine: RiscvProgram M word :=  {
   setCSRField f v := reject_program;
   getPrivMode := reject_program;
   setPrivMode v := reject_program;
+
+  fence a b := (* TODO honor arguments of fence *)
+    s <- get;
+    G <- ask;
+    assert_graph (select G.(Lab) s.(CurrentEvent) = FenceLabel);;
+    put (withCurrentEvent (NextEvent s.(CurrentEvent)) s);
 
   endCycleNormal := s <- get; put (withPc s.(NextPc) (withNextPc (word.add s.(NextPc) (word.of_Z 4)) s));
 

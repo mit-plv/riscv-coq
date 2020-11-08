@@ -54,6 +54,7 @@ Section Riscv.
     setCSRField f v := act (id, SetCSRField f v) ret;
     getPrivMode := act (id, GetPrivMode) ret;
     setPrivMode m := act (id, SetPrivMode m) ret;
+    fence a b := act (id, Fence a b) ret;
     getPC := act (id, GetPC) ret;
     setPC a := act (addMetricJumps 1, SetPC a) ret;
     endCycleNormal := act (addMetricInstructions 1, EndCycleNormal) ret;

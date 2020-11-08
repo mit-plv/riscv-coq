@@ -107,6 +107,7 @@ Section Sane.
           | apply setCSRField_sane
           | apply getPrivMode_sane
           | apply setPrivMode_sane
+          | apply fence_sane
           | apply endCycleNormal_sane
           | apply endCycleEarly_sane
           | apply getPC_sane

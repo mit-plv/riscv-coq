@@ -69,6 +69,7 @@ Section Riscv.
       setCSRField := setCSRField;
       getPrivMode := getPrivMode;
       setPrivMode := setPrivMode;
+      fence := fence;
 
       endCycleNormal := endCycleNormal;
       endCycleEarly{A} := @endCycleEarly _ _ _ _ _ A;

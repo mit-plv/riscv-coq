@@ -61,6 +61,7 @@ Section Riscv.
     setCSRField := liftL2 id setCSRField;
     getPrivMode := liftL0 id getPrivMode;
     setPrivMode := liftL1 id setPrivMode;
+    fence := liftL2 id fence;
     endCycleNormal := liftL0 (addMetricInstructions 1) endCycleNormal;
     endCycleEarly{A} := liftL0 (addMetricInstructions 1) (@endCycleEarly _ _ _ _ _ A);
   }.

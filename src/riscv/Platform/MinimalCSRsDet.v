@@ -111,6 +111,7 @@ Section Riscv.
         | Machine => Return tt
         | User | Supervisor => fail_hard
         end;
+      fence _ _ := fail_hard;
 
       endCycleNormal := mach <- get; put (updatePc mach);
       endCycleEarly{A: Type} := mach <- get; put (updatePc mach);; abort;
