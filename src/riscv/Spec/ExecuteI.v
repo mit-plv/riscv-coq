@@ -241,7 +241,7 @@ Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
         Bind (Spec.Machine.getRegister rs1) (fun x =>
                 Bind (Spec.Machine.getRegister rs2) (fun y =>
                         Spec.Machine.setRegister rd (and x y)))
-    | Spec.Decode.Fence pred succ => Return tt
+    | Spec.Decode.Fence pred succ => Spec.Machine.fence pred succ
     | Spec.Decode.Fence_i => Return tt
     | inst => Return tt
     end.
@@ -258,14 +258,14 @@ Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
      Spec.Decode.Slti Spec.Decode.Sltiu Spec.Decode.Sltu Spec.Decode.Sra
      Spec.Decode.Srai Spec.Decode.Srl Spec.Decode.Srli Spec.Decode.Sub Spec.Decode.Sw
      Spec.Decode.Xor Spec.Decode.Xori Spec.Machine.Execute Spec.Machine.Load
-     Spec.Machine.RiscvMachine Spec.Machine.Store Spec.Machine.getPC
-     Spec.Machine.getRegister Spec.Machine.loadByte Spec.Machine.loadHalf
-     Spec.Machine.loadWord Spec.Machine.raiseExceptionWithInfo Spec.Machine.setPC
-     Spec.Machine.setRegister Spec.Machine.storeByte Spec.Machine.storeHalf
-     Spec.Machine.storeWord Spec.VirtualMemory.translate Utility.Utility.fromImm
-     Utility.Utility.int16ToReg Utility.Utility.int32ToReg Utility.Utility.int8ToReg
-     Utility.Utility.ltu Utility.Utility.regToInt16 Utility.Utility.regToInt32
-     Utility.Utility.regToInt8 Utility.Utility.regToShamt Utility.Utility.remu
-     Utility.Utility.sll Utility.Utility.sra Utility.Utility.srl
+     Spec.Machine.RiscvMachine Spec.Machine.Store Spec.Machine.fence
+     Spec.Machine.getPC Spec.Machine.getRegister Spec.Machine.loadByte
+     Spec.Machine.loadHalf Spec.Machine.loadWord Spec.Machine.raiseExceptionWithInfo
+     Spec.Machine.setPC Spec.Machine.setRegister Spec.Machine.storeByte
+     Spec.Machine.storeHalf Spec.Machine.storeWord Spec.VirtualMemory.translate
+     Utility.Utility.fromImm Utility.Utility.int16ToReg Utility.Utility.int32ToReg
+     Utility.Utility.int8ToReg Utility.Utility.ltu Utility.Utility.regToInt16
+     Utility.Utility.regToInt32 Utility.Utility.regToInt8 Utility.Utility.regToShamt
+     Utility.Utility.remu Utility.Utility.sll Utility.Utility.sra Utility.Utility.srl
      Utility.Utility.uInt16ToReg Utility.Utility.uInt8ToReg
 *)
