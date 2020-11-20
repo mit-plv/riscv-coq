@@ -1,4 +1,5 @@
 Require Import Coq.Lists.List.
+Require Import Coq.Logic.Classical_Prop.
 Require Import Coq.derive.Derive.
 Require Import coqutil.Z.Lia.
 Import ListNotations.
@@ -180,3 +181,52 @@ Proof.
   subst prog1Bres.
   reflexivity.
 Qed.
+
+Goal forall regs, prog1Ares regs = prog1Bres regs.
+Proof.
+  unfold prog1Ares, prog1Bres, t1, t2.
+  intros.
+  apply NNPP.
+  let H := fresh "NegGoal" in intro H.
+  revert regs NegGoal.
+
+Notation "'and' A B" := (Logic.and A B) (at level 10, A at level 0, B at level 0).
+Notation "'or' A B" := (Logic.or A B) (at level 10, A at level 0, B at level 0).
+Notation "+ A B" := (Z.add A B) (at level 10, A at level 0, B at level 0).
+Notation "< A B" := (Z.lt A B) (at level 10, A at level 0, B at level 0).
+Notation "<= A B" := (Z.le A B) (at level 10, A at level 0, B at level 0).
+Notation "- A B" := (Z.sub A B) (at level 10, A at level 0, B at level 0).
+(* Notation "- 1" := minusone (at level 10, format "-  1"). omits space, why? *)
+Notation "* A B" := (Z.mul A B) (at level 10, A at level 0, B at level 0, format " *  A  B").
+Notation "'mod' A B" := (Z.modulo A B) (at level 10, A at level 0, B at level 0).
+Notation "^ A B" := (Z.pow A B) (at level 10, A at level 0, B at level 0).
+Notation "= A B" := (@eq _ A B) (at level 10, A at level 0, B at level 0).
+Notation "'exists' ( ( x T ) ) b" := (exists x: T, b) (at level 10, T at level 0, b at level 0).
+Notation "'not' A" := (negb A) (at level 10, A at level 0).
+Notation "'ite' b thn els" := (if b then thn else els)
+  (at level 10, b at level 0, thn at level 0, els at level 0).
+Notation "#xffffffff" := (ZToReg (-1)) (at level 0).
+Notation "'not' ( = A B )" := (A <> B) (at level 10, A at level 0, B at level 0, format "'not'  ( =  A  B )").
+
+Notation "'bvadd' A B" := (add A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvsub' A B" := (sub A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvmul' A B" := (mul A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvor' A B" := (or A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvxor' A B" := (xor A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvand' A B" := (and A B) (at level 10, A at level 0, B at level 0).
+
+Notation "'Int'" := Z.
+Notation "'(_' 'BitVec' '32)'" := (@word.rep _ _).
+Notation "'(declare-const' x T ) P" := (forall x: T, P)
+  (at level 0, x at level 0, T at level 0, P at level 0, format "'(declare-const'  x  T ) '//' P").
+Notation "'(assert' P ) Q" := (P -> Q)
+  (at level 0, P at level 0, Q at level 0, format "'(assert'  P ) '//' Q").
+Notation "'(check-sat)'" := False.
+
+Set Printing Width 120.
+Set Printing Coercions. (* COQBUG https://github.com/coq/coq/issues/13432 *)
+match goal with
+| |- ?G => idtac G
+end.
+
+Abort.
