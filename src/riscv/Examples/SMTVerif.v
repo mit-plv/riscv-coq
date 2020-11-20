@@ -1,22 +1,17 @@
 Require Import Coq.Lists.List.
 Require Import Coq.Logic.Classical_Prop.
-Require Import Coq.derive.Derive.
-Require Import coqutil.Z.Lia.
 Import ListNotations.
 Require Import coqutil.Decidable.
 Require Import coqutil.Word.Naive.
-Require Import coqutil.Word.Properties.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.Execute.
 Require Import Coq.ZArith.BinInt. Local Open Scope Z_scope.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Utility.PowerFunc.
-Require Import riscv.Platform.Memory.
 Require Import riscv.Utility.Monads. Import MonadNotations.
 Require Import riscv.Utility.MkMachineWidth.
 Require Import riscv.Utility.Words32Naive.
-Require Import coqutil.Z.HexNotation.
 Require Import riscv.Spec.PseudoInstructions.
 Require Import riscv.Utility.InstructionCoercions. Open Scope ilist_scope.
 Require Import riscv.Utility.RegisterNames.
