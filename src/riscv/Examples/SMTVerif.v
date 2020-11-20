@@ -19,19 +19,20 @@ Require Import coqutil.Z.HexNotation.
 Require Import riscv.Spec.PseudoInstructions.
 Require Import riscv.Utility.RegisterNames.
 
-Inductive Array(T U: Type): Type := mkArray (f: T -> U).
-Arguments mkArray {_} {_}.
-Definition select{T U: Type}(a: Array T U)(i: T): U :=
+(* note: this representation is not unique and stores at the same address don't simplify,
+   but the advantage is that Array literals don't contain eqb functions that cbv could
+   try simplifying even when its arguments are not concrete *)
+Inductive Array(T U: Type): Type :=
+| const(u: U)
+| store(a: Array T U)(i: T)(u: U).
+Arguments const {_} {_} _.
+Arguments store {_} {_}.
+
+Fixpoint select{T U: Type}{eqbT: T -> T -> bool}{eqbT_spec: EqDecider eqbT}(a: Array T U)(i: T): U :=
   match a with
-  | mkArray f => f i
+  | const u => u
+  | store a' i' u => if eqbT i i' then u else select a' i
   end.
-Definition Array2Fun{T U: Type}(a: Array T U): T -> U :=
-  match a with
-  | mkArray f => f
-  end.
-Definition store{T U: Type}{eqbT: T -> T -> bool}{eqbT_spec: EqDecider eqbT}(a: Array T U)(i: T)(u: U):
-  Array T U := mkArray (fun j => if eqbT i j then u else Array2Fun a j).
-Definition constArray(T U: Type)(u: U): Array T U := mkArray (fun _ => u).
 
 Record MachineState := mkMachineState {
   Regs: Array Register word;
@@ -126,11 +127,11 @@ Definition run1: OState MachineState unit :=
    the current cycle) are skipped. *)
 Definition runN(n: nat): OState MachineState unit := power_func (fun m => run1;; m) n (Return tt).
 
-Definition zeroRegs: Array Register word := mkArray (fun _ => word.of_Z 0).
+Definition zeroRegs: Array Register word := const (word.of_Z 0).
 
 Fixpoint prog2Array(l: list InstructionI)(start: word): Array word InstructionI :=
   match l with
-  | nil => constArray word InstructionI InvalidI
+  | nil => const InvalidI
   | i :: rest => store (prog2Array rest (word.add start (word.of_Z 4))) start i
   end.
 
@@ -164,6 +165,10 @@ Proof.
   unfold runLinear, initialState.
   match goal with
   | |- context [List.length ?l] => let r := eval cbv in (List.length l) in change (List.length l) with r
+  end.
+  match goal with
+  | |- context [prog2Array ?P ?A] =>
+    let r := eval cbv in (prog2Array P A) in change (prog2Array P A) with r
   end.
   unfold runN, power_func.
   unfold run1 at 1.
