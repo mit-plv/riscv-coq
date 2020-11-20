@@ -147,14 +147,26 @@ Definition initialState(initialRegs: Array Register word)(prog: list Instruction
 Definition runLinear(initialRegs: Array Register word)(prog: list Instruction): MachineState :=
   snd (runN (List.length prog) (initialState initialRegs prog)).
 
-(* t1 = t2 - t1 - 1 *)
+(* t1 = t2 * t3 *)
 Definition prog1A: list Instruction := [[
+  Mul t1 t2 t3
+]].
+
+(* Optimization of prog1A that is only valid if t3=5:
+   t1 = (t2 << 2) + t2 *)
+Definition prog1B: list Instruction := [[
+  Slli t1 t2 2;
+  Add t1 t1 t2
+]].
+
+(* t1 = t2 - t1 - 1 *)
+Definition prog2A: list Instruction := [[
   Sub t1 t2 t1;
   Addi t1 t1 (-1)
 ]].
 
 (* t1 = t2 + ~t1 *)
-Definition prog1B: list Instruction := [[
+Definition prog2B: list Instruction := [[
   Xori t1 t1 (-1);
   Add t1 t2 t1
 ]].
@@ -166,14 +178,16 @@ Ltac reduce_to_stores :=
          | |- context[store ?a _ _] => progress let r := eval hnf in a in change a with r
          end.
 
-Goal forall regs, Regs (runLinear regs prog1A) = Regs (runLinear regs prog1B).
+Goal forall regs,
+    select regs t3 = ZToReg 5 ->
+    Regs (runLinear regs prog1A) = Regs (runLinear regs prog1B).
 Proof.
   intros.
   reduce_to_stores.
-  unfold t1, t2.
+  unfold t1, t2, t3 in *.
   apply NNPP.
   let H := fresh "NegGoal" in intro H.
-  revert regs NegGoal.
+  revert regs H NegGoal.
 
 Notation "'and' A B" := (Logic.and A B) (at level 10, A at level 0, B at level 0).
 Notation "'or' A B" := (Logic.or A B) (at level 10, A at level 0, B at level 0).
@@ -190,6 +204,7 @@ Notation "'exists' ( ( x T ) ) b" := (exists x: T, b) (at level 10, T at level 0
 Notation "'not' A" := (negb A) (at level 10, A at level 0).
 Notation "'ite' b thn els" := (if b then thn else els)
   (at level 10, b at level 0, thn at level 0, els at level 0).
+Notation "'(_' 'bv' B 32 )" := (ZToReg B) (at level 0, format "'(_'  'bv' B  32 )").
 Notation "#xffffffff" := (ZToReg (-1)) (at level 0).
 Notation "'not' ( = A B )" := (A <> B) (at level 10, A at level 0, B at level 0, format "'not'  ( =  A  B )").
 
@@ -199,6 +214,12 @@ Notation "'bvmul' A B" := (mul A B) (at level 10, A at level 0, B at level 0).
 Notation "'bvor' A B" := (or A B) (at level 10, A at level 0, B at level 0).
 Notation "'bvxor' A B" := (xor A B) (at level 10, A at level 0, B at level 0).
 Notation "'bvand' A B" := (and A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvshl' A '(_' 'bv' B 32 )" := (sll A B)
+  (at level 10, A at level 0, B at level 0, format "'bvshl'  A  '(_'  'bv' B  32 )").
+Notation "'bvlshr' A '(_' 'bv' B 32 )" := (srl A B)
+  (at level 10, A at level 0, B at level 0, format "'bvlshr'  A  '(_'  'bv' B  32 )").
+Notation "'bvashr' A '(_' 'bv' B 32 )" := (sra A B)
+  (at level 10, A at level 0, B at level 0, format "'bvashr'  A  '(_'  'bv' B  32 )").
 
 Notation "'Int'" := Z.
 Notation "'(_' 'BitVec' '32)'" := (@word.rep _ _).
@@ -208,7 +229,7 @@ Notation "'(assert' P ) Q" := (P -> Q)
   (at level 0, P at level 0, Q at level 0, format "'(assert'  P ) '//' Q").
 Notation "'(check-sat)'" := False.
 
-Set Printing Width 120.
+Set Printing Width 80.
 Set Printing Coercions. (* COQBUG https://github.com/coq/coq/issues/13432 *)
 match goal with
 | |- ?G => idtac G
