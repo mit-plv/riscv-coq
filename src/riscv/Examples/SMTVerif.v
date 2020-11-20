@@ -171,6 +171,21 @@ Definition prog2B: list Instruction := [[
   Add t1 t2 t1
 ]].
 
+(* t3 = 31
+   t1 = t2 * t3 *)
+Definition prog3A: list Instruction := [[
+  Addi t3 zero 31;
+  Mul t1 t2 t3
+]].
+
+(* t1 = (t2 << 5) - t2
+   t3 = 31 *)
+Definition prog3B: list Instruction := [[
+  Slli t1 t2 5;
+  Sub t1 t1 t2;
+  Addi t3 zero 31 (* <-- could be removed later by dead code elimination *)
+]].
+
 Ltac reduce_to_stores :=
   repeat match goal with
          | |- ?LHS = ?RHS => progress (let l := eval hnf in LHS in change LHS with l;
@@ -181,13 +196,23 @@ Ltac reduce_to_stores :=
 Goal forall regs,
     select regs t3 = ZToReg 5 ->
     Regs (runLinear regs prog1A) = Regs (runLinear regs prog1B).
+Abort.
+
+Goal forall regs,
+    Regs (runLinear regs prog2A) = Regs (runLinear regs prog2B).
+Abort.
+
+Goal forall regs,
+    Regs (runLinear regs prog3A) = Regs (runLinear regs prog3B).
 Proof.
   intros.
   reduce_to_stores.
   unfold t1, t2, t3 in *.
   apply NNPP.
   let H := fresh "NegGoal" in intro H.
-  revert regs H NegGoal.
+  repeat match goal with
+         | H: _ |- _ => revert H
+         end.
 
 Notation "'and' A B" := (Logic.and A B) (at level 10, A at level 0, B at level 0).
 Notation "'or' A B" := (Logic.or A B) (at level 10, A at level 0, B at level 0).
@@ -229,7 +254,7 @@ Notation "'(assert' P ) Q" := (P -> Q)
   (at level 0, P at level 0, Q at level 0, format "'(assert'  P ) '//' Q").
 Notation "'(check-sat)'" := False.
 
-Set Printing Width 80.
+Set Printing Width 70.
 Set Printing Coercions. (* COQBUG https://github.com/coq/coq/issues/13432 *)
 match goal with
 | |- ?G => idtac G
