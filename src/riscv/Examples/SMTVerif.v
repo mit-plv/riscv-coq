@@ -18,6 +18,7 @@ Require Import riscv.Utility.MkMachineWidth.
 Require Import riscv.Utility.Words32Naive.
 Require Import coqutil.Z.HexNotation.
 Require Import riscv.Spec.PseudoInstructions.
+Require Import riscv.Utility.InstructionCoercions. Open Scope ilist_scope.
 Require Import riscv.Utility.RegisterNames.
 
 (* note: this representation is not unique and stores at the same address don't simplify,
@@ -39,7 +40,7 @@ Record MachineState := mkMachineState {
   Regs: Array Register word;
   Pc: word;
   NextPc: word;
-  Prog: Array word InstructionI;
+  Prog: Array word Instruction;
 }.
 
 Definition withRegs   x s := mkMachineState x        (Pc s) (NextPc s) (Prog s).
@@ -115,7 +116,7 @@ Instance IsRiscvProgram: RiscvProgram (OState MachineState) word :=  {
   }.
 
 Definition loadInstruction(a: word): OState MachineState Instruction :=
-  s <- get; Return (IInstruction (select s.(Prog) a)).
+  s <- get; Return (select s.(Prog) a).
 
 Definition run1: OState MachineState unit :=
   pc <- getPC;
@@ -130,62 +131,46 @@ Definition runN(n: nat): OState MachineState unit := power_func (fun m => run1;;
 
 Definition zeroRegs: Array Register word := const (word.of_Z 0).
 
-Fixpoint prog2Array(l: list InstructionI)(start: word): Array word InstructionI :=
+Fixpoint prog2Array(l: list Instruction)(start: word): Array word Instruction :=
   match l with
-  | nil => const InvalidI
+  | nil => const (InvalidInstruction 0)
   | i :: rest => store (prog2Array rest (word.add start (word.of_Z 4))) start i
   end.
 
-Definition initialState(initialRegs: Array Register word)(prog: list InstructionI): MachineState := {|
+Definition initialState(initialRegs: Array Register word)(prog: list Instruction): MachineState := {|
   Regs := initialRegs;
   Pc := word.of_Z 0;
   NextPc := word.of_Z 4;
   Prog := prog2Array prog (word.of_Z 0);
 |}.
 
-Definition runLinear(initialRegs: Array Register word)(prog: list InstructionI): MachineState :=
+Definition runLinear(initialRegs: Array Register word)(prog: list Instruction): MachineState :=
   snd (runN (List.length prog) (initialState initialRegs prog)).
 
 (* t1 = t2 - t1 - 1 *)
-Definition prog1A := [
+Definition prog1A: list Instruction := [[
   Sub t1 t2 t1;
   Addi t1 t1 (-1)
-].
+]].
 
 (* t1 = t2 + ~t1 *)
-Definition prog1B := [
+Definition prog1B: list Instruction := [[
   Xori t1 t1 (-1);
   Add t1 t2 t1
-].
+]].
 
 Ltac reduce_to_stores :=
   repeat match goal with
-         | |- _ = ?RHS => progress let r := eval hnf in RHS in change RHS with r
+         | |- ?LHS = ?RHS => progress (let l := eval hnf in LHS in change LHS with l;
+                                       let r := eval hnf in RHS in change RHS with r)
          | |- context[store ?a _ _] => progress let r := eval hnf in a in change a with r
          end.
 
-Derive prog1Ares
-  SuchThat (forall r0, prog1Ares r0 = Regs (runLinear r0 prog1A))
-  As prog1Ares_correct.
+Goal forall regs, Regs (runLinear regs prog1A) = Regs (runLinear regs prog1B).
 Proof.
-  intros. reduce_to_stores.
-  subst prog1Ares.
-  reflexivity.
-Qed.
-
-Derive prog1Bres
-  SuchThat (forall r0, prog1Bres r0 = Regs (runLinear r0 prog1B))
-  As prog1Bres_correct.
-Proof.
-  intros. reduce_to_stores.
-  subst prog1Bres.
-  reflexivity.
-Qed.
-
-Goal forall regs, prog1Ares regs = prog1Bres regs.
-Proof.
-  unfold prog1Ares, prog1Bres, t1, t2.
   intros.
+  reduce_to_stores.
+  unfold t1, t2.
   apply NNPP.
   let H := fresh "NegGoal" in intro H.
   revert regs NegGoal.
