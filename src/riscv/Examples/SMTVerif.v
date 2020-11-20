@@ -157,65 +157,26 @@ Definition prog1B := [
   Add t1 t2 t1
 ].
 
+Ltac reduce_to_stores :=
+  repeat match goal with
+         | |- _ = ?RHS => progress let r := eval hnf in RHS in change RHS with r
+         | |- context[store ?a _ _] => progress let r := eval hnf in a in change a with r
+         end.
+
 Derive prog1Ares
   SuchThat (forall r0, prog1Ares r0 = Regs (runLinear r0 prog1A))
-  As run1_correct.
+  As prog1Ares_correct.
 Proof.
-  intros.
-  unfold runLinear, initialState.
-  match goal with
-  | |- context [List.length ?l] => let r := eval cbv in (List.length l) in change (List.length l) with r
-  end.
-  match goal with
-  | |- context [prog2Array ?P ?A] =>
-    let r := eval cbv in (prog2Array P A) in change (prog2Array P A) with r
-  end.
-  unfold runN, power_func.
-  unfold run1 at 1.
-  unfold Bind, Return, OState_Monad.
-  unfold getPC, IsRiscvProgram, get, Bind, OState_Monad, Pc, Return, loadInstruction.
-  unfold get, Bind, OState_Monad, Return.
-  match goal with
-  | |- context[select ?p ?i] => let r := eval cbv in (select p i) in change (select p i) with r
-  end.
-  unfold execute, ExecuteI.execute.
-  unfold getRegister, setRegister, update, get, put, Bind, OState_Monad, endCycleNormal.
-  repeat match goal with
-  | |- context[match ?b in bool return ?r with true => ?c | false => ?d end] =>
-       change (match  b in bool return  r with true =>  c | false =>  d end) with c
-  | |- context[match ?b in bool return ?r with true => ?c | false => ?d end] =>
-       change (match  b in bool return  r with true =>  c | false =>  d end) with d
-  | |- context[match ?b in sumbool _ _ return ?r with right _ _ => ?c | left _ _ => ?d end] =>
-       change (match  b in sumbool _ _ return  r with right _ _ =>  c | left _ _ =>  d end) with c
-  | |- context[match ?b in sumbool _ _ return ?r with right _ _ => ?c | left _ _ => ?d end] =>
-       change (match  b in sumbool _ _ return  r with right _ _ =>  c | left _ _ =>  d end) with d
-  | |- _ => progress cbv beta iota zeta
-  | |- _ => progress cbv [Regs Pc NextPc Prog withRegs withPc withNextPc withProg]
-  end.
-  unfold run1 at 1.
-  unfold Bind, Return, OState_Monad.
-  unfold getPC, IsRiscvProgram.
-  unfold get, Bind, OState_Monad, Pc, Return.
-  unfold loadInstruction.
-  unfold get, Bind, OState_Monad, Return.
-  match goal with
-  | |- context[select ?p ?i] => let r := eval cbv in (select p i) in change (select p i) with r
-  end.
-  unfold execute, ExecuteI.execute.
-  unfold getRegister, setRegister, update, get, put, Bind, OState_Monad, endCycleNormal.
-  repeat match goal with
-  | |- context[match ?b in bool return ?r with true => ?c | false => ?d end] =>
-       change (match  b in bool return  r with true =>  c | false =>  d end) with c
-  | |- context[match ?b in bool return ?r with true => ?c | false => ?d end] =>
-       change (match  b in bool return  r with true =>  c | false =>  d end) with d
-  | |- context[match ?b in sumbool _ _ return ?r with right _ _ => ?c | left _ _ => ?d end] =>
-       change (match  b in sumbool _ _ return  r with right _ _ =>  c | left _ _ =>  d end) with c
-  | |- context[match ?b in sumbool _ _ return ?r with right _ _ => ?c | left _ _ => ?d end] =>
-       change (match  b in sumbool _ _ return  r with right _ _ =>  c | left _ _ =>  d end) with d
-  | |- _ => progress cbv beta iota zeta
-  | |- _ => progress cbv [Regs Pc NextPc Prog withRegs withPc withNextPc withProg]
-  end.
-  cbv [snd].
+  intros. reduce_to_stores.
   subst prog1Ares.
+  reflexivity.
+Qed.
+
+Derive prog1Bres
+  SuchThat (forall r0, prog1Bres r0 = Regs (runLinear r0 prog1B))
+  As prog1Bres_correct.
+Proof.
+  intros. reduce_to_stores.
+  subst prog1Bres.
   reflexivity.
 Qed.
