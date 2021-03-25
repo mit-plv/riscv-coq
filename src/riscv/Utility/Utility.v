@@ -2,7 +2,6 @@ Require Export Coq.ZArith.BinIntDef.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.setoid_ring.Ring_theory.
 Require Export coqutil.Word.Interface.
-Require Import coqutil.Tactics.SafeSimpl.
 Require Export coqutil.Byte.
 Require Import coqutil.Datatypes.HList.
 Require Import coqutil.sanity.
@@ -27,11 +26,6 @@ Class Words := {
   word: word width;
   word_ok :> word.ok word;
 }.
-
-Instance SafeSimpl_width: SafeSimpl (@width) 1 := {}.
-Instance SafeSimpl_width_cases: SafeSimpl (@width_cases) 1 := {}.
-Instance SafeSimpl_word: SafeSimpl (@word) 1 := {}.
-Instance SafeSimpl_word_ok: SafeSimpl (@word_ok) 1 := {}.
 
 (* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
    no matter whether it's a 32-bit or 64-bit machine. *)
