@@ -60,10 +60,8 @@ Definition FieldNames: natmap Type := MinimalCSRsDet.Fields (natmap.put nil exec
 
 Definition State: Type := hnatmap FieldNames.
 
-Notation Registers := (@SortedList.rep (Zkeyed_map_params (@Naive.rep 32))).
-
-Definition initial_regs: Registers :=
-  map.of_tuple (HList.tuple.unfoldn (Z.add 1) 31 1) (HList.tuple.unfoldn id 31 (word.of_Z 0)).
+Definition initial_regs :=
+  map.of_tuple (key:=Z) (HList.tuple.unfoldn (Z.add 1) 31 1) (HList.tuple.unfoldn id 31 (word.of_Z (word:=Naive.word 32) 0)).
 
 Definition initial_state: State := HNil
   [regs := initial_regs]

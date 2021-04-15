@@ -159,12 +159,7 @@ Section Riscv.
       map.undef_on m s ->
       map.undef_on m' s.
   Proof.
-    intros.
-    (* TODO why does this not solve the goal? *)
     eauto using map.same_domain_preserves_undef_on, Memory.store_bytes_preserves_domain.
-    eapply map.same_domain_preserves_undef_on.
-    - eassumption.
-    - eapply Memory.store_bytes_preserves_domain. eassumption.
   Qed.
 
   Lemma interpret_action_total{memOk: map.ok Mem} a s postF postA :
