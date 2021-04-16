@@ -157,6 +157,8 @@ Section Riscv.
          its inhabitant were constructed using the RiscvProgram primitives *)
   Abort.
 
+  (* COQBUG: https://github.com/coq/coq/issues/14125 *)
+  Local Hint Mode Word.Interface.word + : typeclass_instances.
   Lemma preserve_undef_on{memOk: map.ok Mem}: forall n (m m': Mem) a w s,
       Memory.store_bytes n m a w = Some m' ->
       map.undef_on m s ->
