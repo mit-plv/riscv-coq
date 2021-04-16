@@ -159,7 +159,63 @@ Section Riscv.
       map.undef_on m s ->
       map.undef_on m' s.
   Proof.
-    eauto using map.same_domain_preserves_undef_on, Memory.store_bytes_preserves_domain.
+    Set Printing All.
+    Set Typeclasses Debug.
+
+    Local Hint Mode Word.Interface.word + : typeclass_instances.
+    pose proof Memory.store_bytes_preserves_domain as H'.
+    (*
+1: looking for (word.word ?width) with backtracking
+2: looking for (map.map (@word.rep ?width ?word) (Init.Byte.byte : Type)) with backtracking
+3: looking for (@word.ok ?width ?word) with backtracking
+3.1: simple apply @word_ok on (@word.ok ?width ?word), 0 subgoal(s)
+3.1: simple apply @word_ok on
+(@word.ok ?width ?word), 1 subgoal(s) in addition to the first 0
+3.1-1 : Words
+3.1-1: looking for Words without backtracking
+3.1-1.1: exact W on Words, 0 subgoal(s)
+4: looking for (@map.ok (@word.rep (@width W) (@word W)) Init.Byte.byte ?mem) with backtracking
+4.1: exact memOk on
+(@map.ok (@word.rep (@width W) (@word W)) Init.Byte.byte ?mem), 0 subgoal(s)
+Finished run 1 of resolution.
+     *)
+
+    Local Hint Mode Word.Interface.word - : typeclass_instances.
+    Fail pose proof Memory.store_bytes_preserves_domain as H.
+    (*
+1: looking for (word.word ?width) with backtracking
+1: no match for (word.word ?width), 0 possibilities
+The command has indeed failed with message:
+Cannot infer the implicit parameter memOk of
+Memory.store_bytes_preserves_domain whose type is
+"@map.ok (@word.rep ?width ?word) Init.Byte.byte ?mem" (no type class
+instance found) in
+environment:
+W : Words
+Mem : map.map (@word.rep (@width W) (@word W)) (Init.Byte.byte : Type)
+Registers : map.map Z (@word.rep (@width W) (@word W))
+mmio_spec : @MMIOSpec W
+memOk : @map.ok (@word.rep (@width W) (@word W)) Init.Byte.byte Mem
+H' : forall (n : nat)
+       (m : @map.rep (@word.rep (@width W) (@word W)) 
+              (Init.Byte.byte : Type) Mem)
+       (a : @word.rep (@width W) (@word W))
+       (v : HList.tuple (Init.Byte.byte : Type) n)
+       (m' : @map.rep (@word.rep (@width W) (@word W))
+               (Init.Byte.byte : Type) Mem)
+       (_ : @eq
+              (option
+                 (@map.rep (@word.rep (@width W) (@word W))
+                    (Init.Byte.byte : Type) Mem))
+              (@Memory.store_bytes (@width W) (@word W) Mem n m a v)
+              (@Some
+                 (@map.rep (@word.rep (@width W) (@word W))
+                    (Init.Byte.byte : Type) Mem) m')),
+     @map.same_domain (@word.rep (@width W) (@word W)) Init.Byte.byte Mem m
+       m'
+     *)
+
+    eauto using map.same_domain_preserves_undef_on.
   Qed.
 
   Lemma interpret_action_total{memOk: map.ok Mem} a s postF postA :

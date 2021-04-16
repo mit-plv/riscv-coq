@@ -162,7 +162,8 @@ Section Riscv.
       map.undef_on m s ->
       map.undef_on m' s.
   Proof.
-    eauto using map.same_domain_preserves_undef_on, Memory.store_bytes_preserves_domain.
+    epose proof Memory.store_bytes_preserves_domain.
+    eauto using map.same_domain_preserves_undef_on.
   Qed.
 
   Global Instance MinimalMMIOPrimitivesSane{memOk: map.ok Mem} :
