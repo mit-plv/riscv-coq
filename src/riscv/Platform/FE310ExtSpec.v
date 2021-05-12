@@ -7,7 +7,7 @@ Require Import riscv.Platform.MinimalMMIO.
 Local Open Scope Z_scope.
 
 Section MMIO.
-  Context {W: Words}.
+  Context {W: Words} {Mem : map.map word byte}.
 
   (* Using the memory layout of FE310-G000 *)
   Definition isOTP  (addr: word): Prop := Ox"00020000" <= word.unsigned addr < Ox"00022000".
@@ -19,6 +19,7 @@ Section MMIO.
   Instance FE310_mmio: MMIOSpec := {|
     isMMIOAddr(addr: word) := isOTP addr \/ isPRCI addr \/ isGPIO0 addr \/ isUART0 addr \/ isSPI1 addr;
     isMMIOAligned(n: nat)(addr: word) := n = 4%nat /\ (word.unsigned addr) mod 4 = 0;
+    MMIOReadOK := fun _ _ _ _ => True;
   |}.
 
 End MMIO.

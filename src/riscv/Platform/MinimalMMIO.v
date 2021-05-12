@@ -22,13 +22,15 @@ Require Import riscv.Platform.Sane.
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
-
-Class MMIOSpec{W: Words} := {
+Class MMIOSpec{W: Words} {Mem : map.map word byte} := {
   (* should not say anything about alignment, just whether it's in the MMIO range *)
   isMMIOAddr: word -> Prop;
 
   (* alignment and load size checks *)
   isMMIOAligned: nat -> word -> Prop;
+
+  (* hardware guarantees on MMIO read values *)
+  MMIOReadOK : nat -> list LogItem -> word -> word -> Prop;
 }.
 
 Section Riscv.
@@ -59,8 +61,13 @@ Section Riscv.
     end.
 
   Definition nonmem_load(n: nat)(ctxid: SourceType) a mach (post: _ -> _ -> Prop) :=
-    isMMIOAddr a /\ isMMIOAligned n a /\
-    forall v, post v (withLogItem (@mmioLoadEvent a n v) mach).
+    isMMIOAddr a /\ isMMIOAligned n a
+    (* there exists at least one valid MMIO read value (set is nonempty) *)
+    /\ (exists v : HList.tuple byte n, MMIOReadOK n (getLog mach) a (signedByteTupleToReg v))
+    (* ...and postcondition holds for all valid read values *)
+    /\ forall v,
+        MMIOReadOK n (getLog mach) a (signedByteTupleToReg v) ->
+        post v (withLogItem (@mmioLoadEvent a n v) mach).
 
   Definition load(n: nat)(ctxid: SourceType) a mach post :=
     (ctxid = Fetch -> isXAddr4 a mach.(getXAddrs)) /\
@@ -167,20 +174,27 @@ Section Riscv.
     disjoint (of_list s.(getXAddrs)) isMMIOAddr ->
     interpret_action a s postF postA ->
     exists s', map.undef_on s'.(getMem) isMMIOAddr /\
-               disjoint (of_list s'.(getXAddrs)) isMMIOAddr /\
-               (postA s' \/ exists v', postF v' s').
+          disjoint (of_list s'.(getXAddrs)) isMMIOAddr /\
+          (postA s' \/ exists v', postF v' s').
   Proof.
     destruct s, a; cbn -[HList.tuple];
       cbv [load store nonmem_load nonmem_store]; cbn -[HList.tuple];
         repeat destruct_one_match;
         intuition idtac;
-        do 2 eexists;
+        repeat lazymatch goal with
+               | H : postF _ ?mach |- exists _ : RiscvMachine, _ =>
+                 exists mach; cbn [RiscvMachine.getMem RiscvMachine.getXAddrs]
+               | H : postA ?mach |- exists _ : RiscvMachine, _ =>
+                 exists mach; cbn [RiscvMachine.getMem RiscvMachine.getXAddrs]
+               | Hexists : (exists v, ?P), Hforall : (forall v, ?P -> _) |- _ =>
+                 let v := fresh "v" in
+                 destruct Hexists as [v Hexists];
+                   specialize (Hforall v Hexists)
+               end;
         ssplit; eauto; simpl;
         change removeXAddr with (@List.removeb word word.eqb _);
         rewrite ?ListSet.of_list_removeb;
         intuition eauto 10 using preserve_undef_on, disjoint_diff_l.
-    Unshelve.
-    all: repeat constructor; exact (word.of_Z 0).
   Qed.
 
   Lemma interpret_action_total'{memOk: map.ok Mem} a s post :
