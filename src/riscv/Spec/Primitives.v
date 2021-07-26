@@ -15,7 +15,7 @@ Definition valid_register(r: Register): Prop := (0 < r < 32)%Z.
 
 Section Primitives.
 
-  Context {W: Words}.
+  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
   Context {Registers: map.map Register word}.
   Context {mem: map.map word byte}.
 
@@ -178,4 +178,4 @@ Section Primitives.
 
 End Primitives.
 
-Arguments PrimitivesParams {_ _ _} M Machine.
+Arguments PrimitivesParams {_ _ _ _ _} M Machine.

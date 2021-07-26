@@ -7,9 +7,8 @@ Require Import riscv.Utility.Utility.
 
 Section Riscv.
   Import free.
-  Context {W: Words}.
 
-  Variant riscv_primitive :=
+  Variant riscv_primitive{width}{BW: Bitwidth width}{word: word width}:=
   | GetRegister (_ : Register)
   | SetRegister (_ : Register) (_ : word)
   | LoadByte (_ : SourceType) (_ : word)
@@ -33,6 +32,8 @@ Section Riscv.
   | EndCycleNormal
   | EndCycleEarly (_ : Type)
   .
+
+  Context {width} {BW: Bitwidth width} {word: word width}.
 
   Definition primitive_result (action : riscv_primitive) : Type :=
     match action with

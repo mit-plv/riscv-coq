@@ -19,7 +19,7 @@ Import ListNotations.
 
 Section Riscv.
 
-  Context {W: Words}.
+  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
 
@@ -103,11 +103,11 @@ Section Riscv.
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
 
-  Lemma VirtualMemoryFetchP: forall addr xAddrs,
+  Lemma VirtualMemoryFetchP: forall (addr: word) xAddrs,
       VirtualMemory = Fetch -> isXAddr4 addr xAddrs.
   Proof. intros. discriminate. Qed.
 
-  Lemma ExecuteFetchP: forall addr xAddrs,
+  Lemma ExecuteFetchP: forall (addr: word) xAddrs,
       Execute = Fetch -> isXAddr4 addr xAddrs.
   Proof. intros. discriminate. Qed.
 

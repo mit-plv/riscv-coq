@@ -22,7 +22,7 @@ Require Import riscv.Platform.Sane.
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
-Class MMIOSpec{W: Words} {Mem : map.map word byte} := {
+Class MMIOSpec{width: Z}{BW: Bitwidth width}{word: word width}{Mem : map.map word byte} := {
   (* should not say anything about alignment, just whether it's in the MMIO range *)
   isMMIOAddr: word -> Prop;
 
@@ -35,7 +35,8 @@ Class MMIOSpec{W: Words} {Mem : map.map word byte} := {
 
 Section Riscv.
   Import free.
-  Context {W: Words} {Mem: map.map word byte} {Registers: map.map Register word}.
+  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {Mem: map.map word byte} {Registers: map.map Register word}.
 
   Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
     word.of_Z (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).

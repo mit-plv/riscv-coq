@@ -1,14 +1,13 @@
 Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Z.Lia.
-Require Import coqutil.Word.Naive.
 Require Import coqutil.Word.Properties.
-Require Import riscv.Utility.Utility.
+Require Import coqutil.Word.Bitwidth.
+Require Import coqutil.Word.Naive.
 
 Local Open Scope Z_scope.
 
-Existing Instance Naive.word.
+Instance word: word.word 32 := Naive.word 32.
 
-Instance Words32Naive: Words := {|
-  word := word32;
+Instance Words32Naive: Bitwidth 32 := {|
   width_cases := or_introl eq_refl;
 |}.
