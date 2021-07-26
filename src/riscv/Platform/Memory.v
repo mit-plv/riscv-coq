@@ -2,6 +2,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
+Require Import coqutil.Word.Bitwidth.
 Require Import coqutil.Datatypes.HList.
 Require Import coqutil.Datatypes.PrimitivePair.
 Require Import coqutil.Map.Interface.
@@ -15,7 +16,7 @@ Local Open Scope Z_scope.
 
 
 Section MemAccess.
-  Context {width: Z} {word: Word.Interface.word width} {mem: map.map word byte}.
+  Context {width} {word: word width} {mem: map.map word byte}.
 
   Definition footprint(a: word)(sz: nat): tuple word sz :=
     tuple.unfoldn (fun w => word.add w (word.of_Z 1)) sz a.
@@ -88,7 +89,7 @@ End MemAccess.
 Require Import riscv.Utility.Utility.
 
 Section MemAccess2.
-  Context {W: Words} {mem: map.map word byte}.
+  Context {width} {word: word width} {mem: map.map word byte}.
 
   Definition loadByte:   mem -> word -> option w8  := load_bytes 1.
   Definition loadHalf:   mem -> word -> option w16 := load_bytes 2.
@@ -105,7 +106,7 @@ End MemAccess2.
 Local Unset Universe Polymorphism.
 
 Section MemoryHelpers.
-  Context {W: Words}.
+  Context {width} {word: word width} {word_ok: word.ok word}.
   Add Ring wring: (@word.ring_theory width word word_ok).
 
   Goal forall (a: word), word.add a (word.of_Z 0) = a. intros. ring. Qed.

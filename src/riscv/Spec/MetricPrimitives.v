@@ -14,7 +14,7 @@ Require Import riscv.Spec.Primitives.
 
 Section MetricPrimitives.
 
-  Context {W: Words}.
+  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
   Context {Registers: map.map Register word}.
   Context {mem: map.map word byte}.
 

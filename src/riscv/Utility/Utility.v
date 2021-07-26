@@ -2,6 +2,7 @@ Require Export Coq.ZArith.BinIntDef.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.setoid_ring.Ring_theory.
 Require Export coqutil.Word.Interface.
+Require Export coqutil.Word.Bitwidth.
 Require Export coqutil.Byte.
 Require Import coqutil.Datatypes.HList.
 Require Import coqutil.sanity.
@@ -19,13 +20,6 @@ Definition w8  := tuple byte 1.
 Definition w16 := tuple byte 2.
 Definition w32 := tuple byte 4.
 Definition w64 := tuple byte 8.
-
-Class Words := {
-  width : Z;
-  width_cases: width = 32 \/ width = 64;
-  word: word width;
-  word_ok :> word.ok word;
-}.
 
 (* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
    no matter whether it's a 32-bit or 64-bit machine. *)

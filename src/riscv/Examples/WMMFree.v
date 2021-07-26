@@ -392,9 +392,9 @@ Definition setDeps(D: Array Register (set Event))(r: Register)(s: set Event): Ar
   if Z.eqb r 0 then D else store D r s.
 
 Notation "D <[ r ]>" := (getDeps D r)
-  (at level 8, left associativity, format "D <[ r ]>", only parsing).
+  (at level 8, left associativity, only parsing).
 Notation "D <[ r := s ]>" := (setDeps D r s)
-  (at level 8, left associativity, format "D <[ r  :=  s ]>", only parsing).
+  (at level 8, left associativity, only parsing).
 
 Definition checkDepsI(inst: InstructionI): M unit :=
   match inst with
@@ -653,7 +653,9 @@ Proof.
   reflexivity.
 Qed.
 
+(*
 Print simplified_run1.
+*)
 
 Local Set Warnings "-notation-both-format-and-spaces".
 

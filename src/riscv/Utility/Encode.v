@@ -274,7 +274,7 @@ Definition Encoder: InstructionMapper MachineInt := {|
 
 Definition encode: Instruction -> MachineInt := apply_InstructionMapper Encoder.
 
-Hint Unfold
+#[export] Hint Unfold
   encode
   encode_Fence
   encode_I

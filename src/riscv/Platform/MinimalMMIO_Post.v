@@ -21,7 +21,7 @@ Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
 
-Class MMIOSpec{W: Words} := {
+Class MMIOSpec{width: Z}{BW: Bitwidth width}{word: word width} := {
   (* should not say anything about alignment, just whether it's in the MMIO range *)
   isMMIOAddr: word -> Prop;
 
@@ -30,7 +30,8 @@ Class MMIOSpec{W: Words} := {
 }.
 
 Section Riscv.
-  Context {W: Words} {Mem: map.map word byte} {Registers: map.map Register word}.
+  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {Mem: map.map word byte} {Registers: map.map Register word}.
 
   Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
     word.of_Z (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).

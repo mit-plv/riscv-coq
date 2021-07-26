@@ -44,7 +44,7 @@ Definition Csrwi imm csr := Csrrwi x0 imm csr.
 Definition Csrsi imm csr := Csrrsi x0 imm csr.
 Definition Csrci imm csr := Csrrci x0 imm csr.
 
-Hint Unfold
+#[export] Hint Unfold
     Nop
     Mov
     Not

@@ -6,7 +6,7 @@ Require Import coqutil.Datatypes.HList.
 Require Import riscv.Utility.Utility.
 Local Open Scope Z_scope.
 
-Instance MachineWidth_XLEN{W: Words}: MachineWidth word := {|
+Instance MachineWidth_XLEN{width}{_: Bitwidth width}{word: word width}: MachineWidth word := {|
   add := word.add;
   sub := word.sub;
   mul := word.mul;

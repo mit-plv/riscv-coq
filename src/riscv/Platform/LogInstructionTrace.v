@@ -21,7 +21,7 @@ Definition exectrace: nat := 8.
 Definition ExecTrace: Type := list (Z * Instruction). (* pc and instruction *)
 
 Section Riscv.
-  Context {W: Words}.
+  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
   Context {Mem: map.map word byte}.
   Context (UnknownFields: natmap Type).
 

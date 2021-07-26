@@ -10,7 +10,7 @@ Require Import riscv.Platform.MetricLogging.
 
 Section Machine.
 
-  Context {W: Words}.
+  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
   Context {Registers: map.map Register word}.
   Context {Mem: map.map word byte}.
 

@@ -7,7 +7,8 @@ Require Import riscv.Platform.MinimalMMIO.
 Local Open Scope Z_scope.
 
 Section MMIO.
-  Context {W: Words} {Mem : map.map word byte}.
+  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {Mem : map.map word byte}.
 
   (* Using the memory layout of FE310-G000 *)
   Definition isOTP  (addr: word): Prop := Ox"00020000" <= word.unsigned addr < Ox"00022000".
