@@ -657,8 +657,8 @@ Print simplified_run1.
 
 Local Set Warnings "-notation-both-format-and-spaces".
 
-Notation "(_ 'bv2nat' 32) A" := (word.unsigned A) (at level 10, A at level 0).
-Notation "(_ 'int2bv' 32) A" := (word.of_Z A) (at level 10, A at level 0).
+Notation "(_ 'bv2nat' 32) A" := (word.unsigned A) (at level 10, A at level 0, only printing).
+Notation "(_ 'int2bv' 32) A" := (word.of_Z A) (at level 10, A at level 0, only printing).
 Notation "'bvadd' A B" := (word.add A B) (at level 10, A at level 0, B at level 0).
 Notation "'bvsub' A B" := (word.sub A B) (at level 10, A at level 0, B at level 0).
 Notation "'bvneg' A" := (word.opp A) (at level 10, A at level 0).
@@ -676,11 +676,11 @@ Notation "'bvult' A B" := (word.ltu A B) (at level 10, A at level 0, B at level 
 Notation "'bvslt' A B" := (word.lts A B) (at level 10, A at level 0, B at level 0).
 
 Notation "(_ 'sign_extend' 24) A" := (word.of_Z (signExtend 8 (LittleEndian.combine 1 A)))
-  (at level 10, A at level 0).
+  (at level 10, A at level 0, only printing).
 Notation "(_ 'zero_extend' 24) A" := (word.of_Z (LittleEndian.combine 1 A))
-  (at level 10, A at level 0).
+  (at level 10, A at level 0, only printing).
 Notation "(_ 'extract' 7 0) A" := (LittleEndian.split 1 (word.unsigned A))
-  (at level 10, A at level 0).
+  (at level 10, A at level 0, only printing).
 
 
 Notation "'(match'  inst ( ( '(Lb'  rd_Lb rs1_Lb oimm12_Lb ) branchLb ) ( '(Lh'  rd_Lh rs1_Lh oimm12_Lh ) branchLh ) ( '(Lw'  rd_Lw rs1_Lw oimm12_Lw ) branchLw ) ( '(Lbu'  rd_Lbu rs1_Lbu oimm12_Lbu ) branchLbu ) ( '(Lhu'  rd_Lhu rs1_Lhu oimm12_Lhu ) branchLhu ) ( '(Fence'  pred_Fence succ_Fence ) branchFence ) ( '(Fence_i'  ) branchFence_i ) ( '(Addi'  rd_Addi rs1_Addi imm12_Addi ) branchAddi ) ( '(Slli'  rd_Slli rs1_Slli shamt6_Slli ) branchSlli ) ( '(Slti'  rd_Slti rs1_Slti imm12_Slti ) branchSlti ) ( '(Sltiu'  rd_Sltiu rs1_Sltiu imm12_Sltiu ) branchSltiu ) ( '(Xori'  rd_Xori rs1_Xori imm12_Xori ) branchXori ) ( '(Ori'  rd_Ori rs1_Ori imm12_Ori ) branchOri ) ( '(Andi'  rd_Andi rs1_Andi imm12_Andi ) branchAndi ) ( '(Srli'  rd_Srli rs1_Srli shamt6_Srli ) branchSrli ) ( '(Srai'  rd_Srai rs1_Srai shamt6_Srai ) branchSrai ) ( '(Auipc'  rd_Auipc oimm20_Auipc ) branchAuipc ) ( '(Sb'  rs1_Sb rs2_Sb simm12_Sb ) branchSb ) ( '(Sh'  rs1_Sh rs2_Sh simm12_Sh ) branchSh ) ( '(Sw'  rs1_Sw rs2_Sw simm12_Sw ) branchSw ) ( '(Add'  rd_Add rs1_Add rs2_Add ) branchAdd ) ( '(Sub'  rd_Sub rs1_Sub rs2_Sub ) branchSub ) ( '(Sll'  rd_Sll rs1_Sll rs2_Sll ) branchSll ) ( '(Slt'  rd_Slt rs1_Slt rs2_Slt ) branchSlt ) ( '(Sltu'  rd_Sltu rs1_Sltu rs2_Sltu ) branchSltu ) ( '(Xor'  rd_Xor rs1_Xor rs2_Xor ) branchXor ) ( '(Srl'  rd_Srl rs1_Srl rs2_Srl ) branchSrl ) ( '(Sra'  rd_Sra rs1_Sra rs2_Sra ) branchSra ) ( '(Or'  rd_Or rs1_Or rs2_Or ) branchOr ) ( '(And'  rd_And rs1_And rs2_And ) branchAnd ) ( '(Lui'  rd_Lui imm20_Lui ) branchLui ) ( '(Beq'  rs1_Beq rs2_Beq sbimm12_Beq ) branchBeq ) ( '(Bne'  rs1_Bne rs2_Bne sbimm12_Bne ) branchBne ) ( '(Blt'  rs1_Blt rs2_Blt sbimm12_Blt ) branchBlt ) ( '(Bge'  rs1_Bge rs2_Bge sbimm12_Bge ) branchBge ) ( '(Bltu'  rs1_Bltu rs2_Bltu sbimm12_Bltu ) branchBltu ) ( '(Bgeu'  rs1_Bgeu rs2_Bgeu sbimm12_Bgeu ) branchBgeu ) ( '(Jalr'  rd_Jalr rs1_Jalr oimm12_Jalr ) branchJalr ) ( '(Jal'  rd_Jal jimm20_Jal ) branchJal ) ( '(InvalidI'  ) branchInvalidI )))"
