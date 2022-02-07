@@ -17,17 +17,16 @@ Require Import coqutil.Map.Interface.
 Require Import riscv.Utility.Words64Naive.
 Require Import riscv.Utility.DefaultMemImpl64.
 Require Import coqutil.Map.Z_keyed_SortedListMap.
-Require Import coqutil.Z.HexNotation.
 Require coqutil.Map.SortedList.
 
 Existing Instance DefaultRiscvState.
 
 
 Definition foo7prog: list MachineInt := [
-  Ox"400017b7"; (* lui    a5,0x40001 *)
-  Ox"fff78793"  (* addi   a5,a5,-1 *)
+  0x400017b7; (* lui    a5,0x40001 *)
+  0xfff78793  (* addi   a5,a5,-1 *)
 ].
-Definition foo7val: Z := Ox"0x40000fff".
+Definition foo7val: Z := 0x40000fff.
 
 Definition literaltest_riscv := foo7prog.
 Definition expected_res      := foo7val.

@@ -17,20 +17,20 @@ Require Import coqutil.Map.Interface.
 Require Import riscv.Utility.Words32Naive.
 Require Import riscv.Utility.DefaultMemImpl32.
 Require Import coqutil.Map.Z_keyed_SortedListMap.
-Require Import coqutil.Z.HexNotation.
+
 Require coqutil.Map.SortedList.
 
 Definition fib6_riscv: list MachineInt := [ (* TODO should be "word32", not MachineInt *)
-  Ox"00600993";         (* li s3,6 *)
-  Ox"00000a13";         (* li s4,0 *)
-  Ox"00100913";         (* li s2,1 *)
-  Ox"00000493";         (* li s1,0 *)
-  Ox"0140006f";         (* j 101e0 <main+0x44> *)
-  Ox"012a0ab3";         (* add s5,s4,s2 *)
-  Ox"00090a13";         (* mv s4,s2 *)
-  Ox"000a8913";         (* mv s2,s5 *)
-  Ox"00148493";         (* addi s1,s1,1 *)
-  Ox"ff34c8e3"          (* blt s1,s3,101d0 <main+0x34> *)
+  0x00600993;         (* li s3,6 *)
+  0x00000a13;         (* li s4,0 *)
+  0x00100913;         (* li s2,1 *)
+  0x00000493;         (* li s1,0 *)
+  0x0140006f;         (* j 101e0 <main+0x44> *)
+  0x012a0ab3;         (* add s5,s4,s2 *)
+  0x00090a13;         (* mv s4,s2 *)
+  0x000a8913;         (* mv s2,s5 *)
+  0x00148493;         (* addi s1,s1,1 *)
+  0xff34c8e3          (* blt s1,s3,101d0 <main+0x34> *)
 ].
 
 (*

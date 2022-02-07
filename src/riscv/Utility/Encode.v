@@ -1,6 +1,5 @@
 (* Need to define Register *)
 Require Import Coq.ZArith.ZArith.
-Require Import coqutil.Z.HexNotation.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Utility.Utility.
 
@@ -456,8 +455,8 @@ Qed.
 
 (* This expression will generate a runtime exception, because the jump target is not
    a multiple of 4 *)
-Example invalid_Jal_encode_example: encode (IInstruction (Jal 0 3)) = Ox"20006F". reflexivity. Qed.
+Example invalid_Jal_encode_example: encode (IInstruction (Jal 0 3)) = 0x20006F. reflexivity. Qed.
 
 (* Note: The least significant bit of the jump target is not encoded, because even
    in compressed instructions, jump targets are always a multiple of 2. *)
-Example Jal_encode_loses_lsb: decode RV64IM (Ox"20006F") = IInstruction (Jal 0 2). reflexivity. Qed.
+Example Jal_encode_loses_lsb: decode RV64IM (0x20006F) = IInstruction (Jal 0 2). reflexivity. Qed.

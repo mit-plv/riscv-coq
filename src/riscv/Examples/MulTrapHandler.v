@@ -1,7 +1,7 @@
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Word.Naive.
 Require Import coqutil.Word.Properties.
-Require Import coqutil.Z.HexNotation. Require Coq.Strings.String. Open Scope string_scope.
+Require Coq.Strings.String. Open Scope string_scope.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import riscv.Utility.InstructionCoercions. Open Scope ilist_scope.
 Require Import riscv.Spec.Machine.
