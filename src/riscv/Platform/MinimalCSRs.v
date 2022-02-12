@@ -6,11 +6,16 @@ Require Import riscv.Spec.Machine.
 Require Import riscv.Platform.Memory.
 Require Import riscv.Spec.CSRFile.
 Require Import riscv.Utility.Utility.
-Require Import riscv.Utility.StringRecords.
-Import RecordNotations. (* Warnings are spurious, COQBUG https://github.com/coq/coq/issues/13058 *)
+Require Import riscv.Utility.RecordSetters.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
 Require Import riscv.Platform.MaterializeRiscvProgram.
+
+Module map.
+  (* Swap argument order to enable usage of partially applied `map.set k v` as an updater *)
+  Definition set{key value}{map: map.map key value}(k: key)(v: value)(m: map): map :=
+    map.put m k v.
+End map.
 
 Section Riscv.
   Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
@@ -20,32 +25,32 @@ Section Riscv.
   (* (memory before call, call name, arg values) and (memory after call, return values) *)
   Definition LogItem: Type := (Mem * string * list word) * (Mem * list word).
 
-  Definition State: Type := [#
-    "regs": Registers;
-    "pc": word;
-    "nextPc": word;
-    "mem": Mem;
-    "log": list LogItem;
-    "csrs": CSRFile
-   ].
+  Record State := mkState {
+    regs: Registers;
+    pc: word;
+    nextPc: word;
+    mem: Mem;
+    log: list LogItem;
+    csrs: CSRFile
+  }.
 
   (* TODO: add XAddrs tracking so that executing an instruction written in a previous cycle
      (which potentially is already in the pipeline) is not allowed *)
 
   Definition store(n: nat)(ctxid: SourceType)(a: word) v (mach: State)(post: State -> Prop) :=
-    match Memory.store_bytes n mach#"mem" a v with
-    | Some m => post mach(#"mem" := m)
+    match Memory.store_bytes n mach.(mem) a v with
+    | Some m => post { mach with mem := m }
     | None => False
     end.
 
   Definition load(n: nat)(ctxid: SourceType)(a: word)(mach: State)(post: _ -> _ -> Prop) :=
-    match Memory.load_bytes n mach#"mem" a with
+    match Memory.load_bytes n mach.(mem) a with
     | Some v => post v mach
     | None => False
     end.
 
   Definition updatePc(mach: State): State :=
-    mach(#"pc" := mach#"nextPc")(#"nextPc" := word.add mach#"nextPc" (word.of_Z 4)).
+    { mach with pc := mach.(nextPc); nextPc ::= word.add (word.of_Z 4) }.
 
   Definition getReg(regs: Registers)(reg: Z): word :=
     if Z.eq_dec reg 0 then word.of_Z 0
@@ -54,16 +59,16 @@ Section Riscv.
          | None => word.of_Z 0
          end.
 
-  Definition setReg(regs: Registers)(reg: Z)(v: word): Registers :=
+  Definition setReg(reg: Z)(v: word)(regs: Registers): Registers :=
     if Z.eq_dec reg Register0 then regs else map.put regs reg v.
 
   Definition run_primitive(a: riscv_primitive)(mach: State):
              (primitive_result a -> State -> Prop) -> (State -> Prop) -> Prop :=
     match a with
-    | GetRegister reg => fun postF postA => postF (getReg mach#"regs" reg) mach
-    | SetRegister reg v => fun postF postA => postF tt mach(#"regs" := setReg mach#"regs" reg v)
-    | GetPC => fun postF postA => postF mach#"pc" mach
-    | SetPC newPC => fun postF postA => postF tt mach(#"nextPc" := newPC)
+    | GetRegister reg => fun postF postA => postF (getReg mach.(regs) reg) mach
+    | SetRegister reg v => fun postF postA => postF tt { mach with regs ::= setReg reg v }
+    | GetPC => fun postF postA => postF mach.(pc) mach
+    | SetPC newPC => fun postF postA => postF tt { mach with nextPc := newPC }
     | LoadByte ctxid a => fun postF postA => load 1 ctxid a mach postF
     | LoadHalf ctxid a => fun postF postA => load 2 ctxid a mach postF
     | LoadWord ctxid a => fun postF postA => load 4 ctxid a mach postF
@@ -75,14 +80,14 @@ Section Riscv.
     | EndCycleNormal => fun postF postA => postF tt (updatePc mach)
     | EndCycleEarly _ => fun postF postA => postA (updatePc mach) (* ignores postF containing the continuation *)
     | GetCSRField f => fun postF postA =>
-                         match map.get mach#"csrs" f with
+                         match map.get mach.(csrs) f with
                          | Some v => postF v mach
                          | None => False
                          end
     | SetCSRField f v => fun postF postA =>
                            (* only allow setting CSR fields that are supported (not None) on this machine *)
-                           match map.get mach#"csrs" f with
-                           | Some _ => postF tt mach(#"csrs" := map.put mach#"csrs" f v)
+                           match map.get mach.(csrs) f with
+                           | Some _ => postF tt { mach with csrs ::= map.set f v }
                            | None => False
                            end
     | GetPrivMode => fun postF postA => postF Machine mach
@@ -102,14 +107,14 @@ Section Riscv.
       (forall r s, post1 r s -> post2 r s) ->
       load n c a m post1 -> load n c a m post2.
   Proof.
-    unfold load. intros. destruct (load_bytes n m#"mem" a); intuition eauto.
+    unfold load. intros. destruct (load_bytes n m.(mem) a); intuition eauto.
   Qed.
 
   Lemma weaken_store: forall n c a v m (post1 post2:_->Prop),
       (forall s, post1 s -> post2 s) ->
       store n c a v m post1 -> store n c a v m post2.
   Proof.
-    unfold store. intros. destruct (store_bytes n m#"mem" a v); intuition eauto.
+    unfold store. intros. destruct (store_bytes n m.(mem) a v); intuition eauto.
   Qed.
 
   Lemma weaken_run_primitive: forall a (postF1 postF2: _ -> _ -> Prop) (postA1 postA2: _ -> Prop),
