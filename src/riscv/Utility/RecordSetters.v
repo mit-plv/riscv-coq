@@ -1,5 +1,7 @@
+Require Import Coq.Program.Basics.
 Require Import Ltac2.Ltac2.
 Require Ltac2.Option.
+Require Import Ltac2.Bool.
 Set Default Proof Mode "Classic".
 
 Ltac2 rec strip_foralls(t: constr) :=
@@ -52,10 +54,27 @@ Ltac exact_eta :=
 
 Ltac eta T := constr:(ltac:(exact_eta T)).
 
-Definition Updater{R E: Type}(getter: R -> E): Type := (E -> E) -> R -> R.
-Existing Class Updater.
+Class Setter{R E: Type}(getter: R -> E): Type := set: (E -> E) -> R -> R.
+Arguments set {R E} (getter) {Setter} (fieldUpdater) (r).
 
-Ltac updater R getter :=
+(* "getter and field updater": a specialized tuple with fst/snd that no one else uses,
+   to avoid confusing tactics *)
+Record gafu{R E: Type} := mk_gafu {
+  gafu_getter: R -> E;
+  gafu_field_updater: E -> E;
+}.
+Arguments gafu: clear implicits.
+Arguments mk_gafu {R E} (gafu_getter gafu_field_updater).
+
+(* partially uncurried set ("tupled set") that works better with notations *)
+Definition tset{R E: Type}(t: gafu R E){Setter: Setter (gafu_getter t)}: R -> R :=
+  set (gafu_getter t) (gafu_field_updater t).
+
+Ltac setter R getter :=
+  let getter := lazymatch getter with
+                | gafu_getter (mk_gafu ?g _) => g
+                | _ => getter
+                end in
   let etaR := eta R in
   lazymatch etaR with
   | context[getter] => idtac
@@ -67,88 +86,236 @@ Ltac updater R getter :=
       exact u
   end.
 
-Global Hint Extern 1 (@Updater ?R ?E ?getter) => updater R getter : typeclass_instances.
+Global Hint Extern 1 (@Setter ?R ?E ?getter) => setter R getter : typeclass_instances.
 
-(* Note: in coq-record-update, the second-to-last argument of `set` is an updater
-   of type `E -> E` (a function transforming an old value into a new value),
-   and for setting a field, it just passes a constant function that ignores the
-   old value.
-   This is inconvenient for me because I use rewriting/simplification tactics that
-   don't recurse under binders, but I do want them to recurse into new values of set,
-   so we need two separate definitions for `set` and `update` *)
+(* Note: To update a field with a constant value (rather than by applying an
+   updater function to its old value), we could just use the constant function
+   `fun _ => newValue`, but then `newValue` would appear under a binder, which
+   causes some rewriting/simplification tactics which don't recurse under binders
+   to miss opportunities for rewriting/simplification, so we use this explicit
+   definition of `const` instead. *)
+Definition const{E: Type}(newValue: E): E -> E := fun _ => newValue.
 
-Definition update{R E: Type}(getter: R -> E){updater: Updater getter}
-  : (E -> E) -> R -> R := updater.
-
-Definition set{R E: Type}(getter: R -> E){updater: Updater getter}(newVal: E): R -> R :=
-  updater (fun _ => newVal).
-
-(*
-Module RecordSetNotations1.
+Module Export RecordSetNotations1.
   Declare Scope record_set.
   Delimit Scope record_set with rs.
   Open Scope rs.
   (* Note: coq-record-update uses level 12, but I prefer level 8:
       https://github.com/tchajed/coq-record-update/issues/14 *)
-  Notation "x <| proj ::= f |>" := (update proj f x)
-     (at level 8, f at next level, left associativity, format "x <| proj  ::=  f |>")
+  Notation "x <| proj ::= f |>" := (set proj f x)
+     (at level 8, f at level 99, left associativity, format "x <| proj  ::=  f |>")
      : record_set.
-  Notation "x <| proj := v |>" := (set proj v x)
-     (at level 8, left associativity, format "x <| proj  :=  v |>")
+  Notation "x <| proj := v |>" := (set proj (const v) x)
+     (at level 8, v at level 99, left associativity, format "x <| proj  :=  v |>")
      : record_set.
 End RecordSetNotations1.
-*)
 
-Module Export RecordSetNotationsOCamlLike.
+Module Export RecordSetNotations.
   Declare Scope record_set.
   Delimit Scope record_set with rs.
   Open Scope rs.
 
   Declare Custom Entry field_update.
-  Notation "proj := v" := (set proj v)
+  Notation "proj := v" := (mk_gafu proj (const v))
     (in custom field_update at level 1, proj constr at level 99, v constr at level 99)
     : record_set.
-  Notation "proj ::= f" := (update proj f)
+  Notation "proj ::= f" := (mk_gafu proj f)
     (in custom field_update at level 1, proj constr at level 99, f constr at level 99)
     : record_set.
 
-  (* marker function to enable notation printing *)
-  Definition apply_update{R: Type}(u: R -> R): R -> R := u.
+  Notation "'{!' u }" := (tset u)
+     (at level 0, u custom field_update at level 1,
+      format "'{!'  u  }")
+    : record_set.
 
-  Notation "{ x 'with' u }" := (apply_update u x)
+  Notation "'{!' u ; v ; .. ; w }" :=
+     (compose (tset w) .. (compose (tset v) (tset u)) ..)
+     (at level 0, u custom field_update at level 1, v custom field_update at level 1,
+      w custom field_update at level 1,
+      format "'{!'  u ;  v ;  .. ;  w  }")
+    : record_set.
+
+  Notation "{ x 'with' u }" := (tset u x)
      (at level 0, x at level 99, u custom field_update at level 1,
       format "{  x  'with'  u  }") : record_set.
   Notation "{ x 'with' u ; .. ; v ; w }" :=
-     (apply_update w (apply_update v .. (apply_update u x) .. ))
+     (tset w (tset v .. (tset u x) .. ))
      (at level 0, x at level 99, u custom field_update at level 1,
       v custom field_update at level 1, w custom field_update at level 1,
       format "{  x  'with'  u ;  .. ;  v ;  w  }") : record_set.
-End RecordSetNotationsOCamlLike.
+End RecordSetNotations.
 
-Module LeftUpdateNotations.
-  Declare Scope record_set.
-  Delimit Scope record_set with rs.
-  Open Scope rs.
+Module record.
 
-  Declare Custom Entry fld_update.
-  Notation "proj := v" := (set proj v)
-    (in custom fld_update at level 1, proj constr at level 99, v constr at level 99)
-    : record_set.
-  Notation "proj ::= f" := (update proj f)
-    (in custom fld_update at level 1, proj constr at level 99, f constr at level 99)
-    : record_set.
-  Notation "'{!' u }" := u
-     (at level 0, u custom fld_update at level 1,
-      format "'{!'  u  }")
-    : record_set.
-  Notation "'{!' u ; v ; .. ; w } r" := (u (v .. (w r) ..))
-     (at level 10, u custom fld_update at level 1, r constr at level 9,
-      v custom fld_update at level 1, w custom fld_update at level 1,
-      format "'{!'  u ;  v ;  .. ;  w  }  r")
-    : record_set.
-  (* Doesn't print. If move the r into (fun r => ...) on the rhs, it prints, but as
-     soon as a `cbv beta` happens, it doesn't print any more *)
-End LeftUpdateNotations.
+  (* Is c a bound var with 1-based de Brujin index i? *)
+  Ltac2 is_rel(i: int)(c: constr) :=
+    match Constr.Unsafe.kind c with
+    | Constr.Unsafe.Rel j => Int.equal i j
+    | _ => false
+    end.
+
+  (* Returns (Some i) if c is of the form (fun xn .. x2 x1 => xi) with (1 <= i <= n),
+     None otherwise *)
+  Ltac2 lambda_proj_index(c: constr) :=
+    let rec test d t :=
+      match Constr.Unsafe.kind t with
+      | Constr.Unsafe.Lambda x body => test (Int.add d 1) body
+      | Constr.Unsafe.Rel i => if Int.le i d then Some i else None
+      | _ => None
+      end in
+    test 0 c.
+
+  (* Returns (Some i) if u is of the form
+       (fun r => match r with
+                 | constructor params field_N ... field_2 field_1 => field_i
+                 end)
+     with (1 <= i <= n), None otherwise. *)
+  Ltac2 unfolded_getter_proj_index(u: constr) :=
+    match Constr.Unsafe.kind u with
+    | Constr.Unsafe.Lambda x body =>
+        match Constr.Unsafe.kind body with
+        | Constr.Unsafe.Case _ _ _ d branches =>
+            if is_rel 1 d && Int.equal (Array.length branches) 1 then
+              lambda_proj_index (Array.get branches 0)
+            else None
+        | _ => None
+        end
+    | _ => None
+    end.
+
+  Ltac2 rec strip_n_lambdas(n: int)(c: constr) :=
+    if Int.le n 0 then Some c else
+      match Constr.Unsafe.kind c with
+      | Constr.Unsafe.Lambda x body => strip_n_lambdas (Int.sub n 1) body
+      | _ => None
+      end.
+
+  (* Returns (Some i) if f is a getter returning the i-th-to-last field of a record,
+     None otherwise *)
+  Ltac2 getter_proj_index(f: constr) :=
+    match Constr.Unsafe.kind f with
+    | Constr.Unsafe.App h params =>
+        match Constr.Unsafe.kind h with
+        | Constr.Unsafe.Constant cst _ =>
+            let flags := {
+                Std.rBeta := false;
+                Std.rMatch := false;
+                Std.rFix := false;
+                Std.rCofix := false;
+                Std.rZeta := false;
+                Std.rDelta := false; (* false = delta only on rConst*)
+                Std.rConst := [Std.ConstRef cst]
+              } in
+            let unfolded_h := Std.eval_cbv flags h in
+            match strip_n_lambdas (Array.length params) unfolded_h with
+            | Some l => unfolded_getter_proj_index l
+            | None => None
+            end
+        | _ => None
+        end
+    | _ => None
+    end.
+
+  Ltac2 rec right_leaning_compose(c1: constr)(c2: constr) :=
+    lazy_match! c1 with
+    | compose ?f1 ?f2 =>
+        right_leaning_compose f1 (right_leaning_compose f2 c2)
+    | _ => constr:(compose $c1 $c2)
+    end.
+
+  (* g: getter, u: field updater, c: any constr
+     If c is a series of setters setting g to some u_old, replaces u_old by u.
+     If c is a series of setters not setting g and ending in a constructor,
+     replaces the constructor argument corresponding to g by u.
+     The returned term is convertible to c, but potentially simpler. *)
+  Ltac2 rec push_down_setter(g: constr)(u: constr)(c: constr) :=
+    lazy_match! c with
+    | tset (mk_gafu ?g' ?u') ?r =>
+        (* setter applied to setter *)
+        if Constr.equal g g' then
+          (* setter applied to same setter *)
+          lazy_match! u with
+          | const _ => constr:(tset (mk_gafu $g $u) $r)
+          | _ => let u_combined :=
+                   lazy_match! u' with
+                   | const ?v' => eval cbv beta in ($u $v')
+                   | _ => right_leaning_compose u u'
+                   end in
+                 constr:(tset (mk_gafu $g $u_combined) $r)
+          end
+        else (* setter applied to different setter *)
+          let r' := push_down_setter g u r in constr:(tset (mk_gafu $g' $u') $r')
+    | _ => match Constr.Unsafe.kind c with
+           | Constr.Unsafe.App h args =>
+               if Constr.is_constructor h then
+                 (* setter applied to constructor *)
+                 match getter_proj_index g with
+                 | Some i =>
+                     let j := Int.sub (Array.length args) i in
+                     let old_field := Array.get args j in
+                     let new_field :=
+                       lazy_match! u with
+                       | const ?v => v
+                       | _ => eval cbv beta in ($u $old_field)
+                       end in
+                     let new_args := Array.copy args in
+                     Array.set new_args j new_field;
+                     Constr.Unsafe.make (Constr.Unsafe.App h new_args)
+                  | None => Control.throw_invalid_argument "g is not a getter"
+                  end
+               else (* setter applied to non-setter-non-constructor *) c
+           | _ => (* setter applied to non-setter-non-constructor *) c
+           end
+    end.
+
+  (* g: getter, i: its backwards-index, c: any constr
+     If c is a series of setters setting g to some v, returns v.
+     If c is a series of setters not setting g and ending in a constructor,
+     returns the constructor argument corresponding to g.
+     The returned term is convertible to c, but potentially simpler. *)
+  Ltac2 rec lookup_getter(g: constr)(i: int)(c: constr) :=
+    lazy_match! c with
+    | tset (mk_gafu ?g' ?u') ?r =>
+        (* getter applied to setter *)
+        if Constr.equal g g' then
+          (* getter applied to same setter *)
+          lazy_match! u' with
+          | const ?v' => v'
+          | _ => let w := lookup_getter g i r in eval cbv beta in ($u' $w)
+          end
+        else (* getter applied to different setter *)
+          lookup_getter g i r
+    | _ => match Constr.Unsafe.kind c with
+           | Constr.Unsafe.App h args =>
+               if Constr.is_constructor h then (* getter applied to constructor *)
+                 Array.get args (Int.sub (Array.length args) i)
+               else (* getter applied to non-setter-non-constructor *) c
+           | _ => (* getter applied to non-setter-non-constructor *) c
+           end
+    end.
+
+  Ltac2 rec simp_term(c: constr) :=
+    lazy_match! c with
+    | ?f ?a =>
+        let f' := simp_term f in
+        let a' := simp_term a in
+        lazy_match! f' with
+        | tset (mk_gafu ?g ?u) => push_down_setter g u a'
+        | _ => match getter_proj_index f' with
+               | Some i => lookup_getter f' i a'
+               | None => constr:($f' $a')
+               end
+        end
+    | _ => c
+    end.
+
+  Ltac2 simp_goal () :=
+    let g := simp_term (Control.goal ()) in change $g.
+
+  Ltac simp_goal := ltac2:(simp_goal ()).
+
+  Ltac simp := simp_goal. (* TODO also in hyps *)
+End record.
 
 Module RecordSetterTests.
 
@@ -165,98 +332,46 @@ Module RecordSetterTests.
   Example testFoo(b: bool): foo nat 2 :=
     {| fieldA := 3; fieldB := eq_refl; fieldC := b |}.
 
-  Goal forall b, { testFoo b with fieldC := false } = { testFoo b with fieldC := false }.
-  Abort.
+  Goal forall b, fieldA (testFoo b)<|fieldA := 3|> = 3. intros. reflexivity. Qed.
 
   Goal forall b,
       { testFoo b with fieldC := true; fieldC := false; fieldA ::= Nat.add 2 } =
       { testFoo b with fieldA ::= Nat.add 1; fieldC := false; fieldA ::= Nat.add 1 }.
   Proof.
-    intros. unfold apply_update. unfold update, set. cbn. reflexivity.
+    intros. unfold tset, gafu_getter, gafu_field_updater. unfold set, const. cbn.
+    reflexivity.
   Qed.
+
+  Check (fun b => {! fieldC := false } (testFoo b)).
+  Check (fun b => {! fieldC := false; fieldC := true } (testFoo b)).
+  Check (fun b => {! fieldC := false; fieldC := true; fieldA ::= Nat.add 2 } (testFoo b)).
+
+  Goal forall b,
+      {! fieldC := false; fieldC := true; fieldA ::= Nat.add 2 } (testFoo b) =
+      {! fieldA ::= Nat.add 1; fieldC := true; fieldA ::= Nat.add 1 } (testFoo b).
+  Proof.
+    intros. unfold tset, gafu_getter, gafu_field_updater. unfold set, const, compose. cbn.
+    reflexivity.
+  Qed.
+
+  Goal forall r: foo (foo nat 4) 2,
+  { r with fieldA ::= {! fieldA ::= Nat.add 1 } }.(fieldA).(fieldA) = S r.(fieldA).(fieldA).
+  Proof. intros. reflexivity. Qed.
+
+  (* simplify setter applied to constructor *)
+  Goal forall b, { testFoo b with fieldA ::= (Nat.add 12) } = testFoo b.
+  Proof.
+    unfold testFoo at 1. intros. record.simp.
+  Abort.
+
+  (* simplify getter applied to setter *)
+  Goal forall b, fieldB { testFoo b with fieldA ::= (Nat.add 12) } = eq_refl.
+    intros. (* record.simp. anomaly *)
+  Abort.
+
+  (* unfold getter applied to constructor *)
+  Goal forall b, fieldB (testFoo b) = eq_refl.
+  Proof.
+    intros. unfold testFoo. record.simp.
+  Abort.
 End RecordSetterTests.
-
-
-Module record.
-
-  Ltac head t :=
-    lazymatch t with
-    | ?f _ => head f
-    | _ => t
-    end.
-
-  Ltac apply_set fullRecord partialRecord getter newVal :=
-    match partialRecord with
-    | ?rest ?fieldVal =>
-        let __ := match constr:(Set) with
-                  | _ => unify (getter fullRecord) fieldVal
-                  end in
-        constr:(rest newVal)
-    | ?rest ?fieldVal =>
-        let r := apply_set fullRecord rest getter newVal in constr:(r fieldVal)
-    end.
-
-  (* TODO generalize: ltac that traverses list of updates and unique-ifies them *)
-  Ltac simp_step :=
-    match goal with
-    | |- context[ ?fieldA { ?r with ?fieldB := ?v } ] =>
-        progress tryif constr_eq fieldA fieldB
-        then change (fieldA { r with fieldB := v }) with v
-        else change (fieldA { r with fieldB := v }) with (fieldA r)
-    | |- context[ ?fieldA { ?r with ?fieldB ::= ?f } ] =>
-        progress tryif constr_eq fieldA fieldB
-        then change (fieldA { r with fieldB ::= f }) with (f (fieldA r))
-        else change (fieldA { r with fieldB ::= f }) with (fieldA r)
-    | |- context[{ ?r with ?field := ?v1; ?field := ?v2 }] =>
-        progress change { r with field := v1; field := v2 } with { r with field := v2 }
-    | |- context[{ ?r with ?field ::= ?f1; ?field := ?v2 }] =>
-        progress change { r with field ::= f1; field := v2 } with { r with field := v2 }
-    | |- context[{ ?r with ?field := ?v1; ?field ::= ?f2 }] =>
-        progress change { r with field := v1; field ::= f2 }
-                 with { r with field := f2 v1 }
-    | |- context[{ ?r with ?field ::= ?f1; ?field ::= ?f2 }] =>
-        progress change { r with field ::= f1; field ::= f2 }
-                 with { r with field := f2 (f1 (field r)) }
-    | |- context[{ ?r with ?field := ?v }] =>
-        let h := head r in is_constructor h;
-        let res := apply_set r r field v in
-        progress change { r with field := v } with res
-    | |- context[{ ?r with ?field ::= ?f }] =>
-        let h := head r in is_constructor h;
-        let bare_field := head field in (* <-- strip implicit args/params *)
-        let oldval := eval cbn [bare_field] in (field r) in
-        let res := apply_set r r field (f oldval) in
-        progress change { r with field ::= f } with res
-
-    | H: context[ ?fieldA { ?r with ?fieldB := ?v } ] |- _ =>
-        progress tryif constr_eq fieldA fieldB
-        then change (fieldA { r with fieldB := v }) with v in H
-        else change (fieldA { r with fieldB := v }) with (fieldA r) in H
-    | H: context[ ?fieldA { ?r with ?fieldB ::= ?f } ] |- _ =>
-        progress tryif constr_eq fieldA fieldB
-        then change (fieldA { r with fieldB ::= f }) with (f (fieldA r)) in H
-        else change (fieldA { r with fieldB ::= f }) with (fieldA r) in H
-    | H: context[{ ?r with ?field := ?v1; ?field := ?v2 }] |- _ =>
-        progress change { r with field := v1; field := v2 } with { r with field := v2 } in H
-    | H: context[{ ?r with ?field ::= ?f1; ?field := ?v2 }] |- _ =>
-        progress change { r with field ::= f1; field := v2 } with { r with field := v2 } in H
-    | H: context[{ ?r with ?field := ?v1; ?field ::= ?f2 }] |- _ =>
-        progress change { r with field := v1; field ::= f2 }
-                 with { r with field := f2 v1 } in H
-    | H: context[{ ?r with ?field ::= ?f1; ?field ::= ?f2 }] |- _ =>
-        progress change { r with field ::= f1; field ::= f2 }
-                 with { r with field := f2 (f1 (field r)) } in H
-    | H: context[{ ?r with ?field := ?v }] |- _ =>
-        let h := head r in is_constructor h;
-        let res := apply_set r r field v in
-        progress change { r with field := v } with res in H
-    | H: context[{ ?r with ?field ::= ?f }] |- _ =>
-        let h := head r in is_constructor h;
-        let bare_field := head field in (* <-- strip implicit args/params *)
-        let oldval := eval cbn [bare_field] in (field r) in
-        let res := apply_set r r field (f oldval) in
-        progress change { r with field ::= f } with res in H
-    end.
-
-  Ltac simp := repeat simp_step.
-End record.
