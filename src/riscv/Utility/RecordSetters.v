@@ -225,19 +225,6 @@ Module record.
     | _ => constr:(compose $c1 $c2)
     end.
 
-  Ltac2 Type exn ::= [ Type_not_preserved (constr, constr, constr, constr) ].
-
-  (* for debugging *)
-  Ltac2 preserve_type(c: constr)(f: unit -> constr option) :=
-    let t := Constr.type c in
-    match f () with
-    | Some c' =>
-        let t' := Constr.type c' in
-        orelse (fun () => unify $t $t'; Some c')
-               (fun _ => Control.throw (Type_not_preserved c t c' t'))
-    | None => None
-    end.
-
   Ltac2 rec constr_list_to_msg(l: constr list) :=
     match l with
     | [] => Message.of_string " "
@@ -271,7 +258,7 @@ Module record.
      allocating a new one. *)
   Ltac2 rec push_down_setter(g: constr)(u: constr)(c: constr) :=
     log_call "push_down_setter" [g; u; c];
-    let c' := preserve_type c (fun () =>
+    let c' :=
     lazy_match! c with
     | tset (mk_gafu ?g' ?u') ?r =>
         (* setter applied to setter *)
@@ -281,7 +268,7 @@ Module record.
           | const _ => Some constr:(tset (mk_gafu $g $u) $r)
           | _ => let u_combined :=
                    lazy_match! u' with
-                   | const ?v' => eval cbv beta in (const ($u $v'))
+                   | const ?v' => constr:(const ($u $v'))
                    | _ => right_leaning_compose u u'
                    end in
                  Some constr:(tset (mk_gafu $g $u_combined) $r)
@@ -302,7 +289,7 @@ Module record.
                      let new_field :=
                        lazy_match! u with
                        | const ?v => v
-                       | _ => eval cbv beta in ($u $old_field)
+                       | _ => constr:($u $old_field)
                        end in
                      let new_args := Array.copy args in
                      Array.set new_args j new_field;
@@ -312,7 +299,7 @@ Module record.
                else (* setter applied to non-setter-non-constructor *) None
            | _ => (* setter applied to non-setter-non-constructor *) None
            end
-    end) in
+    end in
     log_ret "push_down_setter" [g; u; c] c'.
 
   (* g: getter, i: its backwards-index, c: any constr
@@ -336,7 +323,7 @@ Module record.
                           | Some w => w
                           | None => constr:($g $r)
                           end in
-                 Some (eval cbv beta in ($u' $w))
+                 Some constr:($u' $w)
           end
         else (* getter applied to different setter *)
           match lookup_getter g i r with
@@ -364,39 +351,90 @@ Module record.
     end in
     log_ret "simp_app" [f; a] c'.
 
+  (* In-place-apply f to all elements of array a for which it returns Some,
+     and return true iff at least one returned Some *)
+  Ltac2 rec transform_array(f: 't -> 'u option)(i: int)(a: 't array) :=
+    if Int.ge i (Array.length a) then false
+    else match f (Array.get a i) with
+         | Some v => Array.set a i v; transform_array f (Int.add i 1) a; true
+         | None => transform_array f (Int.add i 1) a
+         end.
+
+  (* Returns (Some c') with c' convertible to c if simplifications were made,
+     None otherwise. *)
   Ltac2 rec simp_term(c: constr) :=
     log_call "simp_term" [c];
-    let c' := preserve_type c (fun () =>
-    lazy_match! c with
-    | ?f ?a =>
-        match simp_term f with
-        | Some f' =>
-            let a' := match simp_term a with
-                      | Some a' => a'
-                      | None => a
-                      end in
-            let o := simp_app f' a' in
-            match o with
-            | Some _ => o
-            | None => Some constr:($f' $a')
-            end
-        | None =>
-            match simp_term a with
-            | Some a' =>
-                let o := simp_app f a' in
+    let c' :=
+    match Constr.Unsafe.kind c with
+    | Constr.Unsafe.App _ _ =>
+        lazy_match! c with
+        | ?f ?a =>
+            match simp_term f with
+            | Some f' =>
+                let a' := simp_term_nonstrict a in
+                let o := simp_app f' a' in
                 match o with
                 | Some _ => o
-                | None => Some constr:($f $a')
+                | None => Some constr:($f' $a')
                 end
             | None =>
-                (* if nothing was simplifiable, we return None instead of
-                   reconstructing an identical constr:($f $a) *)
-                simp_app f a
+                match simp_term a with
+                | Some a' =>
+                    let o := simp_app f a' in
+                    match o with
+                    | Some _ => o
+                    | None => Some constr:($f $a')
+                    end
+                | None =>
+                    (* if nothing was simplifiable, we return None instead of
+                       reconstructing an identical constr:($f $a) *)
+                    simp_app f a
+                end
             end
         end
+    | Constr.Unsafe.Prod x body =>
+        match simp_term body with
+        | Some body' => Some (Constr.Unsafe.make (Constr.Unsafe.Prod x body'))
+        | None => None
+        end
+    | Constr.Unsafe.Lambda x body =>
+        match simp_term body with
+        | Some body' => Some (Constr.Unsafe.make (Constr.Unsafe.Lambda x body'))
+        | None => None
+        end
+    | Constr.Unsafe.LetIn x rhs body =>
+        match simp_term rhs with
+        | Some rhs' =>
+            let body' := simp_term_nonstrict body in
+            Some (Constr.Unsafe.make (Constr.Unsafe.LetIn x rhs' body'))
+        | None =>
+            match simp_term body with
+            | Some body' => Some (Constr.Unsafe.make (Constr.Unsafe.LetIn x rhs body'))
+            | None => None
+            end
+        end
+    | Constr.Unsafe.Case c t ci d branches =>
+        match simp_term d with
+        | Some d' =>
+            let branches' := Array.map simp_term_nonstrict branches in
+            Some (Constr.Unsafe.make (Constr.Unsafe.Case c t ci d' branches'))
+        | None =>
+            let branches' := Array.copy branches in
+            if transform_array simp_term 0 branches' then
+              Some (Constr.Unsafe.make (Constr.Unsafe.Case c t ci d branches'))
+            else None
+        end
     | _ => None
-    end) in
-    log_ret "simp_term" [c] c'.
+    end in
+    log_ret "simp_term" [c] c'
+
+  (* Always returns a term convertible to the input term, even if no simplifications
+     were made *)
+  with simp_term_nonstrict(c: constr) :=
+    match simp_term c with
+    | Some c' => c'
+    | None => c
+    end.
 
   Ltac2 simp_goal () :=
     match simp_term (Control.goal ()) with
@@ -404,7 +442,7 @@ Module record.
     | None => Control.backtrack_tactic_failure "no simplification opportunities"
     end.
 
-  Ltac simp_goal := ltac2:(simp_goal ()).
+  Ltac simp_goal := ltac2:(Control.enter simp_goal).
 
   Ltac simp := simp_goal. (* TODO also in hyps *)
 End record.
@@ -453,19 +491,30 @@ Module RecordSetterTests.
   (* simplify setter applied to constructor *)
   Goal forall b, { testFoo b with fieldA ::= (Nat.add 12) } = testFoo b.
   Proof.
-    unfold testFoo at 1. intros.
+    unfold testFoo at 1.
+    record.simp.
+  Abort.
+
+  Goal forall b, { { testFoo b with fieldA := 3 }
+                   with fieldA ::= Nat.add 4 } = testFoo b.
+  Proof.
+    intros. record.simp.
+  Abort.
+
+  Goal forall b, { { testFoo b with fieldB := eq_refl; fieldA := 3 }
+                   with fieldA ::= Nat.add 4 } = testFoo b.
+  Proof.
     record.simp.
   Abort.
 
   (* simplify getter applied to setter *)
   Goal forall b, fieldB { testFoo b with fieldA ::= (Nat.add 12) } = eq_refl.
-    intros.
     record.simp.
   Abort.
 
   (* unfold getter applied to constructor *)
   Goal forall b, fieldB (testFoo b) = eq_refl.
   Proof.
-    intros. unfold testFoo. record.simp.
+    unfold testFoo. record.simp.
   Abort.
 End RecordSetterTests.
