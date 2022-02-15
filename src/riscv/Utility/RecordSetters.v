@@ -281,7 +281,7 @@ Module record.
           | const _ => Some constr:(tset (mk_gafu $g $u) $r)
           | _ => let u_combined :=
                    lazy_match! u' with
-                   | const ?v' => eval cbv beta in ($u $v')
+                   | const ?v' => eval cbv beta in (const ($u $v'))
                    | _ => right_leaning_compose u u'
                    end in
                  Some constr:(tset (mk_gafu $g $u_combined) $r)
