@@ -36,6 +36,34 @@ Ltac2 constructor_of_record(t: constr) :=
 Ltac2 mkApp(f: constr)(args: constr array) :=
   Constr.Unsafe.make (Constr.Unsafe.App f args).
 
+(* If we had array literals, these boilerplate functions would not be needed
+   https://github.com/coq/coq/issues/13976 *)
+Ltac2 mkApp1(f: constr)(a0: constr) :=
+  let args := Array.make 1 a0 in
+  Constr.Unsafe.make (Constr.Unsafe.App f args).
+Ltac2 mkApp2(f: constr)(a0: constr)(a1: constr) :=
+  let args := Array.make 2 a0 in
+  Array.set args 1 a1;
+  Constr.Unsafe.make (Constr.Unsafe.App f args).
+Ltac2 mkApp3(f: constr)(a0: constr)(a1: constr)(a2: constr) :=
+  let args := Array.make 3 a0 in
+  Array.set args 1 a1;
+  Array.set args 2 a2;
+  Constr.Unsafe.make (Constr.Unsafe.App f args).
+Ltac2 mkApp4(f: constr)(a0: constr)(a1: constr)(a2: constr)(a3: constr) :=
+  let args := Array.make 4 a0 in
+  Array.set args 1 a1;
+  Array.set args 2 a2;
+  Array.set args 3 a3;
+  Constr.Unsafe.make (Constr.Unsafe.App f args).
+Ltac2 mkApp5(f: constr)(a0: constr)(a1: constr)(a2: constr)(a3: constr)(a4: constr) :=
+  let args := Array.make 5 a0 in
+  Array.set args 1 a1;
+  Array.set args 2 a2;
+  Array.set args 3 a3;
+  Array.set args 4 a4;
+  Constr.Unsafe.make (Constr.Unsafe.App f args).
+
 Ltac2 eta(t: constr) :=
   let (h, args) := match Constr.Unsafe.kind t with
                    | Constr.Unsafe.App h args => (h, args)
@@ -195,34 +223,49 @@ Module record.
   (* Returns (Some i) if f is a getter returning the i-th-to-last field of a record,
      None otherwise *)
   Ltac2 getter_proj_index(f: constr) :=
-    match Constr.Unsafe.kind f with
-    | Constr.Unsafe.App h params =>
-        match Constr.Unsafe.kind h with
-        | Constr.Unsafe.Constant cst _ =>
-            let flags := {
-                Std.rBeta := false;
-                Std.rMatch := false;
-                Std.rFix := false;
-                Std.rCofix := false;
-                Std.rZeta := false;
-                Std.rDelta := false; (* false = delta only on rConst*)
-                Std.rConst := [Std.ConstRef cst]
-              } in
-            let unfolded_h := Std.eval_cbv flags h in
-            match strip_n_lambdas (Array.length params) unfolded_h with
-            | Some l => unfolded_getter_proj_index l
-            | None => None
-            end
-        | _ => None
+    let (h, nparams) := match Constr.Unsafe.kind f with
+                        | Constr.Unsafe.App h params => (h, Array.length params)
+                        | _ => (f, 0)
+                        end in
+    match Constr.Unsafe.kind h with
+    | Constr.Unsafe.Constant cst _ =>
+        let flags := {
+            Std.rBeta := false;
+            Std.rMatch := false;
+            Std.rFix := false;
+            Std.rCofix := false;
+            Std.rZeta := false;
+            Std.rDelta := false; (* false = delta only on rConst*)
+            Std.rConst := [Std.ConstRef cst]
+          } in
+        let unfolded_h := Std.eval_cbv flags h in
+        match strip_n_lambdas nparams unfolded_h with
+        | Some l => unfolded_getter_proj_index l
+        | None => None
         end
     | _ => None
     end.
 
-  Ltac2 rec right_leaning_compose(c1: constr)(c2: constr) :=
-    lazy_match! c1 with
-    | compose ?f1 ?f2 =>
-        right_leaning_compose f1 (right_leaning_compose f2 c2)
-    | _ => constr:(compose $c1 $c2)
+  Ltac2 t_compose(t1: constr)(t2: constr)(t3: constr)(f: constr)(g: constr) :=
+    let args := Array.make 5 t1 in
+    Array.set args 1 t2;
+    Array.set args 2 t3;
+    Array.set args 3 f;
+    Array.set args 4 g;
+    Constr.Unsafe.make (Constr.Unsafe.App (Env.instantiate reference:(compose)) args).
+
+  (* Note: Since there's no uconstr:(...) in Ltac2 (https://github.com/coq/coq/issues/13977),
+     and we don't want to re-typecheck the term each time we create a piece of a term,
+     (both for performance reasons and because the terms we're building contain unbound
+     variables (dangling deBrujin indices)), we need to use mkApp to build the terms,
+     and have to provide all implicit arguments explicitly. *)
+  (* f: t2 -> t4, g: t1 -> t2                         f1    f2    g
+                                                   t4 <- t3 <- t2 <- t1   *)
+  Ltac2 rec right_leaning_compose t1 t2 t4 f g :=
+    lazy_match! f with
+    | @compose _ ?t3 _ ?f1 ?f2 =>
+        right_leaning_compose t1 t3 t4 f1 (right_leaning_compose t1 t2 t3 f2 g)
+    | _ => t_compose t1 t2 t4 f g
     end.
 
   Ltac2 rec constr_list_to_msg(l: constr list) :=
@@ -248,7 +291,31 @@ Module record.
            (Message.concat (Message.of_string " is ") (Message.concat (co_msg ret) (Message.of_string ")")))); *)
     ret.
 
-  (* g: getter, u: field updater, c: any constr
+  Ltac2 t_tset(tR: constr)(tE: constr)(p: constr)(s: constr)(r: constr) :=
+    let args := Array.make 5 tR in
+    Array.set args 1 tE;
+    Array.set args 2 p;
+    Array.set args 3 s;
+    Array.set args 4 r;
+    Constr.Unsafe.make (Constr.Unsafe.App (Env.instantiate reference:(tset)) args).
+
+  Ltac2 t_mk_gafu(tR: constr)(tE: constr)(g: constr)(u: constr) :=
+    let args := Array.make 4 tR in
+    Array.set args 1 tE;
+    Array.set args 2 g;
+    Array.set args 3 u;
+    Constr.Unsafe.make (Constr.Unsafe.App (Env.instantiate reference:(mk_gafu)) args).
+
+  Ltac2 t_const(tE: constr)(v: constr) :=
+    let args := Array.make 2 tE in
+    Array.set args 1 v;
+    Constr.Unsafe.make (Constr.Unsafe.App (Env.instantiate reference:(const)) args).
+
+  (* tR: record type
+     tE: element type
+     g: getter of type R -> E
+     u: field updater of type E -> E
+     c: any constr
      If c is a series of setters setting g to some u_old, replaces u_old by u.
      If c is a series of setters not setting g and ending in a constructor,
      replaces the constructor argument corresponding to g by u.
@@ -256,26 +323,26 @@ Module record.
      If None is returned, no simplification could be made, so the caller might
      be able to reuse an existing (tset (mk_gafu g u) c) term rather than
      allocating a new one. *)
-  Ltac2 rec push_down_setter(g: constr)(u: constr)(c: constr) :=
+  Ltac2 rec push_down_setter(tR: constr)(tE: constr)(g: constr)(u: constr)(c: constr) :=
     log_call "push_down_setter" [g; u; c];
     let c' :=
     lazy_match! c with
-    | tset (mk_gafu ?g' ?u') ?r =>
+    | @tset _ _ (mk_gafu ?g' ?u') ?s ?r =>
         (* setter applied to setter *)
         if Constr.equal g g' then
           (* setter applied to same setter *)
           lazy_match! u with
-          | const _ => Some constr:(tset (mk_gafu $g $u) $r)
+          | const _ => Some (t_tset tR tE (t_mk_gafu tR tE g u) s r)
           | _ => let u_combined :=
                    lazy_match! u' with
-                   | const ?v' => constr:(const ($u $v'))
-                   | _ => right_leaning_compose u u'
+                   | const ?v' => t_const tE (simp_app_nonstrict u v')
+                   | _ => right_leaning_compose tE tE tE u u'
                    end in
-                 Some constr:(tset (mk_gafu $g $u_combined) $r)
+                 Some (t_tset tR tE (t_mk_gafu tR tE g u_combined) s r)
           end
         else (* setter applied to different setter *)
-          match push_down_setter g u r with
-          | Some r' => Some constr:(tset (mk_gafu $g' $u') $r')
+          match push_down_setter tR tE g u r with
+          | Some r' => Some (t_tset tR tE (t_mk_gafu tR tE g' u') s r')
           | None => None
           end
     | _ => match Constr.Unsafe.kind c with
@@ -289,7 +356,7 @@ Module record.
                      let new_field :=
                        lazy_match! u with
                        | const ?v => v
-                       | _ => constr:($u $old_field)
+                       | _ => simp_app_nonstrict u old_field
                        end in
                      let new_args := Array.copy args in
                      Array.set new_args j new_field;
@@ -300,7 +367,7 @@ Module record.
            | _ => (* setter applied to non-setter-non-constructor *) None
            end
     end in
-    log_ret "push_down_setter" [g; u; c] c'.
+    log_ret "push_down_setter" [g; u; c] c'
 
   (* g: getter, i: its backwards-index, c: any constr
      If c is a series of setters setting g to some v, returns v.
@@ -309,7 +376,7 @@ Module record.
      If (Some c') is returned, c' is convertible to c, but simpler.
      If None is returned, no simplification could be made, so the caller might
      be able to reuse an existing (g c) term rather than allocating a new one. *)
-  Ltac2 rec lookup_getter(g: constr)(i: int)(c: constr) :=
+  with lookup_getter(g: constr)(i: int)(c: constr) :=
     log_call "lookup_getter" [g; c];
     let c' :=
     lazy_match! c with
@@ -319,17 +386,10 @@ Module record.
           (* getter applied to same setter *)
           lazy_match! u' with
           | const ?v' => Some v'
-          | _ => let w := match lookup_getter g i r with
-                          | Some w => w
-                          | None => constr:($g $r)
-                          end in
-                 Some constr:($u' $w)
+          | _ => Some (simp_app_nonstrict u' (lookup_getter_nonstrict g i r))
           end
         else (* getter applied to different setter *)
-          match lookup_getter g i r with
-          | Some w => Some w
-          | None => Some constr:($g $r)
-          end
+          Some (lookup_getter_nonstrict g i r)
     | _ => match Constr.Unsafe.kind c with
            | Constr.Unsafe.App h args =>
                if Constr.is_constructor h then (* getter applied to constructor *)
@@ -338,18 +398,35 @@ Module record.
            | _ => (* getter applied to non-setter-non-constructor *) None
            end
     end in
-    log_ret "lookup_getter" [g; c] c'.
+    log_ret "lookup_getter" [g; c] c'
 
-  Ltac2 simp_app(f: constr)(a: constr) :=
+  with lookup_getter_nonstrict(g: constr)(i: int)(r: constr) :=
+    match lookup_getter g i r with
+    | Some w => w
+    | None => mkApp1 g r
+    end
+
+  with simp_app(f: constr)(a: constr) :=
     log_call "simp_app" [f; a];
     let c' := lazy_match! f with
-    | tset (mk_gafu ?g ?u) => push_down_setter g u a
+    | @tset ?tR ?tE (mk_gafu ?g ?u) ?s => push_down_setter tR tE g u a
+    | compose ?f1 ?f2 => Some (simp_app_nonstrict f1 (simp_app_nonstrict f2 a))
+    | fun x => _ => match Constr.Unsafe.kind f with
+                    | Constr.Unsafe.Lambda y body => Some (Constr.Unsafe.substnl [a] 0 body)
+                    | _ => Control.throw Assertion_failure
+                    end
     | _ => match getter_proj_index f with
            | Some i => lookup_getter f i a
            | None => None
            end
     end in
-    log_ret "simp_app" [f; a] c'.
+    log_ret "simp_app" [f; a] c'
+
+  with simp_app_nonstrict(f: constr)(a: constr) :=
+    match simp_app f a with
+    | Some r => r
+    | None => mkApp1 f a
+    end.
 
   (* In-place-apply f to all elements of array a for which it returns Some,
      and return true iff at least one returned Some *)
@@ -372,22 +449,13 @@ Module record.
             match simp_term f with
             | Some f' =>
                 let a' := simp_term_nonstrict a in
-                let o := simp_app f' a' in
-                match o with
-                | Some _ => o
-                | None => Some constr:($f' $a')
-                end
+                Some (simp_app_nonstrict f' a')
             | None =>
                 match simp_term a with
-                | Some a' =>
-                    let o := simp_app f a' in
-                    match o with
-                    | Some _ => o
-                    | None => Some constr:($f $a')
-                    end
+                | Some a' => Some (simp_app_nonstrict f a')
                 | None =>
                     (* if nothing was simplifiable, we return None instead of
-                       reconstructing an identical constr:($f $a) *)
+                       reconstructing an identical (mkApp f [| a |]) *)
                     simp_app f a
                 end
             end
@@ -436,8 +504,25 @@ Module record.
     | None => c
     end.
 
+  Ltac2 Type exn ::=
+    [ Initial_term_ill_typed (constr)
+    | Returned_term_ill_typed (constr)
+    | Type_not_preserved (constr, constr, constr, constr) ].
+
+  Ltac2 simp_term_check(c: constr) :=
+    match simp_term c with
+    | Some c' =>
+        let t := orelse (fun () => Constr.type c)
+                        (fun _ => Control.throw (Initial_term_ill_typed c)) in
+        let t' := orelse (fun () => Constr.type c)
+                         (fun _ => Control.throw (Returned_term_ill_typed c)) in
+        if Constr.equal t t' then Some c'
+        else Control.throw (Type_not_preserved c t c' t')
+    | None => None
+    end.
+
   Ltac2 simp_goal () :=
-    match simp_term (Control.goal ()) with
+    match simp_term(*_check*) (Control.goal ()) with
     | Some g => change $g
     | None => Control.backtrack_tactic_failure "no simplification opportunities"
     end.
@@ -447,12 +532,23 @@ Module record.
   Ltac simp := simp_goal. (* TODO also in hyps *)
 End record.
 
+(* syntactic reflexivity *)
+Ltac srefl :=
+  lazymatch goal with
+  | |- ?x = ?y => constr_eq x y; reflexivity
+  end.
+
 Module RecordSetterTests.
 
   Record foo(A: Type)(n: nat) := {
     fieldA: A;
     fieldB: n = n;
     fieldC: bool;
+  }.
+
+  Record bar := {
+    fieldD: bool;
+    fieldE: foo nat 2;
   }.
 
   Arguments fieldA {_ _}.
@@ -471,7 +567,7 @@ Module RecordSetterTests.
     intros. unfold tset, gafu_getter, gafu_field_updater. unfold set, const. cbn.
     reflexivity.
   Qed.
-  (*  *)
+
   Check (fun b => {! fieldC := false } (testFoo b)).
   Check (fun b => {! fieldC := false; fieldC := true } (testFoo b)).
   Check (fun b => {! fieldC := false; fieldC := true; fieldA ::= Nat.add 2 } (testFoo b)).
@@ -488,33 +584,33 @@ Module RecordSetterTests.
   { r with fieldA ::= {! fieldA ::= Nat.add 1 } }.(fieldA).(fieldA) = S r.(fieldA).(fieldA).
   Proof. intros. reflexivity. Qed.
 
-  (* simplify setter applied to constructor *)
-  Goal forall b, { testFoo b with fieldA ::= (Nat.add 12) } = testFoo b.
-  Proof.
-    unfold testFoo at 1.
-    record.simp.
-  Abort.
+  Goal forall f: foo bool 1, fieldA { f with fieldC ::= andb true } = fieldA f.
+  Proof. record.simp. intros. srefl. Qed.
 
-  Goal forall b, { { testFoo b with fieldA := 3 }
-                   with fieldA ::= Nat.add 4 } = testFoo b.
-  Proof.
-    intros. record.simp.
-  Abort.
+  Goal forall b, {| fieldD := true; fieldE := testFoo b |}.(fieldE).(fieldC) = b.
+  Proof. record.simp. unfold testFoo. record.simp. intros. srefl. Qed.
 
-  Goal forall b, { { testFoo b with fieldB := eq_refl; fieldA := 3 }
-                   with fieldA ::= Nat.add 4 } = testFoo b.
-  Proof.
-    record.simp.
-  Abort.
+  Goal forall b, { testFoo b with fieldA ::= (Nat.add 12) }
+                 = {| fieldA := 12 + 3; fieldB := eq_refl; fieldC := b |}.
+  Proof. unfold testFoo. record.simp. intros. srefl. Qed.
 
-  (* simplify getter applied to setter *)
+  Goal compose (compose (Nat.add 1) (Nat.add 2)) (compose (Nat.add 3) (Nat.add 4)) 5 =
+         1 + (2 + (3 + (4 + 5))).
+  Proof. record.simp. srefl. Qed.
+
+  Goal forall b: bool, { {| fieldD := b; fieldE := testFoo true |}
+                         with fieldD ::= (fun old => andb old old) }
+                       = {| fieldD := andb b b; fieldE := testFoo true |}.
+  Proof. record.simp. intros. srefl. Qed.
+
+  Goal forall b, { { testFoo b with fieldA := 3 } with fieldA ::= Nat.add 4 }
+                 = { testFoo b with fieldA := 4 + 3 }.
+  Proof. record.simp. intros. srefl. Qed.
+
   Goal forall b, fieldB { testFoo b with fieldA ::= (Nat.add 12) } = eq_refl.
-    record.simp.
-  Abort.
+  Proof. record.simp. unfold testFoo. record.simp. intros. srefl. Qed.
 
-  (* unfold getter applied to constructor *)
   Goal forall b, fieldB (testFoo b) = eq_refl.
-  Proof.
-    unfold testFoo. record.simp.
-  Abort.
+  Proof. unfold testFoo. record.simp. intros. srefl. Qed.
+
 End RecordSetterTests.
