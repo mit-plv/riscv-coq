@@ -117,10 +117,12 @@ Module Export RecordSetNotations.
 
   Declare Custom Entry field_update.
   Notation "proj := v" := (mk_gafu proj (const v))
-    (in custom field_update at level 1, proj constr at level 99, v constr at level 99)
+    (in custom field_update at level 1, proj constr at level 99, v constr at level 99,
+     format "proj  :=  '/' v")
     : record_set.
   Notation "proj ::= f" := (mk_gafu proj f)
-    (in custom field_update at level 1, proj constr at level 99, f constr at level 99)
+    (in custom field_update at level 1, proj constr at level 99, f constr at level 99,
+     format "proj  ::=  '/' f")
     : record_set.
 
   Notation "'{!' u }" := (tset u)
@@ -132,17 +134,17 @@ Module Export RecordSetNotations.
      (compose (tset w) .. (compose (tset v) (tset u)) ..)
      (at level 0, u custom field_update at level 1, v custom field_update at level 1,
       w custom field_update at level 1,
-      format "'{!'  u ;  v ;  .. ;  w  }")
+      format "'{!'  '[' u ;  '/' v ;  '/' .. ;  '/' w  ']' }")
     : record_set.
 
   Notation "{ x 'with' u }" := (tset u x)
      (at level 0, x at level 99, u custom field_update at level 1,
-      format "{  x  'with'  u  }") : record_set.
+      format "{  x  'with'  '[' u ']'  }") : record_set.
   Notation "{ x 'with' u ; .. ; v ; w }" :=
      (tset w (tset v .. (tset u x) .. ))
      (at level 0, x at level 99, u custom field_update at level 1,
       v custom field_update at level 1, w custom field_update at level 1,
-      format "{  x  'with'  u ;  .. ;  v ;  w  }") : record_set.
+      format "{  x  'with'  '[' u ;  '/' .. ;  '/' v ;  '/' w  ']' }") : record_set.
 End RecordSetNotations.
 
 Module record.
