@@ -223,28 +223,72 @@ Module record.
     | _ => constr:(compose $c1 $c2)
     end.
 
+  Ltac2 Type exn ::= [ Type_not_preserved (constr, constr, constr, constr) ].
+
+  (* for debugging *)
+  Ltac2 preserve_type(c: constr)(f: unit -> constr option) :=
+    let t := Constr.type c in
+    match f () with
+    | Some c' =>
+        let t' := Constr.type c' in
+        orelse (fun () => unify $t $t'; Some c')
+               (fun _ => Control.throw (Type_not_preserved c t c' t'))
+    | None => None
+    end.
+
+  Ltac2 rec constr_list_to_msg(l: constr list) :=
+    match l with
+    | [] => Message.of_string " "
+    | h :: t => Message.concat (Message.of_string " ") (Message.concat
+                 (Message.of_constr h) (constr_list_to_msg t))
+    end.
+
+  Ltac2 log_call(name: string)(args: constr list) := (). (*
+    Message.print (Message.concat (Message.of_string "(Calling ")
+      (Message.concat (Message.of_string name) (constr_list_to_msg args))). *)
+
+  Ltac2 co_msg(co: constr option) :=
+    match co with
+    | Some c => Message.concat (Message.of_string "Some constr:(") (Message.concat (Message.of_constr c) (Message.of_string ")"))
+    | None => Message.of_string "None"
+    end.
+
+  Ltac2 log_ret(name: string)(args: constr list)(ret: constr option) := (*
+    Message.print (Message.concat (Message.concat (Message.of_string "Return value of ")
+      (Message.concat (Message.of_string name) (constr_list_to_msg args)))
+           (Message.concat (Message.of_string " is ") (Message.concat (co_msg ret) (Message.of_string ")")))); *)
+    ret.
+
   (* g: getter, u: field updater, c: any constr
      If c is a series of setters setting g to some u_old, replaces u_old by u.
      If c is a series of setters not setting g and ending in a constructor,
      replaces the constructor argument corresponding to g by u.
-     The returned term is convertible to c, but potentially simpler. *)
+     If (Some c') is returned, c' is convertible to c, but simpler.
+     If None is returned, no simplification could be made, so the caller might
+     be able to reuse an existing (tset (mk_gafu g u) c) term rather than
+     allocating a new one. *)
   Ltac2 rec push_down_setter(g: constr)(u: constr)(c: constr) :=
+    log_call "push_down_setter" [g; u; c];
+    let c' := preserve_type c (fun () =>
     lazy_match! c with
     | tset (mk_gafu ?g' ?u') ?r =>
         (* setter applied to setter *)
         if Constr.equal g g' then
           (* setter applied to same setter *)
           lazy_match! u with
-          | const _ => constr:(tset (mk_gafu $g $u) $r)
+          | const _ => Some constr:(tset (mk_gafu $g $u) $r)
           | _ => let u_combined :=
                    lazy_match! u' with
                    | const ?v' => eval cbv beta in ($u $v')
                    | _ => right_leaning_compose u u'
                    end in
-                 constr:(tset (mk_gafu $g $u_combined) $r)
+                 Some constr:(tset (mk_gafu $g $u_combined) $r)
           end
         else (* setter applied to different setter *)
-          let r' := push_down_setter g u r in constr:(tset (mk_gafu $g' $u') $r')
+          match push_down_setter g u r with
+          | Some r' => Some constr:(tset (mk_gafu $g' $u') $r')
+          | None => None
+          end
     | _ => match Constr.Unsafe.kind c with
            | Constr.Unsafe.App h args =>
                if Constr.is_constructor h then
@@ -260,57 +304,103 @@ Module record.
                        end in
                      let new_args := Array.copy args in
                      Array.set new_args j new_field;
-                     Constr.Unsafe.make (Constr.Unsafe.App h new_args)
+                     Some (Constr.Unsafe.make (Constr.Unsafe.App h new_args))
                   | None => Control.throw_invalid_argument "g is not a getter"
                   end
-               else (* setter applied to non-setter-non-constructor *) c
-           | _ => (* setter applied to non-setter-non-constructor *) c
+               else (* setter applied to non-setter-non-constructor *) None
+           | _ => (* setter applied to non-setter-non-constructor *) None
            end
-    end.
+    end) in
+    log_ret "push_down_setter" [g; u; c] c'.
 
   (* g: getter, i: its backwards-index, c: any constr
      If c is a series of setters setting g to some v, returns v.
      If c is a series of setters not setting g and ending in a constructor,
      returns the constructor argument corresponding to g.
-     The returned term is convertible to c, but potentially simpler. *)
+     If (Some c') is returned, c' is convertible to c, but simpler.
+     If None is returned, no simplification could be made, so the caller might
+     be able to reuse an existing (g c) term rather than allocating a new one. *)
   Ltac2 rec lookup_getter(g: constr)(i: int)(c: constr) :=
+    log_call "lookup_getter" [g; c];
+    let c' :=
     lazy_match! c with
     | tset (mk_gafu ?g' ?u') ?r =>
         (* getter applied to setter *)
         if Constr.equal g g' then
           (* getter applied to same setter *)
           lazy_match! u' with
-          | const ?v' => v'
-          | _ => let w := lookup_getter g i r in eval cbv beta in ($u' $w)
+          | const ?v' => Some v'
+          | _ => let w := match lookup_getter g i r with
+                          | Some w => w
+                          | None => constr:($g $r)
+                          end in
+                 Some (eval cbv beta in ($u' $w))
           end
         else (* getter applied to different setter *)
-          lookup_getter g i r
+          match lookup_getter g i r with
+          | Some w => Some w
+          | None => Some constr:($g $r)
+          end
     | _ => match Constr.Unsafe.kind c with
            | Constr.Unsafe.App h args =>
                if Constr.is_constructor h then (* getter applied to constructor *)
-                 Array.get args (Int.sub (Array.length args) i)
-               else (* getter applied to non-setter-non-constructor *) c
-           | _ => (* getter applied to non-setter-non-constructor *) c
+                 Some (Array.get args (Int.sub (Array.length args) i))
+               else (* getter applied to non-setter-non-constructor *) None
+           | _ => (* getter applied to non-setter-non-constructor *) None
            end
-    end.
+    end in
+    log_ret "lookup_getter" [g; c] c'.
+
+  Ltac2 simp_app(f: constr)(a: constr) :=
+    log_call "simp_app" [f; a];
+    let c' := lazy_match! f with
+    | tset (mk_gafu ?g ?u) => push_down_setter g u a
+    | _ => match getter_proj_index f with
+           | Some i => lookup_getter f i a
+           | None => None
+           end
+    end in
+    log_ret "simp_app" [f; a] c'.
 
   Ltac2 rec simp_term(c: constr) :=
+    log_call "simp_term" [c];
+    let c' := preserve_type c (fun () =>
     lazy_match! c with
     | ?f ?a =>
-        let f' := simp_term f in
-        let a' := simp_term a in
-        lazy_match! f' with
-        | tset (mk_gafu ?g ?u) => push_down_setter g u a'
-        | _ => match getter_proj_index f' with
-               | Some i => lookup_getter f' i a'
-               | None => constr:($f' $a')
-               end
+        match simp_term f with
+        | Some f' =>
+            let a' := match simp_term a with
+                      | Some a' => a'
+                      | None => a
+                      end in
+            let o := simp_app f' a' in
+            match o with
+            | Some _ => o
+            | None => Some constr:($f' $a')
+            end
+        | None =>
+            match simp_term a with
+            | Some a' =>
+                let o := simp_app f a' in
+                match o with
+                | Some _ => o
+                | None => Some constr:($f $a')
+                end
+            | None =>
+                (* if nothing was simplifiable, we return None instead of
+                   reconstructing an identical constr:($f $a) *)
+                simp_app f a
+            end
         end
-    | _ => c
-    end.
+    | _ => None
+    end) in
+    log_ret "simp_term" [c] c'.
 
   Ltac2 simp_goal () :=
-    let g := simp_term (Control.goal ()) in change $g.
+    match simp_term (Control.goal ()) with
+    | Some g => change $g
+    | None => Control.backtrack_tactic_failure "no simplification opportunities"
+    end.
 
   Ltac simp_goal := ltac2:(simp_goal ()).
 
@@ -341,7 +431,7 @@ Module RecordSetterTests.
     intros. unfold tset, gafu_getter, gafu_field_updater. unfold set, const. cbn.
     reflexivity.
   Qed.
-
+  (*  *)
   Check (fun b => {! fieldC := false } (testFoo b)).
   Check (fun b => {! fieldC := false; fieldC := true } (testFoo b)).
   Check (fun b => {! fieldC := false; fieldC := true; fieldA ::= Nat.add 2 } (testFoo b)).
@@ -361,12 +451,14 @@ Module RecordSetterTests.
   (* simplify setter applied to constructor *)
   Goal forall b, { testFoo b with fieldA ::= (Nat.add 12) } = testFoo b.
   Proof.
-    unfold testFoo at 1. intros. record.simp.
+    unfold testFoo at 1. intros.
+    record.simp.
   Abort.
 
   (* simplify getter applied to setter *)
   Goal forall b, fieldB { testFoo b with fieldA ::= (Nat.add 12) } = eq_refl.
-    intros. (* record.simp. anomaly *)
+    intros.
+    record.simp.
   Abort.
 
   (* unfold getter applied to constructor *)
