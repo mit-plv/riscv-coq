@@ -327,7 +327,7 @@ Module record.
     log_call "push_down_setter" [g; u; c];
     let c' :=
     lazy_match! c with
-    | @tset _ _ (mk_gafu ?g' ?u') ?s ?r =>
+    | @tset ?tR' ?tE' (mk_gafu ?g' ?u') ?s ?r =>
         (* setter applied to setter *)
         if Constr.equal g g' then
           (* setter applied to same setter *)
@@ -342,7 +342,7 @@ Module record.
           end
         else (* setter applied to different setter *)
           match push_down_setter tR tE g u r with
-          | Some r' => Some (t_tset tR tE (t_mk_gafu tR tE g' u') s r')
+          | Some r' => Some (t_tset tR' tE' (t_mk_gafu tR' tE' g' u') s r')
           | None => None
           end
     | _ => match Constr.Unsafe.kind c with
@@ -512,17 +512,25 @@ Module record.
   Ltac2 simp_term_check(c: constr) :=
     match simp_term c with
     | Some c' =>
-        let t := orelse (fun () => Constr.type c)
-                        (fun _ => Control.throw (Initial_term_ill_typed c)) in
-        let t' := orelse (fun () => Constr.type c)
-                         (fun _ => Control.throw (Returned_term_ill_typed c)) in
+        let ct := match Constr.Unsafe.check c with
+                  | Val ct => ct
+                  | _ => Control.throw (Initial_term_ill_typed c)
+                  end in
+        let t := orelse (fun () => Constr.type ct)
+                        (fun _ => Control.throw (Initial_term_ill_typed ct)) in
+        let ct' := match Constr.Unsafe.check c' with
+                   | Val ct' => ct'
+                   | _ => Control.throw (Returned_term_ill_typed c')
+                   end in
+        let t' := orelse (fun () => Constr.type ct')
+                         (fun _ => Control.throw (Returned_term_ill_typed ct')) in
         if Constr.equal t t' then Some c'
-        else Control.throw (Type_not_preserved c t c' t')
+        else Control.throw (Type_not_preserved c t ct' t')
     | None => None
     end.
 
   Ltac2 simp_goal () :=
-    match simp_term(*_check*) (Control.goal ()) with
+    match simp_term_check (Control.goal ()) with
     | Some g => change $g
     | None => Control.backtrack_tactic_failure "no simplification opportunities"
     end.
