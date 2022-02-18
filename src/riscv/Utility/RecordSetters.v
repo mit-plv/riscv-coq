@@ -460,10 +460,15 @@ Module record.
                 end
             end
         end
-    | Constr.Unsafe.Prod x body =>
-        match simp_term body with
-        | Some body' => Some (Constr.Unsafe.make (Constr.Unsafe.Prod x body'))
-        | None => None
+    | Constr.Unsafe.Prod b body =>
+        match simp_term (Constr.Binder.type b) with
+        | Some t => let b' := Constr.Binder.make (Constr.Binder.name b) t in
+                    let body' := simp_term_nonstrict body in
+                    Some (Constr.Unsafe.make (Constr.Unsafe.Prod b' body'))
+        | None => match simp_term body with
+                  | Some body' => Some (Constr.Unsafe.make (Constr.Unsafe.Prod b body'))
+                  | None => None
+                  end
         end
     | Constr.Unsafe.Lambda x body =>
         match simp_term body with
@@ -644,4 +649,7 @@ Module RecordSetterTests.
 
   Goal forall b, fieldB (testFoo b) <> eq_refl -> False.
   Proof. unfold testFoo. intros. record.simp. apply H. srefl. Qed.
+
+  Goal forall b, fieldB (testFoo b) <> eq_refl -> False.
+  Proof. unfold testFoo. record.simp. intros. apply H. srefl. Qed.
 End RecordSetterTests.
