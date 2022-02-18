@@ -529,15 +529,36 @@ Module record.
     | None => None
     end.
 
-  Ltac2 simp_goal () :=
+  Ltac2 simp_hyps_bool_progress () :=
+    List.fold_left (fun progr (x, obody, tp) =>
+      match simp_term_check tp with
+      | Some tp' => change $tp' in $x; true
+      | None => progr
+      end) (Control.hyps ()) false.
+
+  Ltac2 simp_hyps () :=
+    if simp_hyps_bool_progress () then ()
+    else Control.backtrack_tactic_failure "no simplification opportunities".
+
+  Ltac2 simp_goal_bool_progress () :=
     match simp_term_check (Control.goal ()) with
-    | Some g => change $g
-    | None => Control.backtrack_tactic_failure "no simplification opportunities"
+    | Some g => change $g; true
+    | None => false
     end.
 
-  Ltac simp_goal := ltac2:(Control.enter simp_goal).
+  Ltac2 simp_goal () :=
+    if simp_goal_bool_progress () then ()
+    else Control.backtrack_tactic_failure "no simplification opportunities".
 
-  Ltac simp := simp_goal. (* TODO also in hyps *)
+  Ltac2 simp () :=
+    let progr_h := simp_hyps_bool_progress () in
+    let progr_g := simp_goal_bool_progress () in
+    if progr_h || progr_g then ()
+    else Control.backtrack_tactic_failure "no simplification opportunities".
+
+  Ltac simp_hyps := ltac2:(Control.enter simp_hyps).
+  Ltac simp_goal := ltac2:(Control.enter simp_goal).
+  Ltac simp := ltac2:(Control.enter simp).
 End record.
 
 (* syntactic reflexivity *)
@@ -621,4 +642,6 @@ Module RecordSetterTests.
   Goal forall b, fieldB (testFoo b) = eq_refl.
   Proof. unfold testFoo. record.simp. intros. srefl. Qed.
 
+  Goal forall b, fieldB (testFoo b) <> eq_refl -> False.
+  Proof. unfold testFoo. intros. record.simp. apply H. srefl. Qed.
 End RecordSetterTests.
