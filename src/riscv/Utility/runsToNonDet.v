@@ -52,4 +52,10 @@ Section RunsTo.
     : runsTo initial P.
   Proof. eapply runsToStep; eauto. Qed.
 
+  Lemma runsTo_trans_cps: forall (Q : State -> Prop) (initial : State),
+      runsTo initial (fun middle => runsTo middle Q) ->
+      runsTo initial Q.
+  Proof.
+    intros. eapply runsTo_trans; eauto.
+  Qed.
 End RunsTo.
