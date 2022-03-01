@@ -80,21 +80,26 @@ Section Riscv.
   Definition updatePc(mach: RiscvMachine): RiscvMachine :=
     withPc mach.(getNextPc) (withNextPc (word.add mach.(getNextPc) (word.of_Z 4)) mach).
 
+  Definition getReg(regs: Registers)(reg: Z): word :=
+    if ((0 <? reg) && (reg <? 32)) then
+      match map.get regs reg with
+      | Some x => x
+      | None => word.of_Z 0
+      end
+    else word.of_Z 0.
+
+  Definition setReg(reg: Z)(v: word)(regs: Registers): Registers :=
+    if ((0 <? reg) && (reg <? 32)) then map.put regs reg v else regs.
+
   Definition interpret_action (a : riscv_primitive) (mach : RiscvMachine) :
     (primitive_result a -> RiscvMachine -> Prop) -> (RiscvMachine -> Prop) -> Prop :=
     match a with
     | GetRegister reg => fun (postF: word -> RiscvMachine -> Prop) postA =>
-        let v :=
-          if Z.eq_dec reg 0 then word.of_Z 0
-          else match map.get mach.(getRegs) reg with
-               | Some x => x
-               | None => word.of_Z 0 end in
+        let v := getReg mach.(getRegs) reg in
         postF v mach
     | SetRegister reg v => fun postF postA =>
-      let regs := if Z.eq_dec reg Register0
-                  then mach.(getRegs)
-                  else map.put mach.(getRegs) reg v in
-      postF tt (withRegs regs mach)
+        let regs := setReg reg v mach.(getRegs) in
+        postF tt (withRegs regs mach)
     | GetPC => fun postF postA => postF mach.(getPc) mach
     | SetPC newPC => fun postF postA => postF tt (withNextPc newPC mach)
     | LoadByte ctxid a => fun postF postA => load 1 ctxid a mach postF
@@ -302,6 +307,7 @@ Section Riscv.
       | |- _ => solve [ intuition (eauto || blia) ]
       | H : _ \/ _ |- _ => destruct H
       | |- context[match ?x with _ => _ end] => destruct x eqn:?
+      | |- _ => progress unfold getReg, setReg
       | |-_ /\ _ => split
       end.
       (* setRegister *)

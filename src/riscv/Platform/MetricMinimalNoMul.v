@@ -135,6 +135,7 @@ Section Riscv.
       | |- _ => solve [ intuition (eauto || blia) ]
       | H : _ \/ _ |- _ => destruct H
       | |- context[match ?x with _ => _ end] => destruct x eqn:?
+      | |- _ => progress unfold getReg, setReg
       | |-_ /\ _ => split
       end.
       (* setRegister *)
