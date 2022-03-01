@@ -7,7 +7,7 @@ Require Import riscv.Platform.Memory.
 Require Import riscv.Spec.CSRFile.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Utility.RecordSetters.
-Require Import coqutil.Z.Lia.
+Require Import Coq.micromega.Lia.
 Require Import coqutil.Map.Interface.
 Require Import riscv.Platform.MaterializeRiscvProgram.
 
@@ -20,7 +20,112 @@ End map.
 Section Riscv.
   Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
   Context {Mem: map.map word byte}.
-  Context {Registers: map.map Z word}.
+
+  (* Note: If we want to restrict the set of keys to 1..31, but also allow 0,
+     we obtain a structure that does not respect the map axioms (get of set at 0
+     does not return the set value), so we reimplement a new data type instead. *)
+  Record Registers := mkRegisters {
+    regvals: list word;
+    _regvals_length: Nat.eqb (List.length regvals) 31 = true
+  }.
+
+  Definition getReg(regs: Registers)(reg: Z): word :=
+    List.Znth (reg - 1) (regvals regs) (word.of_Z 0).
+
+  Definition setReg(reg: Z)(v: word)(regs: Registers): Registers.
+    refine (
+        if Z.ltb 0 reg
+        then mkRegisters (List.upd (regvals regs) (Z.to_nat (reg - 1)) v) _
+        else regs).
+    match goal with
+    | |- ?b = true => destruct b eqn: E
+    end.
+    (* when executing with concrete maps, only the first case will occur, so the
+       proof term will always be eq_refl. *)
+    - exact eq_refl.
+    - rewrite <- E. rewrite List.upd_length. apply _regvals_length.
+  Defined.
+
+  Lemma regvals_length: forall m, List.length (regvals m) = 31%nat.
+  Proof.
+    intros. destruct m. cbn. eapply Nat.eqb_eq. assumption.
+  Qed.
+
+  Lemma Registers_eq_from_regvals_eq: forall x y, regvals x = regvals y -> x = y.
+  Proof.
+    cbv [regvals]; destruct x as [x px], y as [y py].
+    intro; subst y.
+    apply f_equal, Eqdep_dec.UIP_dec; decide equality.
+  Qed.
+
+  Lemma Registers_ext: forall m1 m2,
+      (forall r, 0 < r < 32 -> getReg m1 r = getReg m2 r) ->
+      m1 = m2.
+  Proof.
+    intros. eapply Registers_eq_from_regvals_eq.
+    unfold getReg in H.
+    eapply List.Znth_ext; rewrite ?regvals_length. 1: reflexivity.
+    intros.
+    specialize (H (z + 1)).
+    replace (z + 1 - 1) with z in H by lia.
+    eapply H.
+    lia.
+  Qed.
+
+  Lemma get_setReg_same: forall m k v,
+      0 < k < 32 ->
+      getReg (setReg k v m) k = v.
+  Proof.
+    intros. unfold getReg, setReg.
+    destr (0 <? k). 2: exfalso; lia.
+    cbn.
+    pose proof (regvals_length m).
+    unfold List.Znth. destr (k - 1 <? 0). 1: exfalso; lia.
+    apply List.nth_upd_same. lia.
+  Qed.
+
+  Lemma getReg_above: forall m k,
+      32 <= k ->
+      getReg m k = word.of_Z 0.
+  Proof.
+    intros. unfold getReg. unfold List.Znth. destr (k - 1 <? 0). 1: exfalso; lia.
+    apply nth_overflow. rewrite regvals_length. lia.
+  Qed.
+
+  Lemma getReg_below: forall m k,
+      k <= 0 ->
+      getReg m k = word.of_Z 0.
+  Proof.
+    intros. unfold getReg. unfold List.Znth. destr (k - 1 <? 0). 2: exfalso; lia.
+    reflexivity.
+  Qed.
+
+  Lemma setReg_above: forall m k v,
+      32 <= k ->
+      setReg k v m = m.
+  Proof.
+    intros. unfold setReg. destr (0 <? k). 2: exfalso; lia.
+    eapply Registers_eq_from_regvals_eq. cbn.
+    apply List.upd_above. rewrite regvals_length. lia.
+  Qed.
+
+  Lemma setReg_below: forall m k v,
+      k <= 0 ->
+      setReg k v m = m.
+  Proof.
+    intros. unfold setReg. destr (0 <? k). 1: exfalso; lia. reflexivity.
+  Qed.
+
+  Lemma get_setReg_diff: forall m k1 k2 v,
+      k1 <> k2 ->
+      getReg (setReg k2 v m) k1 = getReg m k1.
+  Proof.
+    intros. unfold getReg, setReg, List.Znth.
+    destr (k1 - 1 <? 0). 1: reflexivity.
+    destr (0 <? k2); cbn. 2: reflexivity.
+    apply List.nth_upd_diff.
+    lia.
+  Qed.
 
   (* (memory before call, call name, arg values) and (memory after call, return values) *)
   Definition LogItem: Type := (Mem * string * list word) * (Mem * list word).
@@ -51,16 +156,6 @@ Section Riscv.
 
   Definition updatePc(mach: State): State :=
     { mach with pc := mach.(nextPc); nextPc ::= word.add (word.of_Z 4) }.
-
-  Definition getReg(regs: Registers)(reg: Z): word :=
-    if Z.eq_dec reg 0 then word.of_Z 0
-    else match map.get regs reg with
-         | Some x => x
-         | None => word.of_Z 0
-         end.
-
-  Definition setReg(reg: Z)(v: word)(regs: Registers): Registers :=
-    if Z.eq_dec reg Register0 then regs else map.put regs reg v.
 
   Definition run_primitive(a: riscv_primitive)(mach: State):
              (primitive_result a -> State -> Prop) -> (State -> Prop) -> Prop :=
