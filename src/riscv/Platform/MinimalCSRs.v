@@ -53,14 +53,15 @@ Section Riscv.
     { mach with pc := mach.(nextPc); nextPc ::= word.add (word.of_Z 4) }.
 
   Definition getReg(regs: Registers)(reg: Z): word :=
-    if Z.eq_dec reg 0 then word.of_Z 0
-    else match map.get regs reg with
-         | Some x => x
-         | None => word.of_Z 0
-         end.
+    if ((0 <? reg) && (reg <? 32))%bool then
+      match map.get regs reg with
+      | Some x => x
+      | None => word.of_Z 0
+      end
+    else word.of_Z 0.
 
   Definition setReg(reg: Z)(v: word)(regs: Registers): Registers :=
-    if Z.eq_dec reg Register0 then regs else map.put regs reg v.
+    if ((0 <? reg) && (reg <? 32))%bool then map.put regs reg v else regs.
 
   Definition run_primitive(a: riscv_primitive)(mach: State):
              (primitive_result a -> State -> Prop) -> (State -> Prop) -> Prop :=
