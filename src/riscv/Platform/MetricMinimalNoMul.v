@@ -53,6 +53,7 @@ Section Riscv.
     | Fence a b => id
     | GetPC => id
     | SetPC a => addMetricJumps 1
+    | StartCycle => id
     | EndCycleNormal => addMetricInstructions 1
     | EndCycleEarly A => addMetricInstructions 1
     end.

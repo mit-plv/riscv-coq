@@ -78,6 +78,8 @@ Section Riscv.
     | StoreHalf ctxid a v => fun postF postA => store 2 ctxid a v mach (postF tt)
     | StoreWord ctxid a v => fun postF postA => store 4 ctxid a v mach (postF tt)
     | StoreDouble ctxid a v => fun postF postA => store 8 ctxid a v mach (postF tt)
+    | StartCycle => fun postF postA =>
+        postF tt { mach with nextPc := word.add mach.(pc) (word.of_Z 4) }
     | EndCycleNormal => fun postF postA => postF tt (updatePc mach)
     | EndCycleEarly _ => fun postF postA => postA (updatePc mach) (* ignores postF containing the continuation *)
     | GetCSRField f => fun postF postA =>

@@ -29,6 +29,7 @@ Section Riscv.
   | Fence (_ : MachineInt) (_ : MachineInt)
   | GetPC
   | SetPC (_ : word)
+  | StartCycle
   | EndCycleNormal
   | EndCycleEarly (_ : Type)
   .
@@ -53,6 +54,7 @@ Section Riscv.
     | Fence _ _ => unit
     | GetPC => word
     | SetPC _ => unit
+    | StartCycle => unit
     | EndCycleNormal => unit
     | EndCycleEarly T => T
     end.
@@ -82,4 +84,9 @@ Section Riscv.
     endCycleEarly A := act (EndCycleEarly A) ret;
   |}.
 
+  (* Not (yet) in Riscv monad, but added here because it's useful to initialize
+     nextPc to pc+4 at the beginning of each cycle instead of having to maintain
+     a nextPc=pc+4 invariant everywhere *)
+  Definition startCycle: FreeMonad.free riscv_primitive primitive_result unit :=
+    FreeMonad.free.act StartCycle FreeMonad.free.ret.
 End Riscv.
