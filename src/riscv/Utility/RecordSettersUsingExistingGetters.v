@@ -1,14 +1,56 @@
 Require Import Coq.Program.Basics.
+Require Import Ltac2.Ltac2.
+Require Ltac2.Option.
+Require Import Ltac2.Bool.
+Require Import coqutil.Ltac2Lib.Constr.
+Set Default Proof Mode "Classic".
 
-Ltac eta X :=
-  let s := constr:(ltac:(
-        let x := fresh "x" in
-        intro x; unshelve eexists;
-        [ econstructor; destruct x | destruct x; reflexivity ])
-    : forall x : X, { x' : X | x' = x }) in
-  lazymatch s with
-  | fun x => exist _ (@?w x) _ => eval cbv beta in w
+Ltac2 rec strip_foralls(t: constr) :=
+  match Constr.Unsafe.kind t with
+  | Constr.Unsafe.Prod b u => let (bs, body) := strip_foralls u in (b :: bs, body)
+  | _ => ([], t)
   end.
+
+Ltac2 app_arg_count(t: constr) :=
+  match Constr.Unsafe.kind t with
+  | Constr.Unsafe.App f args => Array.length args
+  | _ => 0
+  end.
+
+Ltac2 binder_to_field(qualification: ident list)(b: binder) :=
+   Option.get (Env.get (List.append qualification [Option.get (Constr.Binder.name b)])).
+
+Ltac2 field_names(ctor_ref: Std.reference) :=
+  let ctor_type := Constr.type (Env.instantiate ctor_ref) in
+  let (binders, result) := strip_foralls ctor_type in
+  let n_type_args := app_arg_count result in
+  let field_name_binders := List.skipn n_type_args binders in
+  List.map (binder_to_field (List.removelast (Env.path ctor_ref))) field_name_binders.
+
+Ltac2 constructor_of_record(t: constr) :=
+  match Constr.Unsafe.kind t with
+  | Constr.Unsafe.Ind ind inst =>
+    Std.ConstructRef (Constr.Unsafe.constructor ind 0)
+  | _ => Control.throw (Invalid_argument (Some (Message.of_constr t)))
+  end.
+
+Ltac2 eta(t: constr) :=
+  let (h, args) := match Constr.Unsafe.kind t with
+                   | Constr.Unsafe.App h args => (h, args)
+                   | _ => (t, Array.empty ())
+                   end in
+  let ctor := constructor_of_record h in
+  let getters := List.map (fun getterRef => mkApp (Env.instantiate getterRef) args)
+                          (field_names ctor) in
+  constr:(fun x: $t => ltac2:(
+    let projections := List.map (fun getter => constr:($getter &x)) getters in
+    let res := mkApp (mkApp (Env.instantiate ctor) args) (Array.of_list projections) in
+    exact $res)).
+
+Ltac exact_eta :=
+  ltac2:(t |- let res := eta (Option.get (Ltac1.to_constr t)) in exact $res).
+
+Ltac eta T := constr:(ltac:(exact_eta T)).
 
 Class Setter{R E: Type}(getter: R -> E): Type := set: (E -> E) -> R -> R.
 Arguments set {R E} (getter) {Setter} (fieldUpdater) (r).
@@ -26,31 +68,23 @@ Arguments mk_gafu {R E} (gafu_getter gafu_field_updater).
 Definition tset{R E: Type}(t: gafu R E){Setter: Setter (gafu_getter t)}: R -> R :=
   set (gafu_getter t) (gafu_field_updater t).
 
-Ltac head t :=
-  lazymatch t with
-  | ?f _ => head f
-  | _ => t
-  end.
-
-Ltac setter R E getter :=
+Ltac setter R getter :=
   let getter := lazymatch getter with
                 | gafu_getter (mk_gafu ?g _) => g
                 | _ => getter
                 end in
-  let h := head getter in
   let etaR := eta R in
-  exact (fun (updateE: E -> E) (r: R) => ltac:(
-    let b := eval cbv beta in (etaR r) in
-    let g := eval cbv beta delta [h] in (getter r) in
-    match b with
-    (* Note: `context C[g]` without the constr_eq would work too, but g is printed
-       as a destructuring let, whereas f and the anonymous getters in etaR are
-       printed as matches, and we prefer to uniformly have matches everywhere *)
-    | context C[?f] => constr_eq f g; let b' := context C[updateE f] in exact b'
-    end
-  )).
+  lazymatch etaR with
+  | context[getter] => idtac
+  | _ => fail 1 getter "is not a field of" R
+  end;
+  lazymatch eval pattern getter in etaR with
+  | ?updateR _ =>
+      let u := eval cbv beta in (fun updateE => updateR (fun r => updateE (getter r))) in
+      exact u
+  end.
 
-Global Hint Extern 1 (@Setter ?R ?E ?getter) => setter R E getter : typeclass_instances.
+Global Hint Extern 1 (@Setter ?R ?E ?getter) => setter R getter : typeclass_instances.
 
 (* Note: To update a field with a constant value (rather than by applying an
    updater function to its old value), we could just use the constant function
@@ -110,13 +144,6 @@ Module Export RecordSetNotations.
       v custom field_update at level 1, w custom field_update at level 1,
       format "{  x  'with'  '[' u ;  '/' .. ;  '/' v ;  '/' w  ']' }") : record_set.
 End RecordSetNotations.
-
-Require Import Ltac2.Ltac2.
-Require Ltac2.Option.
-Require Import Ltac2.Bool.
-Require coqutil.Ltac2Lib.Constr.
-
-Set Default Proof Mode "Classic".
 
 Module record.
 
@@ -346,7 +373,7 @@ Module record.
   with lookup_getter_nonstrict(g: constr)(i: int)(r: constr) :=
     match lookup_getter g i r with
     | Some w => w
-    | None => Constr.mkApp1 g r
+    | None => mkApp1 g r
     end
 
   with simp_app(f: constr)(a: constr) :=
@@ -368,7 +395,7 @@ Module record.
   with simp_app_nonstrict(f: constr)(a: constr) :=
     match simp_app f a with
     | Some r => r
-    | None => Constr.mkApp1 f a
+    | None => mkApp1 f a
     end.
 
   (* In-place-apply f to all elements of array a for which it returns Some,
