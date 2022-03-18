@@ -1,5 +1,3 @@
-Require Import Coq.Program.Basics.
-
 Ltac eta X :=
   let s := constr:(ltac:(
         let x := fresh "x" in
@@ -7,24 +5,11 @@ Ltac eta X :=
         [ econstructor; destruct x | destruct x; reflexivity ])
     : forall x : X, { x' : X | x' = x }) in
   lazymatch s with
-  | fun x => exist _ (@?w x) _ => eval cbv beta in w
+  (* `eval cbv beta` would get rid of superfluous eta expansions in each branch that
+     were created by `destruct`, but we commment it out because `cbv beta` is called
+     again in `setter` *)
+  | fun x => exist _ (@?w x) _ => (* eval cbv beta in *) w
   end.
-
-Class Setter{R E: Type}(getter: R -> E): Type := set: (E -> E) -> R -> R.
-Arguments set {R E} (getter) {Setter} (fieldUpdater) (r).
-
-(* "getter and field updater": a specialized tuple with fst/snd that no one else uses,
-   to avoid confusing tactics *)
-Record gafu{R E: Type} := mk_gafu {
-  gafu_getter: R -> E;
-  gafu_field_updater: E -> E;
-}.
-Arguments gafu: clear implicits.
-Arguments mk_gafu {R E} (gafu_getter gafu_field_updater).
-
-(* partially uncurried set ("tupled set") that works better with notations *)
-Definition tset{R E: Type}(t: gafu R E){Setter: Setter (gafu_getter t)}: R -> R :=
-  set (gafu_getter t) (gafu_field_updater t).
 
 Ltac head t :=
   lazymatch t with
@@ -33,10 +18,6 @@ Ltac head t :=
   end.
 
 Ltac setter R E getter :=
-  let getter := lazymatch getter with
-                | gafu_getter (mk_gafu ?g _) => g
-                | _ => getter
-                end in
   let h := head getter in
   let etaR := eta R in
   exact (fun (updateE: E -> E) (r: R) => ltac:(
@@ -50,66 +31,81 @@ Ltac setter R E getter :=
     end
   )).
 
+Definition Setter{R E: Type}(getter: R -> E): Type := (E -> E) -> R -> R.
+Existing Class Setter.
+
+Inductive update(R E: Type): Type :=
+| mk_update(getter: R -> E)(setter: Setter getter)(transf: E -> E).
+
+Definition apply_update{R E: Type}(u: update R E): R -> R :=
+  match u with
+  | mk_update _ _ getter setter transf => setter transf
+  end.
+
+Arguments mk_update {R E} getter {setter} transf.
+
 Global Hint Extern 1 (@Setter ?R ?E ?getter) => setter R E getter : typeclass_instances.
 
 (* Note: To update a field with a constant value (rather than by applying an
-   updater function to its old value), we could just use the constant function
+   transformer function to its old value), we could just use the constant function
    `fun _ => newValue`, but then `newValue` would appear under a binder, which
    causes some rewriting/simplification tactics which don't recurse under binders
    to miss opportunities for rewriting/simplification, so we use this explicit
-   definition of `const` instead. *)
-Definition const{E: Type}(newValue: E): E -> E := fun _ => newValue.
+   definition of `constant` instead.
+   Note: There's already Coq.Program.Basics.const, but it's return type can differ
+   from its argument type, which we don't want/need here. *)
+Definition constant{E: Type}(newValue: E): E -> E := fun _ => newValue.
 
-Module Export RecordSetNotations1.
-  Declare Scope record_set.
-  Delimit Scope record_set with rs.
-  Open Scope rs.
-  (* Note: coq-record-update uses level 12, but I prefer level 8:
-      https://github.com/tchajed/coq-record-update/issues/14 *)
-  Notation "x <| proj ::= f |>" := (set proj f x)
-     (at level 8, f at level 99, left associativity, format "x <| proj  ::=  f |>")
-     : record_set.
-  Notation "x <| proj := v |>" := (set proj (const v) x)
-     (at level 8, v at level 99, left associativity, format "x <| proj  :=  v |>")
-     : record_set.
-End RecordSetNotations1.
-
-Module Export RecordSetNotations.
-  Declare Scope record_set.
-  Delimit Scope record_set with rs.
-  Open Scope rs.
+Module Export OCamlLikeNotations.
+  Declare Scope ocaml_like_record_set.
+  Open Scope ocaml_like_record_set.
 
   Declare Custom Entry field_update.
-  Notation "proj := v" := (mk_gafu proj (const v))
+  Notation "proj := v" := (mk_update proj (constant v))
     (in custom field_update at level 1, proj constr at level 99, v constr at level 99,
-     format "proj  :=  '/' v")
-    : record_set.
-  Notation "proj ::= f" := (mk_gafu proj f)
+     format "'[  ' proj  :=  '/' v ']'")
+    : ocaml_like_record_set.
+  Notation "proj ::= f" := (mk_update proj f)
     (in custom field_update at level 1, proj constr at level 99, f constr at level 99,
-     format "proj  ::=  '/' f")
-    : record_set.
+     format "'[  ' proj  ::=  '/' f ']'")
+    : ocaml_like_record_set.
 
-  Notation "'{!' u }" := (tset u)
+  Notation "{ x 'with' u }" := (apply_update u x)
+     (at level 0, x at level 99, u custom field_update at level 1,
+      format "{  '[hv  ' x  'with'  '/' u ']'  }") : ocaml_like_record_set.
+  Notation "{ x 'with' u ; .. ; v ; w }" :=
+     (apply_update w (apply_update v .. (apply_update u x) .. ))
+     (at level 0, x at level 99, u custom field_update at level 1,
+      v custom field_update at level 1, w custom field_update at level 1,
+      format "{  '[hv  ' x  'with'  '/' u ;  '/' .. ;  '/' v ;  '/' w  ']' }")
+      : ocaml_like_record_set.
+End OCamlLikeNotations.
+
+Require Coq.Program.Basics.
+Notation compose := Coq.Program.Basics.compose. (* selective import *)
+
+Module AdditionalNotations.
+  Declare Scope record_set.
+  Open Scope record_set.
+
+  (* Note: coq-record-update uses level 12, but I prefer level 8:
+      https://github.com/tchajed/coq-record-update/issues/14 *)
+  Notation "x <| u |>" := (apply_update u x)
+     (at level 8, u custom field_update at level 1, left associativity, format "x <| u |>")
+     : record_set.
+
+  Notation "'{!' u }" := (apply_update u)
      (at level 0, u custom field_update at level 1,
       format "'{!'  u  }")
     : record_set.
 
   Notation "'{!' u ; v ; .. ; w }" :=
-     (compose (tset w) .. (compose (tset v) (tset u)) ..)
+     (compose (apply_update w) .. (compose (apply_update v) (apply_update u)) ..)
      (at level 0, u custom field_update at level 1, v custom field_update at level 1,
       w custom field_update at level 1,
       format "'{!'  '[' u ;  '/' v ;  '/' .. ;  '/' w  ']' }")
     : record_set.
-
-  Notation "{ x 'with' u }" := (tset u x)
-     (at level 0, x at level 99, u custom field_update at level 1,
-      format "{  x  'with'  '[' u ']'  }") : record_set.
-  Notation "{ x 'with' u ; .. ; v ; w }" :=
-     (tset w (tset v .. (tset u x) .. ))
-     (at level 0, x at level 99, u custom field_update at level 1,
-      v custom field_update at level 1, w custom field_update at level 1,
-      format "{  x  'with'  '[' u ;  '/' .. ;  '/' v ;  '/' w  ']' }") : record_set.
-End RecordSetNotations.
+End AdditionalNotations.
 
 Require Import Ltac2.Ltac2.
 Require Ltac2.Option.
@@ -195,7 +191,7 @@ Module record.
     Array.set args 2 t3;
     Array.set args 3 f;
     Array.set args 4 g;
-    Constr.Unsafe.make (Constr.Unsafe.App (Env.instantiate reference:(compose)) args).
+    Constr.Unsafe.make (Constr.Unsafe.App (Env.instantiate reference:(Basics.compose)) args).
 
   (* Note: Since there's no uconstr:(...) in Ltac2 (https://github.com/coq/coq/issues/13977),
      and we don't want to re-typecheck the term each time we create a piece of a term,
@@ -234,30 +230,27 @@ Module record.
            (Message.concat (Message.of_string " is ") (Message.concat (co_msg ret) (Message.of_string ")")))); *)
     ret.
 
-  Ltac2 t_tset(tR: constr)(tE: constr)(p: constr)(s: constr)(r: constr) :=
-    let args := Array.make 5 tR in
-    Array.set args 1 tE;
-    Array.set args 2 p;
-    Array.set args 3 s;
-    Array.set args 4 r;
-    Constr.Unsafe.make (Constr.Unsafe.App (Env.instantiate reference:(tset)) args).
-
-  Ltac2 t_mk_gafu(tR: constr)(tE: constr)(g: constr)(u: constr) :=
+  Ltac2 t_apply_update(tR: constr)(tE: constr)(u: constr)(r: constr) :=
     let args := Array.make 4 tR in
     Array.set args 1 tE;
+    Array.set args 2 u;
+    Array.set args 3 r;
+    Constr.Unsafe.make (Constr.Unsafe.App (Env.instantiate reference:(apply_update)) args).
+
+  Ltac2 t_mk_update(tR: constr)(tE: constr)(g: constr)(s: constr)(t: constr) :=
+    let args := Array.make 5 tR in
+    Array.set args 1 tE;
     Array.set args 2 g;
-    Array.set args 3 u;
-    Constr.Unsafe.make (Constr.Unsafe.App (Env.instantiate reference:(mk_gafu)) args).
+    Array.set args 3 s;
+    Array.set args 4 t;
+    Constr.Unsafe.make (Constr.Unsafe.App (Env.instantiate reference:(mk_update)) args).
 
   Ltac2 t_const(tE: constr)(v: constr) :=
     let args := Array.make 2 tE in
     Array.set args 1 v;
-    Constr.Unsafe.make (Constr.Unsafe.App (Env.instantiate reference:(const)) args).
+    Constr.Unsafe.make (Constr.Unsafe.App (Env.instantiate reference:(constant)) args).
 
-  (* tR: record type
-     tE: element type
-     g: getter of type R -> E
-     u: field updater of type E -> E
+  (* upd: field update of type `update tR tE`, of form `@mk_update tR tE g s u`
      c: any constr
      If c is a series of setters setting g to some u_old, replaces u_old by u.
      If c is a series of setters not setting g and ending in a constructor,
@@ -266,28 +259,30 @@ Module record.
      If None is returned, no simplification could be made, so the caller might
      be able to reuse an existing (tset (mk_gafu g u) c) term rather than
      allocating a new one. *)
-  Ltac2 rec push_down_setter(tR: constr)(tE: constr)(g: constr)(u: constr)(c: constr) :=
-    log_call "push_down_setter" [g; u; c];
+  Ltac2 rec push_down_setter(upd: constr)(c: constr) :=
+    log_call "push_down_setter" [upd; c];
     let c' :=
+    lazy_match! upd with @mk_update ?tR ?tE ?g ?s ?u =>
     lazy_match! c with
-    | @tset ?tR' ?tE' (mk_gafu ?g' ?u') ?s ?r =>
+    | @apply_update ?tR' ?tE' ?upd' ?r => lazy_match! upd' with @mk_update _ _ ?g' ?s' ?u' =>
         (* setter applied to setter *)
         if Constr.equal g g' then
           (* setter applied to same setter *)
           lazy_match! u with
-          | const _ => Some (t_tset tR tE (t_mk_gafu tR tE g u) s r)
+          | constant _ => Some (t_apply_update tR tE upd r)
           | _ => let u_combined :=
                    lazy_match! u' with
-                   | const ?v' => t_const tE (simp_app_nonstrict u v')
+                   | constant ?v' => t_const tE (simp_app_nonstrict u v')
                    | _ => right_leaning_compose tE tE tE u u'
                    end in
-                 Some (t_tset tR tE (t_mk_gafu tR tE g u_combined) s r)
+                 Some (t_apply_update tR tE (t_mk_update tR tE g s u_combined) r)
           end
         else (* setter applied to different setter *)
-          match push_down_setter tR tE g u r with
-          | Some r' => Some (t_tset tR' tE' (t_mk_gafu tR' tE' g' u') s r')
+          match push_down_setter upd r with
+          | Some r' => Some (t_apply_update tR' tE' upd' r')
           | None => None
           end
+      end
     | _ => match Constr.Unsafe.kind c with
            | Constr.Unsafe.App h args =>
                if Constr.is_constructor h then
@@ -298,7 +293,7 @@ Module record.
                      let old_field := Array.get args j in
                      let new_field :=
                        lazy_match! u with
-                       | const ?v => v
+                       | constant ?v => v
                        | _ => simp_app_nonstrict u old_field
                        end in
                      let new_args := Array.copy args in
@@ -309,8 +304,8 @@ Module record.
                else (* setter applied to non-setter-non-constructor *) None
            | _ => (* setter applied to non-setter-non-constructor *) None
            end
-    end in
-    log_ret "push_down_setter" [g; u; c] c'
+    end end in
+    log_ret "push_down_setter" [upd; c] c'
 
   (* g: getter, i: its backwards-index, c: any constr
      If c is a series of setters setting g to some v, returns v.
@@ -323,12 +318,12 @@ Module record.
     log_call "lookup_getter" [g; c];
     let c' :=
     lazy_match! c with
-    | tset (mk_gafu ?g' ?u') ?r =>
+    | apply_update (mk_update ?g' ?u') ?r =>
         (* getter applied to setter *)
         if Constr.equal g g' then
           (* getter applied to same setter *)
           lazy_match! u' with
-          | const ?v' => Some v'
+          | constant ?v' => Some v'
           | _ => Some (simp_app_nonstrict u' (lookup_getter_nonstrict g i r))
           end
         else (* getter applied to different setter *)
@@ -352,7 +347,7 @@ Module record.
   with simp_app(f: constr)(a: constr) :=
     log_call "simp_app" [f; a];
     let c' := lazy_match! f with
-    | @tset ?tR ?tE (mk_gafu ?g ?u) ?s => push_down_setter tR tE g u a
+    | @apply_update ?tR ?tE ?upd => push_down_setter upd a
     | compose ?f1 ?f2 => Some (simp_app_nonstrict f1 (simp_app_nonstrict f2 a))
     | fun x => _ => match Constr.Unsafe.kind f with
                     | Constr.Unsafe.Lambda y body => Some (Constr.Unsafe.substnl [a] 0 body)
@@ -516,6 +511,7 @@ Ltac srefl :=
   end.
 
 Module RecordSetterTests.
+  Import AdditionalNotations.
 
   Record foo(A: Type)(n: nat) := {
     fieldA: A;
@@ -537,12 +533,17 @@ Module RecordSetterTests.
 
   Goal forall b, fieldA (testFoo b)<|fieldA := 3|> = 3. intros. reflexivity. Qed.
 
+  (*
+  Check _<|S := 3|>.
+  Fail Check (testFoo true)<|S := 3|>.
+  Fail Goal forall (g: foo nat 2 -> nat), (testFoo true)<|g := 3|> = testFoo true.
+  *)
+
   Goal forall b,
       { testFoo b with fieldC := true; fieldC := false; fieldA ::= Nat.add 2 } =
       { testFoo b with fieldA ::= Nat.add 1; fieldC := false; fieldA ::= Nat.add 1 }.
   Proof.
-    intros. unfold tset, gafu_getter, gafu_field_updater. unfold set, const. cbn.
-    reflexivity.
+    intros. unfold apply_update. unfold constant. cbn. srefl.
   Qed.
 
   Check (fun b => {! fieldC := false } (testFoo b)).
@@ -553,12 +554,16 @@ Module RecordSetterTests.
       {! fieldC := false; fieldC := true; fieldA ::= Nat.add 2 } (testFoo b) =
       {! fieldA ::= Nat.add 1; fieldC := true; fieldA ::= Nat.add 1 } (testFoo b).
   Proof.
-    intros. unfold tset, gafu_getter, gafu_field_updater. unfold set, const, compose. cbn.
-    reflexivity.
+    intros. unfold apply_update. unfold constant, compose. cbn. srefl.
   Qed.
 
   Goal forall r: foo (foo nat 4) 2,
   { r with fieldA ::= {! fieldA ::= Nat.add 1 } }.(fieldA).(fieldA) = S r.(fieldA).(fieldA).
+  Proof. intros. reflexivity. Qed.
+
+  Goal forall r: foo (foo nat 4) 2,
+      { r with fieldA := { r.(fieldA) with fieldA ::= Nat.add 1 } }.(fieldA).(fieldA) =
+        S r.(fieldA).(fieldA).
   Proof. intros. reflexivity. Qed.
 
   Goal forall f: foo bool 1, fieldA { f with fieldC ::= andb true } = fieldA f.
