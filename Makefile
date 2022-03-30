@@ -16,10 +16,22 @@ ALL_VOS := $(patsubst %.v,%.vo,$(ALL_VOS))
 DEPS_DIR?=$(PARENT_DIR)
 
 # Note: make does not interpret "\n", and this is intended
-DEPFLAGS_NL=-Q $(DEPS_DIR)/coqutil/src/coqutil coqutil\n-Q $(DEPS_DIR)/coq-record-update/src RecordUpdate\n
+DEPFLAGS_COQUTIL_NL=-Q $(DEPS_DIR)/coqutil/src/coqutil coqutil\n
+DEPFLAGS_COQ_RECORD_UPDATE_NL=-Q $(DEPS_DIR)/coq-record-update/src RecordUpdate\n
+DEPFLAGS_NL=
 CURFLAGS_NL=-R $(SRCDIR) riscv\n
 
 EXTERNAL_DEPENDENCIES?=
+EXTERNAL_COQUTIL?=
+EXTERNAL_COQ_RECORD_UPDATE?=
+
+ifneq ($(EXTERNAL_COQUTIL),1)
+DEPFLAGS_NL+=$(DEPFLAGS_COQUTIL_NL)
+endif
+
+ifneq ($(EXTERNAL_COQ_RECORD_UPDATE),1)
+DEPFLAGS_NL+=$(DEPFLAGS_COQ_RECORD_UPDATE_NL)
+endif
 
 # If we get our dependencies externally, then we should not bind the local versions of things
 ifneq ($(EXTERNAL_DEPENDENCIES),1)
