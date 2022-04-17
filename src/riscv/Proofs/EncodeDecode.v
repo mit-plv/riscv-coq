@@ -192,7 +192,8 @@ Proof.
   cbv zeta.
   refine (id _).
   loop INil.
-  all: match goal with
+  all: try abstract (
+       match goal with
        | |- encode (nth 0 ?l ?d) = _ =>
            rewrite ?if_same
        end;
@@ -210,23 +211,19 @@ Proof.
             change (nth 0 l d) with r
           else
             fail "hnf did not return a term starting with a constructor, but" r
-       end.
-  all: cbv beta iota zeta delta [encode apply_InstructionMapper Encoder
+       end;
+       cbv beta iota zeta delta [encode apply_InstructionMapper Encoder
            map_Invalid map_R map_R_atomic map_I map_I_shift_57 map_I_shift_66
            map_I_system map_S map_SB map_U map_UJ map_Fence map_FenceI
-      ].
-  all: try apply_encode_decode_lemma.
-  {
-    eqapply encode_decode_I; [assumption|f_equal].
-    1: assumption.
-    case TODO_spec_bug.
-  }
-  {
-    eqapply encode_decode_I; [assumption|f_equal].
-    1: assumption.
-    case TODO_spec_bug.
-  }
-  all: try match goal with
+       ];
+       try apply_encode_decode_lemma;
+       try match goal with
            | H: true = false |- _ => discriminate H
-           end.
-Time Defined. (* 916.782 secs *)
+           end).
+  {
+    case TODO_spec_bug.
+  }
+  {
+    case TODO_spec_bug.
+  }
+Time Defined. (* 941.462 secs *)
