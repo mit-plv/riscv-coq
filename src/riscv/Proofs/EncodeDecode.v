@@ -190,7 +190,6 @@ Proof.
                   decodeI64 decodeM64 decodeA64 decodeF64
                   decodeCSR].
   cbv zeta.
-  refine (id _).
   loop INil.
   all: try abstract (
        match goal with
@@ -226,4 +225,4 @@ Proof.
   {
     case TODO_spec_bug.
   }
-Time Defined. (* 941.462 secs *)
+Time Defined. (* 799.18 secs *)

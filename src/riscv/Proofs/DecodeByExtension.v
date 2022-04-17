@@ -191,12 +191,10 @@ Ltac isnatcst_addition t :=
 Ltac loop ind :=
   try match goal with
   | |- ?lhs <= 1 => isnatcst_addition lhs; (apply Nat.le_refl || apply Nat.le_0_1)
-  | |- _ => refine (id _);
-            progress cbn [isValidI isValidM isValidA isValidF
+  | |- _ => progress cbn [isValidI isValidM isValidA isValidF
                           isValidI64 isValidM64 isValidA64 isValidF64
                           isValidCSR
                           andb orb];
-            refine (id _);
             loop ind
   | |- context[Z.eqb ?l ?r] =>
       let r' := rdelta r in
@@ -231,7 +229,6 @@ Proof.
                   decodeI64 decodeM64 decodeA64 decodeF64
                   decodeCSR].
   cbv zeta.
-  refine (id _).
   loop INil.
 Time Defined. (* 291.481 secs *)
 
