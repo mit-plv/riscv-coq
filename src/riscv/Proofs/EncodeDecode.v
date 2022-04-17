@@ -140,7 +140,7 @@ Lemma encode_decode_Invalid: forall inst,
     encode_Invalid inst = inst.
 Proof. t. Qed.
 
-Ltac apply_encode_decode_lemma :=
+Ltac apply_encode_decode_lemma_by_format :=
   match goal with
   | |- encode_I _ _ _ _ _ = _ =>
       eqapply encode_decode_I; [assumption|f_equal;assumption]
@@ -170,10 +170,100 @@ Ltac apply_encode_decode_lemma :=
       apply encode_decode_Invalid; assumption
   end.
 
-Axiom TODO_spec_bug: False.
+Local Open Scope Z_scope.
 
-Lemma if_same{A: Type}: forall (b: bool) (a: A), (if b then a else a) = a.
-Proof. destruct b; reflexivity. Qed.
+Ltac loop ind :=
+  try match goal with
+  | |- _ => progress cbn [andb orb] in *; loop ind
+  | |- context[Z.eqb ?l ?r] =>
+      let r' := rdelta r in
+      lazymatch isZcst r' with
+      | true => idtac
+      end;
+      (*idtac ind l r;*)
+      let E := fresh "E" in
+      destruct (Decidable.Z.eqb_spec l r) as [E | E];
+      [ repeat match goal with
+               | |- context[Z.eqb l ?r'] =>
+                   replace (Z.eqb l r') with false in * by (rewrite E; reflexivity)
+               end
+      | ];
+      loop (ICons ind)
+  end.
+
+Ltac prove_encode_decode :=
+  intros;
+  cbv beta zeta delta [decodeI decodeM decodeA decodeF
+                       decodeI64 decodeM64 decodeA64 decodeF64
+                       decodeCSR] in *;
+  loop INil;
+  try match goal with
+      | H: ?isValid ?Invalid = true |- _ => discriminate H
+      end;
+  cbv beta iota zeta delta [encode apply_InstructionMapper Encoder
+           map_Invalid map_R map_R_atomic map_I map_I_shift_57 map_I_shift_66
+           map_I_system map_S map_SB map_U map_UJ map_Fence map_FenceI
+       ];
+  try apply_encode_decode_lemma_by_format.
+
+Axiom TODO_spec_bug_in_JALR: forall inst,
+  encode_I opcode_JALR (bitSlice inst 7 12) (bitSlice inst 15 20) funct3_JALR
+    (signExtend 12 (bitSlice inst 20 32)) = inst.
+
+Lemma encode_decodeCSR: forall bw inst,
+    0 <= inst < 2 ^ 32 ->
+    isValidCSR (decodeCSR bw inst) = true ->
+    encode (CSRInstruction (decodeCSR bw inst)) = inst.
+Proof. prove_encode_decode. Qed.
+
+Lemma encode_decodeA64: forall bw inst,
+    0 <= inst < 2 ^ 32 ->
+    isValidA64 (decodeA64 bw inst) = true ->
+    encode (A64Instruction (decodeA64 bw inst)) = inst.
+Proof. prove_encode_decode. Qed.
+
+Lemma encode_decodeM64: forall bw inst,
+    0 <= inst < 2 ^ 32 ->
+    isValidM64 (decodeM64 bw inst) = true ->
+    encode (M64Instruction (decodeM64 bw inst)) = inst.
+Proof. prove_encode_decode. Qed.
+
+Lemma encode_decodeI64: forall bw inst,
+    0 <= inst < 2 ^ 32 ->
+    isValidI64 (decodeI64 bw inst) = true ->
+    encode (I64Instruction (decodeI64 bw inst)) = inst.
+Proof. prove_encode_decode. Qed.
+
+Lemma encode_decodeA: forall bw inst,
+    0 <= inst < 2 ^ 32 ->
+    isValidA (decodeA bw inst) = true ->
+    encode (AInstruction (decodeA bw inst)) = inst.
+Proof. prove_encode_decode. Qed.
+
+Lemma encode_decodeM: forall bw inst,
+    0 <= inst < 2 ^ 32 ->
+    isValidM (decodeM bw inst) = true ->
+    encode (MInstruction (decodeM bw inst)) = inst.
+Proof. prove_encode_decode. Qed.
+
+Lemma encode_decodeI: forall bw inst,
+    0 <= inst < 2 ^ 32 ->
+    isValidI (decodeI bw inst) = true ->
+    encode (IInstruction (decodeI bw inst)) = inst.
+Proof.
+  prove_encode_decode.
+  apply TODO_spec_bug_in_JALR.
+Qed.
+
+Ltac apply_encode_decode_lemma_by_ext :=
+  first [ apply encode_decodeI
+        | apply encode_decodeM
+        | apply encode_decodeA
+        | apply encode_decodeI64
+        | apply encode_decodeM64
+        | apply encode_decodeA64
+        | apply encode_decodeCSR ];
+  assumption.
 
 Lemma encode_decode: forall iset inst,
     supportsF iset = false -> (* encoder does not yet support F extension *)
@@ -181,48 +271,39 @@ Lemma encode_decode: forall iset inst,
     encode (decode iset inst) = inst.
 Proof.
   intros *. intro F_not_supported. intros. rewrite <- decode_alt_correct.
-  cbv beta delta [decode_alt decode_results].
-  cbv beta delta [decode_resultI decode_resultM decode_resultA decode_resultF
-                  decode_resultI64 decode_resultM64 decode_resultA64 decode_resultF64
-                  decode_resultCSR].
-  cbv zeta.
-  cbv beta delta [decodeI decodeM decodeA decodeF
-                  decodeI64 decodeM64 decodeA64 decodeF64
-                  decodeCSR].
-  cbv zeta.
-  loop INil.
-  all: try abstract (
-       match goal with
-       | |- encode (nth 0 ?l ?d) = _ =>
-           rewrite ?if_same
-       end;
-       repeat match goal with
-              | |- context[if ?supports ?iset then _ else _] =>
-                  lazymatch type of iset with
-                  | InstructionSet => destr (supports iset)
-                  end
-              end;
-       match goal with
-       | |- encode (nth 0 ?l ?d) = _ =>
-          let r := eval hnf in (nth 0 l d) in
-          let h := head r in
-          tryif is_constructor h then
-            change (nth 0 l d) with r
-          else
-            fail "hnf did not return a term starting with a constructor, but" r
-       end;
-       cbv beta iota zeta delta [encode apply_InstructionMapper Encoder
-           map_Invalid map_R map_R_atomic map_I map_I_shift_57 map_I_shift_66
-           map_I_system map_S map_SB map_U map_UJ map_Fence map_FenceI
-       ];
-       try apply_encode_decode_lemma;
-       try match goal with
-           | H: true = false |- _ => discriminate H
-           end).
-  {
-    case TODO_spec_bug.
-  }
-  {
-    case TODO_spec_bug.
-  }
-Time Defined. (* 799.18 secs *)
+  cbv beta delta [decode_alt].
+  pose proof (extensions_disjoint iset inst) as D.
+  cbv beta delta [decode_results] in *.
+  cbv beta zeta delta [decode_resultI decode_resultM decode_resultA decode_resultF
+                       decode_resultI64 decode_resultM64 decode_resultA64 decode_resultF64
+                       decode_resultCSR] in *.
+  rewrite F_not_supported in *.
+  repeat
+    (let l := match type of D with
+              | (length nil <= 1)%nat => fail 1 "done"
+              | (length (?l ++ _) <= 1)%nat => l
+              | (length ?l <= 1)%nat => l
+              end in
+     let E := fresh "E" in
+     let rest := fresh "rest" in
+     destruct l as [|? rest] eqn: E;
+      [ (* length 0: do most work in next iteration *)
+        cbn [List.app] in D
+      | destruct rest;
+        [ (* length 1 *)
+          repeat match type of E with
+          | (if andb ?b false then _ else _) = _ =>
+              replace (andb b false) with false in E
+                by (symmetry; apply Bool.andb_false_r)
+          | [] = [_] => discriminate E
+          | (if ?d then _ else _) = _ => destruct d eqn: ?; [ | discriminate E]
+          end;
+          injection E; intros; subst; cbn [List.length nth app];
+          apply_encode_decode_lemma_by_ext
+        | (* length 2: contradiction *)
+          exfalso; cbn [List.length List.app] in D; eapply le_S_n in D;
+          eapply Nat.nle_succ_0; exact D]]).
+  cbn [List.length nth app].
+  apply encode_decode_Invalid.
+  assumption.
+Qed.
