@@ -172,25 +172,6 @@ Ltac apply_encode_decode_lemma_by_format :=
 
 Local Open Scope Z_scope.
 
-Ltac loop ind :=
-  try match goal with
-  | |- _ => progress cbn [andb orb] in *; loop ind
-  | |- context[Z.eqb ?l ?r] =>
-      let r' := rdelta r in
-      lazymatch isZcst r' with
-      | true => idtac
-      end;
-      (*idtac ind l r;*)
-      let E := fresh "E" in
-      destruct (Decidable.Z.eqb_spec l r) as [E | E];
-      [ repeat match goal with
-               | |- context[Z.eqb l ?r'] =>
-                   replace (Z.eqb l r') with false in * by (rewrite E; reflexivity)
-               end
-      | ];
-      loop (ICons ind)
-  end.
-
 Ltac prove_encode_decode :=
   intros;
   cbv beta zeta delta [decodeI decodeM decodeA decodeF

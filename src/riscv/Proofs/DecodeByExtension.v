@@ -190,26 +190,20 @@ Ltac isnatcst_addition t :=
 
 Ltac loop ind :=
   try match goal with
-  | |- ?lhs <= 1 => isnatcst_addition lhs; (apply Nat.le_refl || apply Nat.le_0_1)
-  | |- _ => progress cbn [isValidI isValidM isValidA isValidF
-                          isValidI64 isValidM64 isValidA64 isValidF64
-                          isValidCSR
-                          andb orb];
-            loop ind
+  | |- _ => progress cbn [andb orb] in *; loop ind
   | |- context[Z.eqb ?l ?r] =>
       let r' := rdelta r in
       lazymatch isZcst r' with
       | true => idtac
       end;
-      first
-        [ (replace (Z.eqb l r) with true by reflexivity); loop ind
-        | (replace (Z.eqb l r) with false by reflexivity); loop ind
-        | (*idtac ind l r;*)
-          destr (Z.eqb l r);
-          [ match goal with
-            | E: _ = r |- _ => rewrite ?E
-            end
-          | ] ];
+      (*idtac ind l r;*)
+      let E := fresh "E" in
+      destruct (Decidable.Z.eqb_spec l r) as [E | E];
+      [ repeat match goal with
+               | |- context[Z.eqb l ?r'] =>
+                   replace (Z.eqb l r') with false in * by (rewrite E; reflexivity)
+               end
+      | ];
       loop (ICons ind)
   end.
 
@@ -225,12 +219,17 @@ Lemma extensions_disjoint': forall iset inst,
   (if isValidCSR (decodeCSR (bitwidth iset) inst) then 1 else 0) <= 1.
 Proof.
   intros.
-  cbv beta delta [decodeI decodeM decodeA decodeF
-                  decodeI64 decodeM64 decodeA64 decodeF64
-                  decodeCSR].
-  cbv zeta.
+  cbv beta zeta delta [decodeI decodeM decodeA decodeF
+                       decodeI64 decodeM64 decodeA64 decodeF64
+                       decodeCSR
+                       isValidI isValidM isValidA isValidF
+                       isValidI64 isValidM64 isValidA64 isValidF64
+                       isValidCSR].
   loop INil.
-Time Defined. (* 291.481 secs *)
+  all: match goal with
+       | |- ?lhs <= 1 => isnatcst_addition lhs; (apply Nat.le_refl || apply Nat.le_0_1)
+       end.
+Time Qed. (* 367.474 secs (laptop) *)
 
 Lemma extensions_disjoint: forall iset inst, length (decode_results iset inst) <= 1.
 Proof.
