@@ -15,8 +15,10 @@ Require Export riscv.Platform.MaterializeRiscvProgram.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Properties.
+Require Import coqutil.Word.Properties.
 Require Import coqutil.Datatypes.PropSet.
 Require Import coqutil.Tactics.Tactics.
+Require Import coqutil.Tactics.fwd.
 Require Import riscv.Platform.Sane.
 
 Local Open Scope Z_scope.
@@ -27,8 +29,10 @@ Section Riscv.
   Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
   Context {Mem: map.map word byte} {Registers: map.map Register word}.
 
-  Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
-    word.of_Z (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).
+  Add Ring wring : (word.ring_theory (word := word))
+      (preprocess [autorewrite with rew_word_morphism],
+       morphism (word.ring_morph (word := word)),
+       constants [word_cst]).
 
   Definition store(n: nat)(ctxid: SourceType) a v mach post :=
     match Memory.store_bytes n mach.(getMem) a v with
@@ -92,7 +96,9 @@ Section Riscv.
     end.
 
   Definition no_M(mach: RiscvMachine): Prop :=
-      forall a v, isXAddr4 a mach.(getXAddrs) ->
+      forall a v,
+        isXAddr4 a mach.(getXAddrs) ->
+        word.unsigned a mod 4 = 0 ->
         Memory.load_bytes 4 mach.(getMem) a = Some v ->
         forall minst, decode RV32IM (LittleEndian.combine 4 v) <> MInstruction minst.
 
@@ -147,20 +153,90 @@ Section Riscv.
     eauto using map.same_domain_preserves_undef_on, Memory.store_bytes_preserves_domain.
   Qed.
 
-  Lemma transfer_load4bytes_to_previous_mem: forall (a: word) v n m m' r w someSet,
+  Lemma removeXAddr_bw: forall (a1 a2: word) xaddrs,
+      isXAddr1 a1 (removeXAddr a2 xaddrs) ->
+      isXAddr1 a1 xaddrs.
+  Proof.
+    unfold isXAddr1, removeXAddr.
+    intros.
+    eapply filter_In.
+    eassumption.
+  Qed.
+
+  Lemma invalidateWrittenXAddrs_bw: forall n (a r: word) xa,
+      In a (invalidateWrittenXAddrs n r xa) ->
+      In a xa.
+  Proof.
+    induction n; cbn; intros.
+    - assumption.
+    - eapply IHn. eapply removeXAddr_bw. unfold isXAddr1. eassumption.
+  Qed.
+
+  Lemma put_preserves_getmany_of_tuple{memOk: map.ok Mem}:
+    forall n (t: HList.tuple word n) (m: Mem) (r: word) b,
+      ~In r (HList.tuple.to_list t) ->
+      map.getmany_of_tuple m t =
+      map.getmany_of_tuple (map.put m r b) t.
+  Proof.
+    induction n; intros.
+    - destruct t. reflexivity.
+    - destruct t as (w & t). cbn in H|-*.
+      unfold map.getmany_of_tuple in IHn.
+      erewrite IHn.
+      2: {
+        intro C. eapply H. right. exact C.
+      }
+      rewrite ?map.get_put_dec.
+      destr (word.eqb r w). 2: reflexivity.
+      exfalso. apply H. auto.
+  Qed.
+
+  Lemma transfer_load4bytes_to_previous_mem{memOk: map.ok Mem}:
+    forall n (a: word) v m m' r w someSet,
       Memory.store_bytes n m r w = Some m' ->
       (* a notin r..r+n *)
       isXAddr4 a (invalidateWrittenXAddrs n r someSet) ->
       Memory.load_bytes 4 m' a = Some v ->
       Memory.load_bytes 4 m a = Some v.
   Proof.
-  Admitted.
+    induction n; intros.
+    - cbn in H. congruence.
+    - unfold Memory.store_bytes in *. fwd. cbn in H0. destruct w as [b w].
+      cbn -[HList.tuple Memory.load_bytes] in H1.
+      cbn in E. fwd.
+      unfold Memory.load_bytes at 1 in IHn.
+      unfold map.getmany_of_tuple, Memory.footprint in IHn.
+      specialize IHn with (m := m) (r := (word.add r (word.of_Z 1))).
+      rewrite E1 in IHn.
+      specialize IHn with (1 := eq_refl).
+      eapply IHn.
+      + instantiate (1 := someSet). clear -H0.
+        unfold isXAddr4 in *. fwd. eauto 10 using removeXAddr_bw.
+      + unfold Memory.load_bytes in *.
+        etransitivity. 2: eassumption.
+        unfold Memory.unchecked_store_bytes, Memory.footprint.
+        eapply put_preserves_getmany_of_tuple.
+        cbn. clear -H0 word_ok. unfold isXAddr4, isXAddr1 in H0. fwd.
+        intro C.
+        unfold removeXAddr in *.
+        apply_in_hyps filter_In.
+        fwd.
+        apply_in_hyps Bool.negb_true_iff.
+        apply_in_hyps Properties.word.eqb_false.
+        repeat destruct C as [C | C]; try assumption;
+          match type of C with
+          | ?l = _ => ring_simplify l in C
+          end;
+          subst r;
+          congruence.
+  Qed.
 
   Lemma isXAddr4_uninvalidate: forall (a: word) n r xa,
       isXAddr4 a (invalidateWrittenXAddrs n r xa) ->
       isXAddr4 a xa.
   Proof.
-  Admitted.
+    unfold isXAddr4, isXAddr1. intros. fwd. eauto 10 using invalidateWrittenXAddrs_bw.
+  Qed.
 
   Lemma interpret_action_total{memOk: map.ok Mem} a s postF postA :
     no_M s ->
