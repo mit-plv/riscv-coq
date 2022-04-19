@@ -1,5 +1,6 @@
 Require Export Coq.ZArith.ZArith.
 Require Export Coq.Lists.List. Import ListNotations.
+Require Import coqutil.Tactics.Tactics.
 Require Import coqutil.Tactics.rdelta.
 Require Import coqutil.Tactics.destr.
 Require Export riscv.Spec.Decode.
@@ -267,4 +268,47 @@ Proof.
   exfalso.
   pose proof (extensions_disjoint iset inst).
   Lia.lia.
+Qed.
+
+Local Open Scope bool_scope.
+Local Open Scope Z_scope.
+
+Definition decode_seq(iset: InstructionSet)(inst: Z): Instruction :=
+  let bw := bitwidth iset in
+  if isValidI (decodeI bw inst)
+  then IInstruction (decodeI bw inst)
+  else if supportsM iset && isValidM (decodeM bw inst)
+  then MInstruction (decodeM bw inst)
+  else if supportsA iset && isValidA (decodeA bw inst)
+  then AInstruction (decodeA bw inst)
+  else if supportsF iset && isValidF (decodeF bw inst)
+  then FInstruction (decodeF bw inst)
+  else if (bw =? 64) && isValidI64 (decodeI64 bw inst)
+  then I64Instruction (decodeI64 bw inst)
+  else if (bw =? 64) && supportsM iset && isValidM64 (decodeM64 bw inst)
+  then M64Instruction (decodeM64 bw inst)
+  else if (bw =? 64) && supportsA iset && isValidA64 (decodeA64 bw inst)
+  then A64Instruction (decodeA64 bw inst)
+  else if (bw =? 64) && supportsF iset && isValidF64 (decodeF64 bw inst)
+  then F64Instruction (decodeF64 bw inst)
+  else if isValidCSR (decodeCSR bw inst)
+  then CSRInstruction (decodeCSR bw inst)
+  else InvalidInstruction inst.
+
+Lemma double_if_to_andb{T: Type}: forall (c1 c2: bool) (a b: T),
+    (if c1 then (if c2 then a else b) else b) = (if andb c1 c2 then a else b).
+Proof. destruct c1, c2; reflexivity. Qed.
+
+Lemma decode_seq_correct: forall iset inst,
+    decode_seq iset inst = decode iset inst.
+Proof.
+  intros.
+  rewrite <- decode_alt_correct.
+  unfold decode_alt, decode_seq, decode_results.
+  cbv beta zeta delta [decode_resultI decode_resultM decode_resultA decode_resultF
+                       decode_resultI64 decode_resultM64 decode_resultA64 decode_resultF64
+                       decode_resultCSR].
+  rewrite ?double_if_to_andb.
+  repeat (destruct_one_match; cbn [List.app]; [reflexivity|]).
+  reflexivity.
 Qed.
