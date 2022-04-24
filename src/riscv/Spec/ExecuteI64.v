@@ -29,7 +29,8 @@ Require Utility.Utility.
 
 (* Converted value declarations: *)
 
-Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
+Definition execute {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p
+                                                                             t}
    : Spec.Decode.InstructionI64 -> p unit :=
   fun arg_0__ =>
     match arg_0__ with
@@ -97,15 +98,15 @@ Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
     end.
 
 (* External variables:
-     Bind Return ZToReg op_zm__ op_zp__ tt unit Spec.Decode.Addiw Spec.Decode.Addw
-     Spec.Decode.InstructionI64 Spec.Decode.Ld Spec.Decode.Lwu Spec.Decode.Sd
-     Spec.Decode.Slliw Spec.Decode.Sllw Spec.Decode.Sraiw Spec.Decode.Sraw
-     Spec.Decode.Srliw Spec.Decode.Srlw Spec.Decode.Subw Spec.Machine.Execute
-     Spec.Machine.Load Spec.Machine.RiscvMachine Spec.Machine.Store
-     Spec.Machine.getRegister Spec.Machine.loadDouble Spec.Machine.loadWord
-     Spec.Machine.setRegister Spec.Machine.storeDouble Spec.VirtualMemory.translate
-     Utility.Utility.fromImm Utility.Utility.int64ToReg Utility.Utility.regToInt64
-     Utility.Utility.regToShamt5 Utility.Utility.s32 Utility.Utility.sll
-     Utility.Utility.sra Utility.Utility.srl Utility.Utility.u32
+     Bind Return Type ZToReg op_zm__ op_zp__ tt unit Spec.Decode.Addiw
+     Spec.Decode.Addw Spec.Decode.InstructionI64 Spec.Decode.Ld Spec.Decode.Lwu
+     Spec.Decode.Sd Spec.Decode.Slliw Spec.Decode.Sllw Spec.Decode.Sraiw
+     Spec.Decode.Sraw Spec.Decode.Srliw Spec.Decode.Srlw Spec.Decode.Subw
+     Spec.Machine.Execute Spec.Machine.Load Spec.Machine.RiscvMachine
+     Spec.Machine.Store Spec.Machine.getRegister Spec.Machine.loadDouble
+     Spec.Machine.loadWord Spec.Machine.setRegister Spec.Machine.storeDouble
+     Spec.VirtualMemory.translate Utility.Utility.fromImm Utility.Utility.int64ToReg
+     Utility.Utility.regToInt64 Utility.Utility.regToShamt5 Utility.Utility.s32
+     Utility.Utility.sll Utility.Utility.sra Utility.Utility.srl Utility.Utility.u32
      Utility.Utility.uInt32ToReg
 *)

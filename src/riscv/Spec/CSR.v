@@ -24,80 +24,82 @@ Require Utility.Utility.
 
 (* Converted type declarations: *)
 
-Inductive CSR : Type
-  := | MHartID : CSR
-  |  MISA : CSR
-  |  MStatus : CSR
-  |  MTVec : CSR
-  |  MEDeleg : CSR
-  |  MIDeleg : CSR
-  |  MIP : CSR
-  |  MIE : CSR
-  |  MCycle : CSR
-  |  MInstRet : CSR
-  |  MCounterEn : CSR
-  |  MScratch : CSR
-  |  MEPC : CSR
-  |  MCause : CSR
-  |  MTVal : CSR
-  |  MHPMCounter3 : CSR
-  |  MHPMCounter4 : CSR
-  |  MHPMCounter5 : CSR
-  |  MHPMCounter6 : CSR
-  |  MHPMCounter7 : CSR
-  |  MHPMCounter8 : CSR
-  |  MHPMCounter9 : CSR
-  |  MHPMCounter10 : CSR
-  |  MHPMCounter11 : CSR
-  |  MHPMCounter12 : CSR
-  |  MHPMCounter13 : CSR
-  |  MHPMCounter14 : CSR
-  |  MHPMCounter15 : CSR
-  |  MHPMCounter16 : CSR
-  |  MHPMCounter17 : CSR
-  |  MHPMCounter18 : CSR
-  |  MHPMCounter19 : CSR
-  |  MHPMCounter20 : CSR
-  |  MHPMCounter21 : CSR
-  |  MHPMCounter22 : CSR
-  |  MHPMCounter23 : CSR
-  |  MHPMCounter24 : CSR
-  |  MHPMCounter25 : CSR
-  |  MHPMCounter26 : CSR
-  |  MHPMCounter27 : CSR
-  |  MHPMCounter28 : CSR
-  |  MHPMCounter29 : CSR
-  |  MHPMCounter30 : CSR
-  |  MHPMCounter31 : CSR
-  |  SStatus : CSR
-  |  SEDeleg : CSR
-  |  SIDeleg : CSR
-  |  STVec : CSR
-  |  SIP : CSR
-  |  SIE : CSR
-  |  SCounterEn : CSR
-  |  SScratch : CSR
-  |  SEPC : CSR
-  |  SCause : CSR
-  |  STVal : CSR
-  |  SATP : CSR
-  |  UStatus : CSR
-  |  UIE : CSR
-  |  UTVec : CSR
-  |  UScratch : CSR
-  |  UEPC : CSR
-  |  UCause : CSR
-  |  UTVal : CSR
-  |  UIP : CSR
-  |  FFlags : CSR
-  |  FRM : CSR
-  |  FCSR : CSR
-  |  Time : CSR
-  |  Cycle : CSR
-  |  InstRet : CSR
-  |  InvalidCSR : CSR.
+Inductive CSR : Type :=
+  | MHartID : CSR
+  | MISA : CSR
+  | MStatus : CSR
+  | MTVec : CSR
+  | MEDeleg : CSR
+  | MIDeleg : CSR
+  | MIP : CSR
+  | MIE : CSR
+  | MCycle : CSR
+  | MInstRet : CSR
+  | MCounterEn : CSR
+  | MScratch : CSR
+  | MEPC : CSR
+  | MCause : CSR
+  | MTVal : CSR
+  | MHPMCounter3 : CSR
+  | MHPMCounter4 : CSR
+  | MHPMCounter5 : CSR
+  | MHPMCounter6 : CSR
+  | MHPMCounter7 : CSR
+  | MHPMCounter8 : CSR
+  | MHPMCounter9 : CSR
+  | MHPMCounter10 : CSR
+  | MHPMCounter11 : CSR
+  | MHPMCounter12 : CSR
+  | MHPMCounter13 : CSR
+  | MHPMCounter14 : CSR
+  | MHPMCounter15 : CSR
+  | MHPMCounter16 : CSR
+  | MHPMCounter17 : CSR
+  | MHPMCounter18 : CSR
+  | MHPMCounter19 : CSR
+  | MHPMCounter20 : CSR
+  | MHPMCounter21 : CSR
+  | MHPMCounter22 : CSR
+  | MHPMCounter23 : CSR
+  | MHPMCounter24 : CSR
+  | MHPMCounter25 : CSR
+  | MHPMCounter26 : CSR
+  | MHPMCounter27 : CSR
+  | MHPMCounter28 : CSR
+  | MHPMCounter29 : CSR
+  | MHPMCounter30 : CSR
+  | MHPMCounter31 : CSR
+  | SStatus : CSR
+  | SEDeleg : CSR
+  | SIDeleg : CSR
+  | STVec : CSR
+  | SIP : CSR
+  | SIE : CSR
+  | SCounterEn : CSR
+  | SScratch : CSR
+  | SEPC : CSR
+  | SCause : CSR
+  | STVal : CSR
+  | SATP : CSR
+  | UStatus : CSR
+  | UIE : CSR
+  | UTVec : CSR
+  | UScratch : CSR
+  | UEPC : CSR
+  | UCause : CSR
+  | UTVal : CSR
+  | UIP : CSR
+  | FFlags : CSR
+  | FRM : CSR
+  | FCSR : CSR
+  | Time : CSR
+  | Cycle : CSR
+  | InstRet : CSR
+  | InvalidCSR : CSR.
 
 (* Converted value declarations: *)
+
+(* Skipping instance `Spec.CSR.Eq___CSR' of class `GHC.Base.Eq_' *)
 
 Definition lookupCSR : Utility.Utility.MachineInt -> CSR :=
   fun x =>
@@ -172,8 +174,6 @@ Definition lookupCSR : Utility.Utility.MachineInt -> CSR :=
     if Z.eqb x 3074 : bool then InstRet else
     if Z.eqb x 3860 : bool then MHartID else
     InvalidCSR.
-
-(* Skipping instance `Spec.CSR.Eq___CSR' of class `GHC.Base.Eq_' *)
 
 (* External variables:
      Z.eqb bool Utility.Utility.MachineInt

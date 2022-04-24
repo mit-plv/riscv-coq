@@ -31,7 +31,8 @@ Require Utility.Utility.
 
 (* Converted value declarations: *)
 
-Definition getCSR_SStatus {p} {t} `{(Spec.Machine.RiscvMachine p t)}
+Definition getCSR_SStatus {p : Type -> Type} {t : Type}
+  `{Spec.Machine.RiscvMachine p t}
    : p Utility.Utility.MachineInt :=
   Bind (Spec.Machine.getCSRField Spec.CSRField.MXR) (fun mxr =>
           Bind (Spec.Machine.getCSRField Spec.CSRField.SUM) (fun sum =>
@@ -48,7 +49,8 @@ Definition getCSR_SStatus {p} {t} `{(Spec.Machine.RiscvMachine p t)}
                                                                        Return (Z.lor (Z.shiftl mxl 32) base)))
                                                   else Return base)))))).
 
-Definition setCSR_SStatus {p} {t} `{(Spec.Machine.RiscvMachine p t)}
+Definition setCSR_SStatus {p : Type -> Type} {t : Type}
+  `{Spec.Machine.RiscvMachine p t}
    : Utility.Utility.MachineInt -> p unit :=
   fun val =>
     Bind (Spec.Machine.setCSRField Spec.CSRField.MXR (Utility.Utility.bitSlice val
@@ -63,197 +65,7 @@ Definition setCSR_SStatus {p} {t} `{(Spec.Machine.RiscvMachine p t)}
                                                                     2)) (fun _ =>
                                             Bind getCSR_SStatus (fun _ => Return tt)))))).
 
-Definition setCSR {p} {t} `{(Spec.Machine.RiscvMachine p t)}
-   : Spec.CSR.CSR -> Utility.Utility.MachineInt -> p unit :=
-  fun arg_0__ arg_1__ =>
-    match arg_0__, arg_1__ with
-    | Spec.CSR.MStatus, val =>
-        Bind (setCSR_SStatus val) (fun _ =>
-                Bind (Spec.Machine.setCSRField Spec.CSRField.TSR (Utility.Utility.bitSlice val
-                                                22 23)) (fun _ =>
-                        Bind (Spec.Machine.setCSRField Spec.CSRField.TW (Utility.Utility.bitSlice val 21
-                                                        22)) (fun _ =>
-                                Bind (Spec.Machine.setCSRField Spec.CSRField.TVM (Utility.Utility.bitSlice val
-                                                                20 21)) (fun _ =>
-                                        Bind (Spec.Machine.setCSRField Spec.CSRField.MPRV (Utility.Utility.bitSlice val
-                                                                        17 18)) (fun _ =>
-                                                Bind (Spec.Machine.setCSRField Spec.CSRField.MPP
-                                                                               (Utility.Utility.bitSlice val 11 13))
-                                                     (fun _ =>
-                                                        Bind (Spec.Machine.setCSRField Spec.CSRField.MPIE
-                                                                                       (Utility.Utility.bitSlice val 7
-                                                                                        8)) (fun _ =>
-                                                                Spec.Machine.setCSRField Spec.CSRField.MIE
-                                                                                         (Utility.Utility.bitSlice val 3
-                                                                                          4))))))))
-    | Spec.CSR.MEDeleg, val =>
-        Spec.Machine.setCSRField Spec.CSRField.MEDeleg (Z.land val (Z.lnot (Z.shiftl 1
-                                                                            11)))
-    | Spec.CSR.MIDeleg, val => Spec.Machine.setCSRField Spec.CSRField.MIDeleg val
-    | Spec.CSR.SIP, val =>
-        let usip := Utility.Utility.bitSlice val 0 1 in
-        let ssip := Utility.Utility.bitSlice val 1 2 in
-        let utip := Utility.Utility.bitSlice val 4 5 in
-        let stip := Utility.Utility.bitSlice val 5 6 in
-        let ueip := Utility.Utility.bitSlice val 8 9 in
-        let seip := Utility.Utility.bitSlice val 9 10 in
-        Bind (Spec.Machine.setCSRField Spec.CSRField.USIP usip) (fun _ =>
-                Bind (Spec.Machine.setCSRField Spec.CSRField.SSIP ssip) (fun _ =>
-                        Bind (Spec.Machine.setCSRField Spec.CSRField.UTIP utip) (fun _ =>
-                                Bind (Spec.Machine.setCSRField Spec.CSRField.STIP stip) (fun _ =>
-                                        Bind (Spec.Machine.setCSRField Spec.CSRField.UEIP ueip) (fun _ =>
-                                                Spec.Machine.setCSRField Spec.CSRField.SEIP seip)))))
-    | Spec.CSR.SIE, val =>
-        let usie := Utility.Utility.bitSlice val 0 1 in
-        let ssie := Utility.Utility.bitSlice val 1 2 in
-        let utie := Utility.Utility.bitSlice val 4 5 in
-        let stie := Utility.Utility.bitSlice val 5 6 in
-        let ueie := Utility.Utility.bitSlice val 8 9 in
-        let seie := Utility.Utility.bitSlice val 9 10 in
-        Bind (Spec.Machine.setCSRField Spec.CSRField.SSIE ssie) (fun _ =>
-                Bind (Spec.Machine.setCSRField Spec.CSRField.STIE stie) (fun _ =>
-                        Spec.Machine.setCSRField Spec.CSRField.SEIE seie))
-    | Spec.CSR.MTVec, val =>
-        Bind (Spec.Machine.setCSRField Spec.CSRField.MTVecMode (Utility.Utility.bitSlice
-                                        val 0 2)) (fun _ =>
-                Spec.Machine.setCSRField Spec.CSRField.MTVecBase (Z.shiftl val (Z.neg 2)))
-    | Spec.CSR.MEPC, val => Spec.Machine.setCSRField Spec.CSRField.MEPC val
-    | Spec.CSR.MCounterEn, val =>
-        let mhpm := Z.shiftl val (Z.neg 3) in
-        let mir := Utility.Utility.bitSlice val 2 3 in
-        let mtm := Utility.Utility.bitSlice val 1 2 in
-        let mcy := Utility.Utility.bitSlice val 0 1 in
-        Bind (Spec.Machine.setCSRField Spec.CSRField.MHPM mhpm) (fun _ =>
-                Bind (Spec.Machine.setCSRField Spec.CSRField.MIR mir) (fun _ =>
-                        Bind (Spec.Machine.setCSRField Spec.CSRField.MTM mtm) (fun _ =>
-                                Spec.Machine.setCSRField Spec.CSRField.MCY mcy)))
-    | Spec.CSR.MScratch, val => Spec.Machine.setCSRField Spec.CSRField.MScratch val
-    | Spec.CSR.MCause, val =>
-        Bind Spec.Machine.getXLEN (fun xlen =>
-                Bind (Spec.Machine.setCSRField Spec.CSRField.MCauseCode
-                                               (Utility.Utility.bitSlice val 0 (Z.sub xlen 1))) (fun _ =>
-                        Spec.Machine.setCSRField Spec.CSRField.MCauseInterrupt (Utility.Utility.bitSlice
-                                                  val (Z.sub xlen 1) xlen)))
-    | Spec.CSR.MTVal, val => Spec.Machine.setCSRField Spec.CSRField.MTVal val
-    | Spec.CSR.SStatus, val => setCSR_SStatus val
-    | Spec.CSR.STVec, val =>
-        Bind (Spec.Machine.setCSRField Spec.CSRField.STVecMode (Utility.Utility.bitSlice
-                                        val 0 2)) (fun _ =>
-                Spec.Machine.setCSRField Spec.CSRField.STVecBase (Z.shiftl val (Z.neg 2)))
-    | Spec.CSR.SEPC, val => Spec.Machine.setCSRField Spec.CSRField.SEPC val
-    | Spec.CSR.SScratch, val => Spec.Machine.setCSRField Spec.CSRField.SScratch val
-    | Spec.CSR.SCounterEn, val =>
-        let shpm := Z.shiftl val (Z.neg 3) in
-        let sir := Utility.Utility.bitSlice val 2 3 in
-        let stm := Utility.Utility.bitSlice val 1 2 in
-        let scy := Utility.Utility.bitSlice val 0 1 in
-        Bind (Spec.Machine.setCSRField Spec.CSRField.SHPM shpm) (fun _ =>
-                Bind (Spec.Machine.setCSRField Spec.CSRField.SIR sir) (fun _ =>
-                        Bind (Spec.Machine.setCSRField Spec.CSRField.STM stm) (fun _ =>
-                                Spec.Machine.setCSRField Spec.CSRField.SCY scy)))
-    | Spec.CSR.SCause, val =>
-        Bind Spec.Machine.getXLEN (fun xlen =>
-                Bind (Spec.Machine.setCSRField Spec.CSRField.SCauseCode
-                                               (Utility.Utility.bitSlice val 0 (Z.sub xlen 1))) (fun _ =>
-                        Spec.Machine.setCSRField Spec.CSRField.SCauseInterrupt (Utility.Utility.bitSlice
-                                                  val (Z.sub xlen 1) xlen)))
-    | Spec.CSR.STVal, val => Spec.Machine.setCSRField Spec.CSRField.STVal val
-    | Spec.CSR.MIP, val =>
-        let usip := Utility.Utility.bitSlice val 0 1 in
-        let ssip := Utility.Utility.bitSlice val 1 2 in
-        let msip := Utility.Utility.bitSlice val 3 4 in
-        let utip := Utility.Utility.bitSlice val 4 5 in
-        let stip := Utility.Utility.bitSlice val 5 6 in
-        let mtip := Utility.Utility.bitSlice val 7 8 in
-        let ueip := Utility.Utility.bitSlice val 8 9 in
-        let seip := Utility.Utility.bitSlice val 9 10 in
-        let meip := Utility.Utility.bitSlice val 11 12 in
-        Bind (Spec.Machine.setCSRField Spec.CSRField.USIP usip) (fun _ =>
-                Bind (Spec.Machine.setCSRField Spec.CSRField.SSIP ssip) (fun _ =>
-                        Bind (Spec.Machine.setCSRField Spec.CSRField.MSIP msip) (fun _ =>
-                                Bind (Spec.Machine.setCSRField Spec.CSRField.UTIP utip) (fun _ =>
-                                        Bind (Spec.Machine.setCSRField Spec.CSRField.STIP stip) (fun _ =>
-                                                Bind (Spec.Machine.setCSRField Spec.CSRField.MTIP mtip) (fun _ =>
-                                                        Bind (Spec.Machine.setCSRField Spec.CSRField.UEIP ueip)
-                                                             (fun _ =>
-                                                                Bind (Spec.Machine.setCSRField Spec.CSRField.SEIP seip)
-                                                                     (fun _ =>
-                                                                        Spec.Machine.setCSRField Spec.CSRField.MEIP
-                                                                                                 meip))))))))
-    | Spec.CSR.MIE, val =>
-        let usie := Utility.Utility.bitSlice val 0 1 in
-        let ssie := Utility.Utility.bitSlice val 1 2 in
-        let msie := Utility.Utility.bitSlice val 3 4 in
-        let utie := Utility.Utility.bitSlice val 4 5 in
-        let stie := Utility.Utility.bitSlice val 5 6 in
-        let mtie := Utility.Utility.bitSlice val 7 8 in
-        let ueie := Utility.Utility.bitSlice val 8 9 in
-        let seie := Utility.Utility.bitSlice val 9 10 in
-        let meie := Utility.Utility.bitSlice val 11 12 in
-        Bind (Spec.Machine.setCSRField Spec.CSRField.SSIE ssie) (fun _ =>
-                Bind (Spec.Machine.setCSRField Spec.CSRField.MSIE msie) (fun _ =>
-                        Bind (Spec.Machine.setCSRField Spec.CSRField.STIE stie) (fun _ =>
-                                Bind (Spec.Machine.setCSRField Spec.CSRField.MTIE mtie) (fun _ =>
-                                        Bind (Spec.Machine.setCSRField Spec.CSRField.SEIE seie) (fun _ =>
-                                                Spec.Machine.setCSRField Spec.CSRField.MEIE meie)))))
-    | Spec.CSR.SATP, val =>
-        Bind Spec.Machine.getPrivMode (fun priv =>
-                Bind (Spec.Machine.getCSRField Spec.CSRField.TVM) (fun tvm =>
-                        Bind (when (andb (Spec.Machine.PrivMode_eqb priv Spec.Machine.Supervisor) (Z.eqb
-                                          tvm 1)) (Spec.Machine.raiseException (ZToReg 0) (ZToReg 2))) (fun _ =>
-                                Bind Spec.Machine.getXLEN (fun xlen =>
-                                        let mode :=
-                                          if Z.eqb xlen 32 : bool
-                                          then Utility.Utility.bitSlice val 31 32
-                                          else Utility.Utility.bitSlice val 60 64 in
-                                        when (orb (Z.eqb mode 1) (orb (Z.eqb mode 8) (Z.eqb mode 9))) (if Z.eqb xlen
-                                                                                                                32 : bool
-                                                                                                       then Bind
-                                                                                                            (Spec.Machine.setCSRField
-                                                                                                             Spec.CSRField.MODE
-                                                                                                             mode)
-                                                                                                            (fun _ =>
-                                                                                                               Bind
-                                                                                                               (Spec.Machine.setCSRField
-                                                                                                                Spec.CSRField.ASID
-                                                                                                                (Utility.Utility.bitSlice
-                                                                                                                 val 22
-                                                                                                                 31))
-                                                                                                               (fun _ =>
-                                                                                                                  Spec.Machine.setCSRField
-                                                                                                                  Spec.CSRField.PPN
-                                                                                                                  (Utility.Utility.bitSlice
-                                                                                                                   val 0
-                                                                                                                   22)))
-                                                                                                       else Bind
-                                                                                                            (Spec.Machine.setCSRField
-                                                                                                             Spec.CSRField.MODE
-                                                                                                             mode)
-                                                                                                            (fun _ =>
-                                                                                                               Bind
-                                                                                                               (Spec.Machine.setCSRField
-                                                                                                                Spec.CSRField.ASID
-                                                                                                                (Utility.Utility.bitSlice
-                                                                                                                 val 44
-                                                                                                                 60))
-                                                                                                               (fun _ =>
-                                                                                                                  Spec.Machine.setCSRField
-                                                                                                                  Spec.CSRField.PPN
-                                                                                                                  (Utility.Utility.bitSlice
-                                                                                                                   val 0
-                                                                                                                   44))))))))
-    | Spec.CSR.FFlags, val =>
-        Spec.Machine.setCSRField Spec.CSRField.FFlags (Utility.Utility.bitSlice val 0 5)
-    | Spec.CSR.FRM, val =>
-        Spec.Machine.setCSRField Spec.CSRField.FRM (Utility.Utility.bitSlice val 0 3)
-    | Spec.CSR.FCSR, val =>
-        Bind (Spec.Machine.setCSRField Spec.CSRField.FFlags (Utility.Utility.bitSlice
-                                        val 0 5)) (fun _ =>
-                Spec.Machine.setCSRField Spec.CSRField.FRM (Utility.Utility.bitSlice val 5 8))
-    | _, _ => Return tt
-    end.
-
-Definition getCSR {p} {t} `{(Spec.Machine.RiscvMachine p t)}
+Definition getCSR {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p t}
    : Spec.CSR.CSR -> p Utility.Utility.MachineInt :=
   fun arg_0__ =>
     match arg_0__ with
@@ -487,25 +299,215 @@ Definition getCSR {p} {t} `{(Spec.Machine.RiscvMachine p t)}
     | _ => Return (Z.neg 1)
     end.
 
+Definition setCSR {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p t}
+   : Spec.CSR.CSR -> Utility.Utility.MachineInt -> p unit :=
+  fun arg_0__ arg_1__ =>
+    match arg_0__, arg_1__ with
+    | Spec.CSR.MStatus, val =>
+        Bind (setCSR_SStatus val) (fun _ =>
+                Bind (Spec.Machine.setCSRField Spec.CSRField.TSR (Utility.Utility.bitSlice val
+                                                22 23)) (fun _ =>
+                        Bind (Spec.Machine.setCSRField Spec.CSRField.TW (Utility.Utility.bitSlice val 21
+                                                        22)) (fun _ =>
+                                Bind (Spec.Machine.setCSRField Spec.CSRField.TVM (Utility.Utility.bitSlice val
+                                                                20 21)) (fun _ =>
+                                        Bind (Spec.Machine.setCSRField Spec.CSRField.MPRV (Utility.Utility.bitSlice val
+                                                                        17 18)) (fun _ =>
+                                                Bind (Spec.Machine.setCSRField Spec.CSRField.MPP
+                                                                               (Utility.Utility.bitSlice val 11 13))
+                                                     (fun _ =>
+                                                        Bind (Spec.Machine.setCSRField Spec.CSRField.MPIE
+                                                                                       (Utility.Utility.bitSlice val 7
+                                                                                        8)) (fun _ =>
+                                                                Spec.Machine.setCSRField Spec.CSRField.MIE
+                                                                                         (Utility.Utility.bitSlice val 3
+                                                                                          4))))))))
+    | Spec.CSR.MEDeleg, val =>
+        Spec.Machine.setCSRField Spec.CSRField.MEDeleg (Z.land val (Z.lnot (Z.shiftl 1
+                                                                            11)))
+    | Spec.CSR.MIDeleg, val => Spec.Machine.setCSRField Spec.CSRField.MIDeleg val
+    | Spec.CSR.SIP, val =>
+        let usip := Utility.Utility.bitSlice val 0 1 in
+        let ssip := Utility.Utility.bitSlice val 1 2 in
+        let utip := Utility.Utility.bitSlice val 4 5 in
+        let stip := Utility.Utility.bitSlice val 5 6 in
+        let ueip := Utility.Utility.bitSlice val 8 9 in
+        let seip := Utility.Utility.bitSlice val 9 10 in
+        Bind (Spec.Machine.setCSRField Spec.CSRField.USIP usip) (fun _ =>
+                Bind (Spec.Machine.setCSRField Spec.CSRField.SSIP ssip) (fun _ =>
+                        Bind (Spec.Machine.setCSRField Spec.CSRField.UTIP utip) (fun _ =>
+                                Bind (Spec.Machine.setCSRField Spec.CSRField.STIP stip) (fun _ =>
+                                        Bind (Spec.Machine.setCSRField Spec.CSRField.UEIP ueip) (fun _ =>
+                                                Spec.Machine.setCSRField Spec.CSRField.SEIP seip)))))
+    | Spec.CSR.SIE, val =>
+        let usie := Utility.Utility.bitSlice val 0 1 in
+        let ssie := Utility.Utility.bitSlice val 1 2 in
+        let utie := Utility.Utility.bitSlice val 4 5 in
+        let stie := Utility.Utility.bitSlice val 5 6 in
+        let ueie := Utility.Utility.bitSlice val 8 9 in
+        let seie := Utility.Utility.bitSlice val 9 10 in
+        Bind (Spec.Machine.setCSRField Spec.CSRField.SSIE ssie) (fun _ =>
+                Bind (Spec.Machine.setCSRField Spec.CSRField.STIE stie) (fun _ =>
+                        Spec.Machine.setCSRField Spec.CSRField.SEIE seie))
+    | Spec.CSR.MTVec, val =>
+        Bind (Spec.Machine.setCSRField Spec.CSRField.MTVecMode (Utility.Utility.bitSlice
+                                        val 0 2)) (fun _ =>
+                Spec.Machine.setCSRField Spec.CSRField.MTVecBase (Z.shiftl val (Z.neg 2)))
+    | Spec.CSR.MEPC, val => Spec.Machine.setCSRField Spec.CSRField.MEPC val
+    | Spec.CSR.MCounterEn, val =>
+        let mhpm := Z.shiftl val (Z.neg 3) in
+        let mir := Utility.Utility.bitSlice val 2 3 in
+        let mtm := Utility.Utility.bitSlice val 1 2 in
+        let mcy := Utility.Utility.bitSlice val 0 1 in
+        Bind (Spec.Machine.setCSRField Spec.CSRField.MHPM mhpm) (fun _ =>
+                Bind (Spec.Machine.setCSRField Spec.CSRField.MIR mir) (fun _ =>
+                        Bind (Spec.Machine.setCSRField Spec.CSRField.MTM mtm) (fun _ =>
+                                Spec.Machine.setCSRField Spec.CSRField.MCY mcy)))
+    | Spec.CSR.MScratch, val => Spec.Machine.setCSRField Spec.CSRField.MScratch val
+    | Spec.CSR.MCause, val =>
+        Bind Spec.Machine.getXLEN (fun xlen =>
+                Bind (Spec.Machine.setCSRField Spec.CSRField.MCauseCode
+                                               (Utility.Utility.bitSlice val 0 (Z.sub xlen 1))) (fun _ =>
+                        Spec.Machine.setCSRField Spec.CSRField.MCauseInterrupt (Utility.Utility.bitSlice
+                                                  val (Z.sub xlen 1) xlen)))
+    | Spec.CSR.MTVal, val => Spec.Machine.setCSRField Spec.CSRField.MTVal val
+    | Spec.CSR.SStatus, val => setCSR_SStatus val
+    | Spec.CSR.STVec, val =>
+        Bind (Spec.Machine.setCSRField Spec.CSRField.STVecMode (Utility.Utility.bitSlice
+                                        val 0 2)) (fun _ =>
+                Spec.Machine.setCSRField Spec.CSRField.STVecBase (Z.shiftl val (Z.neg 2)))
+    | Spec.CSR.SEPC, val => Spec.Machine.setCSRField Spec.CSRField.SEPC val
+    | Spec.CSR.SScratch, val => Spec.Machine.setCSRField Spec.CSRField.SScratch val
+    | Spec.CSR.SCounterEn, val =>
+        let shpm := Z.shiftl val (Z.neg 3) in
+        let sir := Utility.Utility.bitSlice val 2 3 in
+        let stm := Utility.Utility.bitSlice val 1 2 in
+        let scy := Utility.Utility.bitSlice val 0 1 in
+        Bind (Spec.Machine.setCSRField Spec.CSRField.SHPM shpm) (fun _ =>
+                Bind (Spec.Machine.setCSRField Spec.CSRField.SIR sir) (fun _ =>
+                        Bind (Spec.Machine.setCSRField Spec.CSRField.STM stm) (fun _ =>
+                                Spec.Machine.setCSRField Spec.CSRField.SCY scy)))
+    | Spec.CSR.SCause, val =>
+        Bind Spec.Machine.getXLEN (fun xlen =>
+                Bind (Spec.Machine.setCSRField Spec.CSRField.SCauseCode
+                                               (Utility.Utility.bitSlice val 0 (Z.sub xlen 1))) (fun _ =>
+                        Spec.Machine.setCSRField Spec.CSRField.SCauseInterrupt (Utility.Utility.bitSlice
+                                                  val (Z.sub xlen 1) xlen)))
+    | Spec.CSR.STVal, val => Spec.Machine.setCSRField Spec.CSRField.STVal val
+    | Spec.CSR.MIP, val =>
+        let usip := Utility.Utility.bitSlice val 0 1 in
+        let ssip := Utility.Utility.bitSlice val 1 2 in
+        let msip := Utility.Utility.bitSlice val 3 4 in
+        let utip := Utility.Utility.bitSlice val 4 5 in
+        let stip := Utility.Utility.bitSlice val 5 6 in
+        let mtip := Utility.Utility.bitSlice val 7 8 in
+        let ueip := Utility.Utility.bitSlice val 8 9 in
+        let seip := Utility.Utility.bitSlice val 9 10 in
+        let meip := Utility.Utility.bitSlice val 11 12 in
+        Bind (Spec.Machine.setCSRField Spec.CSRField.USIP usip) (fun _ =>
+                Bind (Spec.Machine.setCSRField Spec.CSRField.SSIP ssip) (fun _ =>
+                        Bind (Spec.Machine.setCSRField Spec.CSRField.MSIP msip) (fun _ =>
+                                Bind (Spec.Machine.setCSRField Spec.CSRField.UTIP utip) (fun _ =>
+                                        Bind (Spec.Machine.setCSRField Spec.CSRField.STIP stip) (fun _ =>
+                                                Bind (Spec.Machine.setCSRField Spec.CSRField.MTIP mtip) (fun _ =>
+                                                        Bind (Spec.Machine.setCSRField Spec.CSRField.UEIP ueip)
+                                                             (fun _ =>
+                                                                Bind (Spec.Machine.setCSRField Spec.CSRField.SEIP seip)
+                                                                     (fun _ =>
+                                                                        Spec.Machine.setCSRField Spec.CSRField.MEIP
+                                                                                                 meip))))))))
+    | Spec.CSR.MIE, val =>
+        let usie := Utility.Utility.bitSlice val 0 1 in
+        let ssie := Utility.Utility.bitSlice val 1 2 in
+        let msie := Utility.Utility.bitSlice val 3 4 in
+        let utie := Utility.Utility.bitSlice val 4 5 in
+        let stie := Utility.Utility.bitSlice val 5 6 in
+        let mtie := Utility.Utility.bitSlice val 7 8 in
+        let ueie := Utility.Utility.bitSlice val 8 9 in
+        let seie := Utility.Utility.bitSlice val 9 10 in
+        let meie := Utility.Utility.bitSlice val 11 12 in
+        Bind (Spec.Machine.setCSRField Spec.CSRField.SSIE ssie) (fun _ =>
+                Bind (Spec.Machine.setCSRField Spec.CSRField.MSIE msie) (fun _ =>
+                        Bind (Spec.Machine.setCSRField Spec.CSRField.STIE stie) (fun _ =>
+                                Bind (Spec.Machine.setCSRField Spec.CSRField.MTIE mtie) (fun _ =>
+                                        Bind (Spec.Machine.setCSRField Spec.CSRField.SEIE seie) (fun _ =>
+                                                Spec.Machine.setCSRField Spec.CSRField.MEIE meie)))))
+    | Spec.CSR.SATP, val =>
+        Bind Spec.Machine.getPrivMode (fun priv =>
+                Bind (Spec.Machine.getCSRField Spec.CSRField.TVM) (fun tvm =>
+                        Bind (when (andb (Spec.Machine.PrivMode_eqb priv Spec.Machine.Supervisor) (Z.eqb
+                                          tvm 1)) (Spec.Machine.raiseException (ZToReg 0) (ZToReg 2))) (fun _ =>
+                                Bind Spec.Machine.getXLEN (fun xlen =>
+                                        let mode :=
+                                          if Z.eqb xlen 32 : bool
+                                          then Utility.Utility.bitSlice val 31 32
+                                          else Utility.Utility.bitSlice val 60 64 in
+                                        when (orb (Z.eqb mode 1) (orb (Z.eqb mode 8) (Z.eqb mode 9))) (if Z.eqb xlen
+                                                                                                                32 : bool
+                                                                                                       then Bind
+                                                                                                            (Spec.Machine.setCSRField
+                                                                                                             Spec.CSRField.MODE
+                                                                                                             mode)
+                                                                                                            (fun _ =>
+                                                                                                               Bind
+                                                                                                               (Spec.Machine.setCSRField
+                                                                                                                Spec.CSRField.ASID
+                                                                                                                (Utility.Utility.bitSlice
+                                                                                                                 val 22
+                                                                                                                 31))
+                                                                                                               (fun _ =>
+                                                                                                                  Spec.Machine.setCSRField
+                                                                                                                  Spec.CSRField.PPN
+                                                                                                                  (Utility.Utility.bitSlice
+                                                                                                                   val 0
+                                                                                                                   22)))
+                                                                                                       else Bind
+                                                                                                            (Spec.Machine.setCSRField
+                                                                                                             Spec.CSRField.MODE
+                                                                                                             mode)
+                                                                                                            (fun _ =>
+                                                                                                               Bind
+                                                                                                               (Spec.Machine.setCSRField
+                                                                                                                Spec.CSRField.ASID
+                                                                                                                (Utility.Utility.bitSlice
+                                                                                                                 val 44
+                                                                                                                 60))
+                                                                                                               (fun _ =>
+                                                                                                                  Spec.Machine.setCSRField
+                                                                                                                  Spec.CSRField.PPN
+                                                                                                                  (Utility.Utility.bitSlice
+                                                                                                                   val 0
+                                                                                                                   44))))))))
+    | Spec.CSR.FFlags, val =>
+        Spec.Machine.setCSRField Spec.CSRField.FFlags (Utility.Utility.bitSlice val 0 5)
+    | Spec.CSR.FRM, val =>
+        Spec.Machine.setCSRField Spec.CSRField.FRM (Utility.Utility.bitSlice val 0 3)
+    | Spec.CSR.FCSR, val =>
+        Bind (Spec.Machine.setCSRField Spec.CSRField.FFlags (Utility.Utility.bitSlice
+                                        val 0 5)) (fun _ =>
+                Spec.Machine.setCSRField Spec.CSRField.FRM (Utility.Utility.bitSlice val 5 8))
+    | _, _ => Return tt
+    end.
+
 (* External variables:
-     Bind Return Z.eqb Z.gtb Z.land Z.lnot Z.lor Z.neg Z.shiftl Z.sub ZToReg andb
-     bool orb tt unit when Spec.CSR.CSR Spec.CSR.Cycle Spec.CSR.FCSR Spec.CSR.FFlags
-     Spec.CSR.FRM Spec.CSR.InstRet Spec.CSR.MCause Spec.CSR.MCounterEn
-     Spec.CSR.MCycle Spec.CSR.MEDeleg Spec.CSR.MEPC Spec.CSR.MHPMCounter10
-     Spec.CSR.MHPMCounter11 Spec.CSR.MHPMCounter12 Spec.CSR.MHPMCounter13
-     Spec.CSR.MHPMCounter14 Spec.CSR.MHPMCounter15 Spec.CSR.MHPMCounter16
-     Spec.CSR.MHPMCounter17 Spec.CSR.MHPMCounter18 Spec.CSR.MHPMCounter19
-     Spec.CSR.MHPMCounter20 Spec.CSR.MHPMCounter21 Spec.CSR.MHPMCounter22
-     Spec.CSR.MHPMCounter23 Spec.CSR.MHPMCounter24 Spec.CSR.MHPMCounter25
-     Spec.CSR.MHPMCounter26 Spec.CSR.MHPMCounter27 Spec.CSR.MHPMCounter28
-     Spec.CSR.MHPMCounter29 Spec.CSR.MHPMCounter3 Spec.CSR.MHPMCounter30
-     Spec.CSR.MHPMCounter31 Spec.CSR.MHPMCounter4 Spec.CSR.MHPMCounter5
-     Spec.CSR.MHPMCounter6 Spec.CSR.MHPMCounter7 Spec.CSR.MHPMCounter8
-     Spec.CSR.MHPMCounter9 Spec.CSR.MHartID Spec.CSR.MIDeleg Spec.CSR.MIE
-     Spec.CSR.MIP Spec.CSR.MISA Spec.CSR.MInstRet Spec.CSR.MScratch Spec.CSR.MStatus
-     Spec.CSR.MTVal Spec.CSR.MTVec Spec.CSR.SATP Spec.CSR.SCause Spec.CSR.SCounterEn
-     Spec.CSR.SEPC Spec.CSR.SIE Spec.CSR.SIP Spec.CSR.SScratch Spec.CSR.SStatus
-     Spec.CSR.STVal Spec.CSR.STVec Spec.CSR.Time Spec.CSRField.ASID
+     Bind Return Type Z.eqb Z.gtb Z.land Z.lnot Z.lor Z.neg Z.shiftl Z.sub ZToReg
+     andb bool orb tt unit when Spec.CSR.CSR Spec.CSR.Cycle Spec.CSR.FCSR
+     Spec.CSR.FFlags Spec.CSR.FRM Spec.CSR.InstRet Spec.CSR.MCause
+     Spec.CSR.MCounterEn Spec.CSR.MCycle Spec.CSR.MEDeleg Spec.CSR.MEPC
+     Spec.CSR.MHPMCounter10 Spec.CSR.MHPMCounter11 Spec.CSR.MHPMCounter12
+     Spec.CSR.MHPMCounter13 Spec.CSR.MHPMCounter14 Spec.CSR.MHPMCounter15
+     Spec.CSR.MHPMCounter16 Spec.CSR.MHPMCounter17 Spec.CSR.MHPMCounter18
+     Spec.CSR.MHPMCounter19 Spec.CSR.MHPMCounter20 Spec.CSR.MHPMCounter21
+     Spec.CSR.MHPMCounter22 Spec.CSR.MHPMCounter23 Spec.CSR.MHPMCounter24
+     Spec.CSR.MHPMCounter25 Spec.CSR.MHPMCounter26 Spec.CSR.MHPMCounter27
+     Spec.CSR.MHPMCounter28 Spec.CSR.MHPMCounter29 Spec.CSR.MHPMCounter3
+     Spec.CSR.MHPMCounter30 Spec.CSR.MHPMCounter31 Spec.CSR.MHPMCounter4
+     Spec.CSR.MHPMCounter5 Spec.CSR.MHPMCounter6 Spec.CSR.MHPMCounter7
+     Spec.CSR.MHPMCounter8 Spec.CSR.MHPMCounter9 Spec.CSR.MHartID Spec.CSR.MIDeleg
+     Spec.CSR.MIE Spec.CSR.MIP Spec.CSR.MISA Spec.CSR.MInstRet Spec.CSR.MScratch
+     Spec.CSR.MStatus Spec.CSR.MTVal Spec.CSR.MTVec Spec.CSR.SATP Spec.CSR.SCause
+     Spec.CSR.SCounterEn Spec.CSR.SEPC Spec.CSR.SIE Spec.CSR.SIP Spec.CSR.SScratch
+     Spec.CSR.SStatus Spec.CSR.STVal Spec.CSR.STVec Spec.CSR.Time Spec.CSRField.ASID
      Spec.CSRField.Extensions Spec.CSRField.FFlags Spec.CSRField.FRM
      Spec.CSRField.MCY Spec.CSRField.MCauseCode Spec.CSRField.MCauseInterrupt
      Spec.CSRField.MCycle Spec.CSRField.MEDeleg Spec.CSRField.MEIE Spec.CSRField.MEIP

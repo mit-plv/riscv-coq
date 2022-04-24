@@ -30,7 +30,8 @@ Require Utility.Utility.
 
 (* Converted value declarations: *)
 
-Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
+Definition execute {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p
+                                                                             t}
    : Spec.Decode.InstructionA64 -> p unit :=
   fun arg_0__ =>
     match arg_0__ with
@@ -144,14 +145,14 @@ Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
     end.
 
 (* External variables:
-     Bind Return ZToReg and bool op_zl__ op_zp__ or tt unit xor Spec.Decode.Amoadd_d
-     Spec.Decode.Amoand_d Spec.Decode.Amomax_d Spec.Decode.Amomaxu_d
-     Spec.Decode.Amomin_d Spec.Decode.Amominu_d Spec.Decode.Amoor_d
-     Spec.Decode.Amoswap_d Spec.Decode.Amoxor_d Spec.Decode.InstructionA64
-     Spec.Decode.Lr_d Spec.Decode.Sc_d Spec.Machine.Execute Spec.Machine.Load
-     Spec.Machine.RiscvMachine Spec.Machine.Store Spec.Machine.checkReservation
-     Spec.Machine.getRegister Spec.Machine.loadDouble Spec.Machine.makeReservation
-     Spec.Machine.setRegister Spec.Machine.storeDouble Spec.VirtualMemory.translate
-     Utility.Utility.int64ToReg Utility.Utility.ltu Utility.Utility.regToInt64
-     Utility.Utility.uInt64ToReg
+     Bind Return Type ZToReg and bool op_zl__ op_zp__ or tt unit xor
+     Spec.Decode.Amoadd_d Spec.Decode.Amoand_d Spec.Decode.Amomax_d
+     Spec.Decode.Amomaxu_d Spec.Decode.Amomin_d Spec.Decode.Amominu_d
+     Spec.Decode.Amoor_d Spec.Decode.Amoswap_d Spec.Decode.Amoxor_d
+     Spec.Decode.InstructionA64 Spec.Decode.Lr_d Spec.Decode.Sc_d
+     Spec.Machine.Execute Spec.Machine.Load Spec.Machine.RiscvMachine
+     Spec.Machine.Store Spec.Machine.checkReservation Spec.Machine.getRegister
+     Spec.Machine.loadDouble Spec.Machine.makeReservation Spec.Machine.setRegister
+     Spec.Machine.storeDouble Spec.VirtualMemory.translate Utility.Utility.int64ToReg
+     Utility.Utility.ltu Utility.Utility.regToInt64 Utility.Utility.uInt64ToReg
 *)

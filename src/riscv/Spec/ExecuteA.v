@@ -30,7 +30,8 @@ Require Utility.Utility.
 
 (* Converted value declarations: *)
 
-Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
+Definition execute {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p
+                                                                             t}
    : Spec.Decode.InstructionA -> p unit :=
   fun arg_0__ =>
     match arg_0__ with
@@ -150,14 +151,15 @@ Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
     end.
 
 (* External variables:
-     Bind Return ZToReg and bool op_zl__ op_zp__ or tt unit xor Spec.Decode.Amoadd_w
-     Spec.Decode.Amoand_w Spec.Decode.Amomax_w Spec.Decode.Amomaxu_w
-     Spec.Decode.Amomin_w Spec.Decode.Amominu_w Spec.Decode.Amoor_w
-     Spec.Decode.Amoswap_w Spec.Decode.Amoxor_w Spec.Decode.InstructionA
-     Spec.Decode.Lr_w Spec.Decode.Sc_w Spec.Machine.Execute Spec.Machine.Load
-     Spec.Machine.RiscvMachine Spec.Machine.Store Spec.Machine.checkReservation
-     Spec.Machine.getRegister Spec.Machine.loadWord Spec.Machine.makeReservation
-     Spec.Machine.setRegister Spec.Machine.storeWord Spec.VirtualMemory.translate
-     Utility.Utility.int32ToReg Utility.Utility.ltu Utility.Utility.regToInt32
-     Utility.Utility.s32 Utility.Utility.u32 Utility.Utility.uInt32ToReg
+     Bind Return Type ZToReg and bool op_zl__ op_zp__ or tt unit xor
+     Spec.Decode.Amoadd_w Spec.Decode.Amoand_w Spec.Decode.Amomax_w
+     Spec.Decode.Amomaxu_w Spec.Decode.Amomin_w Spec.Decode.Amominu_w
+     Spec.Decode.Amoor_w Spec.Decode.Amoswap_w Spec.Decode.Amoxor_w
+     Spec.Decode.InstructionA Spec.Decode.Lr_w Spec.Decode.Sc_w Spec.Machine.Execute
+     Spec.Machine.Load Spec.Machine.RiscvMachine Spec.Machine.Store
+     Spec.Machine.checkReservation Spec.Machine.getRegister Spec.Machine.loadWord
+     Spec.Machine.makeReservation Spec.Machine.setRegister Spec.Machine.storeWord
+     Spec.VirtualMemory.translate Utility.Utility.int32ToReg Utility.Utility.ltu
+     Utility.Utility.regToInt32 Utility.Utility.s32 Utility.Utility.u32
+     Utility.Utility.uInt32ToReg
 *)

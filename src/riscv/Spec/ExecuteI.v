@@ -30,7 +30,8 @@ Require Utility.Utility.
 
 (* Converted value declarations: *)
 
-Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
+Definition execute {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p
+                                                                             t}
    : Spec.Decode.InstructionI -> p unit :=
   fun arg_0__ =>
     match arg_0__ with
@@ -247,7 +248,7 @@ Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
     end.
 
 (* External variables:
-     Bind Return ZToReg and bool id lnot negb op_zgze__ op_zl__ op_zm__ op_zp__
+     Bind Return Type ZToReg and bool id lnot negb op_zgze__ op_zl__ op_zm__ op_zp__
      op_zsze__ or reg_eqb tt unit when xor Spec.Decode.Add Spec.Decode.Addi
      Spec.Decode.And Spec.Decode.Andi Spec.Decode.Auipc Spec.Decode.Beq
      Spec.Decode.Bge Spec.Decode.Bgeu Spec.Decode.Blt Spec.Decode.Bltu

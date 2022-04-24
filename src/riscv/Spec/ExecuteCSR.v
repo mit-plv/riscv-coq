@@ -34,7 +34,8 @@ Require Utility.Utility.
 
 (* Converted value declarations: *)
 
-Definition checkPermissions {p} {t} `{(Spec.Machine.RiscvMachine p t)}
+Definition checkPermissions {p : Type -> Type} {t : Type}
+  `{Spec.Machine.RiscvMachine p t}
    : bool -> Utility.Utility.MachineInt -> p unit :=
   fun isWrite csr =>
     let readOnly := Z.eqb (Utility.Utility.bitSlice csr 10 12) 3 in
@@ -44,7 +45,8 @@ Definition checkPermissions {p} {t} `{(Spec.Machine.RiscvMachine p t)}
             when (orb (Spec.Machine.PrivMode_ltb mode minMode) (andb readOnly isWrite))
             (Machine.raiseException (ZToReg 0) (ZToReg 2))).
 
-Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
+Definition execute {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p
+                                                                             t}
    : Spec.Decode.InstructionCSR -> p unit :=
   fun arg_0__ =>
     match arg_0__ with
@@ -151,7 +153,7 @@ Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
     end.
 
 (* External variables:
-     Bind Return Z.eqb ZToReg and andb bool lnot negb or orb true tt unit when
+     Bind Return Type Z.eqb ZToReg and andb bool lnot negb or orb true tt unit when
      Machine.raiseException Spec.CSR.lookupCSR Spec.CSRField.MEPC Spec.CSRField.MIE
      Spec.CSRField.MPIE Spec.CSRField.MPP Spec.CSRField.SEPC Spec.CSRField.SIE
      Spec.CSRField.SPIE Spec.CSRField.SPP Spec.CSRField.TSR Spec.CSRField.TVM

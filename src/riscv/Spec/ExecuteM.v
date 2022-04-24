@@ -29,7 +29,8 @@ Require Utility.Utility.
 
 (* Converted value declarations: *)
 
-Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
+Definition execute {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p
+                                                                             t}
    : Spec.Decode.InstructionM -> p unit :=
   fun arg_0__ =>
     match arg_0__ with
@@ -91,7 +92,7 @@ Definition execute {p} {t} `{(Spec.Machine.RiscvMachine p t)}
     end.
 
 (* External variables:
-     Bind Return ZToReg andb bool div negate op_zt__ reg_eqb rem tt unit
+     Bind Return Type ZToReg andb bool div negate op_zt__ reg_eqb rem tt unit
      Spec.Decode.Div Spec.Decode.Divu Spec.Decode.InstructionM Spec.Decode.Mul
      Spec.Decode.Mulh Spec.Decode.Mulhsu Spec.Decode.Mulhu Spec.Decode.Rem
      Spec.Decode.Remu Spec.Machine.RiscvMachine Spec.Machine.getRegister
