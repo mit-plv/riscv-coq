@@ -811,6 +811,9 @@ Definition funct3_BLTU : Utility.Utility.MachineInt :=
 Definition funct3_BGEU : Utility.Utility.MachineInt :=
   7.
 
+Definition funct3_JALR : Utility.Utility.MachineInt :=
+  0.
+
 Definition funct3_PRIV : Utility.Utility.MachineInt :=
   0.
 
@@ -1158,7 +1161,8 @@ Definition decode
       then Bltu rs1 rs2 sbimm12 else
       if andb (Z.eqb opcode opcode_BRANCH) (Z.eqb funct3 funct3_BGEU) : bool
       then Bgeu rs1 rs2 sbimm12 else
-      if Z.eqb opcode opcode_JALR : bool then Jalr rd rs1 oimm12 else
+      if andb (Z.eqb opcode opcode_JALR) (Z.eqb funct3 funct3_JALR) : bool
+      then Jalr rd rs1 oimm12 else
       if Z.eqb opcode opcode_JAL : bool then Jal rd jimm20 else
       InvalidI in
     let decodeM :=
