@@ -5,8 +5,6 @@ Require Import riscv.Utility.Utility.
 
 Local Open Scope Z_scope.
 
-Definition funct3_JALR: MachineInt := 0. (* TODO why does Decode not define & check this? *)
-
 Record InstructionMapper{T: Type} := mkInstructionMapper {
   map_Invalid: Z -> T;
   map_R(opcode: MachineInt)(rd rs1 rs2: Register)(funct3: MachineInt)(funct7: MachineInt): T;

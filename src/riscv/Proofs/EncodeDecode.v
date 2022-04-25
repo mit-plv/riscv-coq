@@ -187,10 +187,6 @@ Ltac prove_encode_decode :=
        ];
   try apply_encode_decode_lemma_by_format.
 
-Axiom TODO_spec_bug_in_JALR: forall inst,
-  encode_I opcode_JALR (bitSlice inst 7 12) (bitSlice inst 15 20) funct3_JALR
-    (signExtend 12 (bitSlice inst 20 32)) = inst.
-
 Lemma encode_decodeCSR: forall bw inst,
     0 <= inst < 2 ^ 32 ->
     isValidCSR (decodeCSR bw inst) = true ->
@@ -233,7 +229,6 @@ Lemma encode_decodeI: forall bw inst,
     encode (IInstruction (decodeI bw inst)) = inst.
 Proof.
   prove_encode_decode.
-  apply TODO_spec_bug_in_JALR.
 Qed.
 
 Ltac apply_encode_decode_lemma_by_ext :=
