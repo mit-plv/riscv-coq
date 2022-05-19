@@ -147,4 +147,4 @@ Arguments RiscvProgram (M) (t) {_} {_}.
 Arguments RiscvMachine: clear implicits.
 Arguments RiscvMachine (M) (t) {_} {_} {_}.
 
-Existing Instance DefaultRiscvState.
+#[global] Existing Instance DefaultRiscvState.

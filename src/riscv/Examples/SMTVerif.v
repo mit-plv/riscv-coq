@@ -59,7 +59,7 @@ Definition loadN(n: nat)(kind: SourceType)(a: word): OState MachineState (HList.
 Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n): OState MachineState unit :=
   fail_hard.
 
-Instance IsRiscvProgram: RiscvProgram (OState MachineState) word :=  {
+#[global] Instance IsRiscvProgram: RiscvProgram (OState MachineState) word :=  {
   getRegister reg :=
     if Z.eq_dec reg Register0 then
       Return (ZToReg 0)

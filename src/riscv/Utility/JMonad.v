@@ -21,7 +21,7 @@ Open Scope monad_scope.
 
 Definition Id: Type -> Type := id.
 
-Instance Id_monad: Monad Id := {|
+#[global] Instance Id_monad: Monad Id := {|
   ret := @id;
   mmap A B := @id (A -> B);
   join := @id;
@@ -48,7 +48,7 @@ Definition flattenOption{A}(ooa: option (option A)): option A :=
   | _ => None
   end.
 
-Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
+#[global] Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
   ret A (a: A) := mkOptionT (ret (retOption a));
   mmap A B (f: A -> B)(oma: optionT M A) :=
     mkOptionT (mmap (mapOption f)
@@ -75,7 +75,7 @@ Record listT(M: Type -> Type)(A: Type): Type := mkListT {
 Arguments mkListT {M} {A} (_).
 Arguments runListT {M} {A} (_).
 
-Instance listT_Monad(M: Type -> Type){MM: Monad M}: Monad (listT M) := {|
+#[global] Instance listT_Monad(M: Type -> Type){MM: Monad M}: Monad (listT M) := {|
   ret A (a: A) := mkListT (ret (retList a));
   mmap A B (f: A -> B)(nma: listT M A) :=
     mkListT (mmap (mapList f)
@@ -98,7 +98,7 @@ Record StateT(S: Type)(M: Type -> Type)(A: Type): Type := mkStateT {
 Arguments mkStateT {S} {M} {A} (_).
 Arguments runStateT {S} {M} {A} (_).
 
-Instance StateT_Monad(S: Type)(M: Type -> Type){MM: Monad M}: Monad (StateT S M) := {|
+#[global] Instance StateT_Monad(S: Type)(M: Type -> Type){MM: Monad M}: Monad (StateT S M) := {|
   ret A (a: A) := mkStateT (fun s => ret (a, s));
   mmap A B (f: A -> B)(sma: StateT S M A) :=
     mkStateT (fun s => mmap (fun '(a, s0) => (f a, s0)) (runStateT sma s));
@@ -171,7 +171,7 @@ Instance NDStateT_Monad(S: Type)(M: Type -> Type){MM: Monad M}: Monad (NDStateT 
 *)
 
 (* note: no "pick" is needed as argument here *)
-Instance NDS_Monad(S: Type): Monad (NDS S) := {|
+#[global] Instance NDS_Monad(S: Type): Monad (NDS S) := {|
   ret A (a: A) :=
     fun s => cons (a, s) nil;
   mmap A B (f: A -> B)(m: NDS S A) :=

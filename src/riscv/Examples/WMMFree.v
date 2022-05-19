@@ -278,7 +278,7 @@ Fixpoint bind{A B: Type}(m: M A){struct m}: (A -> M B) -> M B :=
   | HaltThread => fun f => HaltThread (* Note: Drops the continuation in f *)
   end.
 
-Instance M_Monad: Monad M. refine ({|
+#[global] Instance M_Monad: Monad M. refine ({|
   Bind := @bind;
   Return := @Ret
 |}).
@@ -471,7 +471,7 @@ Definition updateDeps(inst: Instruction): Array Register (set Event) -> Array Re
   | _ => id (* only I is supported at the moment *)
   end.
 
-Instance IsRiscvMachine: RiscvProgram M word :=  {
+#[global] Instance IsRiscvMachine: RiscvProgram M word :=  {
   getRegister reg := s <- get; Return (getReg s.(Regs) reg);
   setRegister reg v := s <- get; put (withRegs (setReg s.(Regs) reg v) s);
   getPC := s <- get; Return s.(Pc);

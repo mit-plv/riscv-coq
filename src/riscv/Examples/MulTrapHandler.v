@@ -73,7 +73,7 @@ Definition initial_state: State := HNil
                         (CSRField.MScratch, handler_stack_start) :: nil)]
   [exectrace := nil].
 
-Instance IsRiscvMachine: RiscvProgram (StateAbortFail State) word :=
+#[global] Instance IsRiscvMachine: RiscvProgram (StateAbortFail State) word :=
   AddExecTrace FieldNames (MinimalCSRsDet.IsRiscvMachine FieldNames).
 
 (* success flag * final state *)
