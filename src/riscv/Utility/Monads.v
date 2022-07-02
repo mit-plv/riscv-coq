@@ -37,7 +37,7 @@ Ltac prove_monad_law :=
          | o: option _ |- _ => destruct o
          end.
 
-Instance option_Monad: Monad option. refine ({|
+#[global] Instance option_Monad: Monad option. refine ({|
   Bind A B (o: option A) (f: A -> option B) :=
     match o with
     | Some x => f x
@@ -51,7 +51,7 @@ Defined.
 
 Definition NonDet(A: Type): Type := A -> Prop.
 
-Instance NonDet_Monad: Monad NonDet. refine ({|
+#[global] Instance NonDet_Monad: Monad NonDet. refine ({|
   Bind A B (m: NonDet A)(f: A -> NonDet B) :=
     fun (b: B) => exists a, m a /\ f a b;
   Return A := eq;
@@ -62,7 +62,7 @@ Defined.
 
 Definition State(S A: Type) := S -> (A * S).
 
-Instance State_Monad(S: Type): Monad (State S). refine ({|
+#[global] Instance State_Monad(S: Type): Monad (State S). refine ({|
   Bind A B (m: State S A) (f: A -> State S B) :=
     fun (s: S) => let (a, s') := m s in f a s' ;
   Return A (a: A) :=
@@ -80,7 +80,7 @@ End StateOperations.
 
 Definition OState(S A: Type) := S -> (option A) * S.
 
-Instance OState_Monad(S: Type): Monad (OState S). refine ({|
+#[global] Instance OState_Monad(S: Type): Monad (OState S). refine ({|
   Bind A B (m: OState S A) (f: A -> OState S B) :=
     fun (s: S) => match m s with
                   | (Some a, s') => f a s'
@@ -100,7 +100,7 @@ Module OStateOperations.
   Definition fail_hard{S A: Type}: OState S A :=
     fun (s: S) => (None, s).
 
-  Hint Unfold get put fail_hard : unf_monad_ops.
+  #[global] Hint Unfold get put fail_hard : unf_monad_ops.
 
   Lemma Bind_get{S A: Type}: forall (f: S -> OState S A) (s: S),
       Bind get f s = f s s.
@@ -194,7 +194,7 @@ End OStateOperations.
    a unique set of all possible outcomes. *)
 Definition StateND(S A: Type) := S -> (A * S) -> Prop.
 
-Instance StateND_Monad(S: Type): Monad (StateND S). refine ({|
+#[global] Instance StateND_Monad(S: Type): Monad (StateND S). refine ({|
   Bind A B (m: StateND S A)(f : A -> StateND S B) :=
     fun (s1 : S) bs3 => exists a s2, m s1 (a, s2) /\ f a s2 bs3;
   Return A (a : A) :=
@@ -217,7 +217,7 @@ Module StateNDOperations.
   Definition arbitrary{S: Type}(A: Type): StateND S A :=
     fun (s: S) (a_s: (A * S)) => exists a, a_s = (a, s).
 
-  Hint Unfold get put unspecified_behavior arbitrary : unf_monad_ops.
+  #[global] Hint Unfold get put unspecified_behavior arbitrary : unf_monad_ops.
 
   Lemma Bind_get{S A: Type}: forall (f: S -> StateND S A) (s: S),
       Bind get f s = f s s.
@@ -244,7 +244,7 @@ End StateNDOperations.
    a unique set of all possible outcomes. *)
 Definition OStateND(S A: Type) := S -> option (A * S) -> Prop.
 
-Instance OStateND_Monad(S: Type): Monad (OStateND S). refine ({|
+#[global] Instance OStateND_Monad(S: Type): Monad (OStateND S). refine ({|
   Bind A B (m: OStateND S A)(f : A -> OStateND S B) :=
     fun (s : S) (obs: option (B * S)) =>
       (m s None /\ obs = None) \/
@@ -269,7 +269,7 @@ Module OStateNDOperations.
   Definition arbitrary{S: Type}(A: Type): OStateND S A :=
     fun (s: S) (oas: option (A * S)) => exists a, oas = Some (a, s).
 
-  Hint Unfold get put fail_hard arbitrary : unf_monad_ops.
+  #[global] Hint Unfold get put fail_hard arbitrary : unf_monad_ops.
 
   Lemma Bind_get{S A: Type}: forall (f: S -> OStateND S A) (s: S),
       Bind get f s = f s s.
@@ -375,7 +375,7 @@ End OStateNDOperations.
    will return an answer and a final state that satisfy post. *)
 Definition Post(S A: Type) := S -> (A -> S -> Prop) -> Prop.
 
-Instance Post_Monad(S: Type): Monad (Post S). refine ({|
+#[global] Instance Post_Monad(S: Type): Monad (Post S). refine ({|
   Bind A B (m: Post S A) (f : A -> Post S B) :=
     fun s1 post => m s1 (fun a s2 => f a s2 post);
   Return A (a : A) :=
@@ -402,7 +402,7 @@ End PostMonadOperations.
 (* outer option is for failure, inner option is for early return (abort) *)
 Definition StateAbortFail(S A: Type) := S -> (option (option A) * S).
 
-Instance StateAbortFail_Monad(S: Type): Monad (StateAbortFail S). refine ({|
+#[global] Instance StateAbortFail_Monad(S: Type): Monad (StateAbortFail S). refine ({|
   Bind A B (m: StateAbortFail S A) (f: A -> StateAbortFail S B) (s1 : S) :=
     match m s1 with
     | (Some (Some a), s2) => f a s2

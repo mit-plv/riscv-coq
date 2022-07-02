@@ -77,4 +77,4 @@ Section Riscv.
 
 End Riscv.
 
-Existing Instance IsRiscvMachineL. (* needed because it was defined inside a Section *)
+#[global] Existing Instance IsRiscvMachineL. (* needed because it was defined inside a Section *)

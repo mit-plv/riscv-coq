@@ -120,4 +120,4 @@ Section Riscv.
 End Riscv.
 
 (* needed because defined inside a Section *)
-Existing Instance IsRiscvMachine.
+#[global] Existing Instance IsRiscvMachine.

@@ -24,4 +24,4 @@ Section MMIO.
 
 End MMIO.
 
-Hint Resolve FE310_mmio: typeclass_instances.
+#[global] Hint Resolve FE310_mmio: typeclass_instances.

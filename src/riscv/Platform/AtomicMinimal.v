@@ -73,4 +73,4 @@ Section Riscv.
 
 End Riscv.
 
-Existing Instance IsAtomicRiscvMachine.
+#[global] Existing Instance IsAtomicRiscvMachine.

@@ -87,7 +87,7 @@ Proof. intros. destruct f1; destruct f2; simpl in *; congruence. Qed.
 
 Definition CSRField_ltb(f1 f2: CSRField): bool := Z.ltb (CSRField_to_Z f1) (CSRField_to_Z f2).
 
-Instance CSRField_ltb_strictorder: SortedList.parameters.strict_order CSRField_ltb.
+#[global] Instance CSRField_ltb_strictorder: SortedList.parameters.strict_order CSRField_ltb.
 Proof.
   constructor; unfold CSRField_ltb; intros.
   - apply Z.ltb_irrefl.
@@ -97,14 +97,14 @@ Proof.
     blia.
 Qed.
 
-Instance CSRFile_map_params: SortedList.parameters := {|
+#[global] Instance CSRFile_map_params: SortedList.parameters := {|
   parameters.key := CSRField;
   parameters.value := MachineInt;
   parameters.ltb := CSRField_ltb;
 |}.
 
-Instance CSRFile: map.map CSRField MachineInt :=
+#[global] Instance CSRFile: map.map CSRField MachineInt :=
   SortedList.map CSRFile_map_params CSRField_ltb_strictorder.
 
-Instance CSRFile_ok: map.ok CSRFile.
+#[global] Instance CSRFile_ok: map.ok CSRFile.
 Proof. apply (@SortedList.map_ok CSRFile_map_params CSRField_ltb_strictorder). Qed.

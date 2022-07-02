@@ -6,8 +6,8 @@ Require Import coqutil.Word.Naive.
 
 Local Open Scope Z_scope.
 
-Instance word: word.word 32 := Naive.word 32.
+#[global] Instance word: word.word 32 := Naive.word 32.
 
-Instance Words32Naive: Bitwidth 32 := {|
+#[global] Instance Words32Naive: Bitwidth 32 := {|
   width_cases := or_introl eq_refl;
 |}.

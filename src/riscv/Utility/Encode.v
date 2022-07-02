@@ -418,7 +418,7 @@ Definition verify_iset(inst: Instruction)(iset: InstructionSet): Prop :=
 Definition verify(inst: Instruction)(iset: InstructionSet): Prop :=
   respects_bounds (bitwidth iset) inst /\ verify_iset inst iset.
 
-Hint Unfold
+#[global] Hint Unfold
   map_Invalid
   map_R
   map_R_atomic

@@ -151,4 +151,4 @@ Section Riscv.
 
 End Riscv.
 
-Existing Instance IsMetricRiscvMachine.
+#[global] Existing Instance IsMetricRiscvMachine.

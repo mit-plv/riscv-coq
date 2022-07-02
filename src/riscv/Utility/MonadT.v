@@ -21,7 +21,7 @@ Notation "m1 ;; m2" := (Bind m1 (fun _ => m2))
 
 Open Scope monad_scope.
 
-Instance option_Monad: Monad option := {|
+#[global] Instance option_Monad: Monad option := {|
   Bind := fun {A B: Type} (o: option A) (f: A -> option B) => match o with
             | Some x => f x
             | None => None
@@ -75,7 +75,7 @@ listT option nat
 (*Eval cbv in (optionT list nat).*)
 
 
-Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
+#[global] Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
   Bind{A}{B}(m: M (option A))(f: A -> M (option B)) :=
     Bind m (fun (o: option A) =>
               match o with
@@ -98,7 +98,7 @@ End OptionMonad.
 
 Definition State(S A: Type) := S -> (A * S).
 
-Instance State_Monad(S: Type): Monad (State S) := {|
+#[global] Instance State_Monad(S: Type): Monad (State S) := {|
   Bind := fun {A B: Type} (m: State S A) (f: A -> State S B) =>
               fun (s: S) => let (a, s') := m s in f a s' ;
   Return := fun {A: Type} (a: A) =>
@@ -107,7 +107,7 @@ Instance State_Monad(S: Type): Monad (State S) := {|
 
 Definition StateT(S: Type)(M: Type -> Type)(A: Type) := S -> M (A * S)%type.
 
-Instance StateT_Monad(M: Type -> Type){MM: Monad M}(S: Type): Monad (StateT S M) := {|
+#[global] Instance StateT_Monad(M: Type -> Type){MM: Monad M}(S: Type): Monad (StateT S M) := {|
   Bind{A B: Type}(m: StateT S M A)(f: A -> StateT S M B) :=
     fun (s: S) => Bind (m s) (fun '(a, s) => f a s);
   Return{A: Type}(a: A) :=
@@ -174,7 +174,7 @@ Module NonDetMonad.
 
 End NonDetMonad.
 
-Instance NonDet_Monad: Monad NonDet := {|
+#[global] Instance NonDet_Monad: Monad NonDet := {|
   Bind := @NonDetMonad.flatMapSet;
   Return := @NonDetMonad.singletonSet;
 |}.
@@ -184,7 +184,7 @@ Definition NonDetT(M: Type -> Type)(A: Type) := NonDet (M A).
 Goal forall (M: Type -> Type) (A: Type), NonDet (M A) = (M A -> Prop).
   intros. reflexivity. Qed.
 
-Instance NonDetT_Monad(M: Type -> Type){MM: Monad M}: Monad (NonDetT M). refine ({|
+#[global] Instance NonDetT_Monad(M: Type -> Type){MM: Monad M}: Monad (NonDetT M). refine ({|
   Bind{A B}(m: NonDet (M A))(f: A -> NonDet (M B)) := _;
   Return := _
 |}).

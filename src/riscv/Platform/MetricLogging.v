@@ -59,7 +59,7 @@ Delimit Scope MetricL_scope with metricsL.
 Infix "<=" := metricsLeq : MetricL_scope.
 Infix "-" := metricsSub : MetricL_scope.
 
-Hint Unfold
+#[global] Hint Unfold
      withInstructions
      withLoads
      withStores

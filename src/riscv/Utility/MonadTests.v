@@ -17,7 +17,7 @@ Open Scope monad_scope.
 
 Definition Id: Type -> Type := id.
 
-Instance Id_monad: Monad Id := {|
+#[global] Instance Id_monad: Monad Id := {|
   Bind{A B}(m: A)(f: A -> B) := f m;
   Return{A}(a: A) := a;
 |}.
@@ -25,7 +25,7 @@ Instance Id_monad: Monad Id := {|
 
 Definition NonDet(A: Type): Type := A -> Prop.
 
-Instance NonDet_Monad: Monad NonDet := {|
+#[global] Instance NonDet_Monad: Monad NonDet := {|
   Bind{A B}(m: NonDet A)(f: A -> NonDet B) :=
     fun (b: B) => exists a, m a /\ f a b;
   Return{A} := eq;
@@ -38,7 +38,7 @@ Record optionT(M: Type -> Type)(A: Type): Type := mkOptionT {
 Arguments mkOptionT {M} {A} (_).
 Arguments runOptionT {M} {A} (_).
 
-Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
+#[global] Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
   Bind{A}{B}(m: optionT M A)(f: A -> optionT M B) :=
     mkOptionT (Bind (runOptionT m) (fun (o: option A) =>
                                       match o with
@@ -63,7 +63,7 @@ Record StateT(S: Type)(M: Type -> Type)(A: Type): Type := mkStateT {
 Arguments mkStateT {S} {M} {A} (_).
 Arguments runStateT {S} {M} {A} (_).
 
-Instance StateT_Monad(M: Type -> Type){MM: Monad M}(S: Type): Monad (StateT S M) := {|
+#[global] Instance StateT_Monad(M: Type -> Type){MM: Monad M}(S: Type): Monad (StateT S M) := {|
   Bind{A B: Type}(m: StateT S M A)(f: A -> StateT S M B) :=
     mkStateT (fun (s: S) => Bind ((runStateT m) s) (fun '(a, s) => runStateT (f a) s));
   Return{A: Type}(a: A) :=
@@ -86,7 +86,7 @@ Record listT(M: Type -> Type)(A: Type): Type := mkListT {
 Arguments mkListT {M} {A} (_).
 Arguments runListT {M} {A} (_).
 
-Instance listT_Monad(M: Type -> Type){MM: Monad M}: Monad (listT M) := {|
+#[global] Instance listT_Monad(M: Type -> Type){MM: Monad M}: Monad (listT M) := {|
   Bind{A B: Type}(m: listT M A)(f: A -> listT M B) :=
     mkListT (la <- runListT m;
              List.fold_left

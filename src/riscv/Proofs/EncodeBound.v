@@ -68,7 +68,7 @@ Lemma encode_U_bitSlice_idemp: forall opcode r z,
               encode_U opcode r z.
 Proof. intros. unfold encode_U. prove_Zeq_bitwise. Qed.
 
-Hint Rewrite
+#[global] Hint Rewrite
   encode_Fence_bitSlice_idemp
   encode_Invalid_bitSlice_idemp
   encode_I_bitSlice_idemp

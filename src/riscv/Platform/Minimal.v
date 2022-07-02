@@ -260,5 +260,5 @@ Section Riscv.
 End Riscv.
 
 (* needed because defined inside a Section *)
-Existing Instance IsRiscvMachine.
-Existing Instance MinimalSatisfiesPrimitives.
+#[global] Existing Instance IsRiscvMachine.
+#[global] Existing Instance MinimalSatisfiesPrimitives.

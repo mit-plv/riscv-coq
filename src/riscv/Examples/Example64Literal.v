@@ -19,7 +19,7 @@ Require Import riscv.Utility.DefaultMemImpl64.
 Require Import coqutil.Map.Z_keyed_SortedListMap.
 Require coqutil.Map.SortedList.
 
-Existing Instance DefaultRiscvState.
+#[global] Existing Instance DefaultRiscvState.
 
 
 Definition foo7prog: list MachineInt := [
