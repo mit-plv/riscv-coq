@@ -53,7 +53,7 @@ all: Makefile.coq.all $(ALL_VS)
 	rm -f .coqdeps.d
 	$(MAKE) -f Makefile.coq.all
 
-COQ_MAKEFILE := $(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = riscv $(COQMF_ARGS)
+COQ_MAKEFILE := $(COQBIN)coq_makefile -f _CoqProject -docroot riscv $(COQMF_ARGS)
 
 Makefile.coq.spec: _CoqProject force
 	@echo "Generating Makefile.coq.spec"
