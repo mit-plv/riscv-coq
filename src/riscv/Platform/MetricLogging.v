@@ -53,6 +53,7 @@ Section Riscv.
 
 End Riscv.
 
+Declare Scope MetricL_scope.
 Bind Scope MetricL_scope with MetricLog.
 Delimit Scope MetricL_scope with metricsL.
 
