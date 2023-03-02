@@ -208,8 +208,8 @@ Section Riscv.
       unfold map.getmany_of_tuple, Memory.footprint in IHn.
       specialize IHn with (m := m) (r := (word.add r (word.of_Z 1))).
       rewrite E1 in IHn.
-      specialize IHn with (1 := eq_refl).
       eapply IHn.
+      + reflexivity.
       + instantiate (1 := someSet). clear -H0.
         unfold isXAddr4 in *. fwd. eauto 10 using removeXAddr_bw.
       + unfold Memory.load_bytes in *.
