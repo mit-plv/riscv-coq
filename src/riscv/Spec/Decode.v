@@ -55,6 +55,25 @@ Inductive InstructionM64 : Type :=
   | Remuw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM64
   | InvalidM64 : InstructionM64.
 
+(* I believe division is often not implemented in a constant-time way, so this will have to 
+   be changed at some point. *)
+Inductive LeakageM64 : Type :=
+| Mulw_leakage
+| Divw_leakage
+| Divuw_leakage
+| Remw_leakage
+| Remuw_leakage.
+
+Definition leakage_of_instr_M64 (instr : InstructionM64) : option LeakageM64 :=
+  match instr with
+  | Mulw _ _ _ => Some Mulw_leakage
+  | Divw _ _ _ => Some Divw_leakage
+  | Divuw _ _ _ => Some Divw_leakage
+  | Remw _ _ _ => Some Remw_leakage
+  | Remuw _ _ _ => Some Remuw_leakage
+  | InvalidM64 => None
+  end.
+
 Inductive InstructionM : Type :=
   | Mul (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
   | Mulh (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
@@ -65,6 +84,30 @@ Inductive InstructionM : Type :=
   | Rem (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
   | Remu (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionM
   | InvalidM : InstructionM.
+
+(* This will also have to change, due to division beingn implemented in a not-constant-time way. *)
+Inductive LeakageM : Type :=
+| Mul_leakage
+| Mulh_leakage
+| Mulhsu_leakage
+| Mulhu_leakage
+| Div_leakage
+| Divu_leakage
+| Rem_leakage
+| Remu_leakage.
+
+Definition leakage_of_instr_M (instr : InstructionM) : option LeakageM :=
+  match instr with
+  | Mul _ _ _ => Some Mul_leakage
+  | Mulh _ _ _ => Some Mulh_leakage
+  | Mulhsu _ _ _ => Some Mulhsu_leakage
+  | Mulhu _ _ _ => Some Mulhu_leakage
+  | Div _ _ _ => Some Div_leakage
+  | Divu _ _ _ => Some Divu_leakage
+  | Rem _ _ _ => Some Rem_leakage
+  | Remu _ _ _ => Some Remu_leakage
+  | InvalidM => None
+  end.
 
 Inductive InstructionI64 : Type :=
   | Ld (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
@@ -85,6 +128,78 @@ Inductive InstructionI64 : Type :=
   | Sraw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI64
   | InvalidI64 : InstructionI64.
 
+Inductive LeakageI64 : Type :=
+| Ld_leakage (addr: Utility.Utility.MachineInt)
+| Lwu_leakage (addr: Utility.Utility.MachineInt)
+| Addiw_leakage
+| Slliw_leakage
+| Srliw_leakage
+| Sraiw_leakage
+| Sd_leakage (addr: Utility.Utility.MachineInt)
+| Addw_leakage
+| Subw_leakage
+| Sllw_leakage
+| Srlw_leakage
+| Sraw_leakage. Search Utility.Utility.MachineInt.
+
+Definition leakage_of_instr_I64 (getRegister : Register -> Utility.Utility.MachineInt) (instr : InstructionI64) : option LeakageI64 :=
+  match instr with
+  | Ld _ rs1 oimm12 => Some (Ld_leakage (getRegister rs1 + oimm12))
+  | Lwu _ rs1 oimm12 => Some (Lwu_leakage (getRegister rs1 + oimm12))
+  | Addiw _ _ _ => Some Addiw_leakage
+  | Slliw _ _ _ => Some Slliw_leakage
+  | Srliw _ _ _ => Some Srliw_leakage
+  | Sraiw _ _ _ => Some Sraiw_leakage
+  | Sd rs1 _ simm12 => Some (Sd_leakage (getRegister rs1 + simm12))
+  | Addw _ _ _ => Some Addw_leakage
+  | Subw _ _ _ => Some Subw_leakage
+  | Sllw _ _ _ => Some Sllw_leakage
+  | Srlw _ _ _ => Some Srlw_leakage
+  | Sraw _ _ _ => Some Sraw_leakage
+  | InvalidI64 => None
+  end.
+
+Inductive LeakageI : Type :=
+| Lb_leakage (addr: Utility.Utility.MachineInt)
+| Lh_leakage (addr: Utility.Utility.MachineInt)
+| Lw_leakage (addr: Utility.Utility.MachineInt)
+| Lbu_leakage (addr: Utility.Utility.MachineInt)
+| Lhu_leakage (addr: Utility.Utility.MachineInt)
+| Fence_leakage (* unsure about this one. *)
+| Fence_i_leakage
+| Addi_leakage
+| Slli_leakage
+| Slti_leakage
+| Sltiu_leakage
+| Xori_leakage
+| Ori_leakage
+| Andi_leakage
+| Srli_leakage
+| Srai_leakage
+| Auipc_leakage
+| Sb_leakage (addr: Utility.Utility.MachineInt)
+| Sh_leakage (addr: Utility.Utility.MachineInt)
+| Sw_leakage (addr: Utility.Utility.MachineInt)
+| Add_leakage
+| Sub_leakage
+| Sll_leakage
+| Slt_leakage
+| Sltu_leakage
+| Xor_leakage
+| Srl_leakage
+| Sra_leakage
+| Or_leakage
+| And_leakage
+| Lui_leakage
+| Beq_leakage (branch: bool) (* unsure whether this should be here - i think that andres said that having this argument would make my life harder *)
+| Bne_leakage (branch: bool)
+| Blt_leakage (branch: bool)
+| Bge_leakage (branch: bool)
+| Bltu_leakage (branch: bool)
+| Bgeu_leakage (branch: bool)
+| Jalr_leakage (* unsure whether i should add the location we're jumping to here - or on the branches. i think not? *)
+| Jal_leakage.
+                            
 Inductive InstructionI : Type :=
   | Lb (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
    : InstructionI
@@ -147,7 +262,52 @@ Inductive InstructionI : Type :=
   | Jalr (rd : Register) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
    : InstructionI
   | Jal (rd : Register) (jimm20 : Utility.Utility.MachineInt) : InstructionI
-  | InvalidI : InstructionI.
+  | InvalidI : InstructionI. Search Z. Compute (Utility.regToZ_unsigned 0).
+
+(* are the immediates already signed, or do I need to do some sort of sign extension thing?  surely not, since they're already Z, right? *)
+Definition leakage_of_instr_I (getRegister : Register -> Utility.Utility.MachineInt) (instr : InstructionI) : option LeakageI :=
+  match instr with
+  | Lb _ rs1 oimm12 => Some (Lb_leakage (getRegister rs1 + oimm12))
+  | Lh _ rs1 oimm12 => Some (Lh_leakage (getRegister rs1 + oimm12))
+  | Lw _ rs1 oimm12 => Some (Lw_leakage (getRegister rs1 + oimm12))
+  | Lbu _ rs1 oimm12 => Some (Lbu_leakage (getRegister rs1 + oimm12))
+  | Lhu _ rs1 oimm12 => Some (Lhu_leakage (getRegister rs1 + oimm12))
+  | Fence _ _ => Some Fence_leakage
+  | Fence_i => Some Fence_i_leakage
+  | Addi _ _ _ => Some Addi_leakage
+  | Slli _ _ _ => Some Slli_leakage
+  | Slti _ _ _ => Some Slti_leakage
+  | Sltiu _ _ _ => Some Sltiu_leakage
+  | Xori _ _ _ => Some Xori_leakage
+  | Ori _ _ _ => Some Ori_leakage
+  | Andi _ _ _ => Some Andi_leakage
+  | Srli _ _ _ => Some Srli_leakage
+  | Srai _ _ _ => Some Srai_leakage
+  | Auipc _ _ => Some Auipc_leakage
+  | Sb rs1 _ simm12 => Some (Sb_leakage (getRegister rs1 + simm12))
+  | Sh rs1 _ simm12 => Some (Sh_leakage (getRegister rs1 + simm12))
+  | Sw rs1 _ simm12 => Some (Sw_leakage (getRegister rs1 + simm12))
+  | Add _ _ _ => Some Add_leakage
+  | Sub _ _ _ => Some Sub_leakage
+  | Sll _ _ _ => Some Sll_leakage
+  | Slt _ _ _ => Some Slt_leakage
+  | Sltu _ _ _ => Some Sltu_leakage
+  | Xor _ _ _ => Some Xor_leakage
+  | Srl _ _ _ => Some Srl_leakage
+  | Sra _ _ _ => Some Sra_leakage
+  | Or _ _ _ => Some Or_leakage
+  | And _ _ _ => Some And_leakage
+  | Lui _ _ => Some Lui_leakage
+  | Beq rs1 rs2 _ => Some (Beq_leakage (getRegister rs1 =? getRegister rs2))
+  | Bne rs1 rs2 _ => Some (Bne_leakage (negb (getRegister rs1 =? getRegister rs2)))
+  | Blt rs1 rs2 _ => Some (Blt_leakage (getRegister rs1 <? getRegister rs2))
+  | Bge rs1 rs2 _ => Some (Bge_leakage (getRegister rs1  >=? getRegister rs2))
+  | Bltu rs1 rs2 _ => Some (Bltu_leakage (getRegister rs1 <=? getRegister rs2))
+  | Bgeu rs1 rs2 _ => Some (Bgeu_leakage (getRegister rs1 >=? getRegister rs2))
+  | Jalr _ _ _ => Some Jalr_leakage
+  | Jal _ _ => Some Jal_leakage
+  | InvalidI => None
+  end.
 
 Inductive InstructionF64 : Type :=
   | Fcvt_l_s (rd : Register) (rs1 : FPRegister) (rm : RoundMode) : InstructionF64
@@ -155,6 +315,49 @@ Inductive InstructionF64 : Type :=
   | Fcvt_s_l (rd : FPRegister) (rs1 : Register) (rm : RoundMode) : InstructionF64
   | Fcvt_s_lu (rd : FPRegister) (rs1 : Register) (rm : RoundMode) : InstructionF64
   | InvalidF64 : InstructionF64.
+
+Inductive LeakageF64 : Type :=
+| Fcvt_l_s_leakage
+| Fcvt_lu_s_leakage
+| Fcvt_s_l_leakage
+| Fcvt_s_lu_leakage.
+
+Definition leakage_of_instr_F64 (instr : InstructionF64) : option LeakageF64 :=
+  match instr with
+  | Fcvt_l_s _ _ _ => Some Fcvt_l_s_leakage
+  | Fcvt_lu_s _ _ _ => Some Fcvt_lu_s_leakage
+  | Fcvt_s_l _ _ _ => Some Fcvt_s_l_leakage
+  | Fcvt_s_lu _ _ _ => Some Fcvt_s_lu_leakage
+  | InvalidF64 => None
+  end.
+
+Inductive LeakageF : Type :=
+| Flw_leakage (addr: Utility.Utility.MachineInt)
+| Fsw_leakage (addr: Utility.Utility.MachineInt)
+| Fmadd_s_leakage
+| Fmsub_s_leakage
+| Fnmsub_s_leakage
+| Fnmadd_s_leakage
+| Fadd_s_leakage
+| Fsub_s_leakage
+| Fmul_s_leakage
+| Fdiv_s_leakage
+| Fsqrt_s_leakage
+| Fsgnj_s_leakage
+| Fsgnjn_s_leakage
+| Fsgnjx_s_leakage
+| Fmin_s_leakage
+| Fmax_s_leakage
+| Fcvt_w_s_leakage
+| Fcvt_wu_s_leakage
+| Fmv_x_w_leakage
+| Feq_s_leakage
+| Flt_s_leakage
+| Fle_s_leakage
+| Fclass_s_leakage
+| Fcvt_s_w_leakage
+| Fcvt_s_wu_leakage
+| Fmv_w_x_leakage.
 
 Inductive InstructionF : Type :=
   | Flw (rd : FPRegister) (rs1 : Register) (oimm12 : Utility.Utility.MachineInt)
@@ -205,6 +408,54 @@ Inductive InstructionF : Type :=
   | Fmv_w_x (rd : FPRegister) (rs1 : Register) : InstructionF
   | InvalidF : InstructionF.
 
+Definition leakage_of_instr_F (getRegister : Register -> Utility.Utility.MachineInt) (instr : InstructionF) : option LeakageF :=
+  match instr with
+  | Flw _ rs1 oimm12 => Some (Flw_leakage (getRegister rs1 + oimm12))
+  | Fsw rs1 _ simm12 => Some (Fsw_leakage (getRegister rs1 + simm12))
+  | Fmadd_s _ _ _ _ _ => Some Fmadd_s_leakage
+  | Fmsub_s _ _ _ _ _ => Some Fmsub_s_leakage
+  | Fnmsub_s _ _ _ _ _ => Some Fnmsub_s_leakage
+  | Fnmadd_s _ _ _ _ _ => Some Fnmadd_s_leakage
+  | Fadd_s _ _ _ _ => Some Fadd_s_leakage
+  | Fsub_s _ _ _ _ => Some Fsub_s_leakage
+  | Fmul_s _ _ _ _ => Some Fmul_s_leakage
+  | Fdiv_s _ _ _ _ => Some Fdiv_s_leakage
+  | Fsqrt_s _ _ _ => Some Fsqrt_s_leakage
+  | Fsgnj_s _ _ _ => Some Fsgnj_s_leakage
+  | Fsgnjn_s _ _ _ => Some Fsgnjn_s_leakage
+  | Fsgnjx_s _ _ _ => Some Fsgnjx_s_leakage
+  | Fmin_s _ _ _ => Some Fmin_s_leakage
+  | Fmax_s _ _ _ => Some Fmax_s_leakage
+  | Fcvt_w_s _ _ _ => Some Fcvt_w_s_leakage
+  | Fcvt_wu_s _ _ _ => Some Fcvt_wu_s_leakage
+  | Fmv_x_w _ _ => Some Fmv_x_w_leakage
+  | Feq_s _ _ _ => Some Feq_s_leakage
+  | Flt_s _ _ _ => Some Flt_s_leakage
+  | Fle_s _ _ _ => Some Fle_s_leakage
+  | Fclass_s _ _ => Some Fclass_s_leakage
+  | Fcvt_s_w _ _ _ => Some Fcvt_s_w_leakage
+  | Fcvt_s_wu _ _ _ => Some Fcvt_s_wu_leakage
+  | Fmv_w_x _ _ => Some Fmv_w_x_leakage
+  | InvalidF => None
+  end.
+
+(* unsure what some of these mean, so unsure whether I have the right definition here. *)
+Inductive LeakageCSR : Type :=
+| Ecall_leakage
+| Ebreak_leakage
+| Uret_leakage
+| Sret_leakage
+| Mret_leakage
+| Wfi_leakage
+| Sfence_vma_leakage
+| Csrrw_leakage
+| Csrrs_leakage
+| Csrrc_leakage
+| Csrrwi_leakage
+| Csrrsi_leakage
+| Csrrci_leakage.
+
+(* what are these, and why is it hard to find documentation for them? *)
 Inductive InstructionCSR : Type :=
   | Ecall : InstructionCSR
   | Ebreak : InstructionCSR
@@ -229,6 +480,38 @@ Inductive InstructionCSR : Type :=
     : Utility.Utility.MachineInt)
    : InstructionCSR
   | InvalidCSR : InstructionCSR.
+
+Definition leakage_of_instr_CSR (instr : InstructionCSR) : option LeakageCSR :=
+  match instr with
+  | Ecall => Some Ecall_leakage
+  | Ebreak => Some Ebreak_leakage
+  | Uret => Some Uret_leakage
+  | Sret => Some Uret_leakage
+  | Mret => Some Mret_leakage
+  | Wfi => Some Wfi_leakage
+  | Sfence_vma _ _ => Some Sfence_vma_leakage
+  | Csrrw _ _ _ => Some Csrrw_leakage
+  | Csrrs _ _ _ => Some Csrrs_leakage
+  | Csrrc _ _ _ => Some Csrrc_leakage
+  | Csrrwi _ _ _ => Some Csrrwi_leakage
+  | Csrrsi _ _ _ => Some Csrrsi_leakage
+  | Csrrci _ _ _ => Some Csrrci_leakage
+  | InvalidCSR => None
+  end.
+
+(* do we care about aqrl here? *)
+Inductive LeakageA64 : Type :=
+| Lr_d_leakage (addr : Utility.Utility.MachineInt)
+| Sc_d_leakage (addr : Utility.Utility.MachineInt) (* behavior of this depends on whether there is a reservation on addr... *)
+| Amoswap_d_leakage (addr : Utility.Utility.MachineInt)
+| Amoadd_d_leakage (addr : Utility.Utility.MachineInt)
+| Amoand_d_leakage (addr : Utility.Utility.MachineInt)
+| Amoor_d_leakage (addr : Utility.Utility.MachineInt)
+| Amoxor_d_leakage (addr : Utility.Utility.MachineInt)
+| Amomax_d_leakage (addr : Utility.Utility.MachineInt)
+| Amomaxu_d_leakage (addr : Utility.Utility.MachineInt)
+| Amomin_d_leakage (addr : Utility.Utility.MachineInt)
+| Amominu_d_leakage (addr : Utility.Utility.MachineInt).
 
 Inductive InstructionA64 : Type :=
   | Lr_d (rd : Register) (rs1 : Register) (aqrl : Utility.Utility.MachineInt)
@@ -265,6 +548,35 @@ Inductive InstructionA64 : Type :=
    : InstructionA64
   | InvalidA64 : InstructionA64.
 
+Definition leakage_of_instr_A64 (getRegister : Register -> Utility.Utility.MachineInt) (instr : InstructionA64) : option LeakageA64 :=
+  match instr with
+  | Lr_d _ rs1 _ => Some (Lr_d_leakage (getRegister rs1))
+  | Sc_d _ rs1 _ _ => Some (Sc_d_leakage (getRegister rs1))
+  | Amoswap_d _ rs1 _ _ => Some (Amoswap_d_leakage (getRegister rs1))
+  | Amoadd_d _ rs1 _ _ => Some (Amoadd_d_leakage (getRegister rs1))
+  | Amoand_d _ rs1 _ _ => Some (Amoand_d_leakage (getRegister rs1))
+  | Amoor_d _ rs1 _ _ => Some (Amoor_d_leakage (getRegister rs1))
+  | Amoxor_d _ rs1 _ _ => Some (Amoxor_d_leakage (getRegister rs1))
+  | Amomax_d _ rs1 _ _ => Some (Amomax_d_leakage (getRegister rs1))
+  | Amomaxu_d _ rs1 _ _ => Some (Amomaxu_d_leakage (getRegister rs1))
+  | Amomin_d _ rs1 _ _ => Some (Amomin_d_leakage (getRegister rs1))
+  | Amominu_d _ rs1 _ _ => Some (Amominu_d_leakage (getRegister rs1))
+  | InvalidA64 => None
+  end.
+
+Inductive LeakageA : Type :=
+| Lr_w_leakage (addr : Utility.Utility.MachineInt)
+| Sc_w_leakage (addr : Utility.Utility.MachineInt)
+| Amoswap_w_leakage (addr : Utility.Utility.MachineInt)
+| Amoadd_w_leakage (addr : Utility.Utility.MachineInt)
+| Amoand_w_leakage (addr : Utility.Utility.MachineInt)
+| Amoor_w_leakage (addr : Utility.Utility.MachineInt)
+| Amoxor_w_leakage (addr : Utility.Utility.MachineInt)
+| Amomax_w_leakage (addr : Utility.Utility.MachineInt)
+| Amomaxu_w_leakage (addr : Utility.Utility.MachineInt)
+| Amomin_w_leakage (addr : Utility.Utility.MachineInt)
+| Amominu_w_leakage (addr : Utility.Utility.MachineInt).
+
 Inductive InstructionA : Type :=
   | Lr_w (rd : Register) (rs1 : Register) (aqrl : Utility.Utility.MachineInt)
    : InstructionA
@@ -300,6 +612,22 @@ Inductive InstructionA : Type :=
    : InstructionA
   | InvalidA : InstructionA.
 
+Definition leakage_of_instr_A (getRegister : Register -> Utility.Utility.MachineInt) (instr : InstructionA) : option LeakageA :=
+  match instr with
+  | Lr_w _ rs1 _ => Some (Lr_w_leakage (getRegister rs1))
+  | Sc_w _ rs1 _ _ => Some (Sc_w_leakage (getRegister rs1))
+  | Amoswap_w _ rs1 _ _ => Some (Amoswap_w_leakage (getRegister rs1))
+  | Amoadd_w _ rs1 _ _ => Some (Amoadd_w_leakage (getRegister rs1))
+  | Amoand_w _ rs1 _ _ => Some (Amoand_w_leakage (getRegister rs1))
+  | Amoor_w _ rs1 _ _ => Some (Amoor_w_leakage (getRegister rs1))
+  | Amoxor_w _ rs1 _ _ => Some (Amoxor_w_leakage (getRegister rs1))
+  | Amomax_w _ rs1 _ _ => Some (Amomax_w_leakage (getRegister rs1))
+  | Amomaxu_w _ rs1 _ _ => Some (Amomaxu_w_leakage (getRegister rs1))
+  | Amomin_w _ rs1 _ _ => Some (Amomin_w_leakage (getRegister rs1))
+  | Amominu_w _ rs1 _ _ => Some (Amominu_w_leakage (getRegister rs1))
+  | InvalidA => None
+  end.
+
 Inductive Instruction : Type :=
   | IInstruction (iInstruction : InstructionI) : Instruction
   | MInstruction (mInstruction : InstructionM) : Instruction
@@ -311,6 +639,31 @@ Inductive Instruction : Type :=
   | F64Instruction (f64Instruction : InstructionF64) : Instruction
   | CSRInstruction (csrInstruction : InstructionCSR) : Instruction
   | InvalidInstruction (inst : Utility.Utility.MachineInt) : Instruction.
+
+Inductive LeakageEvent : Type :=
+| ILeakage (iLeakage : LeakageI)
+| MLeakage (mLeakage : LeakageM)
+| ALeakage (aLeakage : LeakageA)
+| FLeakage (fLeakage : LeakageF)
+| I64Leakage (i64Leakage : LeakageI64)
+| M64Leakage (m64Leakage : LeakageM64)
+| A64Leakage (a64Leakage : LeakageA64)
+| F64Leakage (f64Leakage : LeakageF64)
+| CSRLeakage (csrLeakage : LeakageCSR).
+
+Definition leakage_of_instr (getRegister : Register -> Utility.Utility.MachineInt) (instr : Instruction) : option LeakageEvent :=
+  match instr with
+  | IInstruction instr => option_map ILeakage (leakage_of_instr_I getRegister instr)
+  | MInstruction instr => option_map MLeakage (leakage_of_instr_M instr)
+  | AInstruction instr => option_map ALeakage (leakage_of_instr_A getRegister instr)
+  | FInstruction instr => option_map FLeakage (leakage_of_instr_F getRegister instr)
+  | I64Instruction instr => option_map I64Leakage (leakage_of_instr_I64 getRegister instr)
+  | M64Instruction instr => option_map M64Leakage (leakage_of_instr_M64 instr)
+  | A64Instruction instr => option_map A64Leakage (leakage_of_instr_A64 getRegister instr)
+  | F64Instruction instr => option_map F64Leakage (leakage_of_instr_F64 instr)
+  | CSRInstruction instr => option_map CSRLeakage (leakage_of_instr_CSR instr)
+  | InvalidInstruction _ => None
+  end.
 
 (* Converted value declarations: *)
 
