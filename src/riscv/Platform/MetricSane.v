@@ -20,7 +20,7 @@ Section Sane.
   Context {mem: map.map word byte}.
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
-  Context {RVM: RiscvProgram M word}.
+  Context {RVM: RiscvProgramWithLeakage}.
   Context {PRParams: PrimitivesParams M MetricRiscvMachine}.
   Context {mcomp_sat_ok: mcomp_sat_spec PRParams}.
 
@@ -165,6 +165,7 @@ Section Sane.
     unfold run1. intros.
     apply Bind_sane; [apply getPC_sane|intros].
     apply Bind_sane; [apply loadWord_sane|intros].
+    apply Bind_sane; [apply logInstr_sane|intros].
     apply Bind_sane; [apply execute_sane|intros].
     apply endCycleNormal_sane.
   Qed.

@@ -30,7 +30,41 @@ Section Riscv.
   (* note: ext_spec does not have access to the metrics *)
   Context {mmio_spec: MMIOSpec}.
 
-  Local Notation M := (free action result).
+  (*should i change this to (list LeakageEvent -> list LeakageEvent) * ... ? *)
+  Definition action : Type := (MetricLog -> MetricLog) * riscv_primitive.
+  Definition result (a : action) := primitive_result (snd a).
+  Local Notation M := (free action result). Print act.
+
+  Global Instance IsRiscvMachine: RiscvProgram M word := {|
+    getRegister a := act (id, GetRegister a) ret;
+    setRegister a b := act (id, SetRegister a b) ret;
+    loadByte a b := act (addMetricLoads 1, LoadByte a b) ret;
+    loadHalf a b := act (addMetricLoads 1, LoadHalf a b) ret;
+    loadWord a b := act (addMetricLoads 1, LoadWord a b) ret;
+    loadDouble a b := act (addMetricLoads 1, LoadDouble a b) ret;
+    storeByte a b c := act (addMetricStores 1, StoreByte a b c) ret;
+    storeHalf a b c := act (addMetricStores 1, StoreHalf a b c) ret;
+    storeWord a b c := act (addMetricStores 1, StoreWord a b c) ret;
+    storeDouble a b c := act (addMetricStores 1, StoreDouble a b c) ret;
+    makeReservation a := act (id, MakeReservation a) ret;
+    clearReservation a := act (id, ClearReservation a) ret;
+    checkReservation a := act (id, CheckReservation a) ret;
+    getCSRField f := act (id, GetCSRField f) ret;
+    setCSRField f v := act (id, SetCSRField f v) ret;
+    getPrivMode := act (id, GetPrivMode) ret;
+    setPrivMode m := act (id, SetPrivMode m) ret;
+    fence a b := act (id, Fence a b) ret;
+    getPC := act (id, GetPC) ret;
+    setPC a := act (addMetricJumps 1, SetPC a) ret;
+    endCycleNormal := act (addMetricInstructions 1, EndCycleNormal) ret;
+    endCycleEarly A := act (addMetricInstructions 1, EndCycleEarly A) ret;
+                                                        |}.
+
+  Check addMetricInstructions.
+
+  Global Instance IsRiscvMachineWithLeakage: RiscvProgramWithLeakage :=
+    {|
+      logInstr a := act (id, LogInstr a) ret; |}.
 
   Definition interp_action a metmach post :=
     interpret_action (snd a) (metmach.(getMachine)) (fun r mach =>
