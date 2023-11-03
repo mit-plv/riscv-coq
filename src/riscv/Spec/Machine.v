@@ -66,6 +66,11 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   endCycleEarly: forall A, M A;
 }.
 
+Class RiscvProgramWithLeakage{M}{t}{MM}{MWt}:=
+  mkRiscvProgramWithLeakage {
+      RVP :> @RiscvProgram M t MM MWt;
+      leakInstr : Instruction -> M unit;
+    }.
 
 Class RiscvMachine`{MP: RiscvProgram} := mkRiscvMachine {
   (* checks that addr is aligned, and translates the (possibly virtual) addr to a physical
