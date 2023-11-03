@@ -69,7 +69,7 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
 Class RiscvProgramWithLeakage{M}{t}{MM}{MWt}:=
   mkRiscvProgramWithLeakage {
       RVP :> @RiscvProgram M t MM MWt;
-      leakInstr : Instruction -> M unit;
+      logInstr : Instruction -> M unit;
     }.
 
 Class RiscvMachine`{MP: RiscvProgram} := mkRiscvMachine {
