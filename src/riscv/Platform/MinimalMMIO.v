@@ -22,20 +22,6 @@ Require Import riscv.Platform.Sane.
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
-Definition Mtriv (x : Type) := x.
-Definition trivialBind (A B : Type) (x : Mtriv A) (f : A -> B) : Mtriv B := f x.
-Definition trivialReturn (A : Type) (a : A) : Mtriv A := a.
-Print Monad.
-Lemma trivial_left_identity : forall (A B : Type) (a : A) (f : A -> Mtriv B), trivialBind A B (trivialReturn A a) f = f a.
-Proof. trivial. Qed.
-Lemma trivial_right_identity : forall (A : Type) (m : Mtriv A), trivialBind A A m (trivialReturn A) = m.
-Proof. trivial. Qed.
-Lemma trivial_associativity : forall (A B C : Type) (m : Mtriv A) (f : A -> Mtriv B) (g : B -> Mtriv C), trivialBind B C (trivialBind A B m f) g = trivialBind A C m (fun x : A => trivialBind B C (f x) g).
-Proof. trivial. Qed.
-
-Definition trivialMonad : Monad Mtriv :=
-  {| Bind := trivialBind; Return := trivialReturn; left_identity := trivial_left_identity; right_identity := trivial_right_identity; associativity := trivial_associativity |}.
-
 Class MMIOSpec{width: Z}{BW: Bitwidth width}{word: word width}{Mem : map.map word byte} := {
   (* should not say anything about alignment, just whether it's in the MMIO range *)
   isMMIOAddr: word -> Prop;
@@ -103,7 +89,7 @@ Section Riscv.
     else word.of_Z 0.
 
   Definition setReg(reg: Z)(v: word)(regs: Registers): Registers :=
-    if ((0 <? reg) && (reg <? 32)) then map.put regs reg v else regs. Print withTraceItem.
+    if ((0 <? reg) && (reg <? 32)) then map.put regs reg v else regs.
 
   Definition interpret_action (a : riscv_primitive) (mach : RiscvMachine) :
     (primitive_result a -> RiscvMachine -> Prop) -> (RiscvMachine -> Prop) -> Prop :=
@@ -128,8 +114,7 @@ Section Riscv.
         postF tt (withNextPc (word.add mach.(getPc) (word.of_Z 4)) mach)
     | EndCycleNormal => fun postF postA => postF tt (updatePc mach)
     | EndCycleEarly _ => fun postF postA => postA (updatePc mach) (* ignores postF containing the continuation *)
-    | LogInstr i => fun (postF : unit -> RiscvMachine -> Prop) postA =>
-                      postF tt (withTraceItem (@leakage_of_instr Mtriv trivialMonad (fun reg => word.unsigned (getReg mach.(getRegs) reg)) i) mach)
+    | LeakEvent e => fun postF postA => postF tt (withLeakageEvent e mach)
     | MakeReservation _
     | ClearReservation _
     | CheckReservation _

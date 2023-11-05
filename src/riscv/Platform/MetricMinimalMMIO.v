@@ -64,7 +64,7 @@ Section Riscv.
 
   Global Instance IsRiscvMachineWithLeakage: RiscvProgramWithLeakage :=
     {|
-      logInstr a := act (id, LogInstr a) ret; |}.
+      leakEvent a := act (id, LeakEvent a) ret; |}.
 
   Definition interp_action a metmach post :=
     interpret_action (snd a) (metmach.(getMachine)) (fun r mach =>
