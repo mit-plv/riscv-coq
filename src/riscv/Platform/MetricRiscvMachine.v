@@ -58,6 +58,14 @@ Section Machine.
     fun items '(mkMetricRiscvMachine mach mc) =>
       (mkMetricRiscvMachine (withLogItems items mach) mc).
 
+  Definition withLeakageEvent: LeakageEvent -> MetricRiscvMachine -> MetricRiscvMachine :=
+    fun event '(mkMetricRiscvMachine mach mc) =>
+      (mkMetricRiscvMachine (withLeakageEvent event mach) mc).
+
+  Definition withLeakageEvents: list LeakageEvent -> MetricRiscvMachine -> MetricRiscvMachine :=
+    fun events '(mkMetricRiscvMachine mach mc) =>
+      (mkMetricRiscvMachine (withLeakageEvents events mach) mc).
+
   Definition forgetMetrics(m: MetricRiscvMachine): RiscvMachine := m.(getMachine).
   Definition addMetrics(m: RiscvMachine)(mc: MetricLog): MetricRiscvMachine :=
     mkMetricRiscvMachine m mc.

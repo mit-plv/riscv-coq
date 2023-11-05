@@ -55,7 +55,7 @@ Section MetricPrimitives.
     getPrivMode_sane: mcomp_sane getPrivMode;
     setPrivMode_sane: forall m, mcomp_sane (setPrivMode m);
     fence_sane: forall a b, mcomp_sane (fence a b);
-    logInstr_sane: forall a, mcomp_sane (logInstr a);
+    leakInstr_sane: forall a, mcomp_sane (leakEvent a);
     getPC_sane: mcomp_sane getPC;
     setPC_sane: forall newPc, mcomp_sane (setPC newPc);
     endCycleNormal_sane: mcomp_sane endCycleNormal;
@@ -114,6 +114,10 @@ Section MetricPrimitives.
     spec_loadHalf: spec_load 2 (Machine.loadHalf (RiscvProgram := RVM.(RVP))) Memory.loadHalf;
     spec_loadWord: spec_load 4 (Machine.loadWord (RiscvProgram := RVM.(RVP))) Memory.loadWord;
     spec_loadDouble: spec_load 8 (Machine.loadDouble (RiscvProgram := RVM.(RVP))) Memory.loadDouble;
+
+    spec_leakEvent: forall (initialL: MetricRiscvMachine) (post: unit -> MetricRiscvMachine -> Prop) (e : LeakageEvent),
+        post tt (withLeakageEvent e initialL) ->
+        mcomp_sat (leakEvent e) initialL post;
 
     spec_storeByte: spec_store 1 (Machine.storeByte (RiscvProgram := RVM.(RVP))) Memory.storeByte;
     spec_storeHalf: spec_store 2 (Machine.storeHalf (RiscvProgram := RVM.(RVP))) Memory.storeHalf;
