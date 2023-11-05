@@ -15,16 +15,20 @@ Section Riscv.
 
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
-  Context {RVP: RiscvProgramWithLeakage}.
+  Context {RVM: RiscvProgramWithLeakage}.
   Context {RVS: RiscvMachine M mword}.
+
+  Print leakage_of_instr. Print decode. Print leakEvent. Print getRegister. Print MachineWidth.
 
   Definition run1(iset: InstructionSet):
     M unit :=
     pc <- getPC;
-    inst <- loadWord Fetch pc;
-    logInstr (decode iset (combine 4 inst));;
-    execute (decode iset (combine 4 inst));;
-    endCycleNormal.
+  inst <- loadWord Fetch pc;
+  let inst' := decode iset (combine 4 inst) in
+  leakage_event <- leakage_of_instr getRegister inst';
+  leakEvent leakage_event;;
+  execute inst';;
+  endCycleNormal.
 
   (* Note: We cannot use
      power_func (fun m => run1 iset;; m) n (Return tt)
