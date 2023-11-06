@@ -31,8 +31,8 @@ Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Section WithMonad.
   Context {M : Type -> Type} {MM : Monad M}.
-  Context {mword: Type} {MW: MachineWidth mword}.
-  Context (getRegister : Register -> M mword).
+  Context {mword: Type}.
+  Context (regToZ_unsigned: mword -> Z) (regToZ_signed: mword -> Z) (getRegister : Register -> M mword).
 
 (* Converted type declarations: *)
 
@@ -151,8 +151,6 @@ Inductive LeakageI64 : Type :=
 | Srlw_leakage
 | Sraw_leakage
 | InvalidI64_leakage. Locate "<- ; _ ".
-
-Print MW. Check add. Check regToZ_unsigned.
 
 Definition leakage_of_instr_I64 (instr : InstructionI64) : M LeakageI64 :=
   match instr with
@@ -1909,3 +1907,20 @@ Definition decode
      Utility.Utility.bitSlice Utility.Utility.machineIntToShamt
      Utility.Utility.signExtend
 *)
+
+Definition Mtriv (x : Type) := x.
+Definition trivialBind (A B : Type) (x : Mtriv A) (f : A -> B) : Mtriv B := f x.
+Definition trivialReturn (A : Type) (a : A) : Mtriv A := a.
+Print Monad.
+Lemma trivial_left_identity : forall (A B : Type) (a : A) (f : A -> Mtriv B), trivialBind A B (trivialReturn A a) f = f a.
+Proof. trivial. Qed.
+Lemma trivial_right_identity : forall (A : Type) (m : Mtriv A), trivialBind A A m (trivialReturn A) = m.
+Proof. trivial. Qed.
+Lemma trivial_associativity : forall (A B C : Type) (m : Mtriv A) (f : A -> Mtriv B) (g : B -> Mtriv C), trivialBind B C (trivialBind A B m f) g = trivialBind A C m (fun x : A => trivialBind B C (f x) g).
+Proof. trivial. Qed.
+Check @leakage_of_instr.
+Definition trivialMonad : Monad Mtriv :=
+  {| Bind := trivialBind; Return := trivialReturn; left_identity := trivial_left_identity; right_identity := trivial_right_identity; associativity := trivial_associativity |}.
+Definition concrete_leakage_of_instr := @leakage_of_instr Mtriv trivialMonad.
+Definition concrete_leakage_of_instr_Z := concrete_leakage_of_instr Z (fun x => x) (fun x => x).
+Print concrete_leakage_of_instr_Z. Print leakage_of_instr.
