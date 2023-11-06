@@ -174,7 +174,7 @@ Section Sane.
     apply Bind_sane; [apply getPC_sane|intros].
     apply Bind_sane; [apply loadWord_sane|intros].
     apply Bind_sane; [apply leakage_of_instr_sane|intros].
-    apply Bind_sane; [apply leakInstr_sane|intros].
+    apply Bind_sane; [apply leakEvent_sane|intros].
     apply Bind_sane; [apply execute_sane|intros].
     apply endCycleNormal_sane.
   Qed.
