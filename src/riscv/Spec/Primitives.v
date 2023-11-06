@@ -70,8 +70,8 @@ Section Primitives.
       (mcomp_sat comp st (fun a st' =>
          (post a st' /\ exists diff, st'.(getLog) = diff ++ st.(getLog)) /\ valid_machine st')).
 
-  Context {RVM: RiscvProgram M word}.
-  Context {RVS: @riscv.Spec.Machine.RiscvMachine M word _ _ RVM}.
+  Context {RVM: RiscvProgramWithLeakage}.
+  Context {RVS: @riscv.Spec.Machine.RiscvMachine M word _ _ RVM.(RVP)}.
 
   Class PrimitivesSane(p: PrimitivesParams RiscvMachine): Prop := {
     getRegister_sane: forall r, mcomp_sane (getRegister r);
@@ -92,6 +92,7 @@ Section Primitives.
     getPrivMode_sane: mcomp_sane getPrivMode;
     setPrivMode_sane: forall m, mcomp_sane (setPrivMode m);
     fence_sane: forall a b, mcomp_sane (fence a b);
+    leakEvent_sane: forall e, mcomp_sane (leakEvent e);
     getPC_sane: mcomp_sane getPC;
     setPC_sane: forall newPc, mcomp_sane (setPC newPc);
     endCycleNormal_sane: mcomp_sane endCycleNormal;
@@ -151,15 +152,15 @@ Section Primitives.
        x = Register0 /\ post tt initialL) ->
       mcomp_sat (setRegister x v) initialL post;
 
-    spec_loadByte: spec_load 1 (Machine.loadByte (RiscvProgram := RVM)) Memory.loadByte;
-    spec_loadHalf: spec_load 2 (Machine.loadHalf (RiscvProgram := RVM)) Memory.loadHalf;
-    spec_loadWord: spec_load 4 (Machine.loadWord (RiscvProgram := RVM)) Memory.loadWord;
-    spec_loadDouble: spec_load 8 (Machine.loadDouble (RiscvProgram := RVM)) Memory.loadDouble;
+    spec_loadByte: spec_load 1 (Machine.loadByte (RiscvProgram := RVM.(RVP))) Memory.loadByte;
+    spec_loadHalf: spec_load 2 (Machine.loadHalf (RiscvProgram := RVM.(RVP))) Memory.loadHalf;
+    spec_loadWord: spec_load 4 (Machine.loadWord (RiscvProgram := RVM.(RVP))) Memory.loadWord;
+    spec_loadDouble: spec_load 8 (Machine.loadDouble (RiscvProgram := RVM.(RVP))) Memory.loadDouble;
 
-    spec_storeByte: spec_store 1 (Machine.storeByte (RiscvProgram := RVM)) Memory.storeByte;
-    spec_storeHalf: spec_store 2 (Machine.storeHalf (RiscvProgram := RVM)) Memory.storeHalf;
-    spec_storeWord: spec_store 4 (Machine.storeWord (RiscvProgram := RVM)) Memory.storeWord;
-    spec_storeDouble: spec_store 8 (Machine.storeDouble (RiscvProgram := RVM)) Memory.storeDouble;
+    spec_storeByte: spec_store 1 (Machine.storeByte (RiscvProgram := RVM.(RVP))) Memory.storeByte;
+    spec_storeHalf: spec_store 2 (Machine.storeHalf (RiscvProgram := RVM.(RVP))) Memory.storeHalf;
+    spec_storeWord: spec_store 4 (Machine.storeWord (RiscvProgram := RVM.(RVP))) Memory.storeWord;
+    spec_storeDouble: spec_store 8 (Machine.storeDouble (RiscvProgram := RVM.(RVP))) Memory.storeDouble;
 
     spec_getPC: forall initialL (post: word -> RiscvMachine -> Prop),
         post initialL.(getPc) initialL ->

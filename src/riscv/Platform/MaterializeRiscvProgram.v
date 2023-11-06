@@ -84,7 +84,12 @@ Section Riscv.
     setPC a := act (SetPC a) ret;
     endCycleNormal := act EndCycleNormal ret;
     endCycleEarly A := act (EndCycleEarly A) ret;
-  |}.
+                                                                                           |}.
+
+  Global Instance MaterializeWithLeakage : RiscvProgramWithLeakage :=
+    {|
+      RVP := Materialize;
+      leakEvent a := act (LeakEvent a) ret |}.
 
   (* Not (yet) in Riscv monad, but added here because it's useful to initialize
      nextPc to pc+4 at the beginning of each cycle instead of having to maintain

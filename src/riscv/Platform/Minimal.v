@@ -98,7 +98,13 @@ Section Riscv.
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
       endCycleEarly{A: Type} := fail_hard;
-  }.
+    }.
+
+  Print RiscvProgramWithLeakage.
+  Instance IsRiscvMachineWithLeakage: @RiscvProgramWithLeakage (OState RiscvMachine) _ _ _ :=  {
+      RVP := IsRiscvMachine;
+      leakEvent e := fail_hard;
+    }.
 
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
@@ -116,7 +122,7 @@ Section Riscv.
        | |- _ => reflexivity
        | |- _ => progress (
                      unfold computation_satisfies, computation_with_answer_satisfies,
-                            IsRiscvMachine,
+                            IsRiscvMachine, IsRiscvMachineWithLeakage,
                             valid_register,
                             is_initial_register_value,
                             get, put, fail_hard,
@@ -225,10 +231,20 @@ Section Riscv.
     intros. eapply update_sane. intros. exists [e]. destruct mach. reflexivity.
   Qed.
 
+  Print PrimitivesSane.
+
   Instance MinimalSane: PrimitivesSane MinimalPrimitivesParams.
   Proof.
     constructor.
     all: intros;
+      unfold IsRiscvMachine, IsRiscvMachineWithLeakage, RVP,
+      getRegister, setRegister,
+         loadByte, loadHalf, loadWord, loadDouble,
+         storeByte, storeHalf, storeWord, storeDouble,
+         getPC, setPC,
+         endCycleNormal, endCycleEarly, raiseExceptionWithInfo,
+      loadN, storeN, fail_if_None.
+    all:
       unfold getRegister, setRegister,
          loadByte, loadHalf, loadWord, loadDouble,
          storeByte, storeHalf, storeWord, storeDouble,
@@ -261,4 +277,5 @@ End Riscv.
 
 (* needed because defined inside a Section *)
 #[global] Existing Instance IsRiscvMachine.
+#[global] Existing Instance IsRiscvMachineWithLeakage.
 #[global] Existing Instance MinimalSatisfiesPrimitives.

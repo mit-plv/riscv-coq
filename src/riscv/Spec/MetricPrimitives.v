@@ -55,7 +55,7 @@ Section MetricPrimitives.
     getPrivMode_sane: mcomp_sane getPrivMode;
     setPrivMode_sane: forall m, mcomp_sane (setPrivMode m);
     fence_sane: forall a b, mcomp_sane (fence a b);
-    leakInstr_sane: forall a, mcomp_sane (leakEvent a);
+    leakEvent_sane: forall a, mcomp_sane (leakEvent a);
     getPC_sane: mcomp_sane getPC;
     setPC_sane: forall newPc, mcomp_sane (setPC newPc);
     endCycleNormal_sane: mcomp_sane endCycleNormal;

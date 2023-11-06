@@ -151,6 +151,14 @@ Section Sane.
 
   Ltac t := repeat (simpl; unfold when; repeat t_step').
 
+  Lemma leakage_of_instr_sane: forall inst,
+      mcomp_sane (leakage_of_instr getRegister inst).
+  Proof.
+    intros.
+    destruct inst as [inst | inst | inst | inst | inst | inst | inst | inst | inst | inst];
+      simpl; destruct inst; t.
+  Qed.
+  
   Lemma execute_sane: forall inst,
       mcomp_sane (Execute.execute inst).
   Proof.
@@ -165,7 +173,8 @@ Section Sane.
     unfold run1. intros.
     apply Bind_sane; [apply getPC_sane|intros].
     apply Bind_sane; [apply loadWord_sane|intros].
-    apply Bind_sane; [apply logInstr_sane|intros].
+    apply Bind_sane; [apply leakage_of_instr_sane|intros].
+    apply Bind_sane; [apply leakInstr_sane|intros].
     apply Bind_sane; [apply execute_sane|intros].
     apply endCycleNormal_sane.
   Qed.
