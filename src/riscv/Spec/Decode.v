@@ -31,9 +31,6 @@ Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Section WithMonad.
   Context {M : Type -> Type} {MM : Monad M}.
-  Context {width} {BW : Bitwidth width} {word: word.word width}.
-  Context (getRegister : Register -> M word).
-  (*Am I handling signed/unsigned stuff correctly?*)
 
 (* Converted type declarations: *)
 
@@ -138,7 +135,9 @@ Inductive InstructionI64 : Type :=
   | Sraw (rd : Register) (rs1 : Register) (rs2 : Register) : InstructionI64
   | InvalidI64 : InstructionI64.
 
-Inductive LeakageI64 : Type :=
+Inductive LeakageI64
+{width} {BW : Bitwidth width} {word: word.word width}
+  : Type :=
 | Ld_leakage (addr: word)
 | Lwu_leakage (addr: word)
 | Addiw_leakage
@@ -153,7 +152,9 @@ Inductive LeakageI64 : Type :=
 | Sraw_leakage
 | InvalidI64_leakage.
 
-Definition leakage_of_instr_I64 (instr : InstructionI64) : M LeakageI64 :=
+Definition leakage_of_instr_I64
+  {width} {BW : Bitwidth width} {word: word.word width} (getRegister : Register -> M word)
+  (instr : InstructionI64) : M LeakageI64 :=
   match instr with
   | Ld _ rs1 oimm12 => Bind (getRegister rs1) (fun rs1_val => Return (Ld_leakage (word.add rs1_val (word.of_Z oimm12))))
   | Lwu _ rs1 oimm12 => Bind (getRegister rs1) (fun rs1_val => Return (Lwu_leakage (word.add rs1_val (word.of_Z oimm12))))
@@ -170,7 +171,9 @@ Definition leakage_of_instr_I64 (instr : InstructionI64) : M LeakageI64 :=
   | InvalidI64 => Return InvalidI64_leakage
   end.
 
-Inductive LeakageI : Type :=
+Inductive LeakageI
+  {width} {BW : Bitwidth width} {word: word.word width}
+  : Type :=
 | Lb_leakage (addr: word)
 | Lh_leakage (addr: word)
 | Lw_leakage (addr: word)
@@ -277,7 +280,9 @@ Inductive InstructionI : Type :=
   | InvalidI : InstructionI. Search Z. Compute (Utility.regToZ_unsigned 0).
 
 (* are the immediates already signed, or do I need to do some sort of sign extension thing?  surely not, since they're already Z, right? *) Print word.word.
-Definition leakage_of_instr_I (instr : InstructionI) : M LeakageI :=
+Definition leakage_of_instr_I
+  {width} {BW : Bitwidth width} {word: word.word width} (getRegister : Register -> M word)
+  (instr : InstructionI) : M LeakageI :=
   match instr with
   | Lb _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Lb_leakage (word.add rs1_val (word.of_Z oimm12)))
   | Lh _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Lh_leakage (word.add rs1_val (word.of_Z oimm12)))
@@ -344,7 +349,9 @@ Definition leakage_of_instr_F64 (instr : InstructionF64) : M LeakageF64 :=
   | InvalidF64 => Return InvalidF64_leakage
   end.
 
-Inductive LeakageF : Type :=
+Inductive LeakageF
+  {width} {BW : Bitwidth width} {word: word.word width}
+  : Type :=
 | Flw_leakage (addr: word)
 | Fsw_leakage (addr: word)
 | Fmadd_s_leakage
@@ -422,7 +429,9 @@ Inductive InstructionF : Type :=
   | Fmv_w_x (rd : FPRegister) (rs1 : Register) : InstructionF
   | InvalidF : InstructionF. Print word.word.
 
-Definition leakage_of_instr_F (instr : InstructionF) : M LeakageF :=
+Definition leakage_of_instr_F
+  {width} {BW : Bitwidth width} {word: word.word width} (getRegister : Register -> M word)
+  (instr : InstructionF) : M LeakageF :=
   match instr with
   | Flw _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Flw_leakage (word.add rs1_val (word.of_Z oimm12)))
   | Fsw rs1 _ simm12 => rs1_val <- getRegister rs1; Return (Fsw_leakage (word.add rs1_val (word.of_Z simm12)))
@@ -515,7 +524,9 @@ Definition leakage_of_instr_CSR (instr : InstructionCSR) : M LeakageCSR :=
   end.
 
 (* do we care about aqrl here? *)
-Inductive LeakageA64 : Type :=
+Inductive LeakageA64
+  {width} {BW : Bitwidth width} {word: word.word width}
+  : Type :=
 | Lr_d_leakage (addr : word)
 | Sc_d_leakage (addr : word) (* behavior of this depends on whether there is a reservation on addr... *)
 | Amoswap_d_leakage (addr : word)
@@ -564,7 +575,9 @@ Inductive InstructionA64 : Type :=
    : InstructionA64
   | InvalidA64 : InstructionA64.
 
-Definition leakage_of_instr_A64 (instr : InstructionA64) : M LeakageA64 :=
+Definition leakage_of_instr_A64
+  {width} {BW : Bitwidth width} {word: word.word width} (getRegister : Register -> M word)
+  (instr : InstructionA64) : M LeakageA64 :=
   match instr with
   | Lr_d _ rs1 _ => rs1_val <- getRegister rs1; Return (Lr_d_leakage rs1_val)
   | Sc_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Sc_d_leakage rs1_val)
@@ -580,7 +593,9 @@ Definition leakage_of_instr_A64 (instr : InstructionA64) : M LeakageA64 :=
   | InvalidA64 => Return InvalidA64_leakage
   end.
 
-Inductive LeakageA : Type :=
+  Inductive LeakageA
+    {width} {BW : Bitwidth width} {word: word.word width}
+    : Type :=
 | Lr_w_leakage (addr : word)
 | Sc_w_leakage (addr : word)
 | Amoswap_w_leakage (addr : word)
@@ -629,7 +644,9 @@ Inductive InstructionA : Type :=
    : InstructionA
   | InvalidA : InstructionA.
 
-Definition leakage_of_instr_A (instr : InstructionA) : M LeakageA :=
+Definition leakage_of_instr_A
+  {width} {BW : Bitwidth width} {word: word.word width} (getRegister : Register -> M word)
+  (instr : InstructionA) : M LeakageA :=
   match instr with
   | Lr_w _ rs1 _ => rs1_val <- getRegister rs1; Return (Lr_w_leakage rs1_val)
   | Sc_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Sc_w_leakage rs1_val)
@@ -657,7 +674,9 @@ Inductive Instruction : Type :=
   | CSRInstruction (csrInstruction : InstructionCSR) : Instruction
   | InvalidInstruction (inst : Utility.Utility.MachineInt) : Instruction.
 
-Inductive LeakageEvent : Type :=
+Inductive LeakageEvent
+  {width} {BW : Bitwidth width} {word: word.word width}
+  : Type :=
 | ILeakage (iLeakage : LeakageI)
 | MLeakage (mLeakage : LeakageM)
 | ALeakage (aLeakage : LeakageA)
@@ -669,15 +688,17 @@ Inductive LeakageEvent : Type :=
 | CSRLeakage (csrLeakage : LeakageCSR)
 | InvalidLeakage.
 
-Definition leakage_of_instr (instr : Instruction) : M LeakageEvent :=
+Definition leakage_of_instr
+  {width} {BW : Bitwidth width} {word: word.word width} (getRegister : Register -> M word)
+  (instr : Instruction) : M LeakageEvent :=
   match instr with
-  | IInstruction instr => l <- leakage_of_instr_I instr; Return (ILeakage l)
+  | IInstruction instr => l <- leakage_of_instr_I getRegister instr; Return (ILeakage l)
   | MInstruction instr => l <- leakage_of_instr_M instr; Return (MLeakage l)
-  | AInstruction instr => l <- leakage_of_instr_A instr; Return (ALeakage l)
-  | FInstruction instr => l <- leakage_of_instr_F instr; Return (FLeakage l)
-  | I64Instruction instr => l <- leakage_of_instr_I64 instr; Return (I64Leakage l)
+  | AInstruction instr => l <- leakage_of_instr_A getRegister instr; Return (ALeakage l)
+  | FInstruction instr => l <- leakage_of_instr_F getRegister instr; Return (FLeakage l)
+  | I64Instruction instr => l <- leakage_of_instr_I64 getRegister instr; Return (I64Leakage l)
   | M64Instruction instr => l <- leakage_of_instr_M64 instr; Return (M64Leakage l)
-  | A64Instruction instr => l <- leakage_of_instr_A64 instr; Return (A64Leakage l)
+  | A64Instruction instr => l <- leakage_of_instr_A64 getRegister instr; Return (A64Leakage l)
   | F64Instruction instr => l <- leakage_of_instr_F64 instr; Return (F64Leakage l)
   | CSRInstruction instr => l <- leakage_of_instr_CSR instr; Return (CSRLeakage l)
   | InvalidInstruction _ => Return InvalidLeakage

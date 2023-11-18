@@ -71,7 +71,7 @@ Class RiscvProgramWithLeakage
   {M}{t}{MM}{MWt}:=
   mkRiscvProgramWithLeakage {
       RVP :> @RiscvProgram M t MM MWt;
-      leakEvent : @LeakageEvent width word -> M unit;
+      leakEvent : @LeakageEvent width BW word -> M unit;
     }.
 
 Class RiscvMachine`{MP: RiscvProgram} := mkRiscvMachine {
