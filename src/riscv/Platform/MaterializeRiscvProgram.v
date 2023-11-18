@@ -27,7 +27,7 @@ Section Riscv.
   | GetPrivMode
   | SetPrivMode (_ : PrivMode)
   | Fence (_ : MachineInt) (_ : MachineInt)
-  | LeakEvent (_ : LeakageEvent)
+  | LeakEvent (_ : @LeakageEvent width word)
   | GetPC
   | SetPC (_ : word)
   | StartCycle

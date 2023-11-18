@@ -141,7 +141,7 @@ Section Machine.
       getMem: Mem;
       getXAddrs: XAddrs;
       getLog: list LogItem;
-      getTrace: list LeakageEvent;
+      getTrace: list (@LeakageEvent width word);
     }.
 
     Definition withRegs: Registers -> RiscvMachine -> RiscvMachine :=

@@ -64,12 +64,14 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
      Some instances may not support endCycleEarly and fail instead. *)
   endCycleNormal: M unit;
   endCycleEarly: forall A, M A;
-}.
+}. Print LeakageEvent.
 
-Class RiscvProgramWithLeakage{M}{t}{MM}{MWt}:=
+Class RiscvProgramWithLeakage
+  {width} {BW : Bitwidth width} {word: word.word width}
+  {M}{t}{MM}{MWt}:=
   mkRiscvProgramWithLeakage {
       RVP :> @RiscvProgram M t MM MWt;
-      leakEvent : LeakageEvent -> M unit;
+      leakEvent : @LeakageEvent width word -> M unit;
     }.
 
 Class RiscvMachine`{MP: RiscvProgram} := mkRiscvMachine {

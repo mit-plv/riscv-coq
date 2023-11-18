@@ -115,7 +115,7 @@ Section Riscv.
   - exact (post tt (withPc mach.(getNextPc) (withNextPc (word.add mach.(getNextPc) (word.of_Z 4)) mach))).
   Defined.
 
-  Instance IsRiscvMachineWithLeakage: @RiscvProgramWithLeakage (Post RiscvMachine) _ _ _ :=
+  Instance IsRiscvMachineWithLeakage: @RiscvProgramWithLeakage width BW word (Post RiscvMachine) _ _ _ :=
     {|
       RVP := IsRiscvMachine;
       leakEvent _ := fun _ _ => False |}.

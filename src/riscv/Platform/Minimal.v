@@ -101,7 +101,7 @@ Section Riscv.
     }.
 
   Print RiscvProgramWithLeakage.
-  Instance IsRiscvMachineWithLeakage: @RiscvProgramWithLeakage (OState RiscvMachine) _ _ _ :=  {
+  Instance IsRiscvMachineWithLeakage: @RiscvProgramWithLeakage width BW word (OState RiscvMachine) _ _ _ :=  {
       RVP := IsRiscvMachine;
       leakEvent e := fail_hard;
     }.

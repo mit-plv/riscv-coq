@@ -31,7 +31,7 @@ Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Section WithMonad.
   Context {M : Type -> Type} {MM : Monad M}.
-  Context {width} {BW : Bitwidth width} {word: word.word width} {word_ok: word.ok word}.
+  Context {width} {BW : Bitwidth width} {word: word.word width}.
   Context (getRegister : Register -> M word).
   (*Am I handling signed/unsigned stuff correctly?*)
 

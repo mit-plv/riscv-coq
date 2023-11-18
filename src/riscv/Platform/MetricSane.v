@@ -152,7 +152,7 @@ Section Sane.
   Ltac t := repeat (simpl; unfold when; repeat t_step').
 
   Lemma leakage_of_instr_sane: forall inst,
-      mcomp_sane (leakage_of_instr regToZ_unsigned regToZ_signed getRegister inst).
+      mcomp_sane (leakage_of_instr getRegister inst).
   Proof.
     intros.
     destruct inst as [inst | inst | inst | inst | inst | inst | inst | inst | inst | inst];

@@ -10,25 +10,25 @@ Require Import riscv.Utility.Utility.
 
 Section Riscv.
 
-  Context {mword: Type}.
+  Context {width} {BW : Bitwidth width} {mword: word.word width}.
   Context {MW: MachineWidth mword}.
 
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
   Context {RVM: RiscvProgramWithLeakage}.
-  Context {RVS: RiscvMachine M mword}.
+  Context {RVS: RiscvMachine M mword}. Print leakage_of_instr.
 
-  Print leakage_of_instr. Print decode. Print leakEvent. Print getRegister. Print MachineWidth.
-
+  Check (leakage_of_instr getRegister _).
+  Print leakage_of_instr. Check getRegister.
   Definition run1(iset: InstructionSet):
     M unit :=
     pc <- getPC;
-  inst <- loadWord Fetch pc;
-  let inst' := decode iset (combine 4 inst) in
-  leakage_event <- leakage_of_instr regToZ_unsigned regToZ_signed getRegister inst';
-  leakEvent leakage_event;;
-  execute inst';;
-  endCycleNormal.
+    inst <- loadWord Fetch pc;
+    let inst' := decode iset (combine 4 inst) in
+    leakage_event <- leakage_of_instr getRegister inst';
+    leakEvent leakage_event;;
+    execute inst';;
+    endCycleNormal.
 
   (* Note: We cannot use
      power_func (fun m => run1 iset;; m) n (Return tt)
