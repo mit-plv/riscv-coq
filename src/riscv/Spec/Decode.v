@@ -31,8 +31,9 @@ Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Section WithMonad.
   Context {M : Type -> Type} {MM : Monad M}.
-  Context {mword: Type}.
-  Context (regToZ_unsigned: mword -> Z) (regToZ_signed: mword -> Z) (getRegister : Register -> M mword).
+  Context {width} {BW : Bitwidth width} {word: word.word width} {word_ok: word.ok word}.
+  Context (getRegister : Register -> M word).
+  (*Am I handling signed/unsigned stuff correctly?*)
 
 (* Converted type declarations: *)
 
@@ -138,29 +139,29 @@ Inductive InstructionI64 : Type :=
   | InvalidI64 : InstructionI64.
 
 Inductive LeakageI64 : Type :=
-| Ld_leakage (addr: Utility.Utility.MachineInt)
-| Lwu_leakage (addr: Utility.Utility.MachineInt)
+| Ld_leakage (addr: word)
+| Lwu_leakage (addr: word)
 | Addiw_leakage
 | Slliw_leakage
 | Srliw_leakage
 | Sraiw_leakage
-| Sd_leakage (addr: Utility.Utility.MachineInt)
+| Sd_leakage (addr: word)
 | Addw_leakage
 | Subw_leakage
 | Sllw_leakage
 | Srlw_leakage
 | Sraw_leakage
-| InvalidI64_leakage. Locate "<- ; _ ".
+| InvalidI64_leakage.
 
 Definition leakage_of_instr_I64 (instr : InstructionI64) : M LeakageI64 :=
   match instr with
-  | Ld _ rs1 oimm12 => Bind (getRegister rs1) (fun rs1_val => Return (Ld_leakage (regToZ_unsigned rs1_val + oimm12)))
-  | Lwu _ rs1 oimm12 => Bind (getRegister rs1) (fun rs1_val => Return (Lwu_leakage (regToZ_unsigned rs1_val + oimm12)))
+  | Ld _ rs1 oimm12 => Bind (getRegister rs1) (fun rs1_val => Return (Ld_leakage (word.add rs1_val (word.of_Z oimm12))))
+  | Lwu _ rs1 oimm12 => Bind (getRegister rs1) (fun rs1_val => Return (Lwu_leakage (word.add rs1_val (word.of_Z oimm12))))
   | Addiw _ _ _ => Return Addiw_leakage
   | Slliw _ _ _ => Return Slliw_leakage
   | Srliw _ _ _ => Return Srliw_leakage
   | Sraiw _ _ _ => Return Sraiw_leakage
-  | Sd rs1 _ simm12 => Bind (getRegister rs1) (fun rs1_val => Return (Sd_leakage (regToZ_unsigned rs1_val + simm12)))
+  | Sd rs1 _ simm12 => Bind (getRegister rs1) (fun rs1_val => Return (Sd_leakage (word.add rs1_val (word.of_Z simm12))))
   | Addw _ _ _ => Return Addw_leakage
   | Subw _ _ _ => Return Subw_leakage
   | Sllw _ _ _ => Return Sllw_leakage
@@ -170,11 +171,11 @@ Definition leakage_of_instr_I64 (instr : InstructionI64) : M LeakageI64 :=
   end.
 
 Inductive LeakageI : Type :=
-| Lb_leakage (addr: Utility.Utility.MachineInt)
-| Lh_leakage (addr: Utility.Utility.MachineInt)
-| Lw_leakage (addr: Utility.Utility.MachineInt)
-| Lbu_leakage (addr: Utility.Utility.MachineInt)
-| Lhu_leakage (addr: Utility.Utility.MachineInt)
+| Lb_leakage (addr: word)
+| Lh_leakage (addr: word)
+| Lw_leakage (addr: word)
+| Lbu_leakage (addr: word)
+| Lhu_leakage (addr: word)
 | Fence_leakage (* unsure about this one. *)
 | Fence_i_leakage
 | Addi_leakage
@@ -187,9 +188,9 @@ Inductive LeakageI : Type :=
 | Srli_leakage
 | Srai_leakage
 | Auipc_leakage
-| Sb_leakage (addr: Utility.Utility.MachineInt)
-| Sh_leakage (addr: Utility.Utility.MachineInt)
-| Sw_leakage (addr: Utility.Utility.MachineInt)
+| Sb_leakage (addr: word)
+| Sh_leakage (addr: word)
+| Sw_leakage (addr: word)
 | Add_leakage
 | Sub_leakage
 | Sll_leakage
@@ -275,14 +276,14 @@ Inductive InstructionI : Type :=
   | Jal (rd : Register) (jimm20 : Utility.Utility.MachineInt) : InstructionI
   | InvalidI : InstructionI. Search Z. Compute (Utility.regToZ_unsigned 0).
 
-(* are the immediates already signed, or do I need to do some sort of sign extension thing?  surely not, since they're already Z, right? *)
+(* are the immediates already signed, or do I need to do some sort of sign extension thing?  surely not, since they're already Z, right? *) Print word.word.
 Definition leakage_of_instr_I (instr : InstructionI) : M LeakageI :=
   match instr with
-  | Lb _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Lb_leakage (regToZ_unsigned rs1_val + oimm12))
-  | Lh _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Lh_leakage (regToZ_unsigned rs1_val + oimm12))
-  | Lw _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Lw_leakage (regToZ_unsigned rs1_val + oimm12))
-  | Lbu _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Lbu_leakage (regToZ_unsigned rs1_val + oimm12))
-  | Lhu _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Lhu_leakage (regToZ_unsigned rs1_val + oimm12))
+  | Lb _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Lb_leakage (word.add rs1_val (word.of_Z oimm12)))
+  | Lh _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Lh_leakage (word.add rs1_val (word.of_Z oimm12)))
+  | Lw _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Lw_leakage (word.add rs1_val (word.of_Z oimm12)))
+  | Lbu _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Lbu_leakage (word.add rs1_val (word.of_Z oimm12)))
+  | Lhu _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Lhu_leakage (word.add rs1_val (word.of_Z oimm12)))
   | Fence _ _ => Return Fence_leakage
   | Fence_i => Return Fence_i_leakage
   | Addi _ _ _ => Return Addi_leakage
@@ -295,9 +296,9 @@ Definition leakage_of_instr_I (instr : InstructionI) : M LeakageI :=
   | Srli _ _ _ => Return Srli_leakage
   | Srai _ _ _ => Return Srai_leakage
   | Auipc _ _ => Return Auipc_leakage
-  | Sb rs1 _ simm12 => rs1_val <- getRegister rs1; Return (Sb_leakage (regToZ_unsigned rs1_val + simm12))
-  | Sh rs1 _ simm12 => rs1_val <- getRegister rs1; Return (Sh_leakage (regToZ_unsigned rs1_val + simm12))
-  | Sw rs1 _ simm12 => rs1_val <- getRegister rs1; Return (Sw_leakage (regToZ_unsigned rs1_val + simm12))
+  | Sb rs1 _ simm12 => rs1_val <- getRegister rs1; Return (Sb_leakage (word.add rs1_val (word.of_Z simm12)))
+  | Sh rs1 _ simm12 => rs1_val <- getRegister rs1; Return (Sh_leakage (word.add rs1_val (word.of_Z simm12)))
+  | Sw rs1 _ simm12 => rs1_val <- getRegister rs1; Return (Sw_leakage (word.add rs1_val (word.of_Z simm12)))
   | Add _ _ _ => Return Add_leakage
   | Sub _ _ _ => Return Sub_leakage
   | Sll _ _ _ => Return Sll_leakage
@@ -309,12 +310,12 @@ Definition leakage_of_instr_I (instr : InstructionI) : M LeakageI :=
   | Or _ _ _ => Return Or_leakage
   | And _ _ _ => Return And_leakage
   | Lui _ _ => Return Lui_leakage
-  | Beq rs1 rs2 _ => rs1_val <- getRegister rs1; rs2_val <- getRegister rs2; Return (Beq_leakage (regToZ_unsigned rs1_val =? regToZ_unsigned rs2_val))
-  | Bne rs1 rs2 _ => rs1_val <- getRegister rs1; rs2_val <- getRegister rs2; Return (Bne_leakage (negb (regToZ_unsigned rs1_val =? regToZ_unsigned rs2_val)))
-  | Blt rs1 rs2 _ => rs1_val <- getRegister rs1; rs2_val <- getRegister rs2; Return (Blt_leakage (regToZ_signed rs1_val <? regToZ_signed rs2_val))
-  | Bge rs1 rs2 _ => rs1_val <- getRegister rs1; rs2_val <- getRegister rs2; Return (Bge_leakage (regToZ_signed rs1_val >=? regToZ_signed rs2_val))
-  | Bltu rs1 rs2 _ => rs1_val <- getRegister rs1; rs2_val <- getRegister rs2; Return (Bltu_leakage (regToZ_unsigned rs1_val <=? regToZ_unsigned rs2_val))
-  | Bgeu rs1 rs2 _ => rs1_val <- getRegister rs1; rs2_val <- getRegister rs2; Return (Bgeu_leakage (regToZ_unsigned rs1_val >=? regToZ_unsigned rs2_val))
+  | Beq rs1 rs2 _ => rs1_val <- getRegister rs1; rs2_val <- getRegister rs2; Return (Beq_leakage (word.eqb rs1_val rs2_val))
+  | Bne rs1 rs2 _ => rs1_val <- getRegister rs1; rs2_val <- getRegister rs2; Return (Bne_leakage (negb (word.eqb rs1_val rs2_val)))
+  | Blt rs1 rs2 _ => rs1_val <- getRegister rs1; rs2_val <- getRegister rs2; Return (Blt_leakage (word.lts rs1_val rs2_val))
+  | Bge rs1 rs2 _ => rs1_val <- getRegister rs1; rs2_val <- getRegister rs2; Return (Bge_leakage (negb (word.lts rs1_val rs2_val)))
+  | Bltu rs1 rs2 _ => rs1_val <- getRegister rs1; rs2_val <- getRegister rs2; Return (Bltu_leakage (word.ltu rs1_val rs2_val))
+  | Bgeu rs1 rs2 _ => rs1_val <- getRegister rs1; rs2_val <- getRegister rs2; Return (Bgeu_leakage (negb (word.ltu rs1_val rs2_val)))
   | Jalr _ _ _ => Return Jalr_leakage
   | Jal _ _ => Return Jal_leakage
   | InvalidI => Return InvalidI_leakage
@@ -344,8 +345,8 @@ Definition leakage_of_instr_F64 (instr : InstructionF64) : M LeakageF64 :=
   end.
 
 Inductive LeakageF : Type :=
-| Flw_leakage (addr: Utility.Utility.MachineInt)
-| Fsw_leakage (addr: Utility.Utility.MachineInt)
+| Flw_leakage (addr: word)
+| Fsw_leakage (addr: word)
 | Fmadd_s_leakage
 | Fmsub_s_leakage
 | Fnmsub_s_leakage
@@ -419,12 +420,12 @@ Inductive InstructionF : Type :=
   | Fcvt_s_w (rd : FPRegister) (rs1 : Register) (rm : RoundMode) : InstructionF
   | Fcvt_s_wu (rd : FPRegister) (rs1 : Register) (rm : RoundMode) : InstructionF
   | Fmv_w_x (rd : FPRegister) (rs1 : Register) : InstructionF
-  | InvalidF : InstructionF.
+  | InvalidF : InstructionF. Print word.word.
 
 Definition leakage_of_instr_F (instr : InstructionF) : M LeakageF :=
   match instr with
-  | Flw _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Flw_leakage (regToZ_unsigned rs1_val + oimm12))
-  | Fsw rs1 _ simm12 => rs1_val <- getRegister rs1; Return (Fsw_leakage (regToZ_unsigned rs1_val + simm12))
+  | Flw _ rs1 oimm12 => rs1_val <- getRegister rs1; Return (Flw_leakage (word.add rs1_val (word.of_Z oimm12)))
+  | Fsw rs1 _ simm12 => rs1_val <- getRegister rs1; Return (Fsw_leakage (word.add rs1_val (word.of_Z simm12)))
   | Fmadd_s _ _ _ _ _ => Return Fmadd_s_leakage
   | Fmsub_s _ _ _ _ _ => Return Fmsub_s_leakage
   | Fnmsub_s _ _ _ _ _ => Return Fnmsub_s_leakage
@@ -515,17 +516,17 @@ Definition leakage_of_instr_CSR (instr : InstructionCSR) : M LeakageCSR :=
 
 (* do we care about aqrl here? *)
 Inductive LeakageA64 : Type :=
-| Lr_d_leakage (addr : Utility.Utility.MachineInt)
-| Sc_d_leakage (addr : Utility.Utility.MachineInt) (* behavior of this depends on whether there is a reservation on addr... *)
-| Amoswap_d_leakage (addr : Utility.Utility.MachineInt)
-| Amoadd_d_leakage (addr : Utility.Utility.MachineInt)
-| Amoand_d_leakage (addr : Utility.Utility.MachineInt)
-| Amoor_d_leakage (addr : Utility.Utility.MachineInt)
-| Amoxor_d_leakage (addr : Utility.Utility.MachineInt)
-| Amomax_d_leakage (addr : Utility.Utility.MachineInt)
-| Amomaxu_d_leakage (addr : Utility.Utility.MachineInt)
-| Amomin_d_leakage (addr : Utility.Utility.MachineInt)
-| Amominu_d_leakage (addr : Utility.Utility.MachineInt)
+| Lr_d_leakage (addr : word)
+| Sc_d_leakage (addr : word) (* behavior of this depends on whether there is a reservation on addr... *)
+| Amoswap_d_leakage (addr : word)
+| Amoadd_d_leakage (addr : word)
+| Amoand_d_leakage (addr : word)
+| Amoor_d_leakage (addr : word)
+| Amoxor_d_leakage (addr : word)
+| Amomax_d_leakage (addr : word)
+| Amomaxu_d_leakage (addr : word)
+| Amomin_d_leakage (addr : word)
+| Amominu_d_leakage (addr : word)
 | InvalidA64_leakage.
 
 Inductive InstructionA64 : Type :=
@@ -565,32 +566,32 @@ Inductive InstructionA64 : Type :=
 
 Definition leakage_of_instr_A64 (instr : InstructionA64) : M LeakageA64 :=
   match instr with
-  | Lr_d _ rs1 _ => rs1_val <- getRegister rs1; Return (Lr_d_leakage (regToZ_unsigned rs1_val))
-  | Sc_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Sc_d_leakage (regToZ_unsigned rs1_val))
-  | Amoswap_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoswap_d_leakage (regToZ_unsigned rs1_val))
-  | Amoadd_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoadd_d_leakage (regToZ_unsigned rs1_val))
-  | Amoand_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoand_d_leakage (regToZ_unsigned rs1_val))
-  | Amoor_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoor_d_leakage (regToZ_unsigned rs1_val))
-  | Amoxor_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoxor_d_leakage (regToZ_unsigned rs1_val))
-  | Amomax_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amomax_d_leakage (regToZ_unsigned rs1_val))
-  | Amomaxu_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amomaxu_d_leakage (regToZ_unsigned rs1_val))
-  | Amomin_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amomin_d_leakage (regToZ_unsigned rs1_val))
-  | Amominu_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amominu_d_leakage (regToZ_unsigned rs1_val))
+  | Lr_d _ rs1 _ => rs1_val <- getRegister rs1; Return (Lr_d_leakage rs1_val)
+  | Sc_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Sc_d_leakage rs1_val)
+  | Amoswap_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoswap_d_leakage rs1_val)
+  | Amoadd_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoadd_d_leakage rs1_val)
+  | Amoand_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoand_d_leakage rs1_val)
+  | Amoor_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoor_d_leakage rs1_val)
+  | Amoxor_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoxor_d_leakage rs1_val)
+  | Amomax_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amomax_d_leakage rs1_val)
+  | Amomaxu_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amomaxu_d_leakage rs1_val)
+  | Amomin_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amomin_d_leakage rs1_val)
+  | Amominu_d _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amominu_d_leakage rs1_val)
   | InvalidA64 => Return InvalidA64_leakage
   end.
 
 Inductive LeakageA : Type :=
-| Lr_w_leakage (addr : Utility.Utility.MachineInt)
-| Sc_w_leakage (addr : Utility.Utility.MachineInt)
-| Amoswap_w_leakage (addr : Utility.Utility.MachineInt)
-| Amoadd_w_leakage (addr : Utility.Utility.MachineInt)
-| Amoand_w_leakage (addr : Utility.Utility.MachineInt)
-| Amoor_w_leakage (addr : Utility.Utility.MachineInt)
-| Amoxor_w_leakage (addr : Utility.Utility.MachineInt)
-| Amomax_w_leakage (addr : Utility.Utility.MachineInt)
-| Amomaxu_w_leakage (addr : Utility.Utility.MachineInt)
-| Amomin_w_leakage (addr : Utility.Utility.MachineInt)
-| Amominu_w_leakage (addr : Utility.Utility.MachineInt)
+| Lr_w_leakage (addr : word)
+| Sc_w_leakage (addr : word)
+| Amoswap_w_leakage (addr : word)
+| Amoadd_w_leakage (addr : word)
+| Amoand_w_leakage (addr : word)
+| Amoor_w_leakage (addr : word)
+| Amoxor_w_leakage (addr : word)
+| Amomax_w_leakage (addr : word)
+| Amomaxu_w_leakage (addr : word)
+| Amomin_w_leakage (addr : word)
+| Amominu_w_leakage (addr : word)
 | InvalidA_leakage.
 
 Inductive InstructionA : Type :=
@@ -630,17 +631,17 @@ Inductive InstructionA : Type :=
 
 Definition leakage_of_instr_A (instr : InstructionA) : M LeakageA :=
   match instr with
-  | Lr_w _ rs1 _ => rs1_val <- getRegister rs1; Return (Lr_w_leakage (regToZ_unsigned rs1_val))
-  | Sc_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Sc_w_leakage (regToZ_unsigned rs1_val))
-  | Amoswap_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoswap_w_leakage (regToZ_unsigned rs1_val))
-  | Amoadd_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoadd_w_leakage (regToZ_unsigned rs1_val))
-  | Amoand_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoand_w_leakage (regToZ_unsigned rs1_val))
-  | Amoor_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoor_w_leakage (regToZ_unsigned rs1_val))
-  | Amoxor_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoxor_w_leakage (regToZ_unsigned rs1_val))
-  | Amomax_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amomax_w_leakage (regToZ_unsigned rs1_val))
-  | Amomaxu_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amomaxu_w_leakage (regToZ_unsigned rs1_val))
-  | Amomin_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amomin_w_leakage (regToZ_unsigned rs1_val))
-  | Amominu_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amominu_w_leakage (regToZ_unsigned rs1_val))
+  | Lr_w _ rs1 _ => rs1_val <- getRegister rs1; Return (Lr_w_leakage rs1_val)
+  | Sc_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Sc_w_leakage rs1_val)
+  | Amoswap_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoswap_w_leakage rs1_val)
+  | Amoadd_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoadd_w_leakage rs1_val)
+  | Amoand_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoand_w_leakage rs1_val)
+  | Amoor_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoor_w_leakage rs1_val)
+  | Amoxor_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amoxor_w_leakage rs1_val)
+  | Amomax_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amomax_w_leakage rs1_val)
+  | Amomaxu_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amomaxu_w_leakage rs1_val)
+  | Amomin_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amomin_w_leakage rs1_val)
+  | Amominu_w _ rs1 _ _ => rs1_val <- getRegister rs1; Return (Amominu_w_leakage rs1_val)
   | InvalidA => Return InvalidA_leakage
   end.
 
@@ -666,7 +667,7 @@ Inductive LeakageEvent : Type :=
 | A64Leakage (a64Leakage : LeakageA64)
 | F64Leakage (f64Leakage : LeakageF64)
 | CSRLeakage (csrLeakage : LeakageCSR)
-| InvalidLeakage. Check @Bind.
+| InvalidLeakage.
 
 Definition leakage_of_instr (instr : Instruction) : M LeakageEvent :=
   match instr with
@@ -1921,6 +1922,4 @@ Proof. trivial. Qed.
 Check @leakage_of_instr.
 Definition trivialMonad : Monad Mtriv :=
   {| Bind := trivialBind; Return := trivialReturn; left_identity := trivial_left_identity; right_identity := trivial_right_identity; associativity := trivial_associativity |}.
-Definition concrete_leakage_of_instr := @leakage_of_instr Mtriv trivialMonad.
-Definition concrete_leakage_of_instr_Z := concrete_leakage_of_instr Z (fun x => x) (fun x => x).
-Print concrete_leakage_of_instr_Z. Print leakage_of_instr.
+Definition concrete_leakage_of_instr := @leakage_of_instr Mtriv trivialMonad. Check concrete_leakage_of_instr.
