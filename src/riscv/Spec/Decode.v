@@ -1943,4 +1943,4 @@ Proof. trivial. Qed.
 Check @leakage_of_instr.
 Definition trivialMonad : Monad Mtriv :=
   {| Bind := trivialBind; Return := trivialReturn; left_identity := trivial_left_identity; right_identity := trivial_right_identity; associativity := trivial_associativity |}.
-Definition concrete_leakage_of_instr {width} {BW: Bitwidth width} {word: word.word width} := @leakage_of_instr Mtriv trivialMonad. Check concrete_leakage_of_instr.
+Definition concrete_leakage_of_instr {width} {BW: Bitwidth width} {word: word.word width} := @leakage_of_instr Mtriv trivialMonad width BW word.
