@@ -7,6 +7,8 @@ Class Monad(M: Type -> Type) := mkMonad {
   Return: forall {A}, A -> M A;
 }.
 
+Declare Scope monad_scope.
+
 Notation "x <- m1 ; m2" := (Bind m1 (fun x => m2))
   (right associativity, at level 60) : monad_scope.
 Notation "m1 ;; m2" := (Bind m1 (fun _ => m2))
@@ -18,17 +20,17 @@ Open Scope monad_scope.
 Definition Id: Type -> Type := id.
 
 #[global] Instance Id_monad: Monad Id := {|
-  Bind{A B}(m: A)(f: A -> B) := f m;
-  Return{A}(a: A) := a;
+  Bind A B (m: A)(f: A -> B) := f m;
+  Return A (a: A) := a;
 |}.
 
 
 Definition NonDet(A: Type): Type := A -> Prop.
 
 #[global] Instance NonDet_Monad: Monad NonDet := {|
-  Bind{A B}(m: NonDet A)(f: A -> NonDet B) :=
+  Bind A B (m: NonDet A)(f: A -> NonDet B) :=
     fun (b: B) => exists a, m a /\ f a b;
-  Return{A} := eq;
+  Return A := eq;
 |}.
 
 
@@ -39,13 +41,13 @@ Arguments mkOptionT {M} {A} (_).
 Arguments runOptionT {M} {A} (_).
 
 #[global] Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
-  Bind{A}{B}(m: optionT M A)(f: A -> optionT M B) :=
+  Bind A B (m: optionT M A) (f: A -> optionT M B) :=
     mkOptionT (Bind (runOptionT m) (fun (o: option A) =>
                                       match o with
                                       | Some a => runOptionT (f a)
                                       | None => Return None
                                       end));
-  Return{A}(a: A) := mkOptionT (Return (Some a));
+  Return A (a: A) := mkOptionT (Return (Some a));
 |}.
 
 Definition lift_into_optionT{M: Type -> Type}{MM: Monad M}{A: Type}(m: M A): optionT M A :=
@@ -64,9 +66,9 @@ Arguments mkStateT {S} {M} {A} (_).
 Arguments runStateT {S} {M} {A} (_).
 
 #[global] Instance StateT_Monad(M: Type -> Type){MM: Monad M}(S: Type): Monad (StateT S M) := {|
-  Bind{A B: Type}(m: StateT S M A)(f: A -> StateT S M B) :=
+  Bind A B (m: StateT S M A)(f: A -> StateT S M B) :=
     mkStateT (fun (s: S) => Bind ((runStateT m) s) (fun '(a, s) => runStateT (f a) s));
-  Return{A: Type}(a: A) :=
+  Return A (a: A) :=
     mkStateT (fun (s: S) => Return (a, s));
 |}.
 
@@ -87,7 +89,7 @@ Arguments mkListT {M} {A} (_).
 Arguments runListT {M} {A} (_).
 
 #[global] Instance listT_Monad(M: Type -> Type){MM: Monad M}: Monad (listT M) := {|
-  Bind{A B: Type}(m: listT M A)(f: A -> listT M B) :=
+  Bind A B (m: listT M A) (f: A -> listT M B) :=
     mkListT (la <- runListT m;
              List.fold_left
                (fun res a =>
@@ -96,7 +98,7 @@ Arguments runListT {M} {A} (_).
                   Return (res' ++ a'))
                la
                (Return (@nil B)));
-  Return{A: Type}(a: A) :=
+  Return A (a: A) :=
     mkListT (Return (cons a nil));
 |}.
 

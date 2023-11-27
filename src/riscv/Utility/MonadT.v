@@ -14,6 +14,8 @@ Class Monad(M: Type -> Type) := mkMonad {
   *)
 }.
 
+Declare Scope monad_scope.
+
 Notation "x <- m1 ; m2" := (Bind m1 (fun x => m2))
   (right associativity, at level 60) : monad_scope.
 Notation "m1 ;; m2" := (Bind m1 (fun _ => m2))
@@ -22,11 +24,11 @@ Notation "m1 ;; m2" := (Bind m1 (fun _ => m2))
 Open Scope monad_scope.
 
 #[global] Instance option_Monad: Monad option := {|
-  Bind := fun {A B: Type} (o: option A) (f: A -> option B) => match o with
+  Bind := fun A B (o: option A) (f: A -> option B) => match o with
             | Some x => f x
             | None => None
             end;
-  Return := fun {A: Type} (a: A) => Some a;
+  Return := fun A (a: A) => Some a;
 |}.
 
 (*
@@ -76,13 +78,13 @@ listT option nat
 
 
 #[global] Instance OptionT_Monad(M: Type -> Type){MM: Monad M}: Monad (optionT M) := {|
-  Bind{A}{B}(m: M (option A))(f: A -> M (option B)) :=
+  Bind A B (m: M (option A)) (f: A -> M (option B)) :=
     Bind m (fun (o: option A) =>
               match o with
               | Some a => f a
               | None => Return None
               end);
-  Return{A}(a: A) := Return (Some a);
+  Return A (a: A) := Return (Some a);
 |}.
 
 Module OptionMonad.
@@ -99,18 +101,18 @@ End OptionMonad.
 Definition State(S A: Type) := S -> (A * S).
 
 #[global] Instance State_Monad(S: Type): Monad (State S) := {|
-  Bind := fun {A B: Type} (m: State S A) (f: A -> State S B) =>
+  Bind := fun A B (m: State S A) (f: A -> State S B) =>
               fun (s: S) => let (a, s') := m s in f a s' ;
-  Return := fun {A: Type} (a: A) =>
+  Return := fun A (a: A) =>
                 fun (s: S) => (a, s);
 |}.
 
 Definition StateT(S: Type)(M: Type -> Type)(A: Type) := S -> M (A * S)%type.
 
 #[global] Instance StateT_Monad(M: Type -> Type){MM: Monad M}(S: Type): Monad (StateT S M) := {|
-  Bind{A B: Type}(m: StateT S M A)(f: A -> StateT S M B) :=
+  Bind A B (m: StateT S M A) (f: A -> StateT S M B) :=
     fun (s: S) => Bind (m s) (fun '(a, s) => f a s);
-  Return{A: Type}(a: A) :=
+  Return A (a: A) :=
     fun (s: S) => Return (a, s);
 |}.
 
@@ -185,7 +187,7 @@ Goal forall (M: Type -> Type) (A: Type), NonDet (M A) = (M A -> Prop).
   intros. reflexivity. Qed.
 
 #[global] Instance NonDetT_Monad(M: Type -> Type){MM: Monad M}: Monad (NonDetT M). refine ({|
-  Bind{A B}(m: NonDet (M A))(f: A -> NonDet (M B)) := _;
+  Bind A B (m: NonDet (M A)) (f: A -> NonDet (M B)) := _;
   Return := _
 |}).
 unfold NonDet in *.
@@ -306,7 +308,7 @@ Section RunsTo.
             exists mid, omid = Some (Some tt, mid) /\ runsTo mid P) ->
         runsTo initial P.
 
-  Hint Constructors runsTo.
+  #[local] Hint Constructors runsTo : core.
 
   (* Print runsTo_ind. bad (not a fixpoint) *)
 

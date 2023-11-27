@@ -133,8 +133,8 @@ Section Primitives.
   (* primitives_params is a paramater rather than a field because Primitives lives in Prop and
      is opaque, but the fields of primitives_params need to be visible *)
   Class Primitives(primitives_params: PrimitivesParams RiscvMachine): Prop := {
-    mcomp_sat_ok :> mcomp_sat_spec primitives_params;
-    primitives_sane :> PrimitivesSane primitives_params;
+    #[global] mcomp_sat_ok :: mcomp_sat_spec primitives_params;
+    #[global] primitives_sane :: PrimitivesSane primitives_params;
 
     spec_getRegister: forall (initialL: RiscvMachine) (x: Register)
                              (post: word -> RiscvMachine -> Prop),
