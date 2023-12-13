@@ -186,8 +186,8 @@ Inductive LeakageI
 | Fence_i_leakage
 | Addi_leakage
 | Slli_leakage (shamt : Z)
-| Slti_leakage (shamt : Z)
-| Sltiu_leakage (shamt : Z)
+| Slti_leakage
+| Sltiu_leakage
 | Xori_leakage
 | Ori_leakage
 | Andi_leakage
@@ -200,8 +200,8 @@ Inductive LeakageI
 | Add_leakage
 | Sub_leakage
 | Sll_leakage (shamt : word)
-| Slt_leakage (shamt : word)
-| Sltu_leakage (shamt : word)
+| Slt_leakage
+| Sltu_leakage
 | Xor_leakage
 | Srl_leakage (shamt : word)
 | Sra_leakage (shamt : word)
@@ -296,8 +296,8 @@ Definition leakage_of_instr_I
   | Fence_i => Return Fence_i_leakage
   | Addi _ _ _ => Return Addi_leakage
   | Slli _ _ shamt => Return (Slli_leakage shamt)
-  | Slti _ _ shamt => Return (Slti_leakage shamt)
-  | Sltiu _ _ shamt => Return (Sltiu_leakage shamt)
+  | Slti _ _ _ => Return Slti_leakage
+  | Sltiu _ _ _ => Return Sltiu_leakage
   | Xori _ _ _ => Return Xori_leakage
   | Ori _ _ _ => Return Ori_leakage
   | Andi _ _ _ => Return Andi_leakage
@@ -310,8 +310,8 @@ Definition leakage_of_instr_I
   | Add _ _ _ => Return Add_leakage
   | Sub _ _ _ => Return Sub_leakage
   | Sll _ _ rs2 => shamt <- getRegister rs2; Return (Sll_leakage shamt)
-  | Slt _ _ rs2 => shamt <- getRegister rs2; Return (Slt_leakage shamt)
-  | Sltu _ _ rs2 => shamt <- getRegister rs2; Return (Sltu_leakage shamt)
+  | Slt _ _ _ => Return Slt_leakage
+  | Sltu _ _ _ => Return Sltu_leakage
   | Xor _ _ _ => Return Xor_leakage
   | Srl _ _ rs2 => shamt <- getRegister rs2; Return (Srl_leakage shamt)
   | Sra _ _ rs2 => shamt <- getRegister rs2; Return (Sra_leakage shamt)
