@@ -29,6 +29,7 @@ Definition PrivMode_eqb(m1 m2: PrivMode): bool := Z.eqb (encodePrivMode m1) (enc
 Definition PrivMode_ltb(m1 m2: PrivMode): bool := Z.ltb (encodePrivMode m1) (encodePrivMode m2).
 
 Inductive AccessType: Set := Instr | Load | Store.
+(*find usages of Instr for logic about instruction fetching*)
 Inductive SourceType: Set := VirtualMemory | Fetch | Execute.
 
 Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
