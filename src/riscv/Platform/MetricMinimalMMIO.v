@@ -13,6 +13,7 @@ Require Export riscv.Platform.RiscvMachine.
 Require Export riscv.Platform.MetricRiscvMachine.
 Require Import riscv.Platform.MinimalMMIO.
 Require Import riscv.Platform.MetricLogging.
+Require Export riscv.Platform.MetricMaterializeRiscvProgram.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Tactics.Tactics.
@@ -22,9 +23,6 @@ Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
 Section Riscv.
-  Import List.
-  Import free.
-
   Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
@@ -32,34 +30,7 @@ Section Riscv.
   (* note: ext_spec does not have access to the metrics *)
   Context {mmio_spec: MMIOSpec}.
 
-  Definition action : Type := (MetricLog -> MetricLog) * riscv_primitive.
-  Definition result (a : action) := primitive_result (snd a).
   Local Notation M := (free action result).
-
-  Global Instance IsRiscvMachine: RiscvProgram M word := {|
-    getRegister a := act (id, GetRegister a) ret;
-    setRegister a b := act (id, SetRegister a b) ret;
-    loadByte a b := act (addMetricLoads 1, LoadByte a b) ret;
-    loadHalf a b := act (addMetricLoads 1, LoadHalf a b) ret;
-    loadWord a b := act (addMetricLoads 1, LoadWord a b) ret;
-    loadDouble a b := act (addMetricLoads 1, LoadDouble a b) ret;
-    storeByte a b c := act (addMetricStores 1, StoreByte a b c) ret;
-    storeHalf a b c := act (addMetricStores 1, StoreHalf a b c) ret;
-    storeWord a b c := act (addMetricStores 1, StoreWord a b c) ret;
-    storeDouble a b c := act (addMetricStores 1, StoreDouble a b c) ret;
-    makeReservation a := act (id, MakeReservation a) ret;
-    clearReservation a := act (id, ClearReservation a) ret;
-    checkReservation a := act (id, CheckReservation a) ret;
-    getCSRField f := act (id, GetCSRField f) ret;
-    setCSRField f v := act (id, SetCSRField f v) ret;
-    getPrivMode := act (id, GetPrivMode) ret;
-    setPrivMode m := act (id, SetPrivMode m) ret;
-    fence a b := act (id, Fence a b) ret;
-    getPC := act (id, GetPC) ret;
-    setPC a := act (addMetricJumps 1, SetPC a) ret;
-    endCycleNormal := act (addMetricInstructions 1, EndCycleNormal) ret;
-    endCycleEarly A := act (addMetricInstructions 1, EndCycleEarly A) ret;
-  |}.
 
   Definition interp_action a metmach post :=
     interpret_action (snd a) (metmach.(getMachine)) (fun r mach =>
@@ -82,10 +53,10 @@ Section Riscv.
 
   Global Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MetricMinimalMMIOPrimitivesParams.
   Proof.
-    split; cbv [mcomp_sat MetricMinimalMMIOPrimitivesParams Monad_free Bind Return].
-    { symmetry. eapply interp_bind_ex_mid; intros.
+    split; cbv [mcomp_sat MetricMinimalMMIOPrimitivesParams free.Monad_free Bind Return].
+    { symmetry. eapply free.interp_bind_ex_mid; intros.
       eapply MinimalMMIO.interpret_action_weaken_post; eauto; cbn; eauto. }
-    { symmetry. rewrite interp_ret; eapply iff_refl. }
+    { symmetry. rewrite free.interp_ret; eapply iff_refl. }
   Qed.
 
   Lemma interp_action_weaken_post a (post1 post2:_->_->Prop)
@@ -94,7 +65,7 @@ Section Riscv.
   Proof. eapply MinimalMMIO.interpret_action_weaken_post; eauto. Qed.
   Lemma interp_action_appendonly' a s post :
     interp_action a s post ->
-    interp_action a s (fun v s' => post v s' /\ endswith s'.(getLog) s.(getLog)).
+    interp_action a s (fun v s' => post v s' /\ List.endswith s'.(getLog) s.(getLog)).
   Proof. eapply MinimalMMIO.interpret_action_appendonly''; eauto. Qed.
   Lemma interp_action_total{memOk: map.ok Mem} a s post :
     map.undef_on s.(getMachine).(getMem) isMMIOAddr ->
