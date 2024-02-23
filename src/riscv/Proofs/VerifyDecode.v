@@ -72,7 +72,7 @@ Proof.
       unfold supportsM, supportsA, supportsF in *;
       destruct iset; try intuition congruence].
   all: match goal with
-       | |- respects_bounds _ (_ ?d) => remember d as r in *; revert dependent r; intro r
+       | |- respects_bounds _ (_ ?d) => remember d as r in *; generalize dependent r; intro r
        end.
   all: cbv beta zeta delta [decodeI decodeM decodeA decodeF
                             decodeI64 decodeM64 decodeA64 decodeF64

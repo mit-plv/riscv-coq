@@ -3,7 +3,7 @@ Require Import coqutil.Z.Lia.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Utility.Encode.
 
-Record InstructionSet' := {
+Record InstructionSet': Set := {
   supports_64bit: bool;
   (* supports_I: bool; always true *)
   supports_M: bool;

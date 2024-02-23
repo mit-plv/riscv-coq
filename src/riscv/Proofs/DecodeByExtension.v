@@ -172,7 +172,7 @@ Ltac head t :=
   | _ => t
   end.
 
-Inductive indent :=
+Inductive indent: Set :=
 | INil
 | ICons(tail: indent).
 

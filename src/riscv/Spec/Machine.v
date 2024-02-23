@@ -7,7 +7,7 @@ Require Import riscv.Spec.CSRField.
 Local Open Scope Z_scope.
 
 (* Note that this is ordered: User < Supervisor < Machine *)
-Inductive PrivMode: Type := User | Supervisor | Machine.
+Inductive PrivMode: Set := User | Supervisor | Machine.
 
 Definition decodePrivMode(m: MachineInt): PrivMode :=
   match m with
@@ -28,8 +28,8 @@ Definition PrivMode_eqb(m1 m2: PrivMode): bool := Z.eqb (encodePrivMode m1) (enc
 
 Definition PrivMode_ltb(m1 m2: PrivMode): bool := Z.ltb (encodePrivMode m1) (encodePrivMode m2).
 
-Inductive AccessType: Type := Instr | Load | Store.
-Inductive SourceType: Type := VirtualMemory | Fetch | Execute.
+Inductive AccessType: Set := Instr | Load | Store.
+Inductive SourceType: Set := VirtualMemory | Fetch | Execute.
 
 Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   getRegister: Register -> M t;

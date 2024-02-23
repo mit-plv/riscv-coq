@@ -42,7 +42,7 @@ Section Orders.
   Definition asymmetric := forall a b, R a b -> ~ R b a.
   Definition transitive := forall a b c, R a b -> R b c -> R a c.
 
-  Record strictPartialOrder := mkStrictPartialOrder {
+  Record strictPartialOrder: Prop := mkStrictPartialOrder {
     strictPartialOrder_irreflexive: irreflexive;
     strictPartialOrder_transitive: transitive;
   }.
@@ -109,7 +109,7 @@ Inductive Label :=
 | ErrorLabel
 | AbsentLabel.
 
-Inductive EventTyp := ReadEvent | WriteEvent | FenceEvent | ErrorEvent | AbsentEvent.
+Inductive EventTyp: Set := ReadEvent | WriteEvent | FenceEvent | ErrorEvent | AbsentEvent.
 
 Definition LabelTyp(l: Label): EventTyp :=
   match l with
