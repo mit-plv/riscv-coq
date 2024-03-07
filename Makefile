@@ -1,6 +1,6 @@
 default_target: spec
 
-.PHONY: clean install force spec all convert convert_loc_counts
+.PHONY: clean install install-all install-spec force spec all convert convert_loc_counts
 
 # absolute paths so that emacs compile mode knows where to find error
 # use cygpath -m because Coq on Windows cannot handle cygwin paths
@@ -64,9 +64,13 @@ clean:: Makefile.coq.all
 	find . -type f \( -name '*~' -o -name '*.aux' -o -name '.lia.cache' -o -name '.nia.cache' \) -delete
 	rm -f Makefile.coq.all Makefile.coq.all.conf Makefile.coq.spec Makefile.coq.spec.conf _CoqProject
 
-install:: Makefile.coq.all
+install-all:: Makefile.coq.all
 	$(MAKE) -f Makefile.coq.all install
 
+install-spec:: Makefile.coq.spec
+	$(MAKE) -f Makefile.coq.spec install
+
+install:: install-all
 
 # converting from Haskell using hs-to-coq:
 
