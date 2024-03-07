@@ -70,7 +70,7 @@ install-all:: Makefile.coq.all
 install-spec:: Makefile.coq.spec
 	$(MAKE) -f Makefile.coq.spec install
 
-install:: install-spec
+install:: install-all
 
 # converting from Haskell using hs-to-coq:
 
