@@ -62,7 +62,7 @@ Inductive InstructionM64 : Type :=
 
 Inductive LeakageM64
   {width} {BW : Bitwidth width} {word: word.word width} : Type :=
-| Mulw_leakage (*andres says that this is constant-time*)
+| Mulw_leakage
 | Divw_leakage (num : word) (den : word) (*but that this is not.*)
 | Divuw_leakage (num : word) (den : word)
 | Remw_leakage (num : word) (den : word) (*i'm not sure about this one. probably same as div, so not constant-time.*)
@@ -208,7 +208,7 @@ Inductive LeakageI
 | Or_leakage
 | And_leakage
 | Lui_leakage
-| Beq_leakage (branch: bool) (* unsure whether this should be here - i think that andres said that having this argument would make my life harder *)
+| Beq_leakage (branch: bool)
 | Bne_leakage (branch: bool)
 | Blt_leakage (branch: bool)
 | Bge_leakage (branch: bool)
