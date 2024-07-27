@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import ZArith.
 
 (* Like "pose proof" but only if we don't yet have this hypothesis *)
 Tactic Notation "unique" "pose" "proof" constr(defn) :=

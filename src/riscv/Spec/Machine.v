@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import ZArith.
 Require Import riscv.Utility.Monads.
 Require riscv.Utility.MonadNotations.
 Require Import riscv.Utility.Utility.

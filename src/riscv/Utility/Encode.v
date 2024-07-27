@@ -1,5 +1,5 @@
 (* Need to define Register *)
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import ZArith.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Utility.Utility.
 

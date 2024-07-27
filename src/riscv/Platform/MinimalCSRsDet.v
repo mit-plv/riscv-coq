@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
+From Coq Require Import ZArith.
+From Coq Require Import List.
 Require Import riscv.Utility.Monads. Import StateAbortFailOperations.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Spec.Decode.

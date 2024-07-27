@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.BinInt.
+From Coq Require Import BinInt.
 Require Import riscv.Utility.Encode.
 Require Import coqutil.Z.BitOps.
 Require Import coqutil.Z.prove_Zeq_bitwise.

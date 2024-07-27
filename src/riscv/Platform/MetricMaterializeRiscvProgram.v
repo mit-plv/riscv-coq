@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import ZArith.
 Require Import coqutil.Word.Interface coqutil.Word.Bitwidth.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.FreeMonad.

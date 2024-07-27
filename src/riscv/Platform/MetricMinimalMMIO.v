@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Logic.FunctionalExtensionality.
-Require Import Coq.Logic.PropExtensionality.
+From Coq Require Import ZArith.
+From Coq Require Import FunctionalExtensionality.
+From Coq Require Import PropExtensionality.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Spec.Decode.
@@ -8,7 +8,7 @@ Require Import riscv.Spec.Machine.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Primitives.
 Require Import riscv.Spec.MetricPrimitives.
-Require Import Coq.Lists.List. Import ListNotations.
+From Coq Require Import List. Import ListNotations.
 Require Export riscv.Platform.RiscvMachine.
 Require Export riscv.Platform.MetricRiscvMachine.
 Require Import riscv.Platform.MinimalMMIO.

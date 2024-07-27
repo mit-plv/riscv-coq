@@ -1,4 +1,4 @@
-Require Coq.ZArith.BinInt.
+From Coq Require BinInt.
 Local Open Scope Z_scope.
 
 Notation Register := BinInt.Z (only parsing).

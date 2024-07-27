@@ -1,4 +1,4 @@
-Require Import Coq.Lists.List. Import ListNotations.
+From Coq Require Import List. Import ListNotations.
 Require Import coqutil.Decidable.
 Require Import coqutil.Tactics.Tactics.
 Require Import coqutil.Tactics.Simp.
@@ -16,11 +16,11 @@ Require Import coqutil.Map.Z_keyed_SortedListMap.
 Require Import coqutil.Map.OfFunc.
 Require Import coqutil.Word.Properties.
 Require Import coqutil.Z.prove_Zeq_bitwise.
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import ZArith.
 Require Import riscv.Utility.PowerFunc.
-Require Import Coq.Logic.FunctionalExtensionality.
-Require Import Coq.Logic.PropExtensionality.
-Require Import Coq.derive.Derive.
+From Coq Require Import FunctionalExtensionality.
+From Coq Require Import PropExtensionality.
+From Coq Require Import Derive.
 Require Import riscv.Spec.Decode.
 
 (* sub-relation *)

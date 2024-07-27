@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.BinInt.
+From Coq Require Import BinInt.
 Require Import riscv.Utility.Monads. Import OStateOperations.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Spec.Decode.
@@ -16,8 +16,8 @@ Require Import riscv.Platform.MetricLogging.
 Require Import riscv.Spec.MetricPrimitives.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Z.Lia.
-Require Import Coq.Logic.FunctionalExtensionality.
-Require Import Coq.Logic.PropExtensionality.
+From Coq Require Import FunctionalExtensionality.
+From Coq Require Import PropExtensionality.
 
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.

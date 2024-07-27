@@ -1,5 +1,5 @@
-Require Import Coq.Strings.String.
-Require Import Coq.ZArith.BinInt.
+From Coq Require Import String.
+From Coq Require Import BinInt.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndian.

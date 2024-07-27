@@ -1,11 +1,11 @@
-Require Import Coq.ZArith.ZArith.
+From Coq Require Import ZArith.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Utility.Encode.
 Require Import riscv.Utility.Utility.
 
 (* same verification functions as in Encode, but computable: *)
 
-Require Import Coq.derive.Derive.
+From Coq Require Import Derive.
 
 Lemma andb_spec: forall P Q p q,
     Bool.reflect P p ->

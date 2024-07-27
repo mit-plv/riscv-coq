@@ -1,12 +1,12 @@
-Require Import Coq.Lists.List.
-Require Import Coq.Logic.Classical_Prop.
+From Coq Require Import List.
+From Coq Require Import Classical_Prop.
 Import ListNotations.
 Require Import coqutil.Decidable.
 Require Import coqutil.Word.Naive.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.Execute.
-Require Import Coq.ZArith.BinInt. Local Open Scope Z_scope.
+From Coq Require Import BinInt. Local Open Scope Z_scope.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Utility.PowerFunc.
 Require Import riscv.Utility.Monads. Import MonadNotations.

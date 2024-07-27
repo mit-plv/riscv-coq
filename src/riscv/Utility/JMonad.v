@@ -1,5 +1,5 @@
 (* monads implemented in terms of fmap & join & return instead of bind & return *)
-Require Import Coq.Lists.List.
+From Coq Require Import List.
 
 Class Monad(M: Type -> Type) := mkMonad {
   ret: forall {A}, A -> M A;

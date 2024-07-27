@@ -1,5 +1,5 @@
-Require Import Coq.ZArith.BinInt.
-Require Import Coq.Strings.String.
+From Coq Require Import BinInt.
+From Coq Require Import String.
 Require Import riscv.Utility.Monads. Import OStateOperations.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Spec.Decode.
@@ -8,7 +8,7 @@ Require Import riscv.Spec.Machine.
 Require Import riscv.Spec.Execute.
 Require Import riscv.Utility.PowerFunc.
 Require Import riscv.Utility.Utility.
-Require Import Coq.Lists.List. Import ListNotations.
+From Coq Require Import List. Import ListNotations.
 Require Import riscv.Platform.Minimal.
 Require Import coqutil.Map.Interface.
 
