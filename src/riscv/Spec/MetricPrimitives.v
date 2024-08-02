@@ -20,8 +20,7 @@ Section MetricPrimitives.
 
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
-  Context {RVM: RiscvProgramWithLeakage}. Print RiscvMachine. Print RiscvProgramWithLeakage.
-  Set Printing All. Print RVM.
+  Context {RVM: RiscvProgramWithLeakage}.
   Context {RVS: @RiscvMachine M word _ _ RVM.(RVP)}.
 
   (* monadic computations used for specifying the behavior of RiscvMachines should be "sane"
@@ -115,10 +114,6 @@ Section MetricPrimitives.
     spec_loadWord: spec_load 4 (Machine.loadWord (RiscvProgram := RVM.(RVP))) Memory.loadWord;
     spec_loadDouble: spec_load 8 (Machine.loadDouble (RiscvProgram := RVM.(RVP))) Memory.loadDouble;
 
-    spec_leakEvent: forall (initialL: MetricRiscvMachine) (post: unit -> MetricRiscvMachine -> Prop) (e : LeakageEvent),
-        post tt (withLeakageEvent e initialL) ->
-        mcomp_sat (leakEvent e) initialL post;
-
     spec_storeByte: spec_store 1 (Machine.storeByte (RiscvProgram := RVM.(RVP))) Memory.storeByte;
     spec_storeHalf: spec_store 2 (Machine.storeHalf (RiscvProgram := RVM.(RVP))) Memory.storeHalf;
     spec_storeWord: spec_store 4 (Machine.storeWord (RiscvProgram := RVM.(RVP))) Memory.storeWord;
@@ -140,6 +135,10 @@ Section MetricPrimitives.
                 (updateMetrics (addMetricInstructions 1)
                                initialL))) ->
         mcomp_sat endCycleNormal initialL post;
+
+    spec_leakEvent: forall (initialL: MetricRiscvMachine) (post: unit -> MetricRiscvMachine -> Prop) (e : LeakageEvent),
+        post tt (withLeakageEvent e initialL) ->
+        mcomp_sat (leakEvent e) initialL post;
   }.
 
 End MetricPrimitives.

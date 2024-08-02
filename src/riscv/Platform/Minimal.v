@@ -100,11 +100,10 @@ Section Riscv.
       endCycleEarly{A: Type} := fail_hard;
     }.
 
-  Print RiscvProgramWithLeakage.
-  Instance IsRiscvMachineWithLeakage: @RiscvProgramWithLeakage width BW word (OState RiscvMachine) _ _ _ :=  {
+  Instance IsRiscvMachineWithLeakage: @RiscvProgramWithLeakage _ _ _ (OState RiscvMachine) _ _ _ :=  {
       RVP := IsRiscvMachine;
       leakEvent e := fail_hard;
-    }.
+  }.
 
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
@@ -231,21 +230,12 @@ Section Riscv.
     intros. eapply update_sane. intros. exists [e]. destruct mach. reflexivity.
   Qed.
 
-  Print PrimitivesSane.
-
   Instance MinimalSane: PrimitivesSane MinimalPrimitivesParams.
   Proof.
     constructor.
     all: intros;
       unfold IsRiscvMachine, IsRiscvMachineWithLeakage, RVP,
-      getRegister, setRegister,
-         loadByte, loadHalf, loadWord, loadDouble,
-         storeByte, storeHalf, storeWord, storeDouble,
-         getPC, setPC,
-         endCycleNormal, endCycleEarly, raiseExceptionWithInfo,
-      loadN, storeN, fail_if_None.
-    all:
-      unfold getRegister, setRegister,
+         getRegister, setRegister,
          loadByte, loadHalf, loadWord, loadDouble,
          storeByte, storeHalf, storeWord, storeDouble,
          getPC, setPC,

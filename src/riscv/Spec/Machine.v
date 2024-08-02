@@ -29,7 +29,6 @@ Definition PrivMode_eqb(m1 m2: PrivMode): bool := Z.eqb (encodePrivMode m1) (enc
 Definition PrivMode_ltb(m1 m2: PrivMode): bool := Z.ltb (encodePrivMode m1) (encodePrivMode m2).
 
 Inductive AccessType: Set := Instr | Load | Store.
-(*find usages of Instr for logic about instruction fetching*)
 Inductive SourceType: Set := VirtualMemory | Fetch | Execute.
 
 Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
@@ -65,7 +64,7 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
      Some instances may not support endCycleEarly and fail instead. *)
   endCycleNormal: M unit;
   endCycleEarly: forall A, M A;
-}. Print LeakageEvent.
+}.
 
 Class RiscvProgramWithLeakage
   {width} {BW : Bitwidth width} {word: word.word width}
@@ -73,7 +72,7 @@ Class RiscvProgramWithLeakage
   mkRiscvProgramWithLeakage {
       RVP :> @RiscvProgram M t MM MWt;
       leakEvent : @LeakageEvent width BW word -> M unit;
-    }.
+  }.
 
 Class RiscvMachine`{MP: RiscvProgram} := mkRiscvMachine {
   (* checks that addr is aligned, and translates the (possibly virtual) addr to a physical

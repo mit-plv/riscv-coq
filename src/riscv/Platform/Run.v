@@ -16,10 +16,8 @@ Section Riscv.
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
   Context {RVM: RiscvProgramWithLeakage}.
-  Context {RVS: RiscvMachine M mword}. Print leakage_of_instr.
+  Context {RVS: RiscvMachine M mword}.
 
-  Check (leakage_of_instr getRegister _).
-  Print leakage_of_instr. Check getRegister.
   Definition run1(iset: InstructionSet):
     M unit :=
     pc <- getPC;

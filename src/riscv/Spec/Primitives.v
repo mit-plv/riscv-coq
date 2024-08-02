@@ -175,6 +175,10 @@ Section Primitives.
                 (withNextPc (word.add initialL.(getNextPc) (word.of_Z 4))
                             initialL)) ->
         mcomp_sat endCycleNormal initialL post;
+
+    spec_leakEvent: forall (initialL: RiscvMachine) (post: unit -> RiscvMachine -> Prop) (e : LeakageEvent),
+        post tt (withLeakageEvent e initialL) ->
+        mcomp_sat (leakEvent e) initialL post;
   }.
 
 End Primitives.

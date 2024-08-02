@@ -115,10 +115,10 @@ Section Riscv.
   - exact (post tt (withPc mach.(getNextPc) (withNextPc (word.add mach.(getNextPc) (word.of_Z 4)) mach))).
   Defined.
 
-  Instance IsRiscvMachineWithLeakage: @RiscvProgramWithLeakage width BW word (Post RiscvMachine) _ _ _ :=
-    {|
+  Instance IsRiscvMachineWithLeakage: @RiscvProgramWithLeakage _ _ _ (Post RiscvMachine) _ _ _ := {|
       RVP := IsRiscvMachine;
-      leakEvent _ := fun _ _ => False |}.
+      leakEvent _ := fun _ _ => False;
+  |}.
 
   Definition MinimalMMIOPrimitivesParams: PrimitivesParams (Post RiscvMachine) RiscvMachine := {|
     Primitives.mcomp_sat A (m: Post RiscvMachine A) mach post := m mach post;
