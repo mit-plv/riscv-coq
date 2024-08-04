@@ -262,7 +262,7 @@ Section WithMonad.
     | InvalidF => Return InvalidF_leakage
     end.
 
-  Inductive LeakageCSR : Type :=
+  (*Inductive LeakageCSR : Type :=
   | Ecall_leakage
   | Ebreak_leakage
   | Uret_leakage
@@ -276,9 +276,11 @@ Section WithMonad.
   | Csrrwi_leakage
   | Csrrsi_leakage
   | Csrrci_leakage
-  | InvalidCSR_leakage.
+  | InvalidCSR_leakage.*)
 
-  Definition leakage_of_instr_CSR (instr : InstructionCSR) : M LeakageCSR :=
+  Inductive LeakageCSR : Type :=.
+
+  (*Definition leakage_of_instr_CSR (instr : InstructionCSR) : M LeakageCSR :=
     match instr with
     | Ecall => Return Ecall_leakage
     | Ebreak => Return Ebreak_leakage
@@ -294,7 +296,10 @@ Section WithMonad.
     | Csrrsi _ _ _ => Return Csrrsi_leakage
     | Csrrci _ _ _ => Return Csrrci_leakage
     | InvalidCSR => Return InvalidCSR_leakage
-    end.
+    end.*)
+
+  Definition leakage_of_instr_CSR (instr : InstructionCSR) : M (option LeakageCSR) :=
+    Return None.
   
   Inductive LeakageA64
     {width} {BW : Bitwidth width} {word: word.word width}
@@ -368,6 +373,7 @@ Section WithMonad.
   Inductive LeakageEvent
     {width} {BW : Bitwidth width} {word: word.word width}
     : Type :=
+  | arbitrary_garbage (n : nat)
   | ILeakage (iLeakage : LeakageI)
   | MLeakage (mLeakage : LeakageM)
   | ALeakage (aLeakage : LeakageA)
