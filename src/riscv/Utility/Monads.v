@@ -37,6 +37,13 @@ Ltac prove_monad_law :=
          | o: option _ |- _ => destruct o
          end.
 
+#[global] Instance identity_Monad: Monad (fun T => T). refine ({|
+  Bind A B (x: A) (f: A -> B) := f x;
+  Return A (a: A) := a
+|}).
+all: prove_monad_law.
+Defined.
+
 #[global] Instance option_Monad: Monad option. refine ({|
   Bind A B (o: option A) (f: A -> option B) :=
     match o with

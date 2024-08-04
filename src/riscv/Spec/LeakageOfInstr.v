@@ -397,20 +397,4 @@ Section WithMonad.
 
 End WithMonad.
 
-Definition Mtriv (x : Type) := x.
-Definition trivialBind (A B : Type) (x : Mtriv A) (f : A -> B) : Mtriv B := f x.
-Definition trivialReturn (A : Type) (a : A) : Mtriv A := a.
-
-Lemma trivial_left_identity : forall (A B : Type) (a : A) (f : A -> Mtriv B), trivialBind A B (trivialReturn A a) f = f a.
-Proof. trivial. Qed.
-
-Lemma trivial_right_identity : forall (A : Type) (m : Mtriv A), trivialBind A A m (trivialReturn A) = m.
-Proof. trivial. Qed.
-
-Lemma trivial_associativity : forall (A B C : Type) (m : Mtriv A) (f : A -> Mtriv B) (g : B -> Mtriv C), trivialBind B C (trivialBind A B m f) g = trivialBind A C m (fun x : A => trivialBind B C (f x) g).
-Proof. trivial. Qed.
-
-Definition trivialMonad : Monad Mtriv :=
-  {| Bind := trivialBind; Return := trivialReturn; left_identity := trivial_left_identity; right_identity := trivial_right_identity; associativity := trivial_associativity |}.
-
-Definition concrete_leakage_of_instr {width} {BW: Bitwidth width} {word: word.word width} := @leakage_of_instr Mtriv trivialMonad width BW word.
+Definition concrete_leakage_of_instr {width} {BW: Bitwidth width} {word: word.word width} := @leakage_of_instr (fun T => T) _ width BW word.
