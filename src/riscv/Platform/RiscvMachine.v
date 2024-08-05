@@ -175,15 +175,15 @@ Section Machine.
 
     Definition withLogItems: list LogItem -> RiscvMachine -> RiscvMachine :=
       fun items '(mkRiscvMachine regs pc nextPC mem xAddrs log trace) =>
-                 mkRiscvMachine regs pc nextPC mem xAddrs (items ++ log) trace.
+                  mkRiscvMachine regs pc nextPC mem xAddrs (items ++ log) trace.
 
     Definition withLeakageEvent: LeakageEvent -> RiscvMachine -> RiscvMachine :=
       fun event '(mkRiscvMachine regs pc nextPC mem xAddrs log trace) =>
-                 mkRiscvMachine regs pc nextPC mem xAddrs log (event :: trace).
+                  mkRiscvMachine regs pc nextPC mem xAddrs log (event :: trace).
 
     Definition withLeakageEvents: list LeakageEvent -> RiscvMachine -> RiscvMachine :=
       fun events '(mkRiscvMachine regs pc nextPC mem xAddrs log trace) =>
-                 mkRiscvMachine regs pc nextPC mem xAddrs log (events ++ trace).
+                   mkRiscvMachine regs pc nextPC mem xAddrs log (events ++ trace).
     
     Definition Z32s_to_bytes(l: list Z): list byte :=
       List.flat_map (fun z => HList.tuple.to_list (LittleEndian.split 4 z)) l.

@@ -46,7 +46,7 @@ Section Riscv.
     m <- fail_if_None (Memory.store_bytes n mach.(getMem) a v);
     update (fun mach =>
               withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs)) (withMem m mach)).
-  
+
   Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) word :=  {
       getRegister reg :=
         if Z.eq_dec reg Register0 then
@@ -99,7 +99,7 @@ Section Riscv.
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
       endCycleEarly{A: Type} := fail_hard;
-    }. Print leakEvent. Print withLeakageEvent. Print RiscvMachine.
+  }.
   
   Instance IsRiscvMachineWithLeakage: @RiscvProgramWithLeakage _ _ _ (OState RiscvMachine) _ _ _ :=  {
       RVP := IsRiscvMachine;

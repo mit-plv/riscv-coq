@@ -209,7 +209,7 @@ Section Riscv.
         ssplit; eauto; simpl;
         change removeXAddr with (@List.removeb word word.eqb);
         rewrite ?ListSet.of_list_removeb;
-      intuition eauto 10 using preserve_undef_on, disjoint_diff_l.
+        intuition eauto 10 using preserve_undef_on, disjoint_diff_l.
   Qed.
 
   Lemma interpret_action_total'{memOk: map.ok Mem} a s post :

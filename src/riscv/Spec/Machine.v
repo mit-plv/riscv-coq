@@ -67,9 +67,7 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   endCycleEarly: forall A, M A;
 }.
 
-Class RiscvProgramWithLeakage
-  {width} {BW : Bitwidth width} {word: word.word width}
-  {M}{t}{MM}{MWt}:=
+Class RiscvProgramWithLeakage{width}{BW : Bitwidth width}{word: word.word width}{M}{t}{MM}{MWt} :=
   mkRiscvProgramWithLeakage {
       RVP :> @RiscvProgram M t MM MWt;
       leakEvent : (option LeakageEvent) -> M unit;
