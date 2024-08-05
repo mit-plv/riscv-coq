@@ -25,8 +25,8 @@ Section Riscv.
     leakEvent (Some (fetchInstr pc));;
     inst <- loadWord Fetch pc;
     let inst' := decode iset (combine 4 inst) in
-    leakage_event <- leakage_of_instr getRegister inst';
-    leakEvent leakage_event;;
+    inst_leakage <- leakage_of_instr getRegister inst';
+    leakEvent (option_map (fun il => executeInstr inst' il) inst_leakage);;
     execute inst';;
     endCycleNormal.
 

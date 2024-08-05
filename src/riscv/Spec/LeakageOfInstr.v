@@ -208,9 +208,7 @@ Section WithMonad.
 
   Inductive LeakageA : Type :=.
 
-  Inductive LeakageEvent {width} {BW : Bitwidth width} {word: word.word width} : Type :=
-  | anything {X : Type} (x : X)
-  | fetchInstr (address : word)
+  Inductive InstructionLeakage {width} {BW : Bitwidth width} {word: word.word width} : Type :=
   | ILeakage (iLeakage : LeakageI)
   | MLeakage (mLeakage : LeakageM)
   | ALeakage (aLeakage : LeakageA)
@@ -221,9 +219,14 @@ Section WithMonad.
   | F64Leakage (f64Leakage : LeakageF64)
   | CSRLeakage (csrLeakage : LeakageCSR)
   | InvalidLeakage.
+
+  Inductive LeakageEvent {width} {BW : Bitwidth width} {word: word.word width} : Type :=
+  | anything {X : Type} (x : X)
+  | fetchInstr (address : word)
+  | executeInstr (instr : Instruction) (ileakage : InstructionLeakage).
   
   Definition leakage_of_instr {width} {BW : Bitwidth width} {word: word.word width}
-    (getRegister : Register -> M word) (instr : Instruction) : M (option LeakageEvent) :=
+    (getRegister : Register -> M word) (instr : Instruction) : M (option InstructionLeakage) :=
     match instr with
     | IInstruction instr => l <- leakage_of_instr_I getRegister instr;
                             match l with
