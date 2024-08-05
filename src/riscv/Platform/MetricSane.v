@@ -4,6 +4,7 @@ Require Import coqutil.Tactics.Tactics.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Primitives.
 Require Import riscv.Platform.RiscvMachine.
@@ -172,6 +173,7 @@ Section Sane.
   Proof.
     unfold run1. intros.
     apply Bind_sane; [apply getPC_sane|intros].
+    apply Bind_sane; [apply leakEvent_sane|intros].
     apply Bind_sane; [apply loadWord_sane|intros].
     apply Bind_sane; [apply leakage_of_instr_sane|intros].
     apply Bind_sane; [apply leakEvent_sane|intros].

@@ -1,6 +1,7 @@
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.FreeMonad.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Utility.MkMachineWidth.
 Require Import riscv.Utility.Utility.
@@ -27,7 +28,7 @@ Section Riscv.
   | GetPrivMode
   | SetPrivMode (_ : PrivMode)
   | Fence (_ : MachineInt) (_ : MachineInt)
-  | LeakEvent (_ : LeakageEvent)
+  | LeakEvent (_ : option LeakageEvent)
   | GetPC
   | SetPC (_ : word)
   | StartCycle

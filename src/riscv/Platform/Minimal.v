@@ -5,6 +5,7 @@ Require Import Coq.Logic.PropExtensionality.
 Require Import riscv.Utility.Monads. Import OStateOperations.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Primitives.
@@ -45,7 +46,7 @@ Section Riscv.
     m <- fail_if_None (Memory.store_bytes n mach.(getMem) a v);
     update (fun mach =>
               withXAddrs (invalidateWrittenXAddrs n a mach.(getXAddrs)) (withMem m mach)).
-
+  
   Instance IsRiscvMachine: RiscvProgram (OState RiscvMachine) word :=  {
       getRegister reg :=
         if Z.eq_dec reg Register0 then
@@ -98,11 +99,16 @@ Section Riscv.
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
       endCycleEarly{A: Type} := fail_hard;
-    }.
-
+    }. Print leakEvent. Print withLeakageEvent. Print RiscvMachine.
+  
   Instance IsRiscvMachineWithLeakage: @RiscvProgramWithLeakage _ _ _ (OState RiscvMachine) _ _ _ :=  {
       RVP := IsRiscvMachine;
-      leakEvent e := fail_hard;
+      leakEvent e := update (fun mach =>
+                               match e with
+                               | Some e => withLeakageEvent e mach
+                               (*I would write (anything mach) below, but universe constraints*)
+                               | None => withLeakageEvent (anything (mach.(getRegs), mach.(getPc), mach.(getNextPc), mach.(getMem), mach.(getXAddrs), mach.(getLog))) mach
+                               end);
   }.
 
   Arguments Memory.load_bytes: simpl never.
@@ -230,6 +236,12 @@ Section Riscv.
     intros. eapply update_sane. intros. exists [e]. destruct mach. reflexivity.
   Qed.
 
+  Lemma leakEvent_sane: forall e,
+      mcomp_sane (leakEvent e).
+  Proof.
+    intros. eapply update_sane. intros. exists nil. destruct mach, e; reflexivity.
+  Qed.
+
   Instance MinimalSane: PrimitivesSane MinimalPrimitivesParams.
   Proof.
     constructor.
@@ -245,6 +257,7 @@ Section Riscv.
 
     all: repeat match goal with
                 | |- _ => apply logEvent_sane
+                | |- _ => apply leakEvent_sane
                 | |- mcomp_sane (Bind _ _) => apply Bind_sane
                 | |- _ => apply Return_sane
                 | |- _ => apply get_sane

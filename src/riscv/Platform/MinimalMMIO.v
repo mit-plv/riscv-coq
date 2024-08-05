@@ -4,6 +4,7 @@ Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Require Export riscv.Utility.FreeMonad.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Primitives.
@@ -114,7 +115,10 @@ Section Riscv.
         postF tt (withNextPc (word.add mach.(getPc) (word.of_Z 4)) mach)
     | EndCycleNormal => fun postF postA => postF tt (updatePc mach)
     | EndCycleEarly _ => fun postF postA => postA (updatePc mach) (* ignores postF containing the continuation *)
-    | LeakEvent e => fun postF postA => postF tt (withLeakageEvent e mach)
+    | LeakEvent e => fun postF postA => match e with
+                                        | Some e => postF tt (withLeakageEvent e mach)
+                                        | None => forall X (x : X), postF tt (withLeakageEvent (anything x) mach)
+                                        end
     | MakeReservation _
     | ClearReservation _
     | CheckReservation _
@@ -161,6 +165,7 @@ Section Riscv.
   Proof.
     destruct a; cbn; try solve [intuition eauto].
     all : eauto using load_weaken_post, store_weaken_post.
+    intros. destruct o; eauto.
   Qed.
 
   Global Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MinimalMMIOPrimitivesParams.
@@ -190,6 +195,7 @@ Section Riscv.
       cbv [load store nonmem_load nonmem_store]; cbn -[HList.tuple];
         repeat destruct_one_match;
         intuition idtac;
+        try match goal with | H : forall _ _, _ |- _ => specialize (H True I) end;
         repeat lazymatch goal with
                | H : postF _ ?mach |- exists _ : RiscvMachine, _ =>
                  exists mach; cbn [RiscvMachine.getMem RiscvMachine.getXAddrs]
@@ -203,7 +209,7 @@ Section Riscv.
         ssplit; eauto; simpl;
         change removeXAddr with (@List.removeb word word.eqb);
         rewrite ?ListSet.of_list_removeb;
-        intuition eauto 10 using preserve_undef_on, disjoint_diff_l.
+      intuition eauto 10 using preserve_undef_on, disjoint_diff_l.
   Qed.
 
   Lemma interpret_action_total'{memOk: map.ok Mem} a s post :

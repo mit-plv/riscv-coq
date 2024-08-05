@@ -39,4 +39,9 @@ Section Riscv.
     endCycleEarly A := act (addMetricInstructions 1, EndCycleEarly A) ret;
   |}.
 
+  Global Instance MetricMaterializeWithLeakage : RiscvProgramWithLeakage := {|
+    RVP := MetricMaterialize;
+    leakEvent a := act (id, LeakEvent a) ret
+  |}.
+
 End Riscv.
