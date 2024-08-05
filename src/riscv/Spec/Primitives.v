@@ -4,6 +4,7 @@ Require Import coqutil.Map.Interface.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Platform.Memory.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Platform.RiscvMachine.
@@ -176,8 +177,10 @@ Section Primitives.
                             initialL)) ->
         mcomp_sat endCycleNormal initialL post;
 
-    spec_leakEvent: forall (initialL: RiscvMachine) (post: unit -> RiscvMachine -> Prop) (e : LeakageEvent),
-        post tt (withLeakageEvent e initialL) ->
+    spec_leakEvent: forall (initialL: RiscvMachine) (post: unit -> RiscvMachine -> Prop) (e : option LeakageEvent),
+        (match e with
+         | Some e => post tt (withLeakageEvent e initialL)
+         | None => forall X (x : X), post tt (withLeakageEvent (anything x) initialL) end) ->
         mcomp_sat (leakEvent e) initialL post;
   }.
 

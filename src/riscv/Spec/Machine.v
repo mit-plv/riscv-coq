@@ -3,6 +3,7 @@ Require Import riscv.Utility.Monads.
 Require riscv.Utility.MonadNotations.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Spec.CSRField.
 Local Open Scope Z_scope.
 
@@ -71,7 +72,7 @@ Class RiscvProgramWithLeakage
   {M}{t}{MM}{MWt}:=
   mkRiscvProgramWithLeakage {
       RVP :> @RiscvProgram M t MM MWt;
-      leakEvent : @LeakageEvent width BW word -> M unit;
+      leakEvent : (option LeakageEvent) -> M unit;
   }.
 
 Class RiscvMachine`{MP: RiscvProgram} := mkRiscvMachine {

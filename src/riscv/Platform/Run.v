@@ -3,6 +3,7 @@ Require Import coqutil.Word.LittleEndian.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Platform.Memory. (* should go before Program because both define loadByte etc *)
 Require Import riscv.Spec.Machine.
 Require Import riscv.Spec.Execute.
