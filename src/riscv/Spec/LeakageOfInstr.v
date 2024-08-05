@@ -10,7 +10,8 @@
   all its arguments.  That is, only register contents are leaked--not, for instance, memory
   contents.
 
-  Note that (as can be seen in Run.v), we always leak the full instruction; as the Zkt spec states,
+  Note that (as can be seen in the definition of leakage_of_instr at the bottom of this file),
+  we always leak the full instruction; as the Zkt spec states,
     "Binary executables should not contain secrets in the instruction encodings (Kerckhoffs’s
     principle), so instruction timing may leak information about immediates, ordering of input
     registers, etc."
@@ -198,26 +199,11 @@ Section WithMonad.
     | InvalidI => ReturnSome InvalidI_leakage
     end.
 
-  Inductive LeakageF64 : Type :=.
-  
-  Inductive LeakageF : Type :=.
-
-  Inductive LeakageCSR : Type :=.
-  
-  Inductive LeakageA64 : Type :=.
-
-  Inductive LeakageA : Type :=.
-
   Inductive InstructionLeakage {width} {BW : Bitwidth width} {word: word.word width} : Type :=
   | ILeakage (iLeakage : LeakageI)
   | MLeakage (mLeakage : LeakageM)
-  | ALeakage (aLeakage : LeakageA)
-  | FLeakage (fLeakage : LeakageF)
   | I64Leakage (i64Leakage : LeakageI64)
   | M64Leakage (m64Leakage : LeakageM64)
-  | A64Leakage (a64Leakage : LeakageA64)
-  | F64Leakage (f64Leakage : LeakageF64)
-  | CSRLeakage (csrLeakage : LeakageCSR)
   | InvalidLeakage.
 
   Inductive LeakageEvent {width} {BW : Bitwidth width} {word: word.word width} : Type :=
