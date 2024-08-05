@@ -22,6 +22,7 @@ Section Riscv.
   Definition run1(iset: InstructionSet):
     M unit :=
     pc <- getPC;
+    leakEvent (Some (fetchInstr pc));;
     inst <- loadWord Fetch pc;
     let inst' := decode iset (combine 4 inst) in
     leakage_event <- leakage_of_instr getRegister inst';
