@@ -225,7 +225,7 @@ Section WithMonad.
   | fetchInstr (address : word)
   | executeInstr (instr : Instruction) (ileakage : InstructionLeakage).
   
-  Definition leakage_of_instr {width} {BW : Bitwidth width} {word: word.word width}
+  Definition instr_leakage {width} {BW : Bitwidth width} {word: word.word width}
     (getRegister : Register -> M word) (instr : Instruction) : M (option InstructionLeakage) :=
     match instr with
     | IInstruction instr => l <- leakage_of_instr_I getRegister instr;
@@ -243,6 +243,10 @@ Section WithMonad.
     | CSRInstruction instr => Return None
     | InvalidInstruction _ => ReturnSome InvalidLeakage
     end.
+
+  Definition leakage_of_instr {width} {BW : Bitwidth width} {word: word.word width}
+    (getRegister : Register -> M word) (instr : Instruction) : M (option LeakageEvent) :=
+    l <- instr_leakage getRegister instr; Return (option_map (executeInstr instr) l).
 
 End WithMonad.
 
