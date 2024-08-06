@@ -183,7 +183,7 @@ Section Machine.
 
     Definition withLogItems: list LogItem -> RiscvMachine -> RiscvMachine :=
       fun items '(mkRiscvMachine regs pc nextPC mem xAddrs log trace) =>
-        mkRiscvMachine regs pc nextPC mem xAddrs (items ++ log) trace.
+                  mkRiscvMachine regs pc nextPC mem xAddrs (items ++ log) trace.
 
     Definition withLeakageEvent: option LeakageEvent -> RiscvMachine -> RiscvMachine :=
       fun event '(mkRiscvMachine regs pc nextPC mem xAddrs log trace) =>

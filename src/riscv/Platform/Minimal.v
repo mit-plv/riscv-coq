@@ -234,7 +234,7 @@ Section Riscv.
   Lemma leakEvent_sane: forall e,
       mcomp_sane (leakEvent e).
   Proof.
-    intros. eapply update_sane. intros. exists nil. destruct mach, e; reflexivity.
+    intros. eapply update_sane. intros. exists nil. destruct mach. reflexivity.
   Qed.
 
   Instance MinimalSane: PrimitivesSane MinimalPrimitivesParams.
