@@ -118,10 +118,7 @@ Section Riscv.
 
   Instance IsRiscvMachineWithLeakage: @RiscvProgramWithLeakage _ _ _ (Post RiscvMachine) _ _ _ := {|
       RVP := IsRiscvMachine;
-      leakEvent e := fun mach post => match e with
-                                      | Some e => post tt (withLeakageEvent e mach)
-                                      | None => forall X (x : X), post tt (withLeakageEvent (anything x) mach)
-                                      end;
+      leakEvent e := fun mach post => post tt (withLeakageEvent e mach);
   |}.
 
   Definition MinimalMMIOPrimitivesParams: PrimitivesParams (Post RiscvMachine) RiscvMachine := {|

@@ -103,12 +103,7 @@ Section Riscv.
   
   Instance IsRiscvMachineWithLeakage: @RiscvProgramWithLeakage _ _ _ (OState RiscvMachine) _ _ _ :=  {
       RVP := IsRiscvMachine;
-      leakEvent e := update (fun mach =>
-                               match e with
-                               | Some e => withLeakageEvent e mach
-                               (*I would write (anything mach) below, but universe constraints*)
-                               | None => withLeakageEvent (anything (mach.(getRegs), mach.(getPc), mach.(getNextPc), mach.(getMem), mach.(getXAddrs), mach.(getLog))) mach
-                               end);
+      leakEvent e := update (withLeakageEvent e);
   }.
 
   Arguments Memory.load_bytes: simpl never.

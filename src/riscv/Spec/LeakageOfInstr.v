@@ -206,7 +206,6 @@ Section WithMonad.
   (*| InvalidLeakage*).
 
   Inductive LeakageEvent {width} {BW : Bitwidth width} {word: word.word width} : Type :=
-  | anything {X : Type} (x : X)
   | fetchInstr (address : word)
   | executeInstr (instr : Instruction) (ileakage : InstructionLeakage).
   

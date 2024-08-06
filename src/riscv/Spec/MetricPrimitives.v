@@ -138,10 +138,7 @@ Section MetricPrimitives.
         mcomp_sat endCycleNormal initialL post;
 
     spec_leakEvent: forall (initialL: MetricRiscvMachine) (post: unit -> MetricRiscvMachine -> Prop) (e : option LeakageEvent),
-        (match e with
-         | Some e => post tt (withLeakageEvent e initialL)
-         | None => forall X (x : X), post tt (withLeakageEvent (anything x) initialL) end) ->
-        mcomp_sat (leakEvent e) initialL post;
+        post tt (withLeakageEvent e initialL) -> mcomp_sat (leakEvent e) initialL post;
   }.
 
 End MetricPrimitives.

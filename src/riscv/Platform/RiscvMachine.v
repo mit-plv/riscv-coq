@@ -142,7 +142,9 @@ Section Machine.
       getMem: Mem;
       getXAddrs: XAddrs;
       getLog: list LogItem;
-      getTrace: list LeakageEvent;
+      getTrace: option (list LeakageEvent);
+      (*^Some x means that only x has been leaked;
+        None means there are no guarantees at all about what has been leaked.*)
     }.
 
     Definition withRegs: Registers -> RiscvMachine -> RiscvMachine :=
@@ -165,6 +167,12 @@ Section Machine.
       fun xAddrs2 '(mkRiscvMachine regs pc nextPC mem xAddrs1 log trace)  =>
                     mkRiscvMachine regs pc nextPC mem xAddrs2 log trace.
 
+    Definition option_map2 {X Y Z : Type} (f : X -> Y -> Z) x y :=
+      match x, y with
+      | Some x, Some y => Some (f x y)
+      | _, _ => None
+      end.
+
     Definition withLog: list LogItem -> RiscvMachine -> RiscvMachine :=
       fun log2 '(mkRiscvMachine regs pc nextPC mem xAddrs log1 trace) =>
                  mkRiscvMachine regs pc nextPC mem xAddrs log2 trace.
@@ -175,15 +183,15 @@ Section Machine.
 
     Definition withLogItems: list LogItem -> RiscvMachine -> RiscvMachine :=
       fun items '(mkRiscvMachine regs pc nextPC mem xAddrs log trace) =>
-                  mkRiscvMachine regs pc nextPC mem xAddrs (items ++ log) trace.
+        mkRiscvMachine regs pc nextPC mem xAddrs (items ++ log) trace.
 
-    Definition withLeakageEvent: LeakageEvent -> RiscvMachine -> RiscvMachine :=
+    Definition withLeakageEvent: option LeakageEvent -> RiscvMachine -> RiscvMachine :=
       fun event '(mkRiscvMachine regs pc nextPC mem xAddrs log trace) =>
-                  mkRiscvMachine regs pc nextPC mem xAddrs log (event :: trace).
+                  mkRiscvMachine regs pc nextPC mem xAddrs log (option_map2 cons event trace).
 
-    Definition withLeakageEvents: list LeakageEvent -> RiscvMachine -> RiscvMachine :=
+    Definition withLeakageEvents: option (list LeakageEvent) -> RiscvMachine -> RiscvMachine :=
       fun events '(mkRiscvMachine regs pc nextPC mem xAddrs log trace) =>
-                   mkRiscvMachine regs pc nextPC mem xAddrs log (events ++ trace).
+                   mkRiscvMachine regs pc nextPC mem xAddrs log (option_map2 (@app _) events trace).
     
     Definition Z32s_to_bytes(l: list Z): list byte :=
       List.flat_map (fun z => HList.tuple.to_list (LittleEndian.split 4 z)) l.
