@@ -101,7 +101,7 @@ Section Riscv.
       endCycleEarly{A: Type} := fail_hard;
   }.
   
-  Instance IsRiscvMachineWithLeakage: @RiscvProgramWithLeakage _ _ _ (OState RiscvMachine) _ _ _ :=  {
+  Instance IsRiscvMachineWithLeakage: RiscvProgramWithLeakage (OState RiscvMachine) word :=  {
       RVP := IsRiscvMachine;
       leakEvent e := update (withLeakageEvent e);
   }.

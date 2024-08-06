@@ -21,7 +21,7 @@ Section Sane.
   Context {mem: map.map word byte}.
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
-  Context {RVM: RiscvProgramWithLeakage}.
+  Context {RVM: RiscvProgramWithLeakage M word}.
   Context {PRParams: PrimitivesParams M MetricRiscvMachine}.
   Context {mcomp_sat_ok: mcomp_sat_spec PRParams}.
 

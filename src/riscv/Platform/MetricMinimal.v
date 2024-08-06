@@ -66,7 +66,7 @@ Section Riscv.
     endCycleEarly{A} := liftL0 (addMetricInstructions 1) (@endCycleEarly _ _ _ _ _ A);
   }.
 
-  Instance IsMetricRiscvMachineWithLeakage: @RiscvProgramWithLeakage _ _ _ (OState MetricRiscvMachine) _ _ _ := {
+  Instance IsMetricRiscvMachineWithLeakage: RiscvProgramWithLeakage (OState MetricRiscvMachine) word := {
       RVP := IsMetricRiscvMachine;
       leakEvent := liftL1 id leakEvent;
   }.

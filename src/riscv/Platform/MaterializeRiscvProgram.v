@@ -87,7 +87,7 @@ Section Riscv.
     endCycleEarly A := act (EndCycleEarly A) ret;
   |}.
 
-  Global Instance MaterializeWithLeakage : RiscvProgramWithLeakage := {|
+  Global Instance MaterializeWithLeakage : RiscvProgramWithLeakage (free riscv_primitive primitive_result) word := {|
     RVP := Materialize;
     leakEvent a := act (LeakEvent a) ret
   |}.

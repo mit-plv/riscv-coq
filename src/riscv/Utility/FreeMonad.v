@@ -56,7 +56,7 @@ Module free.
       Lemma interp_weaken_post {T} (p : free T) s
         (post1 post2:_->_->Prop) (Hpost : forall r s, post1 r s -> post2 r s)
         (Hinterp : interp p s post1) : interp p s post2.
-      Proof. revert dependent s; induction p; cbn; firstorder eauto. Qed.
+      Proof. generalize dependent s; induction p; cbn; firstorder eauto. Qed.
 
       Lemma interp_bind {A B} s post (a : free A) (b : A -> free B) :
         interp (bind a b) s post <-> interp a s (fun x s => interp (b x) s post).
@@ -115,7 +115,7 @@ Module free.
         (forall s, postA1 s -> postA2 s) ->
         interpret p s postF1 postA1 -> interpret p s postF2 postA2.
       Proof.
-        revert dependent s; induction p. 2: firstorder eauto.
+        generalize dependent s; induction p. 2: firstorder eauto.
         cbn. intros. eapply interpret_action_weaken_post.
         - intros. eapply H; try eassumption. exact H3.
         - eassumption.

@@ -16,7 +16,7 @@ Section Riscv.
 
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
-  Context {RVM: RiscvProgramWithLeakage}.
+  Context {RVM: RiscvProgramWithLeakage M mword}.
   Context {RVS: RiscvMachine M mword}.
 
   Definition run1(iset: InstructionSet):

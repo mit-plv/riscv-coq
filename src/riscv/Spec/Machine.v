@@ -67,11 +67,13 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   endCycleEarly: forall A, M A;
 }.
 
-Class RiscvProgramWithLeakage{width}{BW : Bitwidth width}{word: word.word width}{M}{t}{MM}{MWt} :=
-  mkRiscvProgramWithLeakage {
-      RVP :> @RiscvProgram M t MM MWt;
-      leakEvent : (option LeakageEvent) -> M unit;
-  }.
+Class RiscvProgramWithLeakage{width}{BW : Bitwidth width}{word: word.word width}
+  {M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgramWithLeakage {
+  RVP :: RiscvProgram;
+  leakEvent : (option LeakageEvent) -> M unit;
+}.
+
+Coercion RVP : RiscvProgramWithLeakage >-> RiscvProgram.
 
 Class RiscvMachine`{MP: RiscvProgram} := mkRiscvMachine {
   (* checks that addr is aligned, and translates the (possibly virtual) addr to a physical
@@ -150,6 +152,8 @@ Notation Register0 := 0%Z (only parsing).
 
 Arguments RiscvProgram: clear implicits.
 Arguments RiscvProgram (M) (t) {_} {_}.
+Arguments RiscvProgramWithLeakage: clear implicits.
+Arguments RiscvProgramWithLeakage {_} {_} {_} (M) (t) {_} {_}.
 Arguments RiscvMachine: clear implicits.
 Arguments RiscvMachine (M) (t) {_} {_} {_}.
 
