@@ -1,5 +1,6 @@
 Require Import Coq.Strings.String.
 Require Import Coq.ZArith.BinInt.
+Require Import coqutil.Datatypes.Option.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndian.
@@ -166,12 +167,6 @@ Section Machine.
     Definition withXAddrs: XAddrs -> RiscvMachine -> RiscvMachine :=
       fun xAddrs2 '(mkRiscvMachine regs pc nextPC mem xAddrs1 log trace)  =>
                     mkRiscvMachine regs pc nextPC mem xAddrs2 log trace.
-
-    Definition option_map2 {X Y Z : Type} (f : X -> Y -> Z) x y :=
-      match x, y with
-      | Some x, Some y => Some (f x y)
-      | _, _ => None
-      end.
 
     Definition withLog: list LogItem -> RiscvMachine -> RiscvMachine :=
       fun log2 '(mkRiscvMachine regs pc nextPC mem xAddrs log1 trace) =>
