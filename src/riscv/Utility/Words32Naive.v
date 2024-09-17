@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.BinInt.
+From Coq Require Import BinInt.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Word.Properties.
 Require Import coqutil.Word.Bitwidth.

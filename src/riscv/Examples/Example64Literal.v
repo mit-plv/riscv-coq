@@ -1,11 +1,11 @@
-Require Import Coq.Lists.List.
+From Coq Require Import List.
 Require Import coqutil.Z.Lia.
 Import ListNotations.
 Require Import coqutil.Word.Naive.
 Require Import coqutil.Word.Properties.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Spec.Decode.
-Require Import Coq.ZArith.BinInt. Local Open Scope Z_scope.
+From Coq Require Import BinInt. Local Open Scope Z_scope.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Platform.Memory.
 Require Import riscv.Platform.Minimal.

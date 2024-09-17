@@ -1,6 +1,6 @@
-Require Import Coq.Logic.FunctionalExtensionality.
-Require Import Coq.Logic.PropExtensionality.
-Require Import Coq.Lists.List.
+From Coq Require Import FunctionalExtensionality.
+From Coq Require Import PropExtensionality.
+From Coq Require Import List.
 
 Class Monad(M: Type -> Type) := mkMonad {
   Bind: forall {A B}, M A -> (A -> M B) -> M B;

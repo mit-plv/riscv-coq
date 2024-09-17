@@ -1,5 +1,5 @@
-Require Export Coq.ZArith.ZArith.
-Require Export Coq.Lists.List. Import ListNotations.
+From Coq Require Export ZArith.
+From Coq Require Export List. Import ListNotations.
 Require Import coqutil.Tactics.rdelta.
 Require Import coqutil.Tactics.destr.
 Require Import coqutil.Z.prove_Zeq_bitwise.

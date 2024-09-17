@@ -1,4 +1,4 @@
-Require Import Coq.Strings.String.
+From Coq Require Import String.
 
 Definition MMIOAction: Type := string.
 Definition MMInput: MMIOAction := "MMInput"%string.

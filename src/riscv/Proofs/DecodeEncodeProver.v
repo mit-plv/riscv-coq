@@ -1,5 +1,5 @@
-Require Export Coq.ZArith.ZArith.
-Require Export Coq.Lists.List. Import ListNotations.
+From Coq Require Export ZArith.
+From Coq Require Export List. Import ListNotations.
 Require Export riscv.Spec.Decode.
 Require Export riscv.Utility.Encode.
 Require Export riscv.Utility.Utility.

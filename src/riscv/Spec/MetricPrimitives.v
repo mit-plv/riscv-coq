@@ -1,5 +1,5 @@
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.BinInt.
+From Coq Require Import List.
+From Coq Require Import BinInt.
 Require Import coqutil.Map.Interface.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.Utility.

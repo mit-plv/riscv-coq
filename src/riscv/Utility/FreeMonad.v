@@ -1,5 +1,5 @@
-Require Import Coq.Logic.FunctionalExtensionality.
-Require Import Coq.Logic.PropExtensionality.
+From Coq Require Import FunctionalExtensionality.
+From Coq Require Import PropExtensionality.
 Require Import riscv.Utility.Monads.
 
 Module free.

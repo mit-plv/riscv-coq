@@ -7,12 +7,12 @@ Set Maximal Implicit Insertion.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Require Coq.Program.Tactics.
-Require Coq.Program.Wf.
+From Coq.Program Require Tactics.
+From Coq.Program Require Wf.
 
 (* Preamble *)
 
-Require Coq.ZArith.BinInt.
+From Coq Require BinInt.
 Local Open Scope Z_scope.
 
 Notation Register := BinInt.Z (only parsing).
@@ -22,9 +22,9 @@ Notation Opcode := BinInt.Z (only parsing).
 
 (* Converted imports: *)
 
-Require Coq.Init.Datatypes.
-Require Coq.Lists.List.
-Require Import Coq.ZArith.BinInt.
+From Coq Require Datatypes.
+From Coq Require List.
+From Coq Require Import BinInt.
 Require Utility.Utility.
 
 (* Converted type declarations: *)

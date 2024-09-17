@@ -7,19 +7,19 @@ Set Maximal Implicit Insertion.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Require Coq.Program.Tactics.
-Require Coq.Program.Wf.
+From Coq.Program Require Tactics.
+From Coq.Program Require Wf.
 
 (* Preamble *)
 
-Require Import Coq.ZArith.BinInt.
+From Coq Require Import BinInt.
 Local Open Scope Z.
 Require Import riscv.Utility.Utility.
 Local Open Scope alu_scope.
 
 (* Converted imports: *)
 
-Require Import Coq.ZArith.BinInt.
+From Coq Require Import BinInt.
 Require Import Monads.
 Require Spec.CSR.
 Require Spec.CSRField.

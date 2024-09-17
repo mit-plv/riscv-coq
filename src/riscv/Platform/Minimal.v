@@ -1,7 +1,7 @@
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
-Require Import Coq.Logic.FunctionalExtensionality.
-Require Import Coq.Logic.PropExtensionality.
+From Coq Require Import ZArith.
+From Coq Require Import List.
+From Coq Require Import FunctionalExtensionality.
+From Coq Require Import PropExtensionality.
 Require Import riscv.Utility.Monads. Import OStateOperations.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Spec.Decode.
