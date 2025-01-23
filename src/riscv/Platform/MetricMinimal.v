@@ -66,6 +66,11 @@ Section Riscv.
     endCycleEarly{A} := liftL0 (addMetricInstructions 1) (@endCycleEarly _ _ _ _ _ A);
   }.
 
+  Instance IsMetricRiscvMachineWithLeakage: RiscvProgramWithLeakage (OState MetricRiscvMachine) word := {
+      RVP := IsMetricRiscvMachine;
+      leakEvent := liftL1 id leakEvent;
+  }.
+
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
 

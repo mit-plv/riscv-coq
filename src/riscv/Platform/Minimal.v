@@ -5,6 +5,7 @@ Require Import Coq.Logic.PropExtensionality.
 Require Import riscv.Utility.Monads. Import OStateOperations.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Primitives.
@@ -99,6 +100,11 @@ Section Riscv.
          code output by the compiler never throws exceptions *)
       endCycleEarly{A: Type} := fail_hard;
   }.
+  
+  Instance IsRiscvMachineWithLeakage: RiscvProgramWithLeakage (OState RiscvMachine) word :=  {
+      RVP := IsRiscvMachine;
+      leakEvent e := update (withLeakageEvent e);
+  }.
 
   Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
@@ -116,7 +122,7 @@ Section Riscv.
        | |- _ => reflexivity
        | |- _ => progress (
                      unfold computation_satisfies, computation_with_answer_satisfies,
-                            IsRiscvMachine,
+                            IsRiscvMachine, IsRiscvMachineWithLeakage,
                             valid_register,
                             is_initial_register_value,
                             get, put, fail_hard,
@@ -225,11 +231,18 @@ Section Riscv.
     intros. eapply update_sane. intros. exists [e]. destruct mach. reflexivity.
   Qed.
 
+  Lemma leakEvent_sane: forall e,
+      mcomp_sane (leakEvent e).
+  Proof.
+    intros. eapply update_sane. intros. exists nil. destruct mach. reflexivity.
+  Qed.
+
   Instance MinimalSane: PrimitivesSane MinimalPrimitivesParams.
   Proof.
     constructor.
     all: intros;
-      unfold getRegister, setRegister,
+      unfold IsRiscvMachine, IsRiscvMachineWithLeakage, RVP,
+         getRegister, setRegister,
          loadByte, loadHalf, loadWord, loadDouble,
          storeByte, storeHalf, storeWord, storeDouble,
          getPC, setPC,
@@ -239,6 +252,7 @@ Section Riscv.
 
     all: repeat match goal with
                 | |- _ => apply logEvent_sane
+                | |- _ => apply leakEvent_sane
                 | |- mcomp_sane (Bind _ _) => apply Bind_sane
                 | |- _ => apply Return_sane
                 | |- _ => apply get_sane
@@ -261,4 +275,5 @@ End Riscv.
 
 (* needed because defined inside a Section *)
 #[global] Existing Instance IsRiscvMachine.
+#[global] Existing Instance IsRiscvMachineWithLeakage.
 #[global] Existing Instance MinimalSatisfiesPrimitives.

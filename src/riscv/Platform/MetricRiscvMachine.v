@@ -3,6 +3,7 @@ Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndian.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Platform.Memory.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Platform.RiscvMachine.
@@ -57,6 +58,14 @@ Section Machine.
   Definition withLogItems: list LogItem -> MetricRiscvMachine -> MetricRiscvMachine :=
     fun items '(mkMetricRiscvMachine mach mc) =>
       (mkMetricRiscvMachine (withLogItems items mach) mc).
+
+  Definition withLeakageEvent: option LeakageEvent -> MetricRiscvMachine -> MetricRiscvMachine :=
+    fun event '(mkMetricRiscvMachine mach mc) =>
+      (mkMetricRiscvMachine (withLeakageEvent event mach) mc).
+
+  Definition withLeakageEvents: option (list LeakageEvent) -> MetricRiscvMachine -> MetricRiscvMachine :=
+    fun events '(mkMetricRiscvMachine mach mc) =>
+      (mkMetricRiscvMachine (withLeakageEvents events mach) mc).
 
   Definition forgetMetrics(m: MetricRiscvMachine): RiscvMachine := m.(getMachine).
   Definition addMetrics(m: RiscvMachine)(mc: MetricLog): MetricRiscvMachine :=

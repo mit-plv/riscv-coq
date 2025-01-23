@@ -3,6 +3,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Primitives.
@@ -114,6 +115,11 @@ Section Riscv.
   - exact (post tt (withNextPc newPC mach)).
   - exact (post tt (withPc mach.(getNextPc) (withNextPc (word.add mach.(getNextPc) (word.of_Z 4)) mach))).
   Defined.
+
+  Instance IsRiscvMachineWithLeakage: RiscvProgramWithLeakage (Post RiscvMachine) word := {|
+      RVP := IsRiscvMachine;
+      leakEvent e := fun mach post => post tt (withLeakageEvent e mach);
+  |}.
 
   Definition MinimalMMIOPrimitivesParams: PrimitivesParams (Post RiscvMachine) RiscvMachine := {|
     Primitives.mcomp_sat A (m: Post RiscvMachine A) mach post := m mach post;

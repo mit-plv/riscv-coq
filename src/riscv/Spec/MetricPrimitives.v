@@ -4,6 +4,7 @@ Require Import coqutil.Map.Interface.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Platform.Memory.
 Require Import riscv.Platform.RiscvMachine.
 Require Import riscv.Spec.Machine.
@@ -20,7 +21,7 @@ Section MetricPrimitives.
 
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
-  Context {RVM: RiscvProgram M word}.
+  Context {RVM: RiscvProgramWithLeakage M word}.
   Context {RVS: @RiscvMachine M word _ _ RVM}.
 
   (* monadic computations used for specifying the behavior of RiscvMachines should be "sane"
@@ -54,6 +55,7 @@ Section MetricPrimitives.
     getPrivMode_sane: mcomp_sane getPrivMode;
     setPrivMode_sane: forall m, mcomp_sane (setPrivMode m);
     fence_sane: forall a b, mcomp_sane (fence a b);
+    leakEvent_sane: forall a, mcomp_sane (leakEvent a);
     getPC_sane: mcomp_sane getPC;
     setPC_sane: forall newPc, mcomp_sane (setPC newPc);
     endCycleNormal_sane: mcomp_sane endCycleNormal;
@@ -134,6 +136,9 @@ Section MetricPrimitives.
                 (updateMetrics (addMetricInstructions 1)
                                initialL))) ->
         mcomp_sat endCycleNormal initialL post;
+
+    spec_leakEvent: forall (initialL: MetricRiscvMachine) (post: unit -> MetricRiscvMachine -> Prop) (e : option LeakageEvent),
+        post tt (withLeakageEvent e initialL) -> mcomp_sat (leakEvent e) initialL post;
   }.
 
 End MetricPrimitives.

@@ -46,6 +46,7 @@ Definition zeroedRiscvMachine: RiscvMachine := {|
   getMem := map.empty;
   getXAddrs := nil;
   getLog := nil;
+  getTrace := Some nil;
 |}.
 
 Definition initialRiscvMachine(imem: list MachineInt): RiscvMachine :=

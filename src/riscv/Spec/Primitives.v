@@ -4,6 +4,7 @@ Require Import coqutil.Map.Interface.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Platform.Memory.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Platform.RiscvMachine.
@@ -70,7 +71,7 @@ Section Primitives.
       (mcomp_sat comp st (fun a st' =>
          (post a st' /\ exists diff, st'.(getLog) = diff ++ st.(getLog)) /\ valid_machine st')).
 
-  Context {RVM: RiscvProgram M word}.
+  Context {RVM: RiscvProgramWithLeakage M word}.
   Context {RVS: @riscv.Spec.Machine.RiscvMachine M word _ _ RVM}.
 
   Class PrimitivesSane(p: PrimitivesParams RiscvMachine): Prop := {
@@ -92,6 +93,7 @@ Section Primitives.
     getPrivMode_sane: mcomp_sane getPrivMode;
     setPrivMode_sane: forall m, mcomp_sane (setPrivMode m);
     fence_sane: forall a b, mcomp_sane (fence a b);
+    leakEvent_sane: forall e, mcomp_sane (leakEvent e);
     getPC_sane: mcomp_sane getPC;
     setPC_sane: forall newPc, mcomp_sane (setPC newPc);
     endCycleNormal_sane: mcomp_sane endCycleNormal;
@@ -174,6 +176,9 @@ Section Primitives.
                 (withNextPc (word.add initialL.(getNextPc) (word.of_Z 4))
                             initialL)) ->
         mcomp_sat endCycleNormal initialL post;
+
+    spec_leakEvent: forall (initialL: RiscvMachine) (post: unit -> RiscvMachine -> Prop) (e : option LeakageEvent),
+        post tt (withLeakageEvent e initialL) -> mcomp_sat (leakEvent e) initialL post;
   }.
 
 End Primitives.

@@ -4,6 +4,7 @@ Require Import coqutil.Tactics.Tactics.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Primitives.
 Require Import riscv.Platform.RiscvMachine.
@@ -20,7 +21,7 @@ Section Sane.
   Context {mem: map.map word byte}.
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
-  Context {RVM: RiscvProgram M word}.
+  Context {RVM: RiscvProgramWithLeakage M word}.
   Context {PRParams: PrimitivesParams M MetricRiscvMachine}.
   Context {mcomp_sat_ok: mcomp_sat_spec PRParams}.
 
@@ -151,6 +152,14 @@ Section Sane.
 
   Ltac t := repeat (simpl; unfold when; repeat t_step').
 
+  Lemma leakage_of_instr_sane: forall inst,
+      mcomp_sane (leakage_of_instr getRegister inst).
+  Proof.
+    intros.
+    destruct inst as [inst | inst | inst | inst | inst | inst | inst | inst | inst | inst];
+      simpl; destruct inst; t.
+  Qed.
+  
   Lemma execute_sane: forall inst,
       mcomp_sane (Execute.execute inst).
   Proof.
@@ -164,7 +173,10 @@ Section Sane.
   Proof.
     unfold run1. intros.
     apply Bind_sane; [apply getPC_sane|intros].
+    apply Bind_sane; [apply leakEvent_sane|intros].
     apply Bind_sane; [apply loadWord_sane|intros].
+    apply Bind_sane; [apply leakage_of_instr_sane|intros].
+    apply Bind_sane; [apply leakEvent_sane|intros].
     apply Bind_sane; [apply execute_sane|intros].
     apply endCycleNormal_sane.
   Qed.

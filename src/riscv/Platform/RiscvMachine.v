@@ -1,9 +1,11 @@
 Require Import Coq.Strings.String.
 Require Import Coq.ZArith.BinInt.
+Require Import coqutil.Datatypes.Option.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndian.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Platform.Memory.
 Require Import riscv.Utility.Utility.
 
@@ -141,40 +143,51 @@ Section Machine.
       getMem: Mem;
       getXAddrs: XAddrs;
       getLog: list LogItem;
+      getTrace: option (list LeakageEvent);
+      (*^Some x means that only x has been leaked;
+        None means there are no guarantees at all about what has been leaked.*)
     }.
 
     Definition withRegs: Registers -> RiscvMachine -> RiscvMachine :=
-      fun regs2 '(mkRiscvMachine regs1 pc nextPC mem xAddrs log) =>
-                  mkRiscvMachine regs2 pc nextPC mem xAddrs log.
+      fun regs2 '(mkRiscvMachine regs1 pc nextPC mem xAddrs log trace) =>
+                  mkRiscvMachine regs2 pc nextPC mem xAddrs log trace.
 
     Definition withPc: word -> RiscvMachine -> RiscvMachine :=
-      fun pc2 '(mkRiscvMachine regs pc1 nextPC mem xAddrs log) =>
-                mkRiscvMachine regs pc2 nextPC mem xAddrs log.
+      fun pc2 '(mkRiscvMachine regs pc1 nextPC mem xAddrs log trace) =>
+                mkRiscvMachine regs pc2 nextPC mem xAddrs log trace.
 
     Definition withNextPc: word -> RiscvMachine -> RiscvMachine :=
-      fun nextPC2 '(mkRiscvMachine regs pc nextPC1 mem xAddrs log) =>
-                    mkRiscvMachine regs pc nextPC2 mem xAddrs log.
+      fun nextPC2 '(mkRiscvMachine regs pc nextPC1 mem xAddrs log trace) =>
+                    mkRiscvMachine regs pc nextPC2 mem xAddrs log trace.
 
     Definition withMem: Mem -> RiscvMachine -> RiscvMachine :=
-      fun mem2 '(mkRiscvMachine regs pc nextPC mem1 xAddrs log)  =>
-                 mkRiscvMachine regs pc nextPC mem2 xAddrs log.
+      fun mem2 '(mkRiscvMachine regs pc nextPC mem1 xAddrs log trace)  =>
+                 mkRiscvMachine regs pc nextPC mem2 xAddrs log trace.
 
     Definition withXAddrs: XAddrs -> RiscvMachine -> RiscvMachine :=
-      fun xAddrs2 '(mkRiscvMachine regs pc nextPC mem xAddrs1 log)  =>
-                    mkRiscvMachine regs pc nextPC mem xAddrs2 log.
+      fun xAddrs2 '(mkRiscvMachine regs pc nextPC mem xAddrs1 log trace)  =>
+                    mkRiscvMachine regs pc nextPC mem xAddrs2 log trace.
 
     Definition withLog: list LogItem -> RiscvMachine -> RiscvMachine :=
-      fun log2 '(mkRiscvMachine regs pc nextPC mem xAddrs log1) =>
-                 mkRiscvMachine regs pc nextPC mem xAddrs log2.
+      fun log2 '(mkRiscvMachine regs pc nextPC mem xAddrs log1 trace) =>
+                 mkRiscvMachine regs pc nextPC mem xAddrs log2 trace.
 
     Definition withLogItem: LogItem -> RiscvMachine -> RiscvMachine :=
-      fun item '(mkRiscvMachine regs pc nextPC mem xAddrs log) =>
-                 mkRiscvMachine regs pc nextPC mem xAddrs (item :: log).
+      fun item '(mkRiscvMachine regs pc nextPC mem xAddrs log trace) =>
+                 mkRiscvMachine regs pc nextPC mem xAddrs (item :: log) trace.
 
     Definition withLogItems: list LogItem -> RiscvMachine -> RiscvMachine :=
-      fun items '(mkRiscvMachine regs pc nextPC mem xAddrs log) =>
-                  mkRiscvMachine regs pc nextPC mem xAddrs (items ++ log).
+      fun items '(mkRiscvMachine regs pc nextPC mem xAddrs log trace) =>
+                  mkRiscvMachine regs pc nextPC mem xAddrs (items ++ log) trace.
 
+    Definition withLeakageEvent: option LeakageEvent -> RiscvMachine -> RiscvMachine :=
+      fun event '(mkRiscvMachine regs pc nextPC mem xAddrs log trace) =>
+                  mkRiscvMachine regs pc nextPC mem xAddrs log (option_map2 cons event trace).
+
+    Definition withLeakageEvents: option (list LeakageEvent) -> RiscvMachine -> RiscvMachine :=
+      fun events '(mkRiscvMachine regs pc nextPC mem xAddrs log trace) =>
+                   mkRiscvMachine regs pc nextPC mem xAddrs log (option_map2 (@app _) events trace).
+    
     Definition Z32s_to_bytes(l: list Z): list byte :=
       List.flat_map (fun z => HList.tuple.to_list (LittleEndian.split 4 z)) l.
 

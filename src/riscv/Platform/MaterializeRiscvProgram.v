@@ -1,6 +1,7 @@
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.FreeMonad.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Utility.MkMachineWidth.
 Require Import riscv.Utility.Utility.
@@ -27,6 +28,7 @@ Section Riscv.
   | GetPrivMode
   | SetPrivMode (_ : PrivMode)
   | Fence (_ : MachineInt) (_ : MachineInt)
+  | LeakEvent (_ : option LeakageEvent)
   | GetPC
   | SetPC (_ : word)
   | StartCycle
@@ -52,6 +54,7 @@ Section Riscv.
     | GetPrivMode => PrivMode
     | SetPrivMode _ => unit
     | Fence _ _ => unit
+    | LeakEvent _ => unit
     | GetPC => word
     | SetPC _ => unit
     | StartCycle => unit
@@ -82,6 +85,11 @@ Section Riscv.
     setPC a := act (SetPC a) ret;
     endCycleNormal := act EndCycleNormal ret;
     endCycleEarly A := act (EndCycleEarly A) ret;
+  |}.
+
+  Global Instance MaterializeWithLeakage : RiscvProgramWithLeakage (free riscv_primitive primitive_result) word := {|
+    RVP := Materialize;
+    leakEvent a := act (LeakEvent a) ret
   |}.
 
   (* Not (yet) in Riscv monad, but added here because it's useful to initialize

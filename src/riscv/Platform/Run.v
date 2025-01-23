@@ -3,6 +3,7 @@ Require Import coqutil.Word.LittleEndian.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Platform.Memory. (* should go before Program because both define loadByte etc *)
 Require Import riscv.Spec.Machine.
 Require Import riscv.Spec.Execute.
@@ -10,19 +11,23 @@ Require Import riscv.Utility.Utility.
 
 Section Riscv.
 
-  Context {mword: Type}.
+  Context {width} {BW : Bitwidth width} {mword: word.word width}.
   Context {MW: MachineWidth mword}.
 
   Context {M: Type -> Type}.
   Context {MM: Monad M}.
-  Context {RVP: RiscvProgram M mword}.
+  Context {RVM: RiscvProgramWithLeakage M mword}.
   Context {RVS: RiscvMachine M mword}.
 
   Definition run1(iset: InstructionSet):
     M unit :=
     pc <- getPC;
+    leakEvent (Some (fetchInstr pc));;
     inst <- loadWord Fetch pc;
-    execute (decode iset (combine 4 inst));;
+    let inst' := decode iset (combine 4 inst) in
+    leakage_event <- leakage_of_instr getRegister inst';
+    leakEvent leakage_event;;
+    execute inst';;
     endCycleNormal.
 
   (* Note: We cannot use

@@ -99,6 +99,7 @@ Section Riscv.
                             | Machine => postF tt mach
                             | User | Supervisor => False
                             end
+    | LeakEvent _ => fun postF postA => postF tt mach
     | MakeReservation _
     | ClearReservation _
     | CheckReservation _

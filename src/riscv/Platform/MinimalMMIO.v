@@ -4,6 +4,7 @@ Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Require Export riscv.Utility.FreeMonad.
 Require Import riscv.Spec.Decode.
+Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Spec.Primitives.
@@ -114,6 +115,7 @@ Section Riscv.
         postF tt (withNextPc (word.add mach.(getPc) (word.of_Z 4)) mach)
     | EndCycleNormal => fun postF postA => postF tt (updatePc mach)
     | EndCycleEarly _ => fun postF postA => postA (updatePc mach) (* ignores postF containing the continuation *)
+    | LeakEvent e => fun postF postA => postF tt (withLeakageEvent e mach)
     | MakeReservation _
     | ClearReservation _
     | CheckReservation _
