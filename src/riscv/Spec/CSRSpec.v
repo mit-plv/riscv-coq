@@ -2,10 +2,10 @@ Require Import Coq.ZArith.BinInt.
 Local Open Scope Z.
 Require Import riscv.Utility.Utility.
 Local Open Scope alu_scope.
-Require Import Monads.
-Require Import Spec.CSR.
-Require Spec.CSRGetSet.
-Require Import Spec.Machine.
+From riscv Require Import Monads.
+From riscv Require Import Spec.CSR.
+From riscv Require Spec.CSRGetSet.
+From riscv Require Import Spec.Machine.
 
 Definition setCSR {p} {t} `{RiscvMachine p t} (c : CSR) (v : t) : p unit :=
   CSRGetSet.setCSR c (regToZ_unsigned v).
