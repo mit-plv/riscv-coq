@@ -71,12 +71,12 @@ Section Riscv.
         MMIOReadOK n (getLog mach) a (signedByteTupleToReg v) ->
         post v (withLogItem (@mmioLoadEvent a n v) mach).
 
-  Definition load(n: nat)(ctxid: SourceType) a mach post :=
+  Notation load n ctxid a mach post := (
     (ctxid = Fetch -> isXAddr4 a mach.(getXAddrs)) /\
     match Memory.load_bytes n mach.(getMem) a with
     | Some v => post v mach
     | None => nonmem_load n ctxid a mach post
-    end.
+    end) (only parsing).
 
   Definition updatePc(mach: RiscvMachine): RiscvMachine :=
     withPc mach.(getNextPc) (withNextPc (word.add mach.(getNextPc) (word.of_Z 4)) mach).
@@ -139,14 +139,6 @@ Section Riscv.
       map.undef_on mach.(getMem) isMMIOAddr /\ disjoint (of_list mach.(getXAddrs)) isMMIOAddr;
   |}.
 
-  Lemma load_weaken_post n c a m (post1 post2:_->_->Prop)
-    (H: forall r s, post1 r s -> post2 r s)
-    : load n c a m post1 -> load n c a m post2.
-  Proof.
-    cbv [load nonmem_load].
-    destruct (Memory.load_bytes n (getMem m) a); intuition eauto.
-  Qed.
-
   Lemma store_weaken_post n c a v m (post1 post2:_->Prop)
     (H: forall s, post1 s -> post2 s)
     : store n c a v m post1 -> store n c a v m post2.
@@ -160,8 +152,8 @@ Section Riscv.
     (forall s, postA1 s -> postA2 s) ->
     forall s, interpret_action a s postF1 postA1 -> interpret_action a s postF2 postA2.
   Proof.
-    destruct a; cbn; try solve [intuition eauto].
-    all : eauto using load_weaken_post, store_weaken_post.
+    destruct a; cbn; intros; try solve [intuition eauto]; cbv [nonmem_load] in *.
+    all : try destruct Memory.load_Z; intuition eauto using store_weaken_post.
   Qed.
 
   Global Instance MinimalMMIOSatisfies_mcomp_sat_spec: mcomp_sat_spec MinimalMMIOPrimitivesParams.
@@ -188,7 +180,7 @@ Section Riscv.
           (postA s' \/ exists v', postF v' s').
   Proof.
     destruct s, a; cbn -[HList.tuple];
-      cbv [load store nonmem_load nonmem_store]; cbn -[HList.tuple];
+      cbv [store nonmem_load nonmem_store]; cbn -[HList.tuple];
         repeat destruct_one_match;
         intuition idtac;
         repeat lazymatch goal with
@@ -229,7 +221,7 @@ Section Riscv.
     interpret_action a s (fun _ s' => endswith s'.(getLog) s.(getLog))
                            (fun s' => endswith s'.(getLog) s.(getLog)).
   Proof.
-    destruct s, a; cbn; cbv [load store nonmem_load nonmem_store]; cbn;
+    destruct s, a; cbn; cbv [store nonmem_load nonmem_store]; cbn;
       repeat destruct_one_match;
       intuition eauto using endswith_refl, endswith_cons_l.
   Qed.
@@ -240,7 +232,7 @@ Section Riscv.
     interpret_action a s (fun v s' => postF v s' /\ endswith s'.(getLog) s.(getLog))
                          (fun   s' => postA   s' /\ endswith s'.(getLog) s.(getLog)).
   Proof.
-    destruct s, a; cbn; cbv [load store nonmem_load nonmem_store]; cbn;
+    destruct s, a; cbn; cbv [store nonmem_load nonmem_store]; cbn;
       repeat destruct_one_match; intros; destruct_products; try split;
         intuition eauto using endswith_refl, endswith_cons_l.
   Qed.
@@ -266,7 +258,7 @@ Section Riscv.
                                     map.undef_on s'.(getMem) isMMIOAddr /\
                                     disjoint (of_list s'.(getXAddrs)) isMMIOAddr).
   Proof.
-    destruct s, a; cbn; cbv [load store nonmem_load nonmem_store]; cbn;
+    destruct s, a; cbn; cbv [store nonmem_load nonmem_store]; cbn;
       repeat destruct_one_match; intros; destruct_products; try split;
         change removeXAddr with (@List.removeb word word.eqb);
         rewrite ?ListSet.of_list_removeb;
@@ -304,18 +296,18 @@ Section Riscv.
       repeat match goal with
       | _ => progress subst
       | _ => Option.inversion_option
-      | _ => progress cbn -[Memory.load_bytes Memory.store_bytes HList.tuple]
-      | _ => progress cbv [valid_register is_initial_register_value load store Memory.loadByte Memory.loadHalf Memory.loadWord Memory.loadDouble Memory.storeByte Memory.storeHalf Memory.storeWord Memory.storeDouble] in *
+      | _ => progress cbn -[Memory.load_Z Memory.store_bytes HList.tuple]
+      | _ => progress cbv [valid_register is_initial_register_value store Memory.loadByte Memory.loadHalf Memory.loadWord Memory.loadDouble Memory.storeByte Memory.storeHalf Memory.storeWord Memory.storeDouble] in *
       | H : exists _, _ |- _ => destruct H
       | H : _ /\ _ |- _ => destruct H
       | |- _ => solve [ intuition (eauto || blia) ]
       | H : _ \/ _ |- _ => destruct H
+      | H : context[match ?x with _ => _ end] |- _ => destruct x eqn:?
       | |- context[match ?x with _ => _ end] => destruct x eqn:?
       | |- _ => progress unfold getReg, setReg
       | |-_ /\ _ => split
       end.
-      (* setRegister *)
-      destruct initialL; eassumption.
+      { destruct initialL; assumption. }
   Qed.
 
 End Riscv.

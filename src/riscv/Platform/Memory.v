@@ -7,81 +7,40 @@ Require Import coqutil.Datatypes.HList.
 Require Import coqutil.Datatypes.PrimitivePair.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Properties.
+Require Import coqutil.Map.Memory.
 Require Import coqutil.Tactics.Tactics.
 Require Import coqutil.sanity.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Byte.
 
-Local Open Scope Z_scope.
+Notation load_bytes sz (* : nat, value *) := (fun m addr =>
+  match load_Z m addr sz with
+  | Some z => Some (tuple.of_list (LittleEndianList.le_split sz z))
+  | None => None
+  end) (only parsing).
 
+Definition store_bytes
+  {width} {word: word width} {mem: map.map word byte}
+  (sz: nat)(m: mem)(a: word)(v: tuple byte sz): option mem :=
+  store_bytes m a (tuple.to_list v).
 
 Section MemAccess.
   Context {width} {word: word width} {mem: map.map word byte}.
-
-  Definition footprint(a: word)(sz: nat): tuple word sz :=
-    tuple.unfoldn (fun w => word.add w (word.of_Z 1)) sz a.
-
-  Definition load_bytes(sz: nat)(m: mem)(addr: word): option (tuple byte sz) :=
-    map.getmany_of_tuple m (footprint addr sz).
-
-  Definition unchecked_store_bytes(sz: nat)(m: mem)(a: word)(bs: tuple byte sz): mem :=
-    map.putmany_of_tuple (footprint a sz) bs m.
-
-  Definition store_bytes(sz: nat)(m: mem)(a: word)(v: tuple byte sz): option mem :=
-    match load_bytes sz m a with
-    | Some _ => Some (unchecked_store_bytes sz m a v)
-    | None => None (* some addresses were invalid *)
-    end.
-
-  Definition unchecked_store_byte_list(a: word)(l: list byte)(m: mem): mem :=
-    unchecked_store_bytes (length l) m a (tuple.of_list l).
-
-  Lemma unchecked_store_byte_list_cons: forall a x (l: list byte) m,
-      unchecked_store_byte_list a (x :: l) m =
-      map.put (unchecked_store_byte_list (word.add a (word.of_Z 1)) l m) a x.
-  Proof.
-    intros. reflexivity.
-  Qed.
-
-  Lemma lift_option_match{A B: Type}: forall (x: option A) (f: A -> B) (a: A),
-      match x with
-      | Some y => f y
-      | None => f a
-      end =
-      f (match x with
-         | Some y => y
-         | None => a
-         end).
-  Proof. intros. destruct x; reflexivity. Qed.
-
   Lemma store_bytes_preserves_domain{wordOk: word.ok word}{memOk: map.ok mem}: forall n m a v m',
-      store_bytes n m a v = Some m' ->
+      store_bytes n m a v = Some m' :> option mem ->
       map.same_domain m m'.
   Proof.
-    unfold store_bytes, load_bytes.
-    induction n; intros.
-    - simpl in *.
-      change (unchecked_store_bytes 0 m a v) with m in H.
-      inversion H. apply map.same_domain_refl.
-    - destruct (map.getmany_of_tuple m (footprint a (S n))) eqn: E; [|discriminate].
-      inversion H. subst m'. clear H.
-      unfold map.getmany_of_tuple in *.
-      simpl in *.
-      destruct (map.get m a) eqn: E'; [|discriminate].
-      destruct_one_match_hyp; [|discriminate].
-      inversion E. subst t. clear E.
-      unfold unchecked_store_bytes in *. simpl.
-      destruct v as [v vs].
-      eapply map.same_domain_trans.
-      + eapply IHn. unfold map.getmany_of_tuple. rewrite E0. reflexivity.
-      + eapply map.same_domain_put_r.
-        * eapply map.same_domain_refl.
-        * rewrite map.putmany_of_tuple_to_putmany.
-          rewrite map.get_putmany_dec.
-          rewrite E'.
-          rewrite lift_option_match.
-          reflexivity.
-  Qed.
+    intros *.
+    cbv [store_bytes Map.Memory.store_bytes].
+    case Map.Memory.load_bytes eqn:E; inversion_clear 1.
+    (*
+E : load_bytes m a (length v) = Some l
+
+========================= (1 / 1)
+
+map.same_domain m (unchecked_store_bytes m a v)
+     *)
+  Admitted.
 
 End MemAccess.
 
@@ -90,8 +49,9 @@ Require Import riscv.Utility.Utility.
 
 Section MemAccess2.
   Context {width} {word: word width} {mem: map.map word byte}.
+  Implicit Types m : mem.
 
-  Definition loadByte:   mem -> word -> option w8  := load_bytes 1.
+  Definition loadByte:   mem -> word -> option w8 := load_bytes 1.
   Definition loadHalf:   mem -> word -> option w16 := load_bytes 2.
   Definition loadWord:   mem -> word -> option w32 := load_bytes 4.
   Definition loadDouble: mem -> word -> option w64 := load_bytes 8.

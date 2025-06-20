@@ -2,6 +2,7 @@ Require Import Coq.Strings.String.
 Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Datatypes.Option.
 Require Import coqutil.Map.Interface.
+Require Import coqutil.Map.Memory.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndian.
 Require Import riscv.Spec.Decode.
@@ -189,13 +190,13 @@ Section Machine.
                    mkRiscvMachine regs pc nextPC mem xAddrs log (option_map2 (@app _) events trace).
     
     Definition Z32s_to_bytes(l: list Z): list byte :=
-      List.flat_map (fun z => HList.tuple.to_list (LittleEndian.split 4 z)) l.
+      List.flat_map (LittleEndianList.le_split 4) l.
 
     Definition putProgram(prog: list MachineInt)(addr: word)(ma: RiscvMachine): RiscvMachine :=
       (withPc addr
       (withNextPc (word.add addr (word.of_Z 4))
       (withXAddrs (addXAddrRange addr (4 * List.length prog) ma.(getXAddrs))
-      (withMem (unchecked_store_byte_list addr (Z32s_to_bytes prog) ma.(getMem)) ma)))).
+      (withMem (unchecked_store_bytes ma.(getMem) addr (Z32s_to_bytes prog)) ma)))).
 
   End WithBitwidth.
 End Machine.

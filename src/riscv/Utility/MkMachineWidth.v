@@ -1,12 +1,11 @@
 Require Import Coq.ZArith.ZArith.
 Require Import coqutil.Word.Interface.
-Require Import coqutil.Z.BitOps.
-Require Import coqutil.Word.LittleEndian.
+Require Import coqutil.Word.LittleEndianList.
 Require Import coqutil.Datatypes.HList.
-Require Import riscv.Utility.Utility.
+Require Import  riscv.Utility.Utility.
 Local Open Scope Z_scope.
 
-#[global] Instance MachineWidth_XLEN{width}{_: Bitwidth width}{word: word width}: MachineWidth word := {|
+#[global] Instance MachineWidth_XLEN{width}{_: Bitwidth.Bitwidth width}{word: word width}: MachineWidth word := {|
   add := word.add;
   sub := word.sub;
   mul := word.mul;
@@ -19,18 +18,18 @@ Local Open Scope Z_scope.
   or := word.or;
   and := word.and;
   XLEN := width;
-  regToInt8  a := split 1 (word.unsigned a);
-  regToInt16 a := split 2 (word.unsigned a);
-  regToInt32 a := split 4 (word.unsigned a);
-  regToInt64 a := split 8 (word.unsigned a);
-  uInt8ToReg  a := word.of_Z (combine 1 a);
-  uInt16ToReg a := word.of_Z (combine 2 a);
-  uInt32ToReg a := word.of_Z (combine 4 a);
-  uInt64ToReg a := word.of_Z (combine 8 a);
-  int8ToReg  a := word.of_Z (signExtend  8 (combine 1 a));
-  int16ToReg a := word.of_Z (signExtend 16 (combine 2 a));
-  int32ToReg a := word.of_Z (signExtend 32 (combine 4 a));
-  int64ToReg a := word.of_Z (signExtend 64 (combine 8 a));
+  regToInt8  a := tuple.of_list (le_split 1 (word.unsigned a));
+  regToInt16 a := tuple.of_list (le_split 2 (word.unsigned a));
+  regToInt32 a := tuple.of_list (le_split 4 (word.unsigned a));
+  regToInt64 a := tuple.of_list (le_split 8 (word.unsigned a));
+  uInt8ToReg  a := word.of_Z (le_combine (tuple.to_list a));
+  uInt16ToReg a := word.of_Z (le_combine (tuple.to_list a));
+  uInt32ToReg a := word.of_Z (le_combine (tuple.to_list a));
+  uInt64ToReg a := word.of_Z (le_combine (tuple.to_list a));
+  int8ToReg  a := word.of_Z (signExtend  8 (le_combine (tuple.to_list a)));
+  int16ToReg a := word.of_Z (signExtend 16 (le_combine (tuple.to_list a)));
+  int32ToReg a := word.of_Z (signExtend 32 (le_combine (tuple.to_list a)));
+  int64ToReg a := word.of_Z (signExtend 64 (le_combine (tuple.to_list a)));
   s32 := word.sextend 32;
   u32(x: word) := word.of_Z ((word.unsigned x) mod 2 ^ 32);
   regToZ_signed := word.signed;
