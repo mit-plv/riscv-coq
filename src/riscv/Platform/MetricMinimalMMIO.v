@@ -36,7 +36,6 @@ Section Riscv.
     interpret_action (snd a) (metmach.(getMachine)) (fun r mach =>
       post r (mkMetricRiscvMachine mach (fst a (metmach.(getMetrics))))) (fun _ => False).
 
-  Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
   Arguments LittleEndian.combine: simpl never.
 
@@ -110,12 +109,13 @@ Section Riscv.
       repeat match goal with
       | _ => progress subst
       | _ => Option.inversion_option
-      | _ => progress cbn -[Memory.load_bytes Memory.store_bytes HList.tuple] in *
-      | _ => progress cbv [id valid_register is_initial_register_value load store Memory.loadByte Memory.loadHalf Memory.loadWord Memory.loadDouble Memory.storeByte Memory.storeHalf Memory.storeWord Memory.storeDouble] in *
+      | _ => progress cbn -[Memory.load_Z Memory.store_bytes HList.tuple] in *
+      | _ => progress cbv [valid_register is_initial_register_value store Memory.loadByte Memory.loadHalf Memory.loadWord Memory.loadDouble Memory.storeByte Memory.storeHalf Memory.storeWord Memory.storeDouble] in *
       | H : exists _, _ |- _ => destruct H
       | H : _ /\ _ |- _ => destruct H
       | |- _ => solve [ intuition (eauto || blia) ]
       | H : _ \/ _ |- _ => destruct H
+      | H : context[match ?x with _ => _ end] |- _ => destruct x eqn:?
       | |- context[match ?x with _ => _ end] => destruct x eqn:?
       | |- _ => progress unfold getReg, setReg
       | |-_ /\ _ => split
