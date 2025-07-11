@@ -33,13 +33,20 @@ Section Riscv.
     | None => fail_hard
     end.
 
-  Definition loadN(n: nat)(kind: SourceType)(a: word): OState RiscvMachine (HList.tuple byte n) :=
+  Notation load n ctxid a mach post := (
+    (ctxid = Fetch -> isXAddr4 a mach.(getXAddrs)) /\
+    match Memory.load_bytes n mach.(getMem) a with
+    | Some v => post v mach
+    | None => nonmem_load n ctxid a mach post
+    end) (only parsing).
+
+  Notation loadN n := (fun (kind: SourceType)(a: word) =>
     mach <- get;
     v <- fail_if_None (Memory.load_bytes n mach.(getMem) a);
     match kind with
     | Fetch => if isXAddr4B a mach.(getXAddrs) then Return v else fail_hard
     | _ => Return v
-    end.
+    end) (only parsing).
 
   Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n) :=
     mach <- get;
@@ -106,7 +113,6 @@ Section Riscv.
       leakEvent e := update (withLeakageEvent e);
   }.
 
-  Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
 
   Lemma VirtualMemoryFetchP: forall (addr: word) xAddrs,
@@ -131,7 +137,7 @@ Section Riscv.
                             Memory.loadHalf, Memory.storeHalf,
                             Memory.loadWord, Memory.storeWord,
                             Memory.loadDouble, Memory.storeDouble,
-                            fail_if_None, loadN, storeN in *;
+                            fail_if_None, storeN in *;
                      subst;
                      simpl in * )
        | |- _ => intro
@@ -248,7 +254,7 @@ Section Riscv.
          getPC, setPC,
          endCycleNormal, endCycleEarly, raiseExceptionWithInfo,
          IsRiscvMachine,
-         loadN, storeN, fail_if_None.
+         storeN, fail_if_None.
 
     all: repeat match goal with
                 | |- _ => apply logEvent_sane

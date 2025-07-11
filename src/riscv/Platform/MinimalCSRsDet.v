@@ -52,10 +52,10 @@ Section Riscv.
 
   Local Notation get := (@StateAbortFailOperations.get State). (* to improve type inference *)
 
-  Definition loadN(n: nat)(kind: SourceType)(a: word): StateAbortFail State (HList.tuple byte n) :=
+  Notation loadN n := (fun (kind: SourceType)(a: word) =>
     mach <- get;
     v <- fail_if_None (Memory.load_bytes n mach[mem] a);
-    Return v.
+    Return v) (only parsing).
 
   Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n): StateAbortFail State unit :=
     mach <- get;

@@ -8,10 +8,12 @@ Require Import coqutil.Datatypes.PrimitivePair.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Properties.
 Require Import coqutil.Map.Memory.
+Require Import coqutil.Map.SeparationMemory.
 Require Import coqutil.Tactics.Tactics.
 Require Import coqutil.sanity.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Byte.
+Require Import riscv.Utility.Utility.
 
 Notation load_bytes sz (* : nat, value *) := (fun m addr =>
   match load_Z m addr sz with
@@ -23,29 +25,6 @@ Definition store_bytes
   {width} {word: word width} {mem: map.map word byte}
   (sz: nat)(m: mem)(a: word)(v: tuple byte sz): option mem :=
   store_bytes m a (tuple.to_list v).
-
-Section MemAccess.
-  Context {width} {word: word width} {mem: map.map word byte}.
-  Lemma store_bytes_preserves_domain{wordOk: word.ok word}{memOk: map.ok mem}: forall n m a v m',
-      store_bytes n m a v = Some m' :> option mem ->
-      map.same_domain m m'.
-  Proof.
-    intros *.
-    cbv [store_bytes Map.Memory.store_bytes].
-    case Map.Memory.load_bytes eqn:E; inversion_clear 1.
-    (*
-E : load_bytes m a (length v) = Some l
-
-========================= (1 / 1)
-
-map.same_domain m (unchecked_store_bytes m a v)
-     *)
-  Admitted.
-
-End MemAccess.
-
-
-Require Import riscv.Utility.Utility.
 
 Section MemAccess2.
   Context {width} {word: word width} {mem: map.map word byte}.
@@ -62,8 +41,12 @@ Section MemAccess2.
   Definition storeDouble: mem -> word -> w64 -> option mem := store_bytes 8.
 End MemAccess2.
 
-
-Local Unset Universe Polymorphism.
+Lemma store_bytes_preserves_domain
+  {width} {word: word width} {mem: map.map word byte}
+  {wordOk: word.ok word}{memOk: map.ok mem}: forall n m a v m',
+    store_bytes n m a v = Some m' :> option mem ->
+    map.same_domain m m'.
+Proof. intros; eapply same_domain_store_bytes; eauto. Qed.
 
 Section MemoryHelpers.
   Context {width} {word: word width} {word_ok: word.ok word}.

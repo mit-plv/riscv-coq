@@ -61,12 +61,12 @@ Section Riscv.
     isMMIOAddr a /\ isMMIOAligned n a /\
     forall v, post v (withLogItem (@mmioLoadEvent a n v) mach).
 
-  Definition load(n: nat)(ctxid: SourceType) a mach post :=
+  Notation load n := (fun (ctxid: SourceType) a mach post =>
     (ctxid = Fetch -> isXAddr4 a mach.(getXAddrs)) /\
     match Memory.load_bytes n mach.(getMem) a with
     | Some v => post v mach
     | None => nonmem_load n ctxid a mach post
-    end.
+    end) (only parsing).
 
   Instance IsRiscvMachine: RiscvProgram (Post RiscvMachine) word. refine ({|
     getRegister reg := fun mach post => _;
@@ -129,14 +129,6 @@ Section Riscv.
     Primitives.valid_machine mach :=
       map.undef_on mach.(getMem) isMMIOAddr /\ disjoint (of_list mach.(getXAddrs)) isMMIOAddr;
   |}.
-
-  Lemma load_weaken_post n c a m (post1 post2:_->_->Prop)
-    (H: forall r s, post1 r s -> post2 r s)
-    : load n c a m post1 -> load n c a m post2.
-  Proof.
-    cbv [load nonmem_load].
-    destruct (Memory.load_bytes n (getMem m) a); intuition eauto.
-  Qed.
 
   Lemma store_weaken_post n c a v m (post1 post2:_->Prop)
     (H: forall s, post1 s -> post2 s)

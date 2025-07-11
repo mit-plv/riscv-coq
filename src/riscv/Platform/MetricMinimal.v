@@ -71,7 +71,6 @@ Section Riscv.
       leakEvent := liftL1 id leakEvent;
   }.
 
-  Arguments Memory.load_bytes: simpl never.
   Arguments Memory.store_bytes: simpl never.
 
   Ltac t :=
@@ -87,7 +86,7 @@ Section Riscv.
                             Memory.loadHalf, Memory.storeHalf,
                             Memory.loadWord, Memory.storeWord,
                             Memory.loadDouble, Memory.storeDouble,
-                            fail_if_None, loadN, storeN,
+                            fail_if_None, storeN,
                             liftL0, liftL1, liftL2, liftL3, id,
                             getRegs, getMem in *;
                      subst;

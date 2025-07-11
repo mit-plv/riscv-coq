@@ -23,6 +23,8 @@ Require Import Coq.Logic.PropExtensionality.
 Require Import Coq.derive.Derive.
 Require Import riscv.Spec.Decode.
 
+From coqutil Require LittleEndian.
+
 (* sub-relation *)
 Definition subrel{A B: Type}(R1 R2: A -> B -> Prop): Prop :=
   forall a b, R1 a b -> R2 a b.

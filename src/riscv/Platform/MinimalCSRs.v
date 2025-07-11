@@ -43,11 +43,11 @@ Section Riscv.
     | None => False
     end.
 
-  Definition load(n: nat)(ctxid: SourceType)(a: word)(mach: State)(post: _ -> _ -> Prop) :=
+  Notation load n := (fun (ctxid: SourceType)(a: word)(mach: State)(post: _ -> _ -> Prop) =>
     match Memory.load_bytes n mach.(mem) a with
     | Some v => post v mach
     | None => False
-    end.
+    end) (only parsing).
 
   Definition updatePc(mach: State): State :=
     { mach with pc := mach.(nextPc); nextPc ::= word.add (word.of_Z 4) }.
@@ -107,13 +107,6 @@ Section Riscv.
         => fun postF postA => False
     end.
 
-  Lemma weaken_load: forall n c a m (post1 post2:_->_->Prop),
-      (forall r s, post1 r s -> post2 r s) ->
-      load n c a m post1 -> load n c a m post2.
-  Proof.
-    unfold load. intros. destruct (load_bytes n m.(mem) a); intuition eauto.
-  Qed.
-
   Lemma weaken_store: forall n c a v m (post1 post2:_->Prop),
       (forall s, post1 s -> post2 s) ->
       store n c a v m post1 -> store n c a v m post2.
@@ -126,7 +119,7 @@ Section Riscv.
     (forall s, postA1 s -> postA2 s) ->
     forall s, run_primitive a s postF1 postA1 -> run_primitive a s postF2 postA2.
   Proof.
-    destruct a; cbn; intros; try solve [intuition eauto using weaken_load, weaken_store];
+    destruct a; cbn; intros; try solve [intuition eauto using weaken_store];
       destruct_one_match; eauto.
   Qed.
 
