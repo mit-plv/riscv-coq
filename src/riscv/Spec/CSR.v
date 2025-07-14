@@ -20,7 +20,7 @@ Local Open Scope alu_scope.
 (* Converted imports: *)
 
 Require Import Coq.ZArith.BinInt.
-Require Utility.Utility.
+From riscv Require Utility.Utility.
 
 (* Converted type declarations: *)
 

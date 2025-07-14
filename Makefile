@@ -18,7 +18,7 @@ DEPS_DIR?=$(PARENT_DIR)
 # Note: make does not interpret "\n", and this is intended
 DEPFLAGS_COQUTIL_NL=-Q $(DEPS_DIR)/coqutil/src/coqutil coqutil\n
 DEPFLAGS_NL=
-CURFLAGS_NL=-R $(SRCDIR) riscv\n
+CURFLAGS_NL=-Q $(SRCDIR) riscv\n
 
 EXTERNAL_DEPENDENCIES?=
 EXTERNAL_COQUTIL?=
