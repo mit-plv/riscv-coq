@@ -1,6 +1,6 @@
-Require Import Coq.ZArith.ZArith. Local Open Scope Z_scope.
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List. Import ListNotations.
+From Stdlib Require Import ZArith.ZArith. Local Open Scope Z_scope.
+From Stdlib Require Import Strings.String.
+From Stdlib Require Import Lists.List. Import ListNotations.
 Require Import coqutil.Tactics.Tactics.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Platform.Memory.

@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.BinInt.
+From Stdlib Require Import ZArith.BinInt.
 Local Open Scope Z.
 Require Import riscv.Utility.Utility.
 Local Open Scope alu_scope.

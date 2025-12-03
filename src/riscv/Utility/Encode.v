@@ -1,5 +1,5 @@
 (* Need to define Register *)
-Require Import Coq.ZArith.ZArith.
+From Stdlib Require Import ZArith.ZArith.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Utility.Utility.
 

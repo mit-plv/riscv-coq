@@ -1,11 +1,11 @@
-Require Import Coq.ZArith.ZArith.
+From Stdlib Require Import ZArith.ZArith.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Utility.Encode.
 Require Import riscv.Utility.Utility.
 
 (* same verification functions as in Encode, but computable: *)
 
-Require Import Coq.derive.Derive.
+From Stdlib Require Import derive.Derive.
 
 Lemma andb_spec: forall P Q p q,
     Bool.reflect P p ->
@@ -48,84 +48,84 @@ Local Ltac t :=
     | eapply true_spec
     | eapply false_spec ].
 
-Derive bverify_Invalid SuchThat
+Derive bverify_Invalid in 
   (forall i: Z, Bool.reflect (verify_Invalid i) (bverify_Invalid i))
-As bverify_Invalid_spec.
+as bverify_Invalid_spec.
   subst bverify_Invalid.
   intros. unfold verify_Invalid. eapply Bool.ReflectF. auto.
 Defined.
 
-Derive bverify_R SuchThat
+Derive bverify_R in
   (forall (opcode: MachineInt)(rd rs1 rs2: Register)(funct3 funct7: MachineInt),
       Bool.reflect (verify_R opcode rd rs1 rs2 funct3 funct7)
                   (bverify_R opcode rd rs1 rs2 funct3 funct7))
-As bverify_R_spec. t. Defined.
+as bverify_R_spec. t. Defined.
 
-Derive bverify_R_atomic SuchThat
+Derive bverify_R_atomic in
   (forall (opcode: MachineInt)(rd rs1 rs2: Register)(funct3 aqrl funct5: MachineInt),
       Bool.reflect (verify_R_atomic opcode rd rs1 rs2 funct3 aqrl funct5)
                   (bverify_R_atomic opcode rd rs1 rs2 funct3 aqrl funct5))
-As bverify_R_atomic_spec. t. Defined.
+as bverify_R_atomic_spec. t. Defined.
 
-Derive bverify_I SuchThat
+Derive bverify_I in
   (forall (opcode: MachineInt)(rd rs1: Register)(funct3: MachineInt)(oimm12: Z),
       Bool.reflect (verify_I opcode rd rs1 funct3 oimm12)
                   (bverify_I opcode rd rs1 funct3 oimm12))
-As bverify_I_spec. t. Defined.
+as bverify_I_spec. t. Defined.
 
-Derive bverify_I_shift_57 SuchThat
+Derive bverify_I_shift_57 in
   (forall (opcode: MachineInt)(rd rs1: Register)(shamt5 funct3 funct7: MachineInt),
       Bool.reflect (verify_I_shift_57 opcode rd rs1 shamt5 funct3 funct7)
                   (bverify_I_shift_57 opcode rd rs1 shamt5 funct3 funct7))
-As bverify_I_shift_57_spec. t. Defined.
+as bverify_I_shift_57_spec. t. Defined.
 
-Derive bverify_I_shift_66 SuchThat
+Derive bverify_I_shift_66 in
   (forall (bitwidth: Z)(opcode: MachineInt)(rd rs1: Register)(shamt6 funct3 funct6: MachineInt),
       Bool.reflect (verify_I_shift_66 bitwidth opcode rd rs1 shamt6 funct3 funct6)
                   (bverify_I_shift_66 bitwidth opcode rd rs1 shamt6 funct3 funct6))
-As bverify_I_shift_66_spec. t. Defined.
+as bverify_I_shift_66_spec. t. Defined.
 
-Derive bverify_I_system SuchThat
+Derive bverify_I_system in
   (forall (opcode: MachineInt)(rd rs1: Register)(funct3 funct12: MachineInt),
       Bool.reflect (verify_I_system opcode rd rs1 funct3 funct12)
                   (bverify_I_system opcode rd rs1 funct3 funct12))
-As bverify_I_system_spec. t. Defined.
+as bverify_I_system_spec. t. Defined.
 
-Derive bverify_S SuchThat
+Derive bverify_S in
   (forall (opcode: MachineInt)(rs1 rs2: Register)(funct3: MachineInt)(simm12: Z),
       Bool.reflect (verify_S opcode rs1 rs2 funct3 simm12)
                   (bverify_S opcode rs1 rs2 funct3 simm12))
-As bverify_S_spec. t. Defined.
+as bverify_S_spec. t. Defined.
 
-Derive bverify_SB SuchThat
+Derive bverify_SB in
   (forall (opcode: MachineInt)(rs1 rs2: Register)(funct3: MachineInt)(sbimm12: Z),
       Bool.reflect (verify_SB opcode rs1 rs2 funct3 sbimm12)
                   (bverify_SB opcode rs1 rs2 funct3 sbimm12))
-As bverify_SB_spec. t. Defined.
+as bverify_SB_spec. t. Defined.
 
-Derive bverify_U SuchThat
+Derive bverify_U in
   (forall (opcode: MachineInt)(rd: Register)(imm20: Z),
       Bool.reflect (verify_U opcode rd imm20)
                   (bverify_U opcode rd imm20))
-As bverify_U_spec. t. Defined.
+as bverify_U_spec. t. Defined.
 
-Derive bverify_UJ SuchThat
+Derive bverify_UJ in
   (forall (opcode: MachineInt)(rd: Register)(jimm20: Z),
       Bool.reflect (verify_UJ opcode rd jimm20)
                   (bverify_UJ opcode rd jimm20))
-As bverify_UJ_spec. t. Defined.
+as bverify_UJ_spec. t. Defined.
 
-Derive bverify_Fence SuchThat
+Derive bverify_Fence in
   (forall (opcode: MachineInt)(rd rs1: Register)(funct3 prd scc msb4: MachineInt),
       Bool.reflect (verify_Fence opcode rd rs1 funct3 prd scc msb4)
                   (bverify_Fence opcode rd rs1 funct3 prd scc msb4))
-As bverify_Fence_spec. t. Defined.
+as bverify_Fence_spec. t. Defined.
 
-Derive bverify_FenceI SuchThat
+Derive bverify_FenceI in
   (forall (opcode: MachineInt)(rd rs1: Register)(funct3 imm12: MachineInt),
       Bool.reflect (verify_FenceI opcode rd rs1 funct3 imm12)
                   (bverify_FenceI opcode rd rs1 funct3 imm12))
-As bverify_FenceI_spec. t. Defined.
+as bverify_FenceI_spec. t. Defined.
 
 Definition bVerifier(bitwidth: Z): InstructionMapper bool := {|
   map_Invalid := bverify_Invalid;
@@ -166,9 +166,9 @@ Proof.
                 bverify_FenceI_spec.
 Qed.
 
-Derive iset_eqb SuchThat
+Derive iset_eqb in
   (forall iset1 iset2: InstructionSet, Bool.reflect (iset1 = iset2) (iset_eqb iset1 iset2))
-As iset_eqb_spec.
+as iset_eqb_spec.
   Unshelve. 2: { intros iset1 iset2. destruct iset1; destruct iset2; shelve. }
   subst iset_eqb.
   destruct iset1; destruct iset2;
@@ -176,10 +176,10 @@ As iset_eqb_spec.
           | eapply Bool.ReflectF; intro C; discriminate C ].
 Defined.
 
-Derive bverify_iset SuchThat
+Derive bverify_iset in
   (forall (inst: Instruction)(iset: InstructionSet),
       Bool.reflect (verify_iset inst iset) (bverify_iset inst iset))
-As bverify_iset_spec.
+as bverify_iset_spec.
   intros.
   let f := open_constr:(ltac:(intro inst'; destruct inst'; shelve):
                          Instruction -> InstructionSet -> bool) in

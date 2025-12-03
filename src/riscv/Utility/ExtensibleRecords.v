@@ -1,5 +1,5 @@
-Require Import Coq.PArith.BinPos.
-Require Import Coq.Lists.List. Import ListNotations.
+From Stdlib Require Import PArith.BinPos.
+From Stdlib Require Import Lists.List. Import ListNotations.
 
 Module natmap. Section __.
   Context {V: Type}.

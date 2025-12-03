@@ -1,5 +1,5 @@
-Require Import Coq.Strings.String. Open Scope string_scope.
-Require Import Coq.Lists.List. Import ListNotations.
+From Stdlib Require Import Strings.String. Open Scope string_scope.
+From Stdlib Require Import Lists.List. Import ListNotations.
 
 Local Set Universe Polymorphism.
 

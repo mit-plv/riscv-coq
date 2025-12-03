@@ -7,12 +7,12 @@ Set Maximal Implicit Insertion.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Require Coq.Program.Tactics.
-Require Coq.Program.Wf.
+From Stdlib Require Program.Tactics.
+From Stdlib Require Program.Wf.
 
 (* Preamble *)
 
-Require Coq.ZArith.BinInt.
+From Stdlib Require ZArith.BinInt.
 Local Open Scope Z_scope.
 
 Notation Register := BinInt.Z (only parsing).
@@ -22,9 +22,9 @@ Notation Opcode := BinInt.Z (only parsing).
 
 (* Converted imports: *)
 
-Require Coq.Init.Datatypes.
-Require Coq.Lists.List.
-Require Import Coq.ZArith.BinInt.
+From Stdlib Require Init.Datatypes.
+From Stdlib Require Lists.List.
+From Stdlib Require Import ZArith.BinInt.
 Require Utility.Utility.
 
 (* Converted type declarations: *)
@@ -1481,24 +1481,24 @@ Definition decode
       then cons (IInstruction decodeI) nil
       else nil in
     let results : list Instruction :=
-      Coq.Init.Datatypes.app resultI (Coq.Init.Datatypes.app (if supportsM iset : bool
+      Init.Datatypes.app resultI (Init.Datatypes.app (if supportsM iset : bool
                                                               then resultM
-                                                              else nil) (Coq.Init.Datatypes.app (if supportsA
+                                                              else nil) (Init.Datatypes.app (if supportsA
                                                                                                     iset : bool
                                                                                                  then resultA
                                                                                                  else nil)
-                                                                                                (Coq.Init.Datatypes.app
+                                                                                                (Init.Datatypes.app
                                                                                                  (if supportsF
                                                                                                      iset : bool
                                                                                                   then resultF
                                                                                                   else nil)
-                                                                                                 (Coq.Init.Datatypes.app
+                                                                                                 (Init.Datatypes.app
                                                                                                   (if Z.eqb (bitwidth
                                                                                                              iset)
                                                                                                             64 : bool
                                                                                                    then resultI64
                                                                                                    else nil)
-                                                                                                  (Coq.Init.Datatypes.app
+                                                                                                  (Init.Datatypes.app
                                                                                                    (if andb (Z.eqb
                                                                                                              (bitwidth
                                                                                                               iset) 64)
@@ -1506,7 +1506,7 @@ Definition decode
                                                                                                              iset) : bool
                                                                                                     then resultM64
                                                                                                     else nil)
-                                                                                                   (Coq.Init.Datatypes.app
+                                                                                                   (Init.Datatypes.app
                                                                                                     (if andb (Z.eqb
                                                                                                               (bitwidth
                                                                                                                iset) 64)
@@ -1514,7 +1514,7 @@ Definition decode
                                                                                                               iset) : bool
                                                                                                      then resultA64
                                                                                                      else nil)
-                                                                                                    (Coq.Init.Datatypes.app
+                                                                                                    (Init.Datatypes.app
                                                                                                      (if andb (Z.eqb
                                                                                                                (bitwidth
                                                                                                                 iset)
@@ -1524,14 +1524,14 @@ Definition decode
                                                                                                       then resultF64
                                                                                                       else nil)
                                                                                                      resultCSR))))))) in
-    if Z.gtb (Z.of_nat (Coq.Lists.List.length results)) 1 : bool
+    if Z.gtb (Z.of_nat (Lists.List.length results)) 1 : bool
     then InvalidInstruction inst
-    else Coq.Lists.List.nth O results (InvalidInstruction inst).
+    else Lists.List.nth O results (InvalidInstruction inst).
 
 (* External variables:
      FPRegister O Opcode Register RoundMode Z Z.eqb Z.gtb Z.lor Z.of_nat Z.shiftl
-     andb bool cons false list nil orb true Coq.Init.Datatypes.app
-     Coq.Lists.List.length Coq.Lists.List.nth Utility.Utility.MachineInt
+     andb bool cons false list nil orb true Init.Datatypes.app
+     Lists.List.length Lists.List.nth Utility.Utility.MachineInt
      Utility.Utility.bitSlice Utility.Utility.machineIntToShamt
      Utility.Utility.signExtend
 *)

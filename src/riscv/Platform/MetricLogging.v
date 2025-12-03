@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.BinInt.
+From Stdlib Require Import ZArith.BinInt.
 Require Import coqutil.Z.Lia.
 
 Section Riscv.

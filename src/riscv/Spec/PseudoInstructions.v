@@ -1,6 +1,6 @@
 Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.Machine.
-Require Import Coq.ZArith.BinInt.
+From Stdlib Require Import ZArith.BinInt.
 
 Open Scope Z_scope.
 

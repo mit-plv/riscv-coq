@@ -1,5 +1,5 @@
-Require Import Coq.Lists.List. Import ListNotations.
-Require Import Coq.Arith.PeanoNat.
+From Stdlib Require Import Lists.List. Import ListNotations.
+From Stdlib Require Import Arith.PeanoNat.
 
 
 Class Monad(M: Type -> Type) := mkMonad {

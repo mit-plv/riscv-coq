@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith.
+From Stdlib Require Import ZArith.ZArith.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndianList.
 Require Import coqutil.Datatypes.HList.

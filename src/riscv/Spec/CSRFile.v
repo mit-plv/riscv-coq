@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith.
+From Stdlib Require Import ZArith.ZArith.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.SortedList.
 Require Import coqutil.Z.Lia.

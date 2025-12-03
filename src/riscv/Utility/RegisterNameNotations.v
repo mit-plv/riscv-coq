@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.BinInt.
+From Stdlib Require Import ZArith.BinInt.
 Declare Custom Entry register_name.
 
 Notation "'zero'" :=   0%Z (in custom register_name).

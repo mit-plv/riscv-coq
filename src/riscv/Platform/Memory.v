@@ -1,5 +1,5 @@
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.ZArith.
+From Stdlib Require Import Lists.List.
+From Stdlib Require Import ZArith.ZArith.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
 Require Import coqutil.Word.Bitwidth.

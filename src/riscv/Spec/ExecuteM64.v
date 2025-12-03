@@ -7,12 +7,12 @@ Set Maximal Implicit Insertion.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Require Coq.Program.Tactics.
-Require Coq.Program.Wf.
+From Stdlib Require Program.Tactics.
+From Stdlib Require Program.Wf.
 
 (* Preamble *)
 
-Require Import Coq.ZArith.BinInt.
+From Stdlib Require Import ZArith.BinInt.
 Local Open Scope Z.
 Require Import riscv.Utility.Utility.
 Local Open Scope alu_scope.
@@ -70,7 +70,7 @@ Definition execute {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p
                 Bind (Spec.Machine.getRegister rs2) (fun y =>
                         let r := if reg_eqb y (ZToReg 0) : bool then x else Utility.Utility.remu x y in
                         Spec.Machine.setRegister rd (Utility.Utility.s32 r)))
-    | inst => Return tt
+    | _ => Return tt
     end.
 
 (* External variables:

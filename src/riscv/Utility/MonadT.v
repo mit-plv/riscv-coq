@@ -1,4 +1,4 @@
-Require Import Coq.Lists.List.
+From Stdlib Require Import Lists.List.
 
 Class Monad(M: Type -> Type) := mkMonad {
   Bind: forall {A B}, M A -> (A -> M B) -> M B;

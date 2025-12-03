@@ -1,5 +1,5 @@
-Require Import Coq.Lists.List.
-Require Import Coq.ZArith.BinInt.
+From Stdlib Require Import Lists.List.
+From Stdlib Require Import ZArith.BinInt.
 Require Import coqutil.Map.Interface.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.Utility.

@@ -1,5 +1,5 @@
-Require Import Coq.Arith.PeanoNat.
-Require Import Coq.ZArith.ZArith.
+From Stdlib Require Import Arith.PeanoNat.
+From Stdlib Require Import ZArith.ZArith.
 Require Import riscv.Utility.Tactics.
 Require Import coqutil.Z.Lia.
 

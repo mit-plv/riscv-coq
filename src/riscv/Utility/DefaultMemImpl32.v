@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith.
+From Stdlib Require Import ZArith.ZArith.
 Require Import coqutil.Z.Lia.
 Require Import coqutil.Word.Interface coqutil.Word.Properties coqutil.Word.Naive.
 Require Import coqutil.Map.Interface.

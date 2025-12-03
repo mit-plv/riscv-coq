@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith.
+From Stdlib Require Import ZArith.ZArith.
 Require Import coqutil.Map.Interface.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Platform.MinimalMMIO.

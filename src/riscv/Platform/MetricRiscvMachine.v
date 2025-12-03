@@ -1,4 +1,4 @@
-Require Import Coq.Strings.String.
+From Stdlib Require Import Strings.String.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndian.

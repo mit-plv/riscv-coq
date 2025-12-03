@@ -1,5 +1,5 @@
-Require Import Coq.Strings.String.
-Require Import Coq.ZArith.BinInt.
+From Stdlib Require Import Strings.String.
+From Stdlib Require Import ZArith.BinInt.
 Require Import coqutil.Datatypes.Option.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Memory.

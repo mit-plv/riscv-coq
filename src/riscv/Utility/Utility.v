@@ -1,6 +1,6 @@
-Require Export Coq.ZArith.BinIntDef.
-Require Import Coq.ZArith.ZArith.
-Require Import Coq.setoid_ring.Ring_theory.
+From Stdlib Require Export ZArith.BinIntDef.
+From Stdlib Require Import ZArith.ZArith.
+From Stdlib Require Import setoid_ring.Ring_theory.
 Require Export coqutil.Word.Interface.
 Require Export coqutil.Word.Bitwidth.
 Require Export coqutil.Byte.
