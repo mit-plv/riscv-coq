@@ -6,6 +6,8 @@ Unset Implicit Arguments.
 Set Maximal Implicit Insertion.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+Local Set Boolean Equality Schemes.
+Local Set Decidable Equality Schemes.
 
 Require Coq.Program.Tactics.
 Require Coq.Program.Wf.
