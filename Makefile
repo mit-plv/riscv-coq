@@ -47,7 +47,7 @@ all: Makefile.coq.all $(ALL_VS)
 	rm -f .coqdeps.d
 	$(MAKE) -f Makefile.coq.all
 
-COQ_MAKEFILE := $(COQBIN)coq_makefile -f _CoqProject -docroot riscv $(COQMF_ARGS)
+COQ_MAKEFILE := "$(COQBIN)rocq" makefile -f _CoqProject -docroot riscv $(COQMF_ARGS)
 
 Makefile.coq.spec: _CoqProject force
 	@echo "Generating Makefile.coq.spec"
@@ -124,7 +124,7 @@ src/riscv/Spec/Decode.v.beautified:
 .SECONDARY:
 
 export/extract.vo: export/extract.v spec
-	$(COQBIN)coqc -R $(SRCDIR) riscv export/extract.v
+	"$(COQBIN)rocq" compile -R $(SRCDIR) riscv export/extract.v
 
 export/json/%.json: export/extract.vo src/riscv/%.vo
 	find . -maxdepth 1 -name '*.json' -type f -exec mv -t export/json -- {} +

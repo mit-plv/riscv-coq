@@ -1,3 +1,3 @@
 #!/bin/sh
 
-coqc -R .. riscv -Q ../../../../coqutil/src/coqutil/ coqutil ./SMTVerif.v | z3 -in
+"${COQBIN}rocq" compile -R .. riscv -Q ../../../../coqutil/src/coqutil/ coqutil ./SMTVerif.v | z3 -in
