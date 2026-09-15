@@ -18,7 +18,8 @@ Module map.
 End map.
 
 Section Riscv.
-  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Z word}.
 
@@ -50,15 +51,15 @@ Section Riscv.
     end) (only parsing).
 
   Definition updatePc(mach: State): State :=
-    { mach with pc := mach.(nextPc); nextPc ::= word.add (word.of_Z 4) }.
+    { mach with pc := mach.(nextPc); nextPc ::= Zmod.add 4 }.
 
   Definition getReg(regs: Registers)(reg: Z): word :=
     if ((0 <? reg) && (reg <? 32))%bool then
       match map.get regs reg with
       | Some x => x
-      | None => word.of_Z 0
+      | None => 0
       end
-    else word.of_Z 0.
+    else 0.
 
   Definition setReg(reg: Z)(v: word)(regs: Registers): Registers :=
     if ((0 <? reg) && (reg <? 32))%bool then map.put regs reg v else regs.
@@ -79,7 +80,7 @@ Section Riscv.
     | StoreWord ctxid a v => fun postF postA => store 4 ctxid a v mach (postF tt)
     | StoreDouble ctxid a v => fun postF postA => store 8 ctxid a v mach (postF tt)
     | StartCycle => fun postF postA =>
-        postF tt { mach with nextPc := word.add mach.(pc) (word.of_Z 4) }
+        postF tt { mach with nextPc := Zmod.add mach.(pc) 4 }
     | EndCycleNormal => fun postF postA => postF tt (updatePc mach)
     | EndCycleEarly _ => fun postF postA => postA (updatePc mach) (* ignores postF containing the continuation *)
     | GetCSRField f => fun postF postA =>

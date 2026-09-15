@@ -1,6 +1,5 @@
 Require Import Coq.Strings.String.
 Require Import coqutil.Map.Interface.
-Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndian.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.LeakageOfInstr.
@@ -11,7 +10,8 @@ Require Import riscv.Platform.MetricLogging.
 
 Section Machine.
 
-  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
   Context {Registers: map.map Register word}.
   Context {Mem: map.map word byte}.
 

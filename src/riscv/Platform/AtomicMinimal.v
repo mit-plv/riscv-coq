@@ -1,5 +1,4 @@
 Require Import coqutil.Map.Interface.
-Require Import coqutil.Word.Interface.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Utility.Monads. Import OStateOperations.
 Require Import riscv.Utility.MonadNotations.
@@ -10,7 +9,8 @@ Require Import riscv.Platform.AtomicRiscvMachine.
 Require Import riscv.Platform.Minimal.
 
 Section Riscv.
-  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
 
@@ -51,7 +51,7 @@ Section Riscv.
         mach <- get;
         match mach.(getReservation) with
         | None => Return false
-        | Some addr' => Return (word.eqb addr addr')
+        | Some addr' => Return (Zmod.eqb addr addr')
         end;
       getCSRField := liftL1 id getCSRField;
       setCSRField := liftL2 id setCSRField;
@@ -65,7 +65,7 @@ Section Riscv.
   Instance AtomicMinimalPrimitivesParams: PrimitivesParams (OState AtomicRiscvMachine) AtomicRiscvMachine :=
     {
       Primitives.mcomp_sat := @OStateOperations.computation_with_answer_satisfies AtomicRiscvMachine;
-      Primitives.is_initial_register_value := eq (word.of_Z 0);
+      Primitives.is_initial_register_value := eq Zmod.zero;
       Primitives.nonmem_load n kind addr _ _ := False;
       Primitives.nonmem_store n kind addr v _ _ := False;
       Primitives.valid_machine mach := True;

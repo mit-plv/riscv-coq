@@ -23,7 +23,8 @@ Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
 Section Riscv.
-  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
 
@@ -141,7 +142,7 @@ Section Riscv.
     PrimitivesParams (OState MetricRiscvMachine) MetricRiscvMachine :=
   {
     Primitives.mcomp_sat := @computation_with_answer_satisfies MetricRiscvMachine;
-    Primitives.is_initial_register_value := eq (word.of_Z 0);
+    Primitives.is_initial_register_value := eq Zmod.zero;
     Primitives.nonmem_load n kind addr _ _ := False;
     Primitives.nonmem_store n kind addr v _ _ := False;
     Primitives.valid_machine mach := True;

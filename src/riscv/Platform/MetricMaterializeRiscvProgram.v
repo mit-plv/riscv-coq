@@ -1,5 +1,5 @@
 Require Import Coq.ZArith.ZArith.
-Require Import coqutil.Word.Interface coqutil.Word.Bitwidth.
+Require Import coqutil.Word.Bitwidth.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.FreeMonad.
 Require Import riscv.Spec.Machine.
@@ -9,7 +9,8 @@ Require Import riscv.Platform.MaterializeRiscvProgram.
 Section Riscv.
   Import free.
 
-  Context {width: Z} {BW: Bitwidth width} {word: word width}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
 
   Definition action : Type := (MetricLog -> MetricLog) * riscv_primitive.
   Definition result (a : action) := primitive_result (snd a).

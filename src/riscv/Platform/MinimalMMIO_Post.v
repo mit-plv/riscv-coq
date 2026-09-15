@@ -22,20 +22,21 @@ Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
 
-Class MMIOSpec{width: Z}{BW: Bitwidth width}{word: word width} := {
+Class MMIOSpec{width: Z}{BW: Bitwidth width} := {
   (* should not say anything about alignment, just whether it's in the MMIO range *)
-  isMMIOAddr: word -> Prop;
+  isMMIOAddr: bits width -> Prop;
 
   (* alignment and load size checks *)
-  isMMIOAligned: nat -> word -> Prop;
+  isMMIOAligned: nat -> bits width -> Prop;
 }.
 
 Section Riscv.
-  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
   Context {Mem: map.map word byte} {Registers: map.map Register word}.
 
   Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
-    word.of_Z (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).
+    bits.of_Z _ (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).
 
   Definition mmioLoadEvent(addr: word){n: nat}(v: HList.tuple byte n): LogItem :=
     ((map.empty, "MMIOREAD"%string, [addr]), (map.empty, [signedByteTupleToReg v])).
@@ -94,10 +95,10 @@ Section Riscv.
   |}).
   (* TODO: inline the terms below into the holes above while keeping Coq's typechecker happy *)
   - exact (let v :=
-        if Z.eq_dec reg 0 then word.of_Z 0
+        if Z.eq_dec reg 0 then Zmod.zero
         else match map.get mach.(getRegs) reg with
              | Some x => x
-             | None => word.of_Z 0 end in
+             | None => Zmod.zero end in
            post v mach).
   - exact (let regs := if Z.eq_dec reg Register0
                        then mach.(getRegs)
@@ -113,7 +114,7 @@ Section Riscv.
   - exact (store 8 ctxid a v mach (post tt)).
   - exact (post mach.(getPc) mach).
   - exact (post tt (withNextPc newPC mach)).
-  - exact (post tt (withPc mach.(getNextPc) (withNextPc (word.add mach.(getNextPc) (word.of_Z 4)) mach))).
+  - exact (post tt (withPc mach.(getNextPc) (withNextPc (Zmod.add mach.(getNextPc) 4) mach))).
   Defined.
 
   Instance IsRiscvMachineWithLeakage: RiscvProgramWithLeakage (Post RiscvMachine) word := {|

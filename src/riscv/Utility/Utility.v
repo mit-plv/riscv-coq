@@ -1,7 +1,6 @@
 Require Export Coq.ZArith.BinIntDef.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.setoid_ring.Ring_theory.
-Require Export coqutil.Word.Interface.
 Require Export coqutil.Word.Bitwidth.
 Require Export coqutil.Byte.
 Require Import coqutil.Datatypes.HList.

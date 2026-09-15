@@ -16,7 +16,8 @@ Import ListNotations.
 
 Section Sane.
 
-  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
   Context {Registers: map.map Register word}.
   Context {mem: map.map word byte}.
   Context {M: Type -> Type}.

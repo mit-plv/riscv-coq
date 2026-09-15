@@ -1,12 +1,12 @@
 Require Import coqutil.Map.Interface.
-Require Import coqutil.Word.Interface.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Utility.Utility.
 Require Import riscv.Platform.RiscvMachine.
 
 Section Machine.
 
-  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
   Context {Registers: map.map Register word}.
   Context {Mem: map.map word byte}.
   Context {Action: Type}.

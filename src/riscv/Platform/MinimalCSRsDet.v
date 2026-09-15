@@ -26,7 +26,8 @@ Definition log: nat := 5.
 Definition csrs: nat := 7.
 
 Section Riscv.
-  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
   Context (UnknownFields: natmap Type).
@@ -63,7 +64,7 @@ Section Riscv.
     put mach[mem := m].
 
   Definition updatePc(mach: State): State :=
-    mach[pc := mach[nextPc]][nextPc := word.add mach[nextPc] (word.of_Z 4)].
+    mach[pc := mach[nextPc]][nextPc := Zmod.add mach[nextPc] 4].
 
   Instance IsRiscvMachine: RiscvProgram (StateAbortFail State) word := {
       getRegister reg :=

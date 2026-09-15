@@ -67,7 +67,7 @@ Class RiscvProgram{M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgram {
   endCycleEarly: forall A, M A;
 }.
 
-Class RiscvProgramWithLeakage{width}{BW : Bitwidth width}{word: word.word width}
+Class RiscvProgramWithLeakage{width}{BW : Bitwidth width}
   {M}{t}`{Monad M}`{MachineWidth t} := mkRiscvProgramWithLeakage {
   RVP :: RiscvProgram;
   leakEvent : (option LeakageEvent) -> M unit;
@@ -153,7 +153,7 @@ Notation Register0 := 0%Z (only parsing).
 Arguments RiscvProgram: clear implicits.
 Arguments RiscvProgram (M) (t) {_} {_}.
 Arguments RiscvProgramWithLeakage: clear implicits.
-Arguments RiscvProgramWithLeakage {_} {_} {_} (M) (t) {_} {_}.
+Arguments RiscvProgramWithLeakage {_} {_} (M) (t) {_} {_}.
 Arguments RiscvMachine: clear implicits.
 Arguments RiscvMachine (M) (t) {_} {_} {_}.
 

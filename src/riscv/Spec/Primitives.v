@@ -16,7 +16,8 @@ Definition valid_register(r: Register): Prop := (0 < r < 32)%Z.
 
 Section Primitives.
 
-  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
   Context {Registers: map.map Register word}.
   Context {mem: map.map word byte}.
 
@@ -117,7 +118,7 @@ Section Primitives.
   Fixpoint invalidateWrittenXAddrs(nBytes: nat)(addr: word)(xAddrs: XAddrs): XAddrs :=
     match nBytes with
     | O => xAddrs
-    | S n => removeXAddr addr (invalidateWrittenXAddrs n (word.add addr (word.of_Z 1)) xAddrs)
+    | S n => removeXAddr addr (invalidateWrittenXAddrs n (Zmod.add addr 1) xAddrs)
     end.
 
   Definition spec_store{p: PrimitivesParams RiscvMachine}(n: nat)
@@ -145,7 +146,7 @@ Section Primitives.
          | Some v => post v initialL
          | None => forall v, is_initial_register_value v -> post v initialL
          end) \/
-        (x = Register0 /\ post (word.of_Z 0) initialL) ->
+        (x = Register0 /\ post Zmod.zero initialL) ->
         mcomp_sat (getRegister x) initialL post;
 
     spec_setRegister: forall initialL x v (post: unit -> RiscvMachine -> Prop),
@@ -173,7 +174,7 @@ Section Primitives.
 
     spec_endCycleNormal: forall initialL (post: unit -> RiscvMachine -> Prop),
         post tt (withPc     initialL.(getNextPc)
-                (withNextPc (word.add initialL.(getNextPc) (word.of_Z 4))
+                (withNextPc (Zmod.add initialL.(getNextPc) 4)
                             initialL)) ->
         mcomp_sat endCycleNormal initialL post;
 
@@ -183,4 +184,4 @@ Section Primitives.
 
 End Primitives.
 
-Arguments PrimitivesParams {_ _ _ _ _} M Machine.
+Arguments PrimitivesParams {_ _ _ _} M Machine.
