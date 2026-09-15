@@ -2,7 +2,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.Logic.Classical_Prop.
 Import ListNotations.
 Require Import coqutil.Decidable.
-Require Import coqutil.Word.Naive.
+Require Import coqutil.Word.Properties.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.Execute.
@@ -12,6 +12,7 @@ Require Import riscv.Utility.PowerFunc.
 Require Import riscv.Utility.Monads. Import MonadNotations.
 Require Import riscv.Utility.MkMachineWidth.
 Require Import riscv.Utility.Words32Naive.
+Local Notation word := (bits 32).
 Require Import riscv.Spec.PseudoInstructions.
 Require Import riscv.Utility.InstructionCoercions. Open Scope ilist_scope.
 Require Import riscv.Utility.RegisterNames.
@@ -103,7 +104,7 @@ Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n): OSt
   fence _ _ := fail_hard;
 
   endCycleNormal := update (fun m => (withPc m.(NextPc)
-                                     (withNextPc (word.add m.(NextPc) (word.of_Z 4)) m)));
+                                     (withNextPc (Zmod.add m.(NextPc) 4) m)));
 
   (* fail hard if exception is thrown because at the moment, we want to prove that
      code output by the compiler never throws exceptions *)
@@ -124,19 +125,19 @@ Definition run1: OState MachineState unit :=
    the current cycle) are skipped. *)
 Definition runN(n: nat): OState MachineState unit := power_func (fun m => run1;; m) n (Return tt).
 
-Definition zeroRegs: Array Register word := const (word.of_Z 0).
+Definition zeroRegs: Array Register word := const Zmod.zero.
 
 Fixpoint prog2Array(l: list Instruction)(start: word): Array word Instruction :=
   match l with
   | nil => const (InvalidInstruction 0)
-  | i :: rest => store (prog2Array rest (word.add start (word.of_Z 4))) start i
+  | i :: rest => store (prog2Array rest (Zmod.add start 4)) start i
   end.
 
 Definition initialState(initialRegs: Array Register word)(prog: list Instruction): MachineState := {|
   Regs := initialRegs;
-  Pc := word.of_Z 0;
-  NextPc := word.of_Z 4;
-  Prog := prog2Array prog (word.of_Z 0);
+  Pc := 0;
+  NextPc := 4;
+  Prog := prog2Array prog 0;
 |}.
 
 Definition runLinear(initialRegs: Array Register word)(prog: list Instruction): MachineState :=
@@ -242,7 +243,7 @@ Notation "'bvashr' A '(_' 'bv' B 32 )" := (sra A B)
   (at level 10, A at level 0, B at level 0, format "'bvashr'  A  '(_'  'bv' B  32 )").
 
 Notation "'Int'" := Z.
-Notation "'(_' 'BitVec' '32)'" := (@word.rep _ _).
+Notation "'(_' 'BitVec' '32)'" := word.
 Notation "'(declare-const' x T ) P" := (forall x: T, P)
   (at level 0, x at level 0, T at level 0, P at level 0, format "'(declare-const'  x  T ) '//' P").
 Notation "'(assert' P ) Q" := (P -> Q)
