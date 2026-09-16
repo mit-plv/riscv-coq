@@ -11,7 +11,8 @@ Require Import riscv.Utility.Utility.
 
 Section Riscv.
 
-  Context {width} {BW : Bitwidth width} {mword: word.word width}.
+  Context {width} {BW : Bitwidth width}.
+  Local Notation mword := (bits width).
   Context {MW: MachineWidth mword}.
 
   Context {M: Type -> Type}.

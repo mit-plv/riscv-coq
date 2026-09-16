@@ -23,24 +23,25 @@ Require Import riscv.Platform.Sane.
 Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
-Class MMIOSpec{width: Z}{BW: Bitwidth width}{word: word width}{Mem : map.map word byte} := {
+Class MMIOSpec{width: Z}{BW: Bitwidth width}{Mem : map.map (bits width) byte} := {
   (* should not say anything about alignment, just whether it's in the MMIO range *)
-  isMMIOAddr: word -> Prop;
+  isMMIOAddr: bits width -> Prop;
 
   (* alignment and load size checks *)
-  isMMIOAligned: nat -> word -> Prop;
+  isMMIOAligned: nat -> bits width -> Prop;
 
   (* hardware guarantees on MMIO read values *)
-  MMIOReadOK : nat -> list LogItem -> word -> word -> Prop;
+  MMIOReadOK : nat -> list LogItem -> bits width -> bits width -> Prop;
 }.
 
 Section Riscv.
   Import free.
-  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
   Context {Mem: map.map word byte} {Registers: map.map Register word}.
 
   Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
-    word.of_Z (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).
+    bits.of_Z _ (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).
 
   Definition mmioLoadEvent(addr: word){n: nat}(v: HList.tuple byte n): LogItem :=
     ((map.empty, "MMIOREAD"%string, [addr]), (map.empty, [signedByteTupleToReg v])).
@@ -79,15 +80,15 @@ Section Riscv.
     end) (only parsing).
 
   Definition updatePc(mach: RiscvMachine): RiscvMachine :=
-    withPc mach.(getNextPc) (withNextPc (word.add mach.(getNextPc) (word.of_Z 4)) mach).
+    withPc mach.(getNextPc) (withNextPc (Zmod.add mach.(getNextPc) 4) mach).
 
   Definition getReg(regs: Registers)(reg: Z): word :=
     if ((0 <? reg) && (reg <? 32)) then
       match map.get regs reg with
       | Some x => x
-      | None => word.of_Z 0
+      | None => 0
       end
-    else word.of_Z 0.
+    else 0.
 
   Definition setReg(reg: Z)(v: word)(regs: Registers): Registers :=
     if ((0 <? reg) && (reg <? 32)) then map.put regs reg v else regs.
@@ -112,7 +113,7 @@ Section Riscv.
     | StoreWord ctxid a v => fun postF postA => store 4 ctxid a v mach (postF tt)
     | StoreDouble ctxid a v => fun postF postA => store 8 ctxid a v mach (postF tt)
     | StartCycle => fun postF postA =>
-        postF tt (withNextPc (word.add mach.(getPc) (word.of_Z 4)) mach)
+        postF tt (withNextPc (Zmod.add mach.(getPc) 4) mach)
     | EndCycleNormal => fun postF postA => postF tt (updatePc mach)
     | EndCycleEarly _ => fun postF postA => postA (updatePc mach) (* ignores postF containing the continuation *)
     | LeakEvent e => fun postF postA => postF tt (withLeakageEvent e mach)
@@ -194,7 +195,7 @@ Section Riscv.
                    specialize (Hforall v Hexists)
                end;
         ssplit; eauto; simpl;
-        change removeXAddr with (@List.removeb word word.eqb);
+        change removeXAddr with (@List.removeb word Zmod.eqb);
         rewrite ?ListSet.of_list_removeb;
         intuition eauto 10 using preserve_undef_on, disjoint_diff_l.
   Qed.
@@ -260,7 +261,7 @@ Section Riscv.
   Proof.
     destruct s, a; cbn; cbv [store nonmem_load nonmem_store]; cbn;
       repeat destruct_one_match; intros; destruct_products; try split;
-        change removeXAddr with (@List.removeb word word.eqb);
+        change removeXAddr with (@List.removeb word Zmod.eqb);
         rewrite ?ListSet.of_list_removeb;
         intuition eauto 10 using preserve_undef_on, disjoint_diff_l.
   Qed.

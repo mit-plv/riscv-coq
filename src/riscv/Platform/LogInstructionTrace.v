@@ -21,7 +21,8 @@ Definition exectrace: nat := 8.
 Definition ExecTrace: Type := list (Z * Instruction). (* pc and instruction *)
 
 Section Riscv.
-  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
   Context {Mem: map.map word byte}.
   Context (UnknownFields: natmap Type).
 
@@ -56,7 +57,7 @@ Section Riscv.
                 | Fetch => decode RV64IMAF i
                 | _ => InvalidInstruction i
                 end in
-      put mach[exectrace := (word.unsigned addr, i') :: mach[exectrace]];;
+      put mach[exectrace := (Zmod.unsigned addr, i') :: mach[exectrace]];;
       Return v;
     loadDouble := loadDouble;
     storeByte := storeByte;

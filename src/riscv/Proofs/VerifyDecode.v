@@ -35,7 +35,6 @@ Proof.
   assert (bitSlice inst 25 26 = 0 -> bitSlice inst 20 26 < bitwidth iset). {
     intros.
     rewrite bitSlice_alt in *. 2-3: cbv; intuition congruence.
-    unfold bitSlice' in *.
     Z.div_mod_to_equations.
     Lia.lia.
   }

@@ -1,8 +1,6 @@
 Require Import Coq.Lists.List.
 Require Import coqutil.Z.Lia.
 Import ListNotations.
-Require Import coqutil.Word.Naive.
-Require Import coqutil.Word.Properties.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Spec.Decode.
 Require Import Coq.ZArith.BinInt. Local Open Scope Z_scope.
@@ -67,15 +65,15 @@ Definition literaltest_final(fuel: nat): RiscvMachine :=
   | (answer, state) => state
   end.
 
-Definition literaltest_res(fuel: nat): word64 :=
+Definition literaltest_res(fuel: nat): bits 64 :=
   match map.get (literaltest_final fuel).(getRegs) 15 with
   | Some v => v
-  | None => word.of_Z 0
+  | None => 0
   end.
 
 Eval vm_compute in (literaltest_res 50).
 
-Lemma literaltest_res_run_test: exists fuel, literaltest_res fuel = word.of_Z expected_res.
+Lemma literaltest_res_run_test: exists fuel, literaltest_res fuel = bits.of_Z _ expected_res.
   exists 50%nat.
   reflexivity.
 Qed.

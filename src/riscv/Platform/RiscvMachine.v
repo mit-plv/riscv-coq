@@ -3,7 +3,6 @@ Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Datatypes.Option.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Memory.
-Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.LittleEndian.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.LeakageOfInstr.
@@ -13,7 +12,8 @@ Require Import riscv.Utility.Utility.
 
 Section Machine.
 
-  Context {width: Z} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z}.
+  Local Notation word := (bits width).
   Context {Registers: map.map Register word}.
   Context {Mem: map.map word byte}.
 
@@ -29,32 +29,32 @@ Section Machine.
   Definition XAddrs: Type := list word.
 
   Definition isXAddr1B(a: word)(xAddrs: XAddrs): bool :=
-    match List.find (word.eqb a) xAddrs with
+    match List.find (Zmod.eqb a) xAddrs with
     | Some _ => true
     | None => false
     end.
 
   Definition isXAddr4B(a: word)(xAddrs: XAddrs): bool :=
     isXAddr1B a xAddrs &&
-    isXAddr1B (word.add a (word.of_Z 1)) xAddrs &&
-    isXAddr1B (word.add a (word.of_Z 2)) xAddrs &&
-    isXAddr1B (word.add a (word.of_Z 3)) xAddrs.
+    isXAddr1B (Zmod.add a 1) xAddrs &&
+    isXAddr1B (Zmod.add a 2) xAddrs &&
+    isXAddr1B (Zmod.add a 3) xAddrs.
 
   Definition isXAddr1: word -> XAddrs -> Prop := @List.In word.
 
   Definition isXAddr4(a: word)(xAddrs: XAddrs): Prop :=
     isXAddr1 a xAddrs /\
-    isXAddr1 (word.add a (word.of_Z 1)) xAddrs /\
-    isXAddr1 (word.add a (word.of_Z 2)) xAddrs /\
-    isXAddr1 (word.add a (word.of_Z 3)) xAddrs.
+    isXAddr1 (Zmod.add a 1) xAddrs /\
+    isXAddr1 (Zmod.add a 2) xAddrs /\
+    isXAddr1 (Zmod.add a 3) xAddrs.
 
   Lemma isXAddr1B_holds: forall a xAddrs,
       isXAddr1B a xAddrs = true -> isXAddr1 a xAddrs.
   Proof.
     unfold isXAddr1B, isXAddr1. intros.
-    destruct (List.find (word.eqb a) xAddrs) eqn: E; [|discriminate].
+    destruct (List.find (Zmod.eqb a) xAddrs) eqn: E; [|discriminate].
     apply List.find_some in E. destruct E.
-    apply Word.Properties.word.eqb_true in H1.
+    apply Zmod.eqb_eq in H1.
     subst. assumption.
   Qed.
 
@@ -62,10 +62,10 @@ Section Machine.
       isXAddr1B a xAddrs = false -> ~ isXAddr1 a xAddrs.
   Proof.
     unfold isXAddr1B, isXAddr1. intros.
-    destruct (List.find (word.eqb a) xAddrs) eqn: E; [discriminate|].
+    destruct (List.find (Zmod.eqb a) xAddrs) eqn: E; [discriminate|].
     intro C.
     pose proof (List.find_none _ _ E _ C) as P.
-    rewrite Word.Properties.word.eqb_eq in P by reflexivity.
+    rewrite Zmod.eqb_refl in P.
     discriminate.
   Qed.
 
@@ -124,14 +124,14 @@ Section Machine.
   Qed.
 
   Definition removeXAddr(a: word): XAddrs -> XAddrs :=
-    List.filter (fun a' => negb (word.eqb a a')).
+    List.filter (fun a' => negb (Zmod.eqb a a')).
 
   Definition addXAddr: word -> XAddrs -> XAddrs := List.cons.
 
   Fixpoint addXAddrRange(a: word)(nBytes: nat)(xAddrs: XAddrs): XAddrs :=
     match nBytes with
     | O => xAddrs
-    | S n => addXAddr a (addXAddrRange (word.add a (word.of_Z 1)) n xAddrs)
+    | S n => addXAddr a (addXAddrRange (Zmod.add a 1) n xAddrs)
     end.
 
   Section WithBitwidth.
@@ -194,7 +194,7 @@ Section Machine.
 
     Definition putProgram(prog: list MachineInt)(addr: word)(ma: RiscvMachine): RiscvMachine :=
       (withPc addr
-      (withNextPc (word.add addr (word.of_Z 4))
+      (withNextPc (Zmod.add addr 4)
       (withXAddrs (addXAddrRange addr (4 * List.length prog) ma.(getXAddrs))
       (withMem (unchecked_store_bytes ma.(getMem) addr (Z32s_to_bytes prog)) ma)))).
 

@@ -12,6 +12,7 @@ Require Import coqutil.Z.Lia.
 Require Import coqutil.Map.Interface.
 Require Import riscv.Platform.MaterializeRiscvProgram.
 Require Import riscv.Utility.Words32Naive.
+Local Notation word := (bits 32).
 Require Import coqutil.Map.Z_keyed_SortedListMap.
 Require Import coqutil.Map.OfFunc.
 Require Import coqutil.Word.Properties.
@@ -323,7 +324,7 @@ Fixpoint interp{A: Type}(p: M A): Graph -> ThreadState -> ThreadState -> A -> Pr
   end.
 
 Definition getReg(regs: Array Register word)(reg: Z): word :=
-  if Z.eq_dec reg 0 then word.of_Z 0 else select regs reg.
+  if Z.eq_dec reg 0 then 0 else select regs reg.
 
 Definition setReg(regs: Array Register word)(reg: Z)(v: word): Array Register word :=
   if Z.eq_dec reg Register0 then regs else store regs reg v.
@@ -504,7 +505,7 @@ Definition updateDeps(inst: Instruction): Array Register (set Event) -> Array Re
     assert_graph (select G.(Lab) s.(CurrentEvent) = FenceLabel);;
     put (withCurrentEvent (NextEvent s.(CurrentEvent)) s);
 
-  endCycleNormal := s <- get; put (withPc s.(NextPc) (withNextPc (word.add s.(NextPc) (word.of_Z 4)) s));
+  endCycleNormal := s <- get; put (withPc s.(NextPc) (withNextPc (Zmod.add s.(NextPc) 4) s));
 
   (* exceptions are not supported *)
   endCycleEarly{A: Type} := reject_program;
@@ -528,19 +529,19 @@ Definition run1: M unit :=
    the current cycle) are skipped. *)
 Definition runN(n: nat): M unit := power_func (fun m => run1;; m) n (Return tt).
 
-Definition initialRegs: Array Register word := mkArray (fun _ => word.of_Z 0).
+Definition initialRegs: Array Register word := mkArray (fun _ => Zmod.zero).
 
 Fixpoint prog2Array(l: list InstructionI)(start: word): Array word InstructionI :=
   match l with
   | nil => constArray word InstructionI InvalidI
-  | i :: rest => store (prog2Array rest (word.add start (word.of_Z 4))) start i
+  | i :: rest => store (prog2Array rest (Zmod.add start 4)) start i
   end.
 
 Definition initialState(id: Tid)(prog: list InstructionI): ThreadState := {|
   Regs := initialRegs;
-  Pc := word.of_Z 0;
-  NextPc := word.of_Z 4;
-  Prog := prog2Array prog (word.of_Z 0);
+  Pc := 0;
+  NextPc := 4;
+  Prog := prog2Array prog 0;
   CurrentEvent := ThreadEvent id 0;
   Deps := emptyDeps
 |}.
@@ -576,7 +577,7 @@ Definition initialReaderState := initialState 0%nat readerProg.
 Definition initialWriterState := initialState 1%nat writerProg.
 
 Ltac simpl_exec :=
-  cbn -[w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs] in *.
+  cbn -[w8 w32 map.empty Z.pow Zmod.of_Z Zmod.unsigned Zmod.and Zmod.add getReg map.put initialRegs] in *.
 
 Lemma remove_exists_unit_iff: forall (P: Prop),
     (exists _: unit, P) <-> P.
@@ -625,7 +626,7 @@ Proof.
   etransitivity. {
     instantiate (1 := ltac:(destruct (select (Prog s1) (Pc s1)))).
     destruct (select (Prog s1) (Pc s1)).
-    all: cbn -[minusone w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
+    all: cbn -[minusone w8 w32 map.empty Z.pow Zmod.of_Z Zmod.unsigned Zmod.and Zmod.add getReg map.put initialRegs].
     all: try lazymatch goal with
          | |- interp ?M _ _ _ _ = _ => fail
          | |- _ => reflexivity
@@ -635,7 +636,7 @@ Proof.
          | |- interp (bind (if ?B then _ else _) _) _ _ _ _ = _ =>
            instantiate (1 := ltac:(destruct B)); destruct B
          end.
-    all: cbn -[minusone w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
+    all: cbn -[minusone w8 w32 map.empty Z.pow Zmod.of_Z Zmod.unsigned Zmod.and Zmod.add getReg map.put initialRegs].
     all: try lazymatch goal with
          | |- interp ?M _ _ _ _ = _ => fail
          | |- _ => reflexivity
@@ -644,13 +645,13 @@ Proof.
          | |- interp (bind (if ?B then _ else _) _) _ _ _ _ = _ =>
            instantiate (1 := ltac:(destruct B)); destruct B
          end.
-    all: cbn -[minusone w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
+    all: cbn -[minusone w8 w32 map.empty Z.pow Zmod.of_Z Zmod.unsigned Zmod.and Zmod.add getReg map.put initialRegs].
     all: try lazymatch goal with
          | |- interp ?M _ _ _ _ = _ => fail
          | |- _ => reflexivity
          end.
   }
-  cbn -[minusone w8 w32 word map.empty word.of_Z word.unsigned word.and word.add getReg map.put initialRegs].
+  cbn -[minusone w8 w32 map.empty Z.pow Zmod.of_Z Zmod.unsigned Zmod.and Zmod.add getReg map.put initialRegs].
   subst simplified_run1.
   reflexivity.
 Qed.
@@ -661,29 +662,29 @@ Print simplified_run1.
 
 Local Set Warnings "-notation-both-format-and-spaces".
 
-Notation "(_ 'bv2nat' 32) A" := (word.unsigned A) (at level 10, A at level 0, only printing).
-Notation "(_ 'int2bv' 32) A" := (word.of_Z A) (at level 10, A at level 0, only printing).
-Notation "'bvadd' A B" := (word.add A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvsub' A B" := (word.sub A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvneg' A" := (word.opp A) (at level 10, A at level 0).
-Notation "'bvor' A B" := (word.or A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvand' A B" := (word.and A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvxor' A B" := (word.xor A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvnot' A" := (word.not A) (at level 10, A at level 0).
-Notation "'bvmul' A B" := (word.mul A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvurem' A B" := (word.modu A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvshl' A B" := (word.slu A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvlshr' A B" := (word.sru A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvashr' A B" := (word.srs A B) (at level 10, A at level 0, B at level 0).
-Notation "= A B" := (word.eqb A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvult' A B" := (word.ltu A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvslt' A B" := (word.lts A B) (at level 10, A at level 0, B at level 0).
+Notation "(_ 'bv2nat' 32) A" := (Zmod.unsigned A) (at level 10, A at level 0, only printing).
+Notation "(_ 'int2bv' 32) A" := (bits.of_Z 32 A) (at level 10, A at level 0, only printing).
+Notation "'bvadd' A B" := (Zmod.add A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvsub' A B" := (Zmod.sub A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvneg' A" := (Zmod.opp A) (at level 10, A at level 0).
+Notation "'bvor' A B" := (Zmod.or A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvand' A B" := (Zmod.and A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvxor' A B" := (Zmod.xor A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvnot' A" := (Zmod.not A) (at level 10, A at level 0).
+Notation "'bvmul' A B" := (Zmod.mul A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvurem' A B" := (Zmod.umod A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvshl' A B" := (Zmod.slu A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvlshr' A B" := (Zmod.sru A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvashr' A B" := (Zmod.srs A B) (at level 10, A at level 0, B at level 0).
+Notation "= A B" := (Zmod.eqb A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvult' A B" := (Z.ltb (Zmod.unsigned A) (Zmod.unsigned B)) (at level 10, A at level 0, B at level 0).
+Notation "'bvslt' A B" := (Z.ltb (Zmod.signed A) (Zmod.signed B)) (at level 10, A at level 0, B at level 0).
 
-Notation "(_ 'sign_extend' 24) A" := (word.of_Z (signExtend 8 (LittleEndian.combine 1 A)))
+Notation "(_ 'sign_extend' 24) A" := (bits.of_Z 32 (signExtend 8 (LittleEndian.combine 1 A)))
   (at level 10, A at level 0, only printing).
-Notation "(_ 'zero_extend' 24) A" := (word.of_Z (LittleEndian.combine 1 A))
+Notation "(_ 'zero_extend' 24) A" := (bits.of_Z 32 (LittleEndian.combine 1 A))
   (at level 10, A at level 0, only printing).
-Notation "(_ 'extract' 7 0) A" := (LittleEndian.split 1 (word.unsigned A))
+Notation "(_ 'extract' 7 0) A" := (LittleEndian.split 1 (Zmod.unsigned A))
   (at level 10, A at level 0, only printing).
 
 
@@ -951,7 +952,7 @@ Qed.
    in the list of instructions *)
 Inductive runToEnd(G: Graph): ThreadState -> ThreadState -> Prop :=
 | RDone: forall s,
-    Z.to_nat (word.unsigned s.(Pc) / 4) = length s.(Prog) ->
+    Z.to_nat (Zmod.unsigned s.(Pc) / 4) = length s.(Prog) ->
     runToEnd G s s
 | RStep: forall s1 s2 s3,
     interp run1 G s1 s2 tt ->
@@ -963,8 +964,8 @@ Lemma readAfterWriteWorks: forall G final,
     Wf G ->
     consSC G ->
     runToEnd G (initialState 0%nat readAfterWriteProg) final ->
-    word.and (getReg final.(Regs) s1) (word.of_Z 255) =
-    word.and (getReg final.(Regs) s0) (word.of_Z 255).
+    Zmod.and (getReg final.(Regs) s1) 255 =
+    Zmod.and (getReg final.(Regs) s0) 255.
 Proof.
   unfold initialState, s0, s1. intros *. intros EF W. intros.
 
@@ -1050,17 +1051,17 @@ Proof.
   rewrite map.get_put_diff by congruence.
   remember (match map.get initialRegs 8 with
             | Some x => x
-            | None => word.of_Z 0
+            | None => Zmod.zero
             end) as v0.
   rewrite signExtend_alt_bitwise by (reflexivity || assumption).
   match goal with
-  | |- ?x = ?y => refine (@word.unsigned_inj _ _ _ x y _)
+  | |- ?x = ?y => refine (Zmod.unsigned_inj _ x y _)
   end.
-  rewrite !word.unsigned_and. unfold word.wrap.
+  rewrite !bits.unsigned_and.
   unfold signExtend_bitwise.
-  remember (@word.unsigned 32 (Naive.word 32) v0) as V.
+  remember (Zmod.unsigned v0) as V.
   clear.
-  rewrite !word.unsigned_of_Z. unfold word.wrap.
+  rewrite !Zmod.unsigned_of_Z.
   change (8 - 1) with 7.
   change (Z.of_nat 1 * 8) with 8.
   rewrite <- !Z.land_ones by discriminate.

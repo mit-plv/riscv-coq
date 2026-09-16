@@ -9,20 +9,20 @@ Require Import riscv.Utility.Utility.
 Section Riscv.
   Import free.
 
-  Variant riscv_primitive{width}{BW: Bitwidth width}{word: word width}:=
+  Variant riscv_primitive{width}{BW: Bitwidth width}:=
   | GetRegister (_ : Register)
-  | SetRegister (_ : Register) (_ : word)
-  | LoadByte (_ : SourceType) (_ : word)
-  | LoadHalf (_ : SourceType) (_ : word)
-  | LoadWord (_ : SourceType) (_ : word)
-  | LoadDouble (_ : SourceType) (_ : word)
-  | StoreByte (_ : SourceType) (_ : word) (_ : w8)
-  | StoreHalf (_ : SourceType) (_ : word) (_ : w16)
-  | StoreWord (_ : SourceType) (_ : word) (_ : w32)
-  | StoreDouble (_ : SourceType) (_ : word) (_ : w64)
-  | MakeReservation (_ : word)
-  | ClearReservation (_ : word)
-  | CheckReservation (_ : word)
+  | SetRegister (_ : Register) (_ : bits width)
+  | LoadByte (_ : SourceType) (_ : bits width)
+  | LoadHalf (_ : SourceType) (_ : bits width)
+  | LoadWord (_ : SourceType) (_ : bits width)
+  | LoadDouble (_ : SourceType) (_ : bits width)
+  | StoreByte (_ : SourceType) (_ : bits width) (_ : w8)
+  | StoreHalf (_ : SourceType) (_ : bits width) (_ : w16)
+  | StoreWord (_ : SourceType) (_ : bits width) (_ : w32)
+  | StoreDouble (_ : SourceType) (_ : bits width) (_ : w64)
+  | MakeReservation (_ : bits width)
+  | ClearReservation (_ : bits width)
+  | CheckReservation (_ : bits width)
   | GetCSRField (_ : CSRField.CSRField)
   | SetCSRField (_ : CSRField.CSRField) (_ : MachineInt)
   | GetPrivMode
@@ -30,13 +30,14 @@ Section Riscv.
   | Fence (_ : MachineInt) (_ : MachineInt)
   | LeakEvent (_ : option LeakageEvent)
   | GetPC
-  | SetPC (_ : word)
+  | SetPC (_ : bits width)
   | StartCycle
   | EndCycleNormal
   | EndCycleEarly (_ : Type)
   .
 
-  Context {width} {BW: Bitwidth width} {word: word width}.
+  Context {width} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
 
   Definition primitive_result (action : riscv_primitive) : Type :=
     match action with

@@ -15,7 +15,8 @@ Require Import riscv.Spec.Primitives.
 
 Section MetricPrimitives.
 
-  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
   Context {Registers: map.map Register word}.
   Context {mem: map.map word byte}.
 
@@ -102,7 +103,7 @@ Section MetricPrimitives.
          | Some v => post v initialL
          | None => forall v, is_initial_register_value v -> post v initialL
          end) \/
-        (x = Register0 /\ post (word.of_Z 0) initialL) ->
+        (x = Register0 /\ post Zmod.zero initialL) ->
         mcomp_sat (getRegister x) initialL post;
 
     spec_setRegister: forall (initialL: MetricRiscvMachine) x v (post: unit -> MetricRiscvMachine -> Prop),
@@ -132,7 +133,7 @@ Section MetricPrimitives.
 
     spec_endCycleNormal: forall (initialL: MetricRiscvMachine) (post: unit -> MetricRiscvMachine -> Prop),
         post tt (withPc     initialL.(getNextPc)
-                (withNextPc (word.add initialL.(getNextPc) (word.of_Z 4))
+                (withNextPc (Zmod.add initialL.(getNextPc) 4)
                 (updateMetrics (addMetricInstructions 1)
                                initialL))) ->
         mcomp_sat endCycleNormal initialL post;

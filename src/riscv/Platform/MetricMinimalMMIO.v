@@ -23,7 +23,8 @@ Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
 Section Riscv.
-  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
 

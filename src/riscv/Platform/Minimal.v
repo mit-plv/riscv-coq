@@ -20,7 +20,8 @@ Import ListNotations.
 
 Section Riscv.
 
-  Context {width: Z} {BW: Bitwidth width} {word: word width} {word_ok: word.ok word}.
+  Context {width: Z} {BW: Bitwidth width}.
+  Local Notation word := (bits width).
   Context {Mem: map.map word byte}.
   Context {Registers: map.map Register word}.
 
@@ -63,7 +64,7 @@ Section Riscv.
             mach <- get;
             match map.get mach.(getRegs) reg with
             | Some v => Return v
-            | None => Return (word.of_Z 0)
+            | None => Return Zmod.zero
             end
           else
             fail_hard;
@@ -101,7 +102,7 @@ Section Riscv.
       fence _ _ := fail_hard;
 
       endCycleNormal := update (fun m => (withPc m.(getNextPc)
-                                         (withNextPc (word.add m.(getNextPc) (word.of_Z 4)) m)));
+                                         (withNextPc (Zmod.add m.(getNextPc) 4) m)));
 
       (* fail hard if exception is thrown because at the moment, we want to prove that
          code output by the compiler never throws exceptions *)
@@ -189,7 +190,7 @@ Section Riscv.
 
   Instance MinimalPrimitivesParams: PrimitivesParams (OState RiscvMachine) RiscvMachine := {
     Primitives.mcomp_sat := @OStateOperations.computation_with_answer_satisfies RiscvMachine;
-    Primitives.is_initial_register_value := eq (word.of_Z 0);
+    Primitives.is_initial_register_value := eq Zmod.zero;
     Primitives.nonmem_load n kind addr _ _ := False;
     Primitives.nonmem_store n kind addr v _ _ := False;
     Primitives.valid_machine _ := True;

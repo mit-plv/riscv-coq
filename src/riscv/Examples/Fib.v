@@ -1,8 +1,6 @@
 Require Import Coq.Lists.List.
 Require Import coqutil.Z.Lia.
 Import ListNotations.
-Require Import coqutil.Word.Naive.
-Require Import coqutil.Word.Properties.
 Require Import riscv.Spec.Machine.
 Require Import riscv.Spec.Decode.
 Require Import Coq.ZArith.BinInt. Local Open Scope Z_scope.
@@ -20,7 +18,7 @@ Require Import coqutil.Map.Z_keyed_SortedListMap.
 
 Require coqutil.Map.SortedList.
 
-Definition fib6_riscv: list MachineInt := [ (* TODO should be "word32", not MachineInt *)
+Definition fib6_riscv: list MachineInt := [ (* TODO should be "bits 32", not MachineInt *)
   0x00600993;         (* li s3,6 *)
   0x00000a13;         (* li s4,0 *)
   0x00100913;         (* li s2,1 *)
@@ -78,10 +76,10 @@ Definition fib6_final(fuel: nat): RiscvMachine :=
   | (answer, state) => state
   end.
 
-Definition fib6_res(fuel: nat): word32 :=
+Definition fib6_res(fuel: nat): bits 32 :=
   match map.get (fib6_final fuel).(getRegs) 18 with
   | Some v => v
-  | None => word.of_Z 0
+  | None => 0
   end.
 
 Definition fib6_trace(fuel: nat): list LogItem :=
@@ -92,7 +90,7 @@ Definition fib6_trace(fuel: nat): list LogItem :=
 
 Example trace_result := Eval vm_compute in (fib6_trace 50).
 
-Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_res fuel = word.of_Z 13.
+Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_res fuel = 13%Zmod.
   exists 50%nat.
   reflexivity.
 Qed.
