@@ -1,6 +1,6 @@
 Require Import Coq.Strings.String.
 Require Import coqutil.Map.Interface.
-Require Import coqutil.Word.LittleEndian.
+Require Import coqutil.Word.LittleEndianList.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Platform.Memory.

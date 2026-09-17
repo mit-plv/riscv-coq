@@ -41,7 +41,7 @@ Section Riscv.
   Context {Mem: map.map word byte} {Registers: map.map Register word}.
 
   Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
-    bits.of_Z _ (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).
+    bits.of_Z _ (BitOps.signExtend (8 * Z.of_nat n) (LittleEndianList.le_combine (HList.tuple.to_list v))).
 
   Definition mmioLoadEvent(addr: word){n: nat}(v: HList.tuple byte n): LogItem :=
     ((map.empty, "MMIOREAD"%string, [addr]), (map.empty, [signedByteTupleToReg v])).

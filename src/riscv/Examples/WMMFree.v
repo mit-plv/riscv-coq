@@ -24,7 +24,7 @@ Require Import Coq.Logic.PropExtensionality.
 Require Import Coq.derive.Derive.
 Require Import riscv.Spec.Decode.
 
-From coqutil Require LittleEndian.
+From coqutil Require LittleEndianList.
 
 (* sub-relation *)
 Definition subrel{A B: Type}(R1 R2: A -> B -> Prop): Prop :=
@@ -593,13 +593,13 @@ Ltac step :=
   | |- _ => rewrite !remove_exists_unit
   | |- context [@nth_error ?A ?l ?i] =>
     progress let r := eval cbv in i in change i with r
-  | |- context [decode ?iset (LittleEndian.combine 4 (LittleEndian.split 4 ?v))] =>
+  | |- context [decode ?iset (LittleEndianList.le_combine (HList.tuple.to_list (HList.tuple.of_list (LittleEndianList.le_split 4 ?v))))] =>
     lazymatch isZcst v with
     | true => idtac
     end;
     progress let r := eval cbv in
-             (decode iset (LittleEndian.combine 4 (LittleEndian.split 4 v))) in
-      change (decode iset (LittleEndian.combine 4 (LittleEndian.split 4 v))) with r
+             (decode iset (LittleEndianList.le_combine (HList.tuple.to_list (HList.tuple.of_list (LittleEndianList.le_split 4 v))))) in
+      change (decode iset (LittleEndianList.le_combine (HList.tuple.to_list (HList.tuple.of_list (LittleEndianList.le_split 4 v))))) with r
   | |- _ => progress simpl_exec
   end.
 
@@ -680,11 +680,11 @@ Notation "= A B" := (Zmod.eqb A B) (at level 10, A at level 0, B at level 0).
 Notation "'bvult' A B" := (Z.ltb (Zmod.unsigned A) (Zmod.unsigned B)) (at level 10, A at level 0, B at level 0).
 Notation "'bvslt' A B" := (Z.ltb (Zmod.signed A) (Zmod.signed B)) (at level 10, A at level 0, B at level 0).
 
-Notation "(_ 'sign_extend' 24) A" := (bits.of_Z 32 (signExtend 8 (LittleEndian.combine 1 A)))
+Notation "(_ 'sign_extend' 24) A" := (bits.of_Z 32 (signExtend 8 (LittleEndianList.le_combine (HList.tuple.to_list A))))
   (at level 10, A at level 0, only printing).
-Notation "(_ 'zero_extend' 24) A" := (bits.of_Z 32 (LittleEndian.combine 1 A))
+Notation "(_ 'zero_extend' 24) A" := (bits.of_Z 32 (LittleEndianList.le_combine (HList.tuple.to_list A)))
   (at level 10, A at level 0, only printing).
-Notation "(_ 'extract' 7 0) A" := (LittleEndian.split 1 (Zmod.unsigned A))
+Notation "(_ 'extract' 7 0) A" := (HList.tuple.of_list (LittleEndianList.le_split 1 (Zmod.unsigned A)))
   (at level 10, A at level 0, only printing).
 
 
@@ -980,7 +980,7 @@ Proof.
   simpl_exec.
   simp.
   cbv in E.
-  eassert (decode RV32I (LittleEndian.combine 4 w) = _) as A. {
+  eassert (decode RV32I (LittleEndianList.le_combine (HList.tuple.to_list w)) = _) as A. {
     apply Option.eq_of_eq_Some in E. subst w. cbv. reflexivity.
   }
   rewrite A in *.
@@ -1002,7 +1002,7 @@ Proof.
   simpl_exec.
   simp.
   cbv in E.
-  eassert (decode RV32I (LittleEndian.combine 4 w) = _) as A. {
+  eassert (decode RV32I (LittleEndianList.le_combine (HList.tuple.to_list w)) = _) as A. {
     apply Option.eq_of_eq_Some in E. subst w. cbv. reflexivity.
   }
   rewrite A in *.
@@ -1045,7 +1045,7 @@ Proof.
   | Hp: Lab G ?e = Some _ |- _ => rewrite Hp in *
   end.
   apply Option.eq_of_eq_Some in E. subst w.
-  rewrite LittleEndian.combine_split.
+  rewrite HList.tuple.to_list_of_list, LittleEndianList.le_combine_split.
   unfold getReg. simpl (Z.eq_dec 9 0). simpl (Z.eq_dec 8 0). cbv [id].
   rewrite map.get_put_same by reflexivity.
   rewrite map.get_put_diff by congruence.

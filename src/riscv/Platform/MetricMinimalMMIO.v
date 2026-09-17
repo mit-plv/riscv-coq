@@ -38,7 +38,6 @@ Section Riscv.
       post r (mkMetricRiscvMachine mach (fst a (metmach.(getMetrics))))) (fun _ => False).
 
   Arguments Memory.store_bytes: simpl never.
-  Arguments LittleEndian.combine: simpl never.
 
   Global Instance MetricMinimalMMIOPrimitivesParams: PrimitivesParams M MetricRiscvMachine :=
   {
