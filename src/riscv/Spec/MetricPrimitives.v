@@ -64,11 +64,11 @@ Section MetricPrimitives.
   }.
 
   Definition spec_load{p: PrimitivesParams M MetricRiscvMachine}(n: nat)
-             (riscv_load: SourceType -> word -> M (HList.tuple byte n))
-             (mem_load: mem -> word -> option (HList.tuple byte n))
+             (riscv_load: SourceType -> word -> M (bits (8 * Z.of_nat n)))
+             (mem_load: mem -> word -> option (bits (8 * Z.of_nat n)))
     : Prop :=
     forall (initialL: MetricRiscvMachine) addr (kind: SourceType)
-           (post: HList.tuple byte n -> MetricRiscvMachine -> Prop),
+           (post: bits (8 * Z.of_nat n) -> MetricRiscvMachine -> Prop),
       (kind = Fetch -> isXAddr4 addr initialL.(getXAddrs)) /\
       ((exists v, mem_load initialL.(getMem) addr = Some v /\
                   post v (updateMetrics (addMetricLoads 1) initialL)) \/
@@ -77,8 +77,8 @@ Section MetricPrimitives.
       mcomp_sat (riscv_load kind addr) initialL post.
 
   Definition spec_store{p: PrimitivesParams M MetricRiscvMachine}(n: nat)
-             (riscv_store: SourceType -> word -> HList.tuple byte n -> M unit)
-             (mem_store: mem -> word -> HList.tuple byte n -> option mem)
+             (riscv_store: SourceType -> word -> bits (8 * Z.of_nat n) -> M unit)
+             (mem_store: mem -> word -> bits (8 * Z.of_nat n) -> option mem)
              : Prop :=
     forall (initialL: MetricRiscvMachine) addr v (kind: SourceType)
            (post: unit -> MetricRiscvMachine -> Prop),

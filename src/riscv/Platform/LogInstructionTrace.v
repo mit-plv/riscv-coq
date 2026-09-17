@@ -50,7 +50,7 @@ Section Riscv.
       v <- loadWord kind addr;
       mach <- get;
       let i := match Memory.loadWord mach[mem] addr with
-               | Some i => LittleEndian.combine 4 i
+               | Some i => Zmod.unsigned i
                | None => -1
                end in
       let i' := match kind with

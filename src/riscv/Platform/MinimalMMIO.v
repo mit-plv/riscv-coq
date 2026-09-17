@@ -40,14 +40,14 @@ Section Riscv.
   Local Notation word := (bits width).
   Context {Mem: map.map word byte} {Registers: map.map Register word}.
 
-  Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
-    bits.of_Z _ (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).
+  Definition signExtendToReg{n: nat}(v: bits (8 * Z.of_nat n)): word :=
+    bits.of_Z _ (Zmod.signed v).
 
-  Definition mmioLoadEvent(addr: word){n: nat}(v: HList.tuple byte n): LogItem :=
-    ((map.empty, "MMIOREAD"%string, [addr]), (map.empty, [signedByteTupleToReg v])).
+  Definition mmioLoadEvent(addr: word){n: nat}(v: bits (8 * Z.of_nat n)): LogItem :=
+    ((map.empty, "MMIOREAD"%string, [addr]), (map.empty, [signExtendToReg v])).
 
-  Definition mmioStoreEvent(addr: word){n: nat}(v: HList.tuple byte n): LogItem :=
-    ((map.empty, "MMIOWRITE"%string, [addr; signedByteTupleToReg v]), (map.empty, [])).
+  Definition mmioStoreEvent(addr: word){n: nat}(v: bits (8 * Z.of_nat n)): LogItem :=
+    ((map.empty, "MMIOWRITE"%string, [addr; signExtendToReg v]), (map.empty, [])).
 
   Context {mmio_spec: MMIOSpec}.
 
@@ -66,10 +66,10 @@ Section Riscv.
   Definition nonmem_load(n: nat)(ctxid: SourceType) a mach (post: _ -> _ -> Prop) :=
     isMMIOAddr a /\ isMMIOAligned n a
     (* there exists at least one valid MMIO read value (set is nonempty) *)
-    /\ (exists v : HList.tuple byte n, MMIOReadOK n (getLog mach) a (signedByteTupleToReg v))
+    /\ (exists v : bits (8 * Z.of_nat n), MMIOReadOK n (getLog mach) a (signExtendToReg v))
     (* ...and postcondition holds for all valid read values *)
     /\ forall v,
-        MMIOReadOK n (getLog mach) a (signedByteTupleToReg v) ->
+        MMIOReadOK n (getLog mach) a (signExtendToReg v) ->
         post v (withLogItem (@mmioLoadEvent a n v) mach).
 
   Notation load n ctxid a mach post := (
@@ -180,8 +180,8 @@ Section Riscv.
           disjoint (of_list s'.(getXAddrs)) isMMIOAddr /\
           (postA s' \/ exists v', postF v' s').
   Proof.
-    destruct s, a; cbn -[HList.tuple];
-      cbv [store nonmem_load nonmem_store]; cbn -[HList.tuple];
+    destruct s, a; cbn -[bits.of_Z];
+      cbv [store nonmem_load nonmem_store]; cbn -[bits.of_Z];
         repeat destruct_one_match;
         intuition idtac;
         repeat lazymatch goal with
@@ -297,7 +297,7 @@ Section Riscv.
       repeat match goal with
       | _ => progress subst
       | _ => Option.inversion_option
-      | _ => progress cbn -[Memory.load_Z Memory.store_bytes HList.tuple]
+      | _ => progress cbn -[Memory.load_Z Memory.store_bytes bits.of_Z]
       | _ => progress cbv [valid_register is_initial_register_value store Memory.loadByte Memory.loadHalf Memory.loadWord Memory.loadDouble Memory.storeByte Memory.storeHalf Memory.storeWord Memory.storeDouble] in *
       | H : exists _, _ |- _ => destruct H
       | H : _ /\ _ |- _ => destruct H

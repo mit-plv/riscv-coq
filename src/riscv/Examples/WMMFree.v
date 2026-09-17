@@ -24,7 +24,6 @@ Require Import Coq.Logic.PropExtensionality.
 Require Import Coq.derive.Derive.
 Require Import riscv.Spec.Decode.
 
-From coqutil Require LittleEndian.
 
 (* sub-relation *)
 Definition subrel{A B: Type}(R1 R2: A -> B -> Prop): Prop :=
@@ -186,7 +185,7 @@ Definition Loc(G: Graph)(e: Event): option word :=
   | AbsentLabel => None
   end.
 
-Definition w8zero: w8 := PrimitivePair.pair.mk Byte.x00 tt.
+Definition w8zero: w8 := bits.of_Z 8 0.
 
 Definition Val(G: Graph)(e: Event): w8 :=
   match select G.(Lab) e with
@@ -353,26 +352,26 @@ Definition store_byte(addr: word)(v: w8): M unit :=
   put (withCurrentEvent (NextEvent s.(CurrentEvent)) s).
 
 (* only 1-byte loads and stores are supported at the moment *)
-Definition loadData(n: nat)(a: word): M (HList.tuple byte n) :=
+Definition loadData(n: nat)(a: word): M (bits (8 * Z.of_nat n)) :=
   match n with
   | 1 => load_byte a
   | _ => reject_program
   end.
 
-Definition storeData(n: nat)(a: word): HList.tuple byte n -> M unit :=
+Definition storeData(n: nat)(a: word): bits (8 * Z.of_nat n) -> M unit :=
   match n with
   | 1 => store_byte a
   | _ => fun _ => reject_program
   end.
 
-Definition loadN(n: nat)(kind: SourceType)(a: word): M (HList.tuple byte n) :=
+Definition loadN(n: nat)(kind: SourceType)(a: word): M (bits (8 * Z.of_nat n)) :=
   match kind with
   | Fetch => reject_program (* instructions are loaded directly, not through loadWord *)
   | Execute => loadData n a
   | VirtualMemory => reject_program
   end.
 
-Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n): M unit :=
+Definition storeN(n: nat)(kind: SourceType)(a: word)(v: bits (8 * Z.of_nat n)): M unit :=
   s <- get;
   match kind with
   | Fetch => reject_program
@@ -593,13 +592,12 @@ Ltac step :=
   | |- _ => rewrite !remove_exists_unit
   | |- context [@nth_error ?A ?l ?i] =>
     progress let r := eval cbv in i in change i with r
-  | |- context [decode ?iset (LittleEndian.combine 4 (LittleEndian.split 4 ?v))] =>
+  | |- context [decode ?iset (Zmod.unsigned (bits.of_Z ?n ?v))] =>
     lazymatch isZcst v with
     | true => idtac
     end;
-    progress let r := eval cbv in
-             (decode iset (LittleEndian.combine 4 (LittleEndian.split 4 v))) in
-      change (decode iset (LittleEndian.combine 4 (LittleEndian.split 4 v))) with r
+    progress let r := eval cbv in (decode iset (Zmod.unsigned (bits.of_Z n v))) in
+      change (decode iset (Zmod.unsigned (bits.of_Z n v))) with r
   | |- _ => progress simpl_exec
   end.
 
@@ -680,11 +678,11 @@ Notation "= A B" := (Zmod.eqb A B) (at level 10, A at level 0, B at level 0).
 Notation "'bvult' A B" := (Z.ltb (Zmod.unsigned A) (Zmod.unsigned B)) (at level 10, A at level 0, B at level 0).
 Notation "'bvslt' A B" := (Z.ltb (Zmod.signed A) (Zmod.signed B)) (at level 10, A at level 0, B at level 0).
 
-Notation "(_ 'sign_extend' 24) A" := (bits.of_Z 32 (signExtend 8 (LittleEndian.combine 1 A)))
+Notation "(_ 'sign_extend' 24) A" := (bits.of_Z 32 (Zmod.signed A))
   (at level 10, A at level 0, only printing).
-Notation "(_ 'zero_extend' 24) A" := (bits.of_Z 32 (LittleEndian.combine 1 A))
+Notation "(_ 'zero_extend' 24) A" := (bits.of_Z 32 (Zmod.unsigned A))
   (at level 10, A at level 0, only printing).
-Notation "(_ 'extract' 7 0) A" := (LittleEndian.split 1 (Zmod.unsigned A))
+Notation "(_ 'extract' 7 0) A" := (bits.of_Z 8 (Zmod.unsigned A))
   (at level 10, A at level 0, only printing).
 
 
@@ -980,7 +978,7 @@ Proof.
   simpl_exec.
   simp.
   cbv in E.
-  eassert (decode RV32I (LittleEndian.combine 4 w) = _) as A. {
+  eassert (decode RV32I (Zmod.unsigned w) = _) as A. {
     apply Option.eq_of_eq_Some in E. subst w. cbv. reflexivity.
   }
   rewrite A in *.
@@ -1002,7 +1000,7 @@ Proof.
   simpl_exec.
   simp.
   cbv in E.
-  eassert (decode RV32I (LittleEndian.combine 4 w) = _) as A. {
+  eassert (decode RV32I (Zmod.unsigned w) = _) as A. {
     apply Option.eq_of_eq_Some in E. subst w. cbv. reflexivity.
   }
   rewrite A in *.
@@ -1045,7 +1043,7 @@ Proof.
   | Hp: Lab G ?e = Some _ |- _ => rewrite Hp in *
   end.
   apply Option.eq_of_eq_Some in E. subst w.
-  rewrite LittleEndian.combine_split.
+  rewrite bits.unsigned_of_Z_small by (cbv; intuition discriminate).
   unfold getReg. simpl (Z.eq_dec 9 0). simpl (Z.eq_dec 8 0). cbv [id].
   rewrite map.get_put_same by reflexivity.
   rewrite map.get_put_diff by congruence.

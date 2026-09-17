@@ -38,7 +38,6 @@ Section Riscv.
       post r (mkMetricRiscvMachine mach (fst a (metmach.(getMetrics))))) (fun _ => False).
 
   Arguments Memory.store_bytes: simpl never.
-  Arguments LittleEndian.combine: simpl never.
 
   Global Instance MetricMinimalMMIOPrimitivesParams: PrimitivesParams M MetricRiscvMachine :=
   {
@@ -110,7 +109,7 @@ Section Riscv.
       repeat match goal with
       | _ => progress subst
       | _ => Option.inversion_option
-      | _ => progress cbn -[Memory.load_Z Memory.store_bytes HList.tuple] in *
+      | _ => progress cbn -[Memory.load_Z Memory.store_bytes bits.of_Z] in *
       | _ => progress cbv [valid_register is_initial_register_value store Memory.loadByte Memory.loadHalf Memory.loadWord Memory.loadDouble Memory.storeByte Memory.storeHalf Memory.storeWord Memory.storeDouble] in *
       | H : exists _, _ |- _ => destruct H
       | H : _ /\ _ |- _ => destruct H

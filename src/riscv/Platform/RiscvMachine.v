@@ -3,7 +3,7 @@ Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Datatypes.Option.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Memory.
-Require Import coqutil.Word.LittleEndian.
+Require Import coqutil.Word.LittleEndianList.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Spec.LeakageOfInstr.
 Require Import riscv.Platform.Memory.

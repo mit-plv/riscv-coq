@@ -58,7 +58,7 @@ Section Riscv.
     v <- fail_if_None (Memory.load_bytes n mach[mem] a);
     Return v) (only parsing).
 
-  Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n): StateAbortFail State unit :=
+  Definition storeN(n: nat)(kind: SourceType)(a: word)(v: bits (8 * Z.of_nat n)): StateAbortFail State unit :=
     mach <- get;
     m <- fail_if_None (Memory.store_bytes n mach[mem] a v);
     put mach[mem := m].

@@ -3,7 +3,6 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.setoid_ring.Ring_theory.
 Require Export coqutil.Word.Bitwidth.
 Require Export coqutil.Byte.
-Require Import coqutil.Datatypes.HList.
 Require Import coqutil.sanity.
 Require Export coqutil.Z.BitOps.
 Require Export riscv.Utility.BitSlice.
@@ -15,11 +14,10 @@ Local Open Scope Z_scope.
 Notation bitSlice := riscv.Utility.BitSlice.bitSlice.
 Notation signExtend := coqutil.Z.BitOps.signExtend.
 
-(* when we don't need any operators, we just use tuples of bytes: *)
-Definition w8  := tuple byte 1.
-Definition w16 := tuple byte 2.
-Definition w32 := tuple byte 4.
-Definition w64 := tuple byte 8.
+Definition w8  := bits 8.
+Definition w16 := bits 16.
+Definition w32 := bits 32.
+Definition w64 := bits 64.
 
 (* Meaning of MachineInt: an integer big enough to hold an integer of a RISCV machine,
    no matter whether it's a 32-bit or 64-bit machine. *)

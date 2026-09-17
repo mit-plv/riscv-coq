@@ -35,10 +35,10 @@ Section Primitives.
     is_initial_register_value: word -> Prop;
 
     (* tells what happens if an n-byte read at a non-memory address is performed *)
-    nonmem_load : forall (n: nat), SourceType -> word -> RiscvMachine -> (HList.tuple byte n -> RiscvMachine -> Prop) -> Prop;
+    nonmem_load : forall (n: nat), SourceType -> word -> RiscvMachine -> (bits (8 * Z.of_nat n) -> RiscvMachine -> Prop) -> Prop;
 
     (* tells what happens if an n-byte write at a non-memory address is performed *)
-    nonmem_store: forall (n: nat), SourceType -> word -> HList.tuple byte n -> RiscvMachine -> (RiscvMachine -> Prop) -> Prop;
+    nonmem_store: forall (n: nat), SourceType -> word -> bits (8 * Z.of_nat n) -> RiscvMachine -> (RiscvMachine -> Prop) -> Prop;
 
     (* an invariant which is preserved by each primitive operation
        TODO it might also be useful to have invariants which are only preserved by whole
@@ -102,10 +102,10 @@ Section Primitives.
   }.
 
   Definition spec_load{p: PrimitivesParams RiscvMachine}(n: nat)
-             (riscv_load: SourceType -> word -> M (HList.tuple byte n))
-             (mem_load: mem -> word -> option (HList.tuple byte n))
+             (riscv_load: SourceType -> word -> M (bits (8 * Z.of_nat n)))
+             (mem_load: mem -> word -> option (bits (8 * Z.of_nat n)))
     : Prop :=
-    forall initialL addr (kind: SourceType) (post: HList.tuple byte n -> RiscvMachine -> Prop),
+    forall initialL addr (kind: SourceType) (post: bits (8 * Z.of_nat n) -> RiscvMachine -> Prop),
       (kind = Fetch -> isXAddr4 addr initialL.(getXAddrs)) /\
       ((exists v, mem_load initialL.(getMem) addr = Some v /\
                   post v initialL) \/
@@ -122,8 +122,8 @@ Section Primitives.
     end.
 
   Definition spec_store{p: PrimitivesParams RiscvMachine}(n: nat)
-             (riscv_store: SourceType -> word -> HList.tuple byte n -> M unit)
-             (mem_store: mem -> word -> HList.tuple byte n -> option mem)
+             (riscv_store: SourceType -> word -> bits (8 * Z.of_nat n) -> M unit)
+             (mem_store: mem -> word -> bits (8 * Z.of_nat n) -> option mem)
              : Prop :=
     forall initialL addr v (kind: SourceType) (post: unit -> RiscvMachine -> Prop),
       (exists m', mem_store initialL.(getMem) addr v = Some m' /\

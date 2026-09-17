@@ -1,7 +1,5 @@
 Require Import Coq.ZArith.ZArith.
 Require Import coqutil.Word.Bitwidth.
-Require Import coqutil.Word.LittleEndianList.
-Require Import coqutil.Datatypes.HList.
 Require Import  riscv.Utility.Utility.
 Local Open Scope Z_scope.
 
@@ -18,18 +16,18 @@ Local Open Scope Z_scope.
   or := Zmod.or;
   and := Zmod.and;
   XLEN := width;
-  regToInt8  a := tuple.of_list (le_split 1 (Zmod.unsigned a));
-  regToInt16 a := tuple.of_list (le_split 2 (Zmod.unsigned a));
-  regToInt32 a := tuple.of_list (le_split 4 (Zmod.unsigned a));
-  regToInt64 a := tuple.of_list (le_split 8 (Zmod.unsigned a));
-  uInt8ToReg  a := bits.of_Z _ (le_combine (tuple.to_list a));
-  uInt16ToReg a := bits.of_Z _ (le_combine (tuple.to_list a));
-  uInt32ToReg a := bits.of_Z _ (le_combine (tuple.to_list a));
-  uInt64ToReg a := bits.of_Z _ (le_combine (tuple.to_list a));
-  int8ToReg  a := bits.of_Z _ (signExtend  8 (le_combine (tuple.to_list a)));
-  int16ToReg a := bits.of_Z _ (signExtend 16 (le_combine (tuple.to_list a)));
-  int32ToReg a := bits.of_Z _ (signExtend 32 (le_combine (tuple.to_list a)));
-  int64ToReg a := bits.of_Z _ (signExtend 64 (le_combine (tuple.to_list a)));
+  regToInt8  a := bits.of_Z 8 (Zmod.unsigned a);
+  regToInt16 a := bits.of_Z 16 (Zmod.unsigned a);
+  regToInt32 a := bits.of_Z 32 (Zmod.unsigned a);
+  regToInt64 a := bits.of_Z 64 (Zmod.unsigned a);
+  uInt8ToReg  a := bits.of_Z _ (Zmod.unsigned a);
+  uInt16ToReg a := bits.of_Z _ (Zmod.unsigned a);
+  uInt32ToReg a := bits.of_Z _ (Zmod.unsigned a);
+  uInt64ToReg a := bits.of_Z _ (Zmod.unsigned a);
+  int8ToReg  a := bits.of_Z _ (Zmod.signed a);
+  int16ToReg a := bits.of_Z _ (Zmod.signed a);
+  int32ToReg a := bits.of_Z _ (Zmod.signed a);
+  int64ToReg a := bits.of_Z _ (Zmod.signed a);
   s32 x := bits.of_Z _ (signExtend 32 (Zmod.unsigned x));
   u32 x := bits.of_Z _ ((Zmod.unsigned x) mod 2 ^ 32);
   regToZ_signed := Zmod.signed;

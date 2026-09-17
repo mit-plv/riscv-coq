@@ -1,11 +1,10 @@
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Import coqutil.Word.Bitwidth.
-Require Import coqutil.Datatypes.HList.
-Require Import coqutil.Datatypes.PrimitivePair.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Properties.
 Require Import coqutil.Map.Memory.
+Require Import coqutil.Word.LittleEndianList.
 Require Import coqutil.Map.SeparationMemory.
 Require Import coqutil.Tactics.Tactics.
 Require Import coqutil.sanity.
@@ -15,14 +14,14 @@ Require Import riscv.Utility.Utility.
 
 Notation load_bytes sz (* : nat, value *) := (fun m addr =>
   match load_Z m addr sz with
-  | Some z => Some (tuple.of_list (LittleEndianList.le_split sz z))
+  | Some z => Some (bits.of_Z (8 * Z.of_nat sz) z)
   | None => None
   end) (only parsing).
 
 Definition store_bytes
   {width} {mem: map.map (bits width) byte}
-  (sz: nat)(m: mem)(a: bits width)(v: tuple byte sz): option mem :=
-  store_bytes m a (tuple.to_list v).
+  (sz: nat)(m: mem)(a: bits width)(v: bits (8 * Z.of_nat sz)): option mem :=
+  store_Z m a sz (Zmod.unsigned v).
 
 Section MemAccess2.
   Context {width: Z}.
@@ -87,3 +86,18 @@ Section MemoryHelpers.
     reflexivity.
   Qed.
 End MemoryHelpers.
+
+Lemma le_split_unsigned_of_Z: forall n z,
+    LittleEndianList.le_split n (Zmod.unsigned (bits.of_Z (8 * Z.of_nat n) z)) =
+    LittleEndianList.le_split n z.
+Proof.
+  intros. rewrite bits.unsigned_of_Z, Z.mul_comm. symmetry. apply LittleEndianList.le_split_mod.
+Qed.
+
+Lemma unsigned_of_Z_le_combine: forall n bs,
+    length bs = n ->
+    Zmod.unsigned (bits.of_Z (8 * Z.of_nat n) (LittleEndianList.le_combine bs)) =
+    LittleEndianList.le_combine bs.
+Proof.
+  intros. subst. apply bits.unsigned_of_Z_small, LittleEndianList.le_combine_bound.
+Qed.

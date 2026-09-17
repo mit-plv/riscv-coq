@@ -35,14 +35,14 @@ Section Riscv.
   Local Notation word := (bits width).
   Context {Mem: map.map word byte} {Registers: map.map Register word}.
 
-  Definition signedByteTupleToReg{n: nat}(v: HList.tuple byte n): word :=
-    bits.of_Z _ (BitOps.signExtend (8 * Z.of_nat n) (LittleEndian.combine n v)).
+  Definition signExtendToReg{n: nat}(v: bits (8 * Z.of_nat n)): word :=
+    bits.of_Z _ (Zmod.signed v).
 
-  Definition mmioLoadEvent(addr: word){n: nat}(v: HList.tuple byte n): LogItem :=
-    ((map.empty, "MMIOREAD"%string, [addr]), (map.empty, [signedByteTupleToReg v])).
+  Definition mmioLoadEvent(addr: word){n: nat}(v: bits (8 * Z.of_nat n)): LogItem :=
+    ((map.empty, "MMIOREAD"%string, [addr]), (map.empty, [signExtendToReg v])).
 
-  Definition mmioStoreEvent(addr: word){n: nat}(v: HList.tuple byte n): LogItem :=
-    ((map.empty, "MMIOWRITE"%string, [addr; signedByteTupleToReg v]), (map.empty, [])).
+  Definition mmioStoreEvent(addr: word){n: nat}(v: bits (8 * Z.of_nat n)): LogItem :=
+    ((map.empty, "MMIOWRITE"%string, [addr; signExtendToReg v]), (map.empty, [])).
 
   Context {mmio_spec: MMIOSpec}.
 

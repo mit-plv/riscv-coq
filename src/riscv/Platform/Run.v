@@ -1,5 +1,4 @@
 Require Import Coq.ZArith.BinInt.
-Require Import coqutil.Word.LittleEndian.
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.
 Require Import riscv.Spec.Decode.
@@ -25,7 +24,7 @@ Section Riscv.
     pc <- getPC;
     leakEvent (Some (fetchInstr pc));;
     inst <- loadWord Fetch pc;
-    let inst' := decode iset (combine 4 inst) in
+    let inst' := decode iset (Zmod.unsigned inst) in
     leakage_event <- leakage_of_instr getRegister inst';
     leakEvent leakage_event;;
     execute inst';;

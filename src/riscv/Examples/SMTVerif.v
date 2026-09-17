@@ -56,8 +56,8 @@ Definition update(f: MachineState -> MachineState): OState MachineState unit :=
   m <- get; put (f m).
 
 (* not interested in memory in this case study *)
-Definition loadN(n: nat)(kind: SourceType)(a: word): OState MachineState (HList.tuple byte n) := fail_hard.
-Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n): OState MachineState unit :=
+Definition loadN(n: nat)(kind: SourceType)(a: word): OState MachineState (bits (8 * Z.of_nat n)) := fail_hard.
+Definition storeN(n: nat)(kind: SourceType)(a: word)(v: bits (8 * Z.of_nat n)): OState MachineState unit :=
   fail_hard.
 
 #[global] Instance IsRiscvProgram: RiscvProgram (OState MachineState) word :=  {

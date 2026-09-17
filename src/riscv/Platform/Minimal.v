@@ -49,7 +49,7 @@ Section Riscv.
     | _ => Return v
     end) (only parsing).
 
-  Definition storeN(n: nat)(kind: SourceType)(a: word)(v: HList.tuple byte n) :=
+  Definition storeN(n: nat)(kind: SourceType)(a: word)(v: bits (8 * Z.of_nat n)) :=
     mach <- get;
     m <- fail_if_None (Memory.store_bytes n mach.(getMem) a v);
     update (fun mach =>
