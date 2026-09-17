@@ -20,7 +20,7 @@
   what we do.
 *)
 
-Require Import Utility.Utility.
+From riscv Require Import Utility.Utility.
 
 Require Import riscv.Utility.Monads.
 Require Import riscv.Utility.MonadNotations.

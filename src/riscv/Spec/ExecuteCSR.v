@@ -20,15 +20,15 @@ Local Open Scope alu_scope.
 (* Converted imports: *)
 
 Require Import Coq.ZArith.BinInt.
-Require Machine.
-Require Import Monads.
-Require Spec.CSR.
-Require Spec.CSRField.
-Require Spec.CSRSpec.
-Require Spec.Decode.
-Require Spec.Machine.
-Require Import Utility.
-Require Utility.Utility.
+From riscv Require Machine.
+From riscv Require Import Monads.
+From riscv Require Spec.CSR.
+From riscv Require Spec.CSRField.
+From riscv Require Spec.CSRSpec.
+From riscv Require Spec.Decode.
+From riscv Require Spec.Machine.
+From riscv Require Import Utility.
+From riscv Require Utility.Utility.
 
 (* No type declarations to convert. *)
 
