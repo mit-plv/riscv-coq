@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith. Open Scope Z_scope.
 Require Import coqutil.Z.Lia.
+Require Import Coq.micromega.Lia.
 Require Import riscv.Spec.Decode.
 Require Import riscv.Utility.Encode.
 

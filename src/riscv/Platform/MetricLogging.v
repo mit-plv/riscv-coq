@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.BinInt.
 Require Import coqutil.Z.Lia.
+Require Import Coq.micromega.Lia.
 
 Section Riscv.
 
