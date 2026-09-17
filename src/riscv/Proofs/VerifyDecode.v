@@ -3,6 +3,7 @@ Require Export Coq.Lists.List. Import ListNotations.
 Require Import coqutil.Tactics.rdelta.
 Require Import coqutil.Tactics.destr.
 Require Import coqutil.Z.prove_Zeq_bitwise.
+Require Import coqutil.Z.ZLib.
 Require Import coqutil.Tactics.Tactics.
 Require Import coqutil.Tactics.fwd.
 Require Export riscv.Spec.Decode.
@@ -39,7 +40,7 @@ Proof.
     Lia.lia.
   }
   assert (signExtend 32 (BinInt.Z.shiftl (bitSlice inst 12 32) 12) mod 2 ^ 12 = 0). {
-    unfold signExtend.
+    unfold signExtend. rewrite Z.smodulo_pow2.
     rewrite Z.shiftl_mul_pow2 by (cbv; discriminate 1).
     Z.div_mod_to_equations.
     Lia.lia.
@@ -94,7 +95,12 @@ Proof.
        ].
   all: repeat match goal with
               | |- 0 <= bitSlice _ _ _ < _ => eapply bitSlice_bounds
-              | |- _ <= signExtend _ _ < _ => eapply signExtend_bounds; cbv; discriminate 1
+              | |- _ <= signExtend _ _ < _ =>
+                unfold signExtend;
+                match goal with
+                | |- context[Z.smodulo ?z ?m] => pose proof (Z.smod_pos_bound z m ltac:(reflexivity))
+                end;
+                Lia.lia
               | |- _ /\ _ => split
               | |- ?x <= ?y => isConst x; isConst y; cbv; discriminate 1
               | |- ?x < ?y => isConst x; isConst y; reflexivity
