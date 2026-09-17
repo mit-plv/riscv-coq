@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.Utility.Encode.
 Require Import coqutil.Z.BitOps.
+Require Import riscv.Utility.BitSlice.
 Require Import coqutil.Z.prove_Zeq_bitwise.
 
 Lemma invert_encode_I: forall {opcode rd rs1 funct3 oimm12},
@@ -12,4 +13,4 @@ Lemma invert_encode_I: forall {opcode rd rs1 funct3 oimm12},
   rd = bitSlice inst 7 12 /\
   rs1 = bitSlice inst 15 20 /\
   oimm12 = signExtend 12 (bitSlice inst 20 32).
-Proof. intros. unfold encode_I, verify_I in *. prove_Zeq_bitwise. Qed.
+Proof. intros. unfold encode_I, verify_I in *. (unfold bitSlice in *; prove_Zeq_bitwise). Qed.

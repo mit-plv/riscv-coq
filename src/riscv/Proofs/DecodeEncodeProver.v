@@ -102,7 +102,7 @@ Lemma funct7_from_funct12: forall {inst funct12 funct7},
   funct7 = bitSlice inst 25 32 ->
   bitSlice funct12 5 12 = funct7.
 Proof.
-  intros. subst. prove_Zeq_bitwise.prove_Zeq_bitwise.
+  intros. subst. unfold bitSlice in *; prove_Zeq_bitwise.prove_Zeq_bitwise.
 Qed.
 
 (* needed to get past the Sfence_vma case in decodeCSR *)

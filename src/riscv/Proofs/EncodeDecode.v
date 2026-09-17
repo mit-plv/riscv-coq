@@ -16,7 +16,7 @@ Local Ltac t :=
   match goal with
   | |- ?l = _ => let h := head l in unfold h
   end;
-  prove_Zeq_bitwise.
+  (unfold bitSlice in *; prove_Zeq_bitwise).
 
 Lemma encode_decode_I: forall inst,
     0 <= inst < 2 ^ 32 ->

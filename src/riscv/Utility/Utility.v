@@ -6,12 +6,13 @@ Require Export coqutil.Byte.
 Require Import coqutil.Datatypes.HList.
 Require Import coqutil.sanity.
 Require Export coqutil.Z.BitOps.
+Require Export riscv.Utility.BitSlice.
 
 Global Unset Universe Minimization ToSet.
 
 Local Open Scope Z_scope.
 
-Notation bitSlice := coqutil.Z.BitOps.bitSlice.
+Notation bitSlice := riscv.Utility.BitSlice.bitSlice.
 Notation signExtend := coqutil.Z.BitOps.signExtend.
 
 (* when we don't need any operators, we just use tuples of bytes: *)
