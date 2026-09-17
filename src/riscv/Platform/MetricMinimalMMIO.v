@@ -114,7 +114,7 @@ Section Riscv.
       | _ => progress cbv [valid_register is_initial_register_value store Memory.loadByte Memory.loadHalf Memory.loadWord Memory.loadDouble Memory.storeByte Memory.storeHalf Memory.storeWord Memory.storeDouble] in *
       | H : exists _, _ |- _ => destruct H
       | H : _ /\ _ |- _ => destruct H
-      | |- _ => solve [ intuition (eauto || blia) ]
+      | |- _ => solve [ intuition (eauto || lia) ]
       | H : _ \/ _ |- _ => destruct H
       | H : context[match ?x with _ => _ end] |- _ => destruct x eqn:?
       | |- context[match ?x with _ => _ end] => destruct x eqn:?

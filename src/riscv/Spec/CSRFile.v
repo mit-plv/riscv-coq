@@ -91,10 +91,10 @@ Definition CSRField_ltb(f1 f2: CSRField): bool := Z.ltb (CSRField_to_Z f1) (CSRF
 Proof.
   constructor; unfold CSRField_ltb; intros.
   - apply Z.ltb_irrefl.
-  - rewrite ?Z.ltb_lt in *. blia.
+  - rewrite ?Z.ltb_lt in *. lia.
   - apply CSRField_to_Z_inj.
     rewrite Z.ltb_ge in *.
-    blia.
+    lia.
 Qed.
 
 #[global] Instance CSRFile_map_params: SortedList.parameters := {|

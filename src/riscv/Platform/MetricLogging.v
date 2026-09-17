@@ -100,17 +100,17 @@ Ltac simpl_MetricLog :=
 Ltac try_equality_MetricLog :=
   repeat match goal with
          | H : MetricLog |- context[{| instructions := ?i; |}] =>
-           progress replace i with (instructions H) by blia
+           progress replace i with (instructions H) by lia
          | H : MetricLog |- context[{| stores := ?i; |}] =>
-           progress replace i with (stores H) by blia
+           progress replace i with (stores H) by lia
          | H : MetricLog |- context[{| loads := ?i; |}] =>
-           progress replace i with (loads H) by blia
+           progress replace i with (loads H) by lia
          | H : MetricLog |- context[{| jumps := ?i; |}] =>
-           progress replace i with (jumps H) by blia
+           progress replace i with (jumps H) by lia
          end.
 
 Ltac solve_MetricLog :=
   repeat unfold_MetricLog;
   repeat simpl_MetricLog;
   try_equality_MetricLog;
-  blia || f_equal; blia || fold_MetricLog.
+  lia || f_equal; lia || fold_MetricLog.

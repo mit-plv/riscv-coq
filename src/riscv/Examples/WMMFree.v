@@ -858,7 +858,7 @@ Lemma mo_implies_po_within_same_thread: forall {G thr iid1 iid2 mo},
     (iid1 < iid2)%nat.
 Proof.
   intros *. intros [ MOStrict [MOWrite MODec] ] Ac Comp.
-  assert (iid1 < iid2 \/ iid1 = iid2 \/ iid2 < iid1)%nat as A by blia.
+  assert (iid1 < iid2 \/ iid1 = iid2 \/ iid2 < iid1)%nat as A by lia.
   destruct A as [ A | [A | A] ].
   - assumption.
   - subst. exfalso. eapply strictPartialOrder_irreflexive; eassumption.
@@ -880,7 +880,7 @@ Lemma rf_implies_po_within_same_thread: forall {G thr iid1 iid2 mo},
 Proof.
   intros *. intros [ MOStrict [MOWrite MODec] ] Ac R.
   unfold SC_acyclicity, acyclic, hasCycle in Ac.
-  assert (iid1 < iid2 \/ iid1 = iid2 \/ iid2 < iid1)%nat as A by blia.
+  assert (iid1 < iid2 \/ iid1 = iid2 \/ iid2 < iid1)%nat as A by lia.
   destruct A as [ A | [A | A] ].
   - assumption.
   - subst. exfalso. apply Ac. exists (ThreadEvent thr iid2).
@@ -1037,7 +1037,7 @@ Proof.
   replace (Rf G (ThreadEvent 0%nat 1)) with (ThreadEvent 0%nat 0) in *. 2: {
     symmetry. eapply ownedReadAfterWrite; try eassumption.
     - cbv. reflexivity.
-    - intros. unfold po in *. destruct e; try contradiction. simp. blia.
+    - intros. unfold po in *. destruct e; try contradiction. simp. lia.
     - case (@TODO False). (* ownership of this location needs to become a hypothesis *)
   }
   unfold Val in *.
