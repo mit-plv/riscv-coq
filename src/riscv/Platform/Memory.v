@@ -69,7 +69,7 @@ Section MemoryHelpers.
     intros.
     rewrite Zmod.unsigned_add.
     pose proof (bits.unsigned_range b width_nonneg).
-    rewrite bits.unsigned_of_Z_small by blia.
+    rewrite bits.unsigned_of_Z_small by lia.
     rewrite Z.mod_small by assumption.
     reflexivity.
   Qed.
@@ -82,7 +82,7 @@ Section MemoryHelpers.
     intros.
     rewrite Zmod.unsigned_add.
     pose proof (bits.unsigned_range a width_nonneg).
-    rewrite bits.unsigned_of_Z_small by blia.
+    rewrite bits.unsigned_of_Z_small by lia.
     rewrite Z.mod_small by assumption.
     reflexivity.
   Qed.

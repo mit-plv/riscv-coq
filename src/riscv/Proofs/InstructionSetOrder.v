@@ -77,7 +77,7 @@ Lemma verify_I_shift_66_monotone: forall iset1 iset2 opcode rd rs1 shamt6 funct3
     verify_I_shift_66 (bitwidth iset2) opcode rd rs1 shamt6 funct3 funct6.
 Proof.
   unfold verify_I_shift_66. intros. apply bitwidth_monotone in H.
-  pose proof bitwidth_cases iset2. intuition blia.
+  pose proof bitwidth_cases iset2. intuition lia.
 Qed.
 
 Lemma respects_bounds_monotone: forall iset1 iset2 inst,
