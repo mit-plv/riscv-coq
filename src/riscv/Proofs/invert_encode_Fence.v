@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.Utility.Encode.
 Require Import coqutil.Z.BitOps.
+Require Import riscv.Utility.BitSlice.
 Require Import coqutil.Z.prove_Zeq_bitwise.
 
 Lemma invert_encode_Fence: forall {opcode rd rs1 funct3 prd scc msb4},
@@ -14,4 +15,4 @@ Lemma invert_encode_Fence: forall {opcode rd rs1 funct3 prd scc msb4},
   scc = bitSlice inst 20 24 /\
   prd = bitSlice inst 24 28 /\
   msb4 = bitSlice inst 28 32.
-Proof. intros. unfold encode_Fence, verify_Fence in *. prove_Zeq_bitwise. Qed.
+Proof. intros. unfold encode_Fence, verify_Fence in *. (unfold bitSlice in *; prove_Zeq_bitwise). Qed.

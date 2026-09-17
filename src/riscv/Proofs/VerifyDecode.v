@@ -49,14 +49,14 @@ Proof.
    (Z.shiftl (bitSlice inst 31 32) 12 <|> BinInt.Z.shiftl (bitSlice inst 25 31) 5 <|>
     Z.shiftl (bitSlice inst 8 12) 1 <|> BinInt.Z.shiftl (bitSlice inst 7 8) 11) mod 2 = 0). {
     eapply mod20_bitSlice.
-    prove_Zeq_bitwise.
+    (unfold bitSlice in *; prove_Zeq_bitwise).
   }
   assert (signExtend 21
    (BinInt.Z.shiftl (bitSlice inst 31 32) 20 <|> BinInt.Z.shiftl (bitSlice inst 21 31) 1 <|>
     BinInt.Z.shiftl (bitSlice inst 20 21) 11 <|> BinInt.Z.shiftl (bitSlice inst 12 20) 12)
    mod 2 = 0). {
     eapply mod20_bitSlice.
-    prove_Zeq_bitwise.
+    (unfold bitSlice in *; prove_Zeq_bitwise).
   }
   unfold decode_seq.
   repeat destruct_one_match; fwd.

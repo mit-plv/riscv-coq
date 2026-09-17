@@ -1066,7 +1066,7 @@ Proof.
   change (Z.of_nat 1 * 8) with 8.
   rewrite <- !Z.land_ones by discriminate.
   change 255 with (Z.ones 8).
-  prove_Zeq_bitwise.
+  (unfold bitSlice in *; prove_Zeq_bitwise).
 Time Qed. (* 20s *)
 *)
 Abort.

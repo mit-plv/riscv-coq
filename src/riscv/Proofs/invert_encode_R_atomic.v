@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.BinInt.
 Require Import riscv.Utility.Encode.
 Require Import coqutil.Z.BitOps.
+Require Import riscv.Utility.BitSlice.
 Require Import coqutil.Z.prove_Zeq_bitwise.
 
 Lemma invert_encode_R_atomic: forall {opcode rd rs1 rs2 funct3 aqrl funct5},
@@ -14,4 +15,4 @@ Lemma invert_encode_R_atomic: forall {opcode rd rs1 rs2 funct3 aqrl funct5},
   rd = bitSlice inst 7 12 /\
   rs1 = bitSlice inst 15 20 /\
   rs2 = bitSlice inst 20 25.
-Proof. intros. unfold encode_R_atomic, verify_R_atomic in *. prove_Zeq_bitwise. Qed.
+Proof. intros. unfold encode_R_atomic, verify_R_atomic in *. (unfold bitSlice in *; prove_Zeq_bitwise). Qed.
