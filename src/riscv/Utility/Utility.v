@@ -102,6 +102,10 @@ Section Derived.
 
   Definition lnot(x: t): t := xor x maxUnsigned.
 
+  (* INT32_MIN, the signed-overflow operand of the RV64 W-form
+     divisions/remainders (after truncation to 32 bits). *)
+  Definition minSigned32: t := negate (ZToReg (2^31)).
+
 End Derived.
 
 Declare Scope alu_scope.

@@ -41,34 +41,42 @@ Definition execute {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p
     | Spec.Decode.Divw rd rs1 rs2 =>
         Bind (Spec.Machine.getRegister rs1) (fun x =>
                 Bind (Spec.Machine.getRegister rs2) (fun y =>
+                        let b := Utility.Utility.s32 y in
+                        let a := Utility.Utility.s32 x in
                         let q :=
-                          if andb (reg_eqb x Utility.Utility.minSigned) (reg_eqb y (negate (ZToReg
-                                                                                            1))) : bool
-                          then x else
-                          if reg_eqb y (ZToReg 0) : bool then negate (ZToReg 1) else
-                          div x y in
+                          if andb (reg_eqb a Utility.Utility.minSigned32) (reg_eqb b (negate (ZToReg
+                                                                                              1))) : bool
+                          then a else
+                          if reg_eqb b (ZToReg 0) : bool then negate (ZToReg 1) else
+                          div a b in
                         Spec.Machine.setRegister rd (Utility.Utility.s32 q)))
     | Spec.Decode.Divuw rd rs1 rs2 =>
         Bind (Spec.Machine.getRegister rs1) (fun x =>
                 Bind (Spec.Machine.getRegister rs2) (fun y =>
+                        let b := Utility.Utility.u32 y in
+                        let a := Utility.Utility.u32 x in
                         let q :=
-                          if reg_eqb y (ZToReg 0) : bool then Utility.Utility.maxUnsigned else
-                          Utility.Utility.divu x y in
+                          if reg_eqb b (ZToReg 0) : bool then Utility.Utility.maxUnsigned else
+                          Utility.Utility.divu a b in
                         Spec.Machine.setRegister rd (Utility.Utility.s32 q)))
     | Spec.Decode.Remw rd rs1 rs2 =>
         Bind (Spec.Machine.getRegister rs1) (fun x =>
                 Bind (Spec.Machine.getRegister rs2) (fun y =>
+                        let b := Utility.Utility.s32 y in
+                        let a := Utility.Utility.s32 x in
                         let r :=
-                          if andb (reg_eqb x Utility.Utility.minSigned) (reg_eqb y (negate (ZToReg
-                                                                                            1))) : bool
+                          if andb (reg_eqb a Utility.Utility.minSigned32) (reg_eqb b (negate (ZToReg
+                                                                                              1))) : bool
                           then ZToReg 0 else
-                          if reg_eqb y (ZToReg 0) : bool then x else
-                          rem x y in
+                          if reg_eqb b (ZToReg 0) : bool then a else
+                          rem a b in
                         Spec.Machine.setRegister rd (Utility.Utility.s32 r)))
     | Spec.Decode.Remuw rd rs1 rs2 =>
         Bind (Spec.Machine.getRegister rs1) (fun x =>
                 Bind (Spec.Machine.getRegister rs2) (fun y =>
-                        let r := if reg_eqb y (ZToReg 0) : bool then x else Utility.Utility.remu x y in
+                        let b := Utility.Utility.u32 y in
+                        let a := Utility.Utility.u32 x in
+                        let r := if reg_eqb b (ZToReg 0) : bool then a else Utility.Utility.remu a b in
                         Spec.Machine.setRegister rd (Utility.Utility.s32 r)))
     | inst => Return tt
     end.
@@ -78,6 +86,6 @@ Definition execute {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p
      Spec.Decode.Divuw Spec.Decode.Divw Spec.Decode.InstructionM64 Spec.Decode.Mulw
      Spec.Decode.Remuw Spec.Decode.Remw Spec.Machine.RiscvMachine
      Spec.Machine.getRegister Spec.Machine.setRegister Utility.Utility.divu
-     Utility.Utility.maxUnsigned Utility.Utility.minSigned Utility.Utility.remu
-     Utility.Utility.s32
+     Utility.Utility.maxUnsigned Utility.Utility.minSigned32 Utility.Utility.remu
+     Utility.Utility.s32 Utility.Utility.u32
 *)
