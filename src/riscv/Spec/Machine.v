@@ -114,9 +114,13 @@ Section Riscv.
     (* here we hardcode that this simplified spec only supports machine mode and no interrupts *)
     addr <- getCSRField MTVecBase;
     setCSRField MTVal (regToZ_unsigned info);;
-    (* these two need to be set just so that Mret will succeed at restoring them *)
+    (* MPP needs to be set just so that Mret will succeed at restoring it *)
     setCSRField MPP (encodePrivMode Machine);;
-    setCSRField MPIE 0;;
+    (* save the global interrupt enable and disable interrupts, as the privileged spec
+       requires on trap entry: MPIE := MIE; MIE := 0 (Mret restores MIE from MPIE) *)
+    mie <- getCSRField MIE;
+    setCSRField MPIE mie;;
+    setCSRField MIE 0;;
     setCSRField MEPC (regToZ_unsigned pc);;
     setCSRField MCauseCode (regToZ_unsigned exceptionCode);;
     setPC (ZToReg (addr * 4));;
@@ -130,7 +134,11 @@ Section Riscv.
   Definition translate_with_alignment_check
     (accessType: AccessType)(alignment: t)(addr: t): M t :=
     if remu addr alignment /= ZToReg 0
-    then raiseException (ZToReg 0) (ZToReg 4)
+    then raiseException (ZToReg 0) (match accessType with
+                                    | Instr => ZToReg 0 (* instruction address misaligned *)
+                                    | Load => ZToReg 4 (* load address misaligned *)
+                                    | Store => ZToReg 6 (* store/AMO address misaligned *)
+                                    end)
     else Return addr.
 
   Instance DefaultRiscvState: RiscvMachine := {|
