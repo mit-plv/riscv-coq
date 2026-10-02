@@ -25,7 +25,7 @@ Notation Opcode := BinInt.Z (only parsing).
 Require Coq.Init.Datatypes.
 Require Coq.Lists.List.
 Require Import Coq.ZArith.BinInt.
-Require Utility.Utility.
+From riscv Require Utility.Utility.
 
 (* Converted type declarations: *)
 

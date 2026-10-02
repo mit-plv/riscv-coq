@@ -1,12 +1,12 @@
-Require Import Decode.
-Require ExecuteI.
-Require ExecuteI64.
-Require ExecuteM.
-Require ExecuteM64.
-Require ExecuteCSR.
-Require Import Monads.
+From riscv Require Import Decode.
+From riscv Require ExecuteI.
+From riscv Require ExecuteI64.
+From riscv Require ExecuteM.
+From riscv Require ExecuteM64.
+From riscv Require ExecuteCSR.
+From riscv Require Import Monads.
 Require Import riscv.Spec.Machine.
-Require Import Utility.
+From riscv Require Import Utility.
 
 (* Note: Filtering of unsupported instructions was already done in Decode, and they are
    turned into `InvalidInstruction i` *)
