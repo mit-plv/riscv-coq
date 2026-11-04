@@ -1,7 +1,5 @@
 Require Import Coq.ZArith.ZArith.
-Require Import coqutil.Z.bitblast.
 Require Import coqutil.Z.ZLib.
-Require Import coqutil.Z.Lia.
 Require Import Coq.micromega.Lia.
 
 Local Open Scope Z_scope.
@@ -16,15 +14,15 @@ Lemma bitSlice_alt: forall w start eend,
     bitSlice w start eend = (w / 2 ^ start) mod (2 ^ (eend - start)).
 Proof.
   intros. unfold bitSlice.
-  rewrite <- Z.land_ones by blia.
-  rewrite <- Z.shiftr_div_pow2 by blia.
+  rewrite <- Z.land_ones by lia.
+  rewrite <- Z.shiftr_div_pow2 by lia.
   f_equal.
-  rewrite Z.shiftl_mul_pow2 by blia.
+  rewrite Z.shiftl_mul_pow2 by lia.
   rewrite Z.mul_comm.
   rewrite <- Z.opp_eq_mul_m1.
   replace (Z.lnot (- 2 ^ (eend - start))) with (2 ^ (eend - start) - 1).
   - rewrite Z.ones_equiv. reflexivity.
-  - pose proof (Z.add_lnot_diag (- 2 ^ (eend - start))). blia.
+  - pose proof (Z.add_lnot_diag (- 2 ^ (eend - start))). lia.
 Qed.
 
 Lemma bitSlice_range: forall sz z,
@@ -32,12 +30,12 @@ Lemma bitSlice_range: forall sz z,
     0 <= bitSlice z 0 sz < 2 ^ sz.
 Proof.
   intros.
-  rewrite bitSlice_alt by blia.
+  rewrite bitSlice_alt by lia.
   change (2 ^ 0) with 1.
   rewrite Z.div_1_r.
   rewrite Z.sub_0_r.
   apply Z.mod_pos_bound.
-  apply Z.pow_pos_nonneg; blia.
+  apply Z.pow_pos_nonneg; lia.
 Qed.
 
 Lemma bitSlice_split: forall sz1 sz2 v,
@@ -45,15 +43,15 @@ Lemma bitSlice_split: forall sz1 sz2 v,
     0 <= sz2 ->
     bitSlice v sz1 (sz1 + sz2) * 2 ^ sz1 + bitSlice v 0 sz1 = bitSlice v 0 (sz1 + sz2).
 Proof.
-  intros. rewrite? bitSlice_alt by blia.
+  intros. rewrite? bitSlice_alt by lia.
   change (2 ^ 0)%Z with 1%Z.
   rewrite Z.div_1_r.
   rewrite! Z.sub_0_r.
-  replace (sz1 + sz2 - sz1)%Z with sz2 by blia.
+  replace (sz1 + sz2 - sz1)%Z with sz2 by lia.
   rewrite Z.pow_add_r by assumption.
-  assert (0 < 2 ^ sz1)%Z by (apply Z.pow_pos_nonneg; blia).
-  assert (0 < 2 ^ sz2)%Z by (apply Z.pow_pos_nonneg; blia).
-  rewrite Z.rem_mul_r by blia.
+  assert (0 < 2 ^ sz1)%Z by (apply Z.pow_pos_nonneg; lia).
+  assert (0 < 2 ^ sz2)%Z by (apply Z.pow_pos_nonneg; lia).
+  rewrite Z.rem_mul_r by lia.
   Lia.nia.
 Qed.
 
@@ -63,7 +61,7 @@ Lemma bitSlice_all_nonneg: forall n v : Z,
     bitSlice v 0 n = v.
 Proof.
   clear. intros.
-  rewrite bitSlice_alt by blia.
+  rewrite bitSlice_alt by lia.
   change (2 ^ 0) with 1.
   rewrite Z.div_1_r.
   rewrite Z.sub_0_r.
@@ -77,15 +75,15 @@ Lemma bitSlice_all_neg: forall n v : Z,
     bitSlice v 0 n = 2 ^ n + v.
 Proof.
   clear. intros.
-  rewrite bitSlice_alt by blia.
+  rewrite bitSlice_alt by lia.
   change (2 ^ 0)%Z with 1%Z.
   rewrite Z.div_1_r.
   rewrite Z.sub_0_r.
   assert (0 < 2 ^ n)%Z. {
-    apply Z.pow_pos_nonneg; blia.
+    apply Z.pow_pos_nonneg; lia.
   }
   Z.div_mod_to_equations.
-  rewrite H2 in * by blia.
+  rewrite H2 in * by lia.
   clear H2 v.
   rewrite Z.add_assoc.
   assert (q = -1)%Z by Lia.nia.
