@@ -11,7 +11,8 @@ build: [
 ]
 install: [make "EXTERNAL_DEPENDENCIES=1" "install"]
 depends: [
-  "coq" {>= "8.18~" | = "dev"}
+  "coq" {>= "9.2~"}
+  "rocq-stdlib" {>= "9.1~"}
   "coq-coqutil" {>= "0.0.7" | = "dev"}
 ]
 conflict-class: [
