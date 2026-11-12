@@ -94,7 +94,7 @@ Definition execute {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p
                         Spec.Machine.setRegister rd (Utility.Utility.s32 (Utility.Utility.sra
                                                                           (Utility.Utility.s32 x)
                                                                           (Utility.Utility.regToShamt5 y)))))
-    | inst => Return tt
+    | _inst => Return tt
     end.
 
 (* External variables:

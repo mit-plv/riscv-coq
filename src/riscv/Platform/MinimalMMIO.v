@@ -74,9 +74,9 @@ Section Riscv.
 
   Notation load n ctxid a mach post := (
     (ctxid = Fetch -> isXAddr4 a mach.(getXAddrs)) /\
-    match Memory.load_bytes n mach.(getMem) a with
+    match Memory.load_bytes n mach.(getMem) a%Zmod with
     | Some v => post v mach
-    | None => nonmem_load n ctxid a mach post
+    | None => nonmem_load n ctxid a mach post%type
     end) (only parsing).
 
   Definition updatePc(mach: RiscvMachine): RiscvMachine :=

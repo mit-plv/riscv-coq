@@ -64,38 +64,47 @@ Tactic Notation "extract_let_of_decode" ident(x) :=
   end.
 
 Definition decodeI(bw: Z)(inst: Z): InstructionI.
+Proof.
   extract_let_of_decode decodeI.
 Defined.
 
 Definition decodeM(bw: Z)(inst: Z): InstructionM.
+Proof.
   extract_let_of_decode decodeM.
 Defined.
 
 Definition decodeA(bw: Z)(inst: Z): InstructionA.
+Proof.
   extract_let_of_decode decodeA.
 Defined.
 
 Definition decodeF(bw: Z)(inst: Z): InstructionF.
+Proof.
   extract_let_of_decode decodeF.
 Defined.
 
 Definition decodeI64(bw: Z)(inst: Z): InstructionI64.
+Proof.
   extract_let_of_decode decodeI64.
 Defined.
 
 Definition decodeM64(bw: Z)(inst: Z): InstructionM64.
+Proof.
   extract_let_of_decode decodeM64.
 Defined.
 
 Definition decodeA64(bw: Z)(inst: Z): InstructionA64.
+Proof.
   extract_let_of_decode decodeA64.
 Defined.
 
 Definition decodeF64(bw: Z)(inst: Z): InstructionF64.
+Proof.
   extract_let_of_decode decodeF64.
 Defined.
 
 Definition decodeCSR(bw: Z)(inst: Z): InstructionCSR.
+Proof.
   extract_let_of_decode decodeCSR.
 Defined.
 
@@ -178,7 +187,7 @@ Inductive indent: Set :=
 
 Notation "" := INil (only printing).
 Notation ">> x" := (ICons x)
-  (at level 0, right associativity, format ">> x", only printing).
+  (at level 2, right associativity, format ">> x", only printing).
 
 Ltac isnatcst_addition t :=
   lazymatch isnatcst t with
@@ -322,7 +331,7 @@ Lemma extensions_disjoint: forall iset inst, length (decode_results iset inst) <
 Proof.
   intros.
   cbv beta delta [decode_results].
-  rewrite ?List.app_length.
+  rewrite ?List.length_app.
   rewrite ?(push_fun_into_if_branches (@length Instruction)).
   change (length nil) with O.
   rewrite ?Nat.add_assoc.

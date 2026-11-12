@@ -244,7 +244,7 @@ Definition execute {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p
                         Spec.Machine.setRegister rd (and x y)))
     | Spec.Decode.Fence pred succ => Spec.Machine.fence pred succ
     | Spec.Decode.Fence_i => Return tt
-    | inst => Return tt
+    | _inst => Return tt
     end.
 
 (* External variables:

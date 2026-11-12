@@ -100,7 +100,7 @@ Notation "'lhu' rd , rs1 , oimm12" := (Lhu rd rs1 oimm12)
 Notation "'fence' pred , succ" := (Fence pred succ)
   (at level 10, pred constr at level 35, succ constr at level 35,
    format "'//'     'fence'    pred ,  succ").
-Notation "'fence_i'" := Fence_i (at level 10, format "'//'     'fence_i'").
+Notation "'fence_i'" := Fence_i (at level 0, format "'//'     'fence_i'").
 Notation "'addi' rd , rs1 , imm12" := (Addi rd rs1 imm12)
   (at level 10, rd custom register_name, rs1 custom register_name, imm12 constr at level 35,
    format "'//'     'addi'     rd ,  rs1 ,  imm12").
@@ -287,12 +287,12 @@ Notation "'fcvt_s_wu' rd , rs1 , rm" := (Fcvt_s_wu rd rs1 rm)
 Notation "'fmv_w_x' rd , rs1" := (Fmv_w_x rd rs1)
   (at level 10, rd constr at level 35, rs1 custom register_name,
    format "'//'     'fmv_w_x'  rd ,  rs1").
-Notation "'ecall'" := Ecall (at level 10, format "'//'     'ecall'").
-Notation "'ebreak'" := Ebreak (at level 10, format "'//'     'ebreak'").
-Notation "'uret'" := Uret (at level 10, format "'//'     'uret'").
-Notation "'sret'" := Sret (at level 10, format "'//'     'sret'").
-Notation "'mret'" := Mret (at level 10, format "'//'     'mret'").
-Notation "'wfi'" := Wfi (at level 10, format "'//'     'wfi'").
+Notation "'ecall'" := Ecall (at level 0, format "'//'     'ecall'").
+Notation "'ebreak'" := Ebreak (at level 0, format "'//'     'ebreak'").
+Notation "'uret'" := Uret (at level 0, format "'//'     'uret'").
+Notation "'sret'" := Sret (at level 0, format "'//'     'sret'").
+Notation "'mret'" := Mret (at level 0, format "'//'     'mret'").
+Notation "'wfi'" := Wfi (at level 0, format "'//'     'wfi'").
 Notation "'sfence_vma' rs1 , rs2" := (Sfence_vma rs1 rs2)
   (at level 10, rs1 custom register_name, rs2 custom register_name,
    format "'//'     'sfence_vma'  rs1 ,  rs2").

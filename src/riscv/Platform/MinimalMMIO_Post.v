@@ -69,7 +69,7 @@ Section Riscv.
     | None => nonmem_load n ctxid a mach post
     end) (only parsing).
 
-  Instance IsRiscvMachine: RiscvProgram (Post RiscvMachine) word. refine ({|
+  Instance IsRiscvMachine: RiscvProgram (Post RiscvMachine) word. Proof. refine ({|
     getRegister reg := fun mach post => _;
     setRegister reg v := fun mach post => _;
     loadByte   ctxid a := fun mach post => _;

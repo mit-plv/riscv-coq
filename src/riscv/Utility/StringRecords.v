@@ -34,12 +34,14 @@ Module record.
   Definition destruct_types(T: list (string * Type)): list (string * Type) := destruct_types_rec T T.
 
   Goal False.
+  Proof.
     let r := eval compute in (destruct_types [("a", nat: Type); ("b", string: Type); ("a", string: Type)])
       in pose r as x.
   Abort.
 
   Definition cast_get_type{n1 n2: string}(pf: (n1 =? n2) = true):
     forall (T: list (string * Type)), get_type T n1 -> get_type T n2.
+  Proof.
     refine (fix rec T v := _).
     destruct T as [|[s A] U].
     - exact tt.
@@ -54,6 +56,7 @@ Module record.
 
   Definition set_rec{T: list (string * Type)}(r: record T)(n: string)(v: get_type T n):
     forall Suffix: list (string * Type), record (destruct_types_rec T Suffix).
+  Proof.
     refine (fix rec Suffix {struct Suffix} := _).
     destruct Suffix as [|[x A] U].
     - exact Nil.
@@ -97,8 +100,8 @@ Module RecordNotations.
   Notation "{# x }" := x (x custom record_value at level 5, format "{#  x  }").
 
   Declare Scope record_scope.
-  Notation "m # f" := (get m f) (left associativity, at level 8, format "m # f") : record_scope.
-  Notation "m (# f := v )" := (set m f v) (left associativity, at level 8, format "m (# f  :=  v )")
+  Notation "m # f" := (get m f) (left associativity, at level 1, format "m # f") : record_scope.
+  Notation "m (# f := v )" := (set m f v) (left associativity, at level 1, format "m (# f  :=  v )")
     : record_scope.
   Open Scope record_scope.
 End RecordNotations.
@@ -109,6 +112,7 @@ Import RecordNotations.
    we can drop the quotes around the field names *)
 
 Goal forall s: [# "a": nat * nat; "b": string; "c": list nat; "d": [# "fst": nat; "snd": nat ]], False.
+Proof.
   intros.
   pose s#"d"#"fst" as x.
   pose (s(#"b" := "hi")(#"a" := (1, 2))(#"c" := 1 :: s#"c")(#"b" := "new hi")) as y.

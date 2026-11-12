@@ -210,45 +210,53 @@ Proof.
          | H: _ |- _ => revert H
          end.
 
-Notation "'and' A B" := (Logic.and A B) (at level 10, A at level 0, B at level 0).
-Notation "'or' A B" := (Logic.or A B) (at level 10, A at level 0, B at level 0).
-Notation "+ A B" := (Z.add A B) (at level 10, A at level 0, B at level 0).
-Notation "< A B" := (Z.lt A B) (at level 10, A at level 0, B at level 0).
-Notation "<= A B" := (Z.le A B) (at level 10, A at level 0, B at level 0).
-Notation "- A B" := (Z.sub A B) (at level 10, A at level 0, B at level 0).
+Notation "'and' A B" := (Logic.and A B) (at level 10, A at level 0, B at level 0, only printing).
+Notation "'or' A B" := (Logic.or A B) (at level 10, A at level 0, B at level 0, only printing).
+Notation "+ A B" := (Z.add A B) (at level 10, A at level 0, B at level 0, only printing).
+Notation "< A B" := (Z.lt A B) (at level 10, A at level 0, B at level 0, only printing).
+Notation "<= A B" := (Z.le A B) (at level 10, A at level 0, B at level 0, only printing).
+#[warnings="-notation-incompatible-prefix"]
+Notation "- A B" := (Z.sub A B) (at level 10, A at level 0, B at level 0, only printing).
 (* Notation "- 1" := minusone (at level 10, format "-  1"). omits space, why? *)
-Notation "* A B" := (Z.mul A B) (at level 10, A at level 0, B at level 0, format " *  A  B").
-Notation "'mod' A B" := (Z.modulo A B) (at level 10, A at level 0, B at level 0).
-Notation "^ A B" := (Z.pow A B) (at level 10, A at level 0, B at level 0).
-Notation "= A B" := (@eq _ A B) (at level 10, A at level 0, B at level 0).
-Notation "'exists' ( ( x T ) ) b" := (exists x: T, b) (at level 10, T at level 0, b at level 0).
-Notation "'not' A" := (negb A) (at level 10, A at level 0).
+Notation "* A B" := (Z.mul A B) (at level 10, A at level 0, B at level 0, format " *  A  B", only printing).
+Notation "'mod' A B" := (Z.modulo A B) (at level 10, A at level 0, B at level 0, only printing).
+Notation "^ A B" := (Z.pow A B) (at level 10, A at level 0, B at level 0, only printing).
+Notation "= A B" := (@eq _ A B) (at level 10, A at level 0, B at level 0, only printing).
+#[warnings="-notation-incompatible-prefix"]
+Notation "'exists' ( ( x T ) ) b" := (exists x: T, b) (at level 10, T at level 0, b at level 0, only printing).
+Notation "'not' A" := (negb A) (at level 10, A at level 0, only printing).
 Notation "'ite' b thn els" := (if b then thn else els)
-  (at level 10, b at level 0, thn at level 0, els at level 0).
-Notation "'(_' 'bv' B 32 )" := (ZToReg B) (at level 0, format "'(_'  'bv' B  32 )").
-Notation "#xffffffff" := (ZToReg (-1)) (at level 0).
-Notation "'not' ( = A B )" := (A <> B) (at level 10, A at level 0, B at level 0, format "'not'  ( =  A  B )").
+  (at level 10, b at level 0, thn at level 0, els at level 0, only printing).
+Notation "'(_' 'bv' B 32 )" := (ZToReg B) (at level 0, format "'(_'  'bv' B  32 )", only printing).
+Notation "#xffffffff" := (ZToReg (-1)) (at level 0, only printing).
+#[warnings="-closed-notation-not-level-0"]
+Notation "'not' ( = A B )" := (A <> B) (at level 10, A at level 0, B at level 0, format "'not'  ( =  A  B )", only printing).
 
-Notation "'bvadd' A B" := (add A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvsub' A B" := (sub A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvmul' A B" := (mul A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvor' A B" := (or A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvxor' A B" := (xor A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvand' A B" := (and A B) (at level 10, A at level 0, B at level 0).
+Notation "'bvadd' A B" := (add A B) (at level 10, A at level 0, B at level 0, only printing).
+Notation "'bvsub' A B" := (sub A B) (at level 10, A at level 0, B at level 0, only printing).
+Notation "'bvmul' A B" := (mul A B) (at level 10, A at level 0, B at level 0, only printing).
+Notation "'bvor' A B" := (or A B) (at level 10, A at level 0, B at level 0, only printing).
+Notation "'bvxor' A B" := (xor A B) (at level 10, A at level 0, B at level 0, only printing).
+Notation "'bvand' A B" := (and A B) (at level 10, A at level 0, B at level 0, only printing).
+#[warnings="-closed-notation-not-level-0"]
 Notation "'bvshl' A '(_' 'bv' B 32 )" := (sll A B)
-  (at level 10, A at level 0, B at level 0, format "'bvshl'  A  '(_'  'bv' B  32 )").
+  (at level 10, A at level 0, B at level 0, format "'bvshl'  A  '(_'  'bv' B  32 )", only printing).
+#[warnings="-closed-notation-not-level-0"]
 Notation "'bvlshr' A '(_' 'bv' B 32 )" := (srl A B)
-  (at level 10, A at level 0, B at level 0, format "'bvlshr'  A  '(_'  'bv' B  32 )").
+  (at level 10, A at level 0, B at level 0, format "'bvlshr'  A  '(_'  'bv' B  32 )", only printing).
+#[warnings="-closed-notation-not-level-0"]
 Notation "'bvashr' A '(_' 'bv' B 32 )" := (sra A B)
-  (at level 10, A at level 0, B at level 0, format "'bvashr'  A  '(_'  'bv' B  32 )").
+  (at level 10, A at level 0, B at level 0, format "'bvashr'  A  '(_'  'bv' B  32 )", only printing).
 
-Notation "'Int'" := Z.
-Notation "'(_' 'BitVec' '32)'" := word.
+Notation "'Int'" := Z (only printing).
+Notation "'(_' 'BitVec' '32)'" := word (only printing).
+#[warnings="-level-0-notation-not-closed"]
 Notation "'(declare-const' x T ) P" := (forall x: T, P)
-  (at level 0, x at level 0, T at level 0, P at level 0, format "'(declare-const'  x  T ) '//' P").
+  (at level 0, x at level 0, T at level 0, P at level 0, format "'(declare-const'  x  T ) '//' P", only printing).
+#[warnings="-level-0-notation-not-closed"]
 Notation "'(assert' P ) Q" := (P -> Q)
-  (at level 0, P at level 0, Q at level 0, format "'(assert'  P ) '//' Q").
-Notation "'(check-sat)'" := False.
+  (at level 0, P at level 0, Q at level 0, format "'(assert'  P ) '//' Q", only printing).
+Notation "'(check-sat)'" := False (only printing).
 
 Set Printing Width 70.
 Set Printing Coercions. (* COQBUG https://github.com/coq/coq/issues/13432 *)

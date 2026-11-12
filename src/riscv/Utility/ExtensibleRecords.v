@@ -83,6 +83,7 @@ Module hnatmap.
 
   (* m2 overrides m1 *)
   Fixpoint merge{T1 T2: natmap Type}(m1: hnatmap T1)(m2: hnatmap T2): hnatmap (natmap.merge T1 T2).
+  Proof.
     refine (match m2 with
             | HNil => m1
             | @HCons OV T2Tail v t => @HCons (match OV with
@@ -112,9 +113,9 @@ End hnatmap.
 Module HnatmapNotations.
   Declare Scope hnatmap_scope.
   Notation "m [ k := v ]" := (hnatmap.put m k v)
-    (at level 8, left associativity, format "m [ k  :=  v ]") : hnatmap_scope.
+    (at level 1, left associativity, format "m [ k  :=  v ]") : hnatmap_scope.
   Notation "m [ k ]" := (hnatmap.get m k)
-    (at level 8, left associativity, format "m [ k ]") : hnatmap_scope.
+    (at level 1, left associativity, format "m [ k ]") : hnatmap_scope.
   (* this notation overrides the notation for applying a function m to the singleton list containing k,
      but that's so rare that it's fine *)
 End HnatmapNotations.
