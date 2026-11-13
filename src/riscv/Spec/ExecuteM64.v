@@ -70,7 +70,7 @@ Definition execute {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p
                 Bind (Spec.Machine.getRegister rs2) (fun y =>
                         let r := if reg_eqb y (ZToReg 0) : bool then x else Utility.Utility.remu x y in
                         Spec.Machine.setRegister rd (Utility.Utility.s32 r)))
-    | inst => Return tt
+    | _inst => Return tt
     end.
 
 (* External variables:

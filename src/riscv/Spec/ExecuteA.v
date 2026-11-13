@@ -147,7 +147,7 @@ Definition execute {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p
                                                                                                       y) : bool
                                                                         then x
                                                                         else Utility.Utility.regToInt32 y))))))
-    | inst => Return tt
+    | _inst => Return tt
     end.
 
 (* External variables:

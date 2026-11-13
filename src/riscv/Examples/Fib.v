@@ -41,6 +41,7 @@ Notation s5 := (WO~1~0~1~0~1)%word.
 *)
 
 Goal False.
+Proof.
   set (l := List.map (decode RV32IM) fib6_riscv).
   cbv in l.
   (* decoder seems to work :) *)
@@ -91,6 +92,7 @@ Definition fib6_trace(fuel: nat): list LogItem :=
 Example trace_result := Eval vm_compute in (fib6_trace 50).
 
 Lemma fib6_res_is_13_by_running_it: exists fuel, fib6_res fuel = 13%Zmod.
+Proof.
   exists 50%nat.
   reflexivity.
 Qed.

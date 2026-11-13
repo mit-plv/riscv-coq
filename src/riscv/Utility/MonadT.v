@@ -184,9 +184,9 @@ End NonDetMonad.
 Definition NonDetT(M: Type -> Type)(A: Type) := NonDet (M A).
 
 Goal forall (M: Type -> Type) (A: Type), NonDet (M A) = (M A -> Prop).
-  intros. reflexivity. Qed.
+Proof. intros. reflexivity. Qed.
 
-#[global] Instance NonDetT_Monad(M: Type -> Type){MM: Monad M}: Monad (NonDetT M). refine ({|
+#[global] Instance NonDetT_Monad(M: Type -> Type){MM: Monad M}: Monad (NonDetT M). Proof. refine ({|
   Bind A B (m: NonDet (M A)) (f: A -> NonDet (M B)) := _;
   Return := _
 |}).
@@ -220,6 +220,7 @@ Definition OStateND'(S A: Type) := S -> (option A * S -> Prop) -> Prop.
 (* double NonDet *)
 Definition DNonDetT(M: Type -> Type)(A: Type) := M (A -> Prop) -> Prop.
 Goal forall S A, DNonDetT (OrigOState S) A = OStateND' S A.
+Proof.
   intros.
   cbv.
 Abort. (* doesn't hold *)
@@ -246,6 +247,7 @@ Module OldVersions.
     (* the option represents hard unacceptable failure, the Prop represents non-determinism *)
     Variable step: State -> (option State) -> Prop.
 
+    #[warnings="-register-all"]
     Inductive runsTo(initial: State)(P: State -> Prop): Prop :=
     | runsToDone:
         P initial ->
@@ -298,6 +300,7 @@ Section RunsTo.
   Variable State: Type.
   Variable step: OStateND State unit.
 
+  #[warnings="-register-all"]
   Inductive runsTo(initial: State)(P: State -> Prop): Prop :=
     | runsToDone:
         P initial ->

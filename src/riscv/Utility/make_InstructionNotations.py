@@ -40,7 +40,7 @@ with open('./src/riscv/Spec/Decode.v', 'r') as file:
         iname = parts[0]
         argtuples = [part.split(':') for part in parts[1:]]
         if len(argtuples) == 0:
-            print(f"""Notation "'{iname.lower()}'" := {iname} (at level 10, format "'//'     '{iname.lower()}'").""")
+            print(f"""Notation "'{iname.lower()}'" := {iname} (at level 0, format "'//'     '{iname.lower()}'").""")
         else:
             argnames = [argname for [argname, argtype] in argtuples]
             print(f"""Notation "'{iname.lower()}' {' , '.join(argnames)}" := ({iname} {' '.join(argnames)})

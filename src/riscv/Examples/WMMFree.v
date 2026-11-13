@@ -64,7 +64,7 @@ Section Orders.
   Definition acyclic := ~ hasCycle.
 End Orders.
 
-Definition TODO{T: Type}: T. Admitted.
+Definition TODO{T: Type}: T. Proof. Admitted.
 
 (* Weak memory formalization following
    Kokologiannakis and Vafeiadis: HMC Model Checking for Hardware Memory Models, ASPLOS 2020
@@ -225,7 +225,7 @@ Definition NextEvent(e: Event): Event :=
 
 Infix "\U" := unionrel (at level 50, left associativity).
 Infix "\;" := composerel (at level 41, right associativity).
-Notation "R ^-1" := (invrel R) (at level 7).
+Notation "R ^-1" := (invrel R) (at level 1).
 
 Definition SC_acyclicity(G: Graph)(mo: Event -> Event -> Prop): Prop :=
   acyclic (po \U (RfRel G) \U mo \U ((RfRel G)^-1 \; mo)).
@@ -280,7 +280,7 @@ Fixpoint bind{A B: Type}(m: M A){struct m}: (A -> M B) -> M B :=
   | HaltThread => fun f => HaltThread (* Note: Drops the continuation in f *)
   end.
 
-#[global] Instance M_Monad: Monad M. refine ({|
+#[global] Instance M_Monad: Monad M. Proof. refine ({|
   Bind := @bind;
   Return := @Ret
 |}).
@@ -394,9 +394,9 @@ Definition setDeps(D: Array Register (set Event))(r: Register)(s: set Event): Ar
   if Z.eqb r 0 then D else store D r s.
 
 Notation "D <[ r ]>" := (getDeps D r)
-  (at level 8, left associativity, only parsing).
+  (at level 1, left associativity, only parsing).
 Notation "D <[ r := s ]>" := (setDeps D r s)
-  (at level 8, left associativity, only parsing).
+  (at level 1, left associativity, only parsing).
 
 Definition checkDepsI(inst: InstructionI): M unit :=
   match inst with
@@ -602,8 +602,8 @@ Ltac step :=
   end.
 
 Derive InstructionI_matching
-  SuchThat (forall inst: InstructionI, InstructionI_matching inst = True)
-  As InstructionI_matching_correct.
+  in (forall inst: InstructionI, InstructionI_matching inst = True)
+  as InstructionI_matching_correct.
 Proof.
   intros.
   symmetry.
@@ -612,9 +612,9 @@ Proof.
 Abort.
 
 Derive simplified_run1
-  SuchThat (forall G s1 s2, simplified_run1 G s1 s2 =
-                            interp run1 G s1 s2 tt)
-  As run1_correct.
+  in (forall G s1 s2, simplified_run1 G s1 s2 =
+                      interp run1 G s1 s2 tt)
+  as run1_correct.
 Proof.
   intros.
   unfold run1, loadInstruction, pre_execute, execute, post_execute, checkDeps, checkDepsI,
@@ -660,33 +660,33 @@ Print simplified_run1.
 
 Local Set Warnings "-notation-both-format-and-spaces".
 
-Notation "(_ 'bv2nat' 32) A" := (Zmod.unsigned A) (at level 10, A at level 0, only printing).
-Notation "(_ 'int2bv' 32) A" := (bits.of_Z 32 A) (at level 10, A at level 0, only printing).
-Notation "'bvadd' A B" := (Zmod.add A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvsub' A B" := (Zmod.sub A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvneg' A" := (Zmod.opp A) (at level 10, A at level 0).
-Notation "'bvor' A B" := (Zmod.or A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvand' A B" := (Zmod.and A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvxor' A B" := (Zmod.xor A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvnot' A" := (Zmod.not A) (at level 10, A at level 0).
-Notation "'bvmul' A B" := (Zmod.mul A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvurem' A B" := (Zmod.umod A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvshl' A B" := (Zmod.slu A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvlshr' A B" := (Zmod.sru A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvashr' A B" := (Zmod.srs A B) (at level 10, A at level 0, B at level 0).
-Notation "= A B" := (Zmod.eqb A B) (at level 10, A at level 0, B at level 0).
-Notation "'bvult' A B" := (Z.ltb (Zmod.unsigned A) (Zmod.unsigned B)) (at level 10, A at level 0, B at level 0).
-Notation "'bvslt' A B" := (Z.ltb (Zmod.signed A) (Zmod.signed B)) (at level 10, A at level 0, B at level 0).
+Local Notation "(_ 'bv2nat' 32) A" := (Zmod.unsigned A) (at level 10, A at level 0, only printing).
+Local Notation "(_ 'int2bv' 32) A" := (bits.of_Z 32 A) (at level 10, A at level 0, only printing).
+Local Notation "'bvadd' A B" := (Zmod.add A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "'bvsub' A B" := (Zmod.sub A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "'bvneg' A" := (Zmod.opp A) (at level 10, A at level 0, only printing).
+Local Notation "'bvor' A B" := (Zmod.or A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "'bvand' A B" := (Zmod.and A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "'bvxor' A B" := (Zmod.xor A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "'bvnot' A" := (Zmod.not A) (at level 10, A at level 0, only printing).
+Local Notation "'bvmul' A B" := (Zmod.mul A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "'bvurem' A B" := (Zmod.umod A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "'bvshl' A B" := (Zmod.slu A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "'bvlshr' A B" := (Zmod.sru A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "'bvashr' A B" := (Zmod.srs A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "= A B" := (Zmod.eqb A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "'bvult' A B" := (Z.ltb (Zmod.unsigned A) (Zmod.unsigned B)) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "'bvslt' A B" := (Z.ltb (Zmod.signed A) (Zmod.signed B)) (at level 10, A at level 0, B at level 0, only printing).
 
-Notation "(_ 'sign_extend' 24) A" := (bits.of_Z 32 (Zmod.signed A))
+Local Notation "(_ 'sign_extend' 24) A" := (bits.of_Z 32 (Zmod.signed A))
   (at level 10, A at level 0, only printing).
-Notation "(_ 'zero_extend' 24) A" := (bits.of_Z 32 (Zmod.unsigned A))
+Local Notation "(_ 'zero_extend' 24) A" := (bits.of_Z 32 (Zmod.unsigned A))
   (at level 10, A at level 0, only printing).
-Notation "(_ 'extract' 7 0) A" := (bits.of_Z 8 (Zmod.unsigned A))
+Local Notation "(_ 'extract' 7 0) A" := (bits.of_Z 8 (Zmod.unsigned A))
   (at level 10, A at level 0, only printing).
 
 
-Notation "'(match'  inst ( ( '(Lb'  rd_Lb rs1_Lb oimm12_Lb ) branchLb ) ( '(Lh'  rd_Lh rs1_Lh oimm12_Lh ) branchLh ) ( '(Lw'  rd_Lw rs1_Lw oimm12_Lw ) branchLw ) ( '(Lbu'  rd_Lbu rs1_Lbu oimm12_Lbu ) branchLbu ) ( '(Lhu'  rd_Lhu rs1_Lhu oimm12_Lhu ) branchLhu ) ( '(Fence'  pred_Fence succ_Fence ) branchFence ) ( '(Fence_i'  ) branchFence_i ) ( '(Addi'  rd_Addi rs1_Addi imm12_Addi ) branchAddi ) ( '(Slli'  rd_Slli rs1_Slli shamt6_Slli ) branchSlli ) ( '(Slti'  rd_Slti rs1_Slti imm12_Slti ) branchSlti ) ( '(Sltiu'  rd_Sltiu rs1_Sltiu imm12_Sltiu ) branchSltiu ) ( '(Xori'  rd_Xori rs1_Xori imm12_Xori ) branchXori ) ( '(Ori'  rd_Ori rs1_Ori imm12_Ori ) branchOri ) ( '(Andi'  rd_Andi rs1_Andi imm12_Andi ) branchAndi ) ( '(Srli'  rd_Srli rs1_Srli shamt6_Srli ) branchSrli ) ( '(Srai'  rd_Srai rs1_Srai shamt6_Srai ) branchSrai ) ( '(Auipc'  rd_Auipc oimm20_Auipc ) branchAuipc ) ( '(Sb'  rs1_Sb rs2_Sb simm12_Sb ) branchSb ) ( '(Sh'  rs1_Sh rs2_Sh simm12_Sh ) branchSh ) ( '(Sw'  rs1_Sw rs2_Sw simm12_Sw ) branchSw ) ( '(Add'  rd_Add rs1_Add rs2_Add ) branchAdd ) ( '(Sub'  rd_Sub rs1_Sub rs2_Sub ) branchSub ) ( '(Sll'  rd_Sll rs1_Sll rs2_Sll ) branchSll ) ( '(Slt'  rd_Slt rs1_Slt rs2_Slt ) branchSlt ) ( '(Sltu'  rd_Sltu rs1_Sltu rs2_Sltu ) branchSltu ) ( '(Xor'  rd_Xor rs1_Xor rs2_Xor ) branchXor ) ( '(Srl'  rd_Srl rs1_Srl rs2_Srl ) branchSrl ) ( '(Sra'  rd_Sra rs1_Sra rs2_Sra ) branchSra ) ( '(Or'  rd_Or rs1_Or rs2_Or ) branchOr ) ( '(And'  rd_And rs1_And rs2_And ) branchAnd ) ( '(Lui'  rd_Lui imm20_Lui ) branchLui ) ( '(Beq'  rs1_Beq rs2_Beq sbimm12_Beq ) branchBeq ) ( '(Bne'  rs1_Bne rs2_Bne sbimm12_Bne ) branchBne ) ( '(Blt'  rs1_Blt rs2_Blt sbimm12_Blt ) branchBlt ) ( '(Bge'  rs1_Bge rs2_Bge sbimm12_Bge ) branchBge ) ( '(Bltu'  rs1_Bltu rs2_Bltu sbimm12_Bltu ) branchBltu ) ( '(Bgeu'  rs1_Bgeu rs2_Bgeu sbimm12_Bgeu ) branchBgeu ) ( '(Jalr'  rd_Jalr rs1_Jalr oimm12_Jalr ) branchJalr ) ( '(Jal'  rd_Jal jimm20_Jal ) branchJal ) ( '(InvalidI'  ) branchInvalidI )))"
+Local Notation "'(match'  inst ( ( '(Lb'  rd_Lb rs1_Lb oimm12_Lb ) branchLb ) ( '(Lh'  rd_Lh rs1_Lh oimm12_Lh ) branchLh ) ( '(Lw'  rd_Lw rs1_Lw oimm12_Lw ) branchLw ) ( '(Lbu'  rd_Lbu rs1_Lbu oimm12_Lbu ) branchLbu ) ( '(Lhu'  rd_Lhu rs1_Lhu oimm12_Lhu ) branchLhu ) ( '(Fence'  pred_Fence succ_Fence ) branchFence ) ( '(Fence_i'  ) branchFence_i ) ( '(Addi'  rd_Addi rs1_Addi imm12_Addi ) branchAddi ) ( '(Slli'  rd_Slli rs1_Slli shamt6_Slli ) branchSlli ) ( '(Slti'  rd_Slti rs1_Slti imm12_Slti ) branchSlti ) ( '(Sltiu'  rd_Sltiu rs1_Sltiu imm12_Sltiu ) branchSltiu ) ( '(Xori'  rd_Xori rs1_Xori imm12_Xori ) branchXori ) ( '(Ori'  rd_Ori rs1_Ori imm12_Ori ) branchOri ) ( '(Andi'  rd_Andi rs1_Andi imm12_Andi ) branchAndi ) ( '(Srli'  rd_Srli rs1_Srli shamt6_Srli ) branchSrli ) ( '(Srai'  rd_Srai rs1_Srai shamt6_Srai ) branchSrai ) ( '(Auipc'  rd_Auipc oimm20_Auipc ) branchAuipc ) ( '(Sb'  rs1_Sb rs2_Sb simm12_Sb ) branchSb ) ( '(Sh'  rs1_Sh rs2_Sh simm12_Sh ) branchSh ) ( '(Sw'  rs1_Sw rs2_Sw simm12_Sw ) branchSw ) ( '(Add'  rd_Add rs1_Add rs2_Add ) branchAdd ) ( '(Sub'  rd_Sub rs1_Sub rs2_Sub ) branchSub ) ( '(Sll'  rd_Sll rs1_Sll rs2_Sll ) branchSll ) ( '(Slt'  rd_Slt rs1_Slt rs2_Slt ) branchSlt ) ( '(Sltu'  rd_Sltu rs1_Sltu rs2_Sltu ) branchSltu ) ( '(Xor'  rd_Xor rs1_Xor rs2_Xor ) branchXor ) ( '(Srl'  rd_Srl rs1_Srl rs2_Srl ) branchSrl ) ( '(Sra'  rd_Sra rs1_Sra rs2_Sra ) branchSra ) ( '(Or'  rd_Or rs1_Or rs2_Or ) branchOr ) ( '(And'  rd_And rs1_And rs2_And ) branchAnd ) ( '(Lui'  rd_Lui imm20_Lui ) branchLui ) ( '(Beq'  rs1_Beq rs2_Beq sbimm12_Beq ) branchBeq ) ( '(Bne'  rs1_Bne rs2_Bne sbimm12_Bne ) branchBne ) ( '(Blt'  rs1_Blt rs2_Blt sbimm12_Blt ) branchBlt ) ( '(Bge'  rs1_Bge rs2_Bge sbimm12_Bge ) branchBge ) ( '(Bltu'  rs1_Bltu rs2_Bltu sbimm12_Bltu ) branchBltu ) ( '(Bgeu'  rs1_Bgeu rs2_Bgeu sbimm12_Bgeu ) branchBgeu ) ( '(Jalr'  rd_Jalr rs1_Jalr oimm12_Jalr ) branchJalr ) ( '(Jal'  rd_Jal jimm20_Jal ) branchJal ) ( '(InvalidI'  ) branchInvalidI )))"
 
 := match inst with
    | Lb rd_Lb rs1_Lb oimm12_Lb => branchLb
@@ -731,7 +731,7 @@ Notation "'(match'  inst ( ( '(Lb'  rd_Lb rs1_Lb oimm12_Lb ) branchLb ) ( '(Lh' 
    | InvalidI => branchInvalidI
    end
 
-(at level 10,
+(at level 0,
    inst at level 0,
    branchLb at level 0,
    branchLh at level 0,
@@ -773,27 +773,31 @@ Notation "'(match'  inst ( ( '(Lb'  rd_Lb rs1_Lb oimm12_Lb ) branchLb ) ( '(Lh' 
    branchJalr at level 0,
    branchJal at level 0,
    branchInvalidI at level 0,
+   only printing,
 
 format "'(match'  inst  ( '//' ( '(Lb'  rd_Lb  rs1_Lb  oimm12_Lb )  branchLb ) '//' ( '(Lh'  rd_Lh  rs1_Lh  oimm12_Lh )  branchLh ) '//' ( '(Lw'  rd_Lw  rs1_Lw  oimm12_Lw )  branchLw ) '//' ( '(Lbu'  rd_Lbu  rs1_Lbu  oimm12_Lbu )  branchLbu ) '//' ( '(Lhu'  rd_Lhu  rs1_Lhu  oimm12_Lhu )  branchLhu ) '//' ( '(Fence'  pred_Fence  succ_Fence )  branchFence ) '//' ( '(Fence_i' )  branchFence_i ) '//' ( '(Addi'  rd_Addi  rs1_Addi  imm12_Addi )  branchAddi ) '//' ( '(Slli'  rd_Slli  rs1_Slli  shamt6_Slli )  branchSlli ) '//' ( '(Slti'  rd_Slti  rs1_Slti  imm12_Slti )  branchSlti ) '//' ( '(Sltiu'  rd_Sltiu  rs1_Sltiu  imm12_Sltiu )  branchSltiu ) '//' ( '(Xori'  rd_Xori  rs1_Xori  imm12_Xori )  branchXori ) '//' ( '(Ori'  rd_Ori  rs1_Ori  imm12_Ori )  branchOri ) '//' ( '(Andi'  rd_Andi  rs1_Andi  imm12_Andi )  branchAndi ) '//' ( '(Srli'  rd_Srli  rs1_Srli  shamt6_Srli )  branchSrli ) '//' ( '(Srai'  rd_Srai  rs1_Srai  shamt6_Srai )  branchSrai ) '//' ( '(Auipc'  rd_Auipc  oimm20_Auipc )  branchAuipc ) '//' ( '(Sb'  rs1_Sb  rs2_Sb  simm12_Sb )  branchSb ) '//' ( '(Sh'  rs1_Sh  rs2_Sh  simm12_Sh )  branchSh ) '//' ( '(Sw'  rs1_Sw  rs2_Sw  simm12_Sw )  branchSw ) '//' ( '(Add'  rd_Add  rs1_Add  rs2_Add )  branchAdd ) '//' ( '(Sub'  rd_Sub  rs1_Sub  rs2_Sub )  branchSub ) '//' ( '(Sll'  rd_Sll  rs1_Sll  rs2_Sll )  branchSll ) '//' ( '(Slt'  rd_Slt  rs1_Slt  rs2_Slt )  branchSlt ) '//' ( '(Sltu'  rd_Sltu  rs1_Sltu  rs2_Sltu )  branchSltu ) '//' ( '(Xor'  rd_Xor  rs1_Xor  rs2_Xor )  branchXor ) '//' ( '(Srl'  rd_Srl  rs1_Srl  rs2_Srl )  branchSrl ) '//' ( '(Sra'  rd_Sra  rs1_Sra  rs2_Sra )  branchSra ) '//' ( '(Or'  rd_Or  rs1_Or  rs2_Or )  branchOr ) '//' ( '(And'  rd_And  rs1_And  rs2_And )  branchAnd ) '//' ( '(Lui'  rd_Lui  imm20_Lui )  branchLui ) '//' ( '(Beq'  rs1_Beq  rs2_Beq  sbimm12_Beq )  branchBeq ) '//' ( '(Bne'  rs1_Bne  rs2_Bne  sbimm12_Bne )  branchBne ) '//' ( '(Blt'  rs1_Blt  rs2_Blt  sbimm12_Blt )  branchBlt ) '//' ( '(Bge'  rs1_Bge  rs2_Bge  sbimm12_Bge )  branchBge ) '//' ( '(Bltu'  rs1_Bltu  rs2_Bltu  sbimm12_Bltu )  branchBltu ) '//' ( '(Bgeu'  rs1_Bgeu  rs2_Bgeu  sbimm12_Bgeu )  branchBgeu ) '//' ( '(Jalr'  rd_Jalr  rs1_Jalr  oimm12_Jalr )  branchJalr ) '//' ( '(Jal'  rd_Jal  jimm20_Jal )  branchJal ) '//' ( '(InvalidI' )  branchInvalidI )))").
 
 
-Notation "'and' A B" := (Logic.and A B) (at level 10, A at level 0, B at level 0).
-Notation "'or' A B" := (Logic.or A B) (at level 10, A at level 0, B at level 0).
-Notation "+ A B" := (Z.add A B) (at level 10, A at level 0, B at level 0).
-Notation "< A B" := (Z.lt A B) (at level 10, A at level 0, B at level 0).
-Notation "<= A B" := (Z.le A B) (at level 10, A at level 0, B at level 0).
-Notation "- A B" := (Z.sub A B) (at level 10, A at level 0, B at level 0).
+Local Notation "'and' A B" := (Logic.and A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "'or' A B" := (Logic.or A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "+ A B" := (Z.add A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "< A B" := (Z.lt A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "<= A B" := (Z.le A B) (at level 10, A at level 0, B at level 0, only printing).
+#[warnings="-notation-incompatible-prefix"]
+Local Notation "- A B" := (Z.sub A B) (at level 10, A at level 0, B at level 0, only printing).
 (* Notation "- 1" := minusone (at level 10, format "-  1"). omits space, why? *)
-Notation "* A B" := (Z.mul A B) (at level 10, A at level 0, B at level 0, format " *  A  B").
-Notation "'mod' A B" := (Z.modulo A B) (at level 10, A at level 0, B at level 0).
-Notation "^ A B" := (Z.pow A B) (at level 10, A at level 0, B at level 0).
-Notation "= A B" := (@eq _ A B) (at level 10, A at level 0, B at level 0).
-Notation "'exists' ( ( x T ) ) b" := (exists x: T, b) (at level 10, T at level 0, b at level 0).
-Notation "'not' A" := (negb A) (at level 10, A at level 0).
-Notation "'ite' b thn els" := (if b then thn else els)
-  (at level 10, b at level 0, thn at level 0, els at level 0).
+Local Notation "* A B" := (Z.mul A B) (at level 10, A at level 0, B at level 0, format " *  A  B", only printing).
+Local Notation "'mod' A B" := (Z.modulo A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "^ A B" := (Z.pow A B) (at level 10, A at level 0, B at level 0, only printing).
+Local Notation "= A B" := (@eq _ A B) (at level 10, A at level 0, B at level 0, only printing).
+#[warnings="-notation-incompatible-prefix"]
+Local Notation "'exists' ( ( x T ) ) b" := (exists x: T, b) (at level 10, T at level 0, b at level 0, only printing).
+Local Notation "'not' A" := (negb A) (at level 10, A at level 0, only printing).
+Local Notation "'ite' b thn els" := (if b then thn else els)
+  (at level 10, b at level 0, thn at level 0, els at level 0, only printing).
 
-Notation "'as'  'None'  '(option'  T )" := (@None T) (at level 10, T at level 0).
+#[warnings="-closed-notation-not-level-0"]
+Local Notation "'as'  'None'  '(option'  T )" := (@None T) (at level 10, T at level 0, only printing).
 
 (* Print simplified_run1. *)
 
@@ -807,9 +811,9 @@ Proof.
 Abort.
 
 Derive readAfterWriteGraphConditions
-  SuchThat (forall G final, readAfterWriteGraphConditions G final =
-                            interp (runN 2) G (initialState 0%nat readAfterWriteProg) final tt)
-  As readAfterWriteGraphConditions_correct.
+  in (forall G final, readAfterWriteGraphConditions G final =
+                      interp (runN 2) G (initialState 0%nat readAfterWriteProg) final tt)
+  as readAfterWriteGraphConditions_correct.
 Proof.
   intros.
   unfold initialState, readAfterWriteProg.
@@ -819,9 +823,9 @@ Proof.
 Defined.
 
 Derive writerGraphConditions
-  SuchThat (forall G final, writerGraphConditions G final =
-                            interp (runN 2) G initialWriterState final tt)
-  As writerGraphConditions_correct.
+  in (forall G final, writerGraphConditions G final =
+                      interp (runN 2) G initialWriterState final tt)
+  as writerGraphConditions_correct.
 Proof.
   intros. unfold initialWriterState, initialState, writerProg.
   repeat step.
@@ -830,9 +834,9 @@ Proof.
 Defined.
 
 Derive readerGraphConditions
-  SuchThat (forall G final, readerGraphConditions G final =
-                            interp (runN 2) G initialReaderState final tt)
-  As readerGraphConditions_correct.
+  in (forall G final, readerGraphConditions G final =
+                      interp (runN 2) G initialReaderState final tt)
+  as readerGraphConditions_correct.
 Proof.
   intros. unfold initialReaderState, initialState, readerProg.
   repeat step.

@@ -36,8 +36,10 @@ endif
 
 ALLDEPFLAGS=$(subst \n, ,$(ALLDEPFLAGS_NL))
 
+WARNINGS := -deprecated-since-9.3,-deprecated-since-9.2,-deprecated-from-Coq
+
 _CoqProject:
-	printf -- '$(ALLDEPFLAGS_NL)' > _CoqProject
+	printf -- '-arg -w -arg $(WARNINGS)\n$(ALLDEPFLAGS_NL)' > _CoqProject
 
 spec: Makefile.coq.spec $(SPEC_VS)
 	rm -f .coqdeps.d

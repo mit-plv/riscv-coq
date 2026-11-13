@@ -30,6 +30,7 @@ Definition literaltest_riscv := foo7prog.
 Definition expected_res      := foo7val.
 
 Goal False.
+Proof.
   set (l := List.map (decode RV64IM) literaltest_riscv).
   cbv in l.
   (* decoder seems to work :) *)
@@ -74,6 +75,7 @@ Definition literaltest_res(fuel: nat): bits 64 :=
 Eval vm_compute in (literaltest_res 50).
 
 Lemma literaltest_res_run_test: exists fuel, literaltest_res fuel = bits.of_Z _ expected_res.
+Proof.
   exists 50%nat.
   reflexivity.
 Qed.

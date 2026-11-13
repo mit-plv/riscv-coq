@@ -149,7 +149,7 @@ Definition execute {p : Type -> Type} {t : Type} `{Spec.Machine.RiscvMachine p
                         Bind (when (andb (Spec.Machine.PrivMode_eqb priv Spec.Machine.Supervisor) (Z.eqb
                                           tvm 1)) (Machine.raiseException (ZToReg 0) (ZToReg 2))) (fun _ =>
                                 Spec.Machine.flushTLB)))
-    | inst => Return tt
+    | _inst => Return tt
     end.
 
 (* External variables:
